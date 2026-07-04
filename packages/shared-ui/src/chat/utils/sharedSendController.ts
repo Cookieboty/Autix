@@ -10,6 +10,8 @@ export interface SendControllerParams {
   content: string;
   attachments?: LocalChatAttachment[];
   modelId?: string;
+  chatModelId?: string;
+  imageSettings?: Record<string, unknown>;
   sourceImages?: Array<{ url: string; prompt?: string }>;
   signal?: AbortSignal;
 }
@@ -76,7 +78,16 @@ export async function sharedSendController(
   callbacks: SendControllerCallbacks,
   labels: SendControllerLabels = {},
 ): Promise<void> {
-  const { conversationId, content, attachments, modelId, sourceImages, signal } = params;
+  const {
+    conversationId,
+    content,
+    attachments,
+    modelId,
+    chatModelId,
+    imageSettings,
+    sourceImages,
+    signal,
+  } = params;
 
   let uploadedAttachments: ChatAttachment[] = [];
   try {
@@ -104,6 +115,8 @@ export async function sharedSendController(
       body: {
         message: content,
         modelId: modelId ?? undefined,
+        chatModelId: chatModelId ?? undefined,
+        imageSettings,
         ...(uploadedImages.length ? { images: uploadedImages } : {}),
         ...(uploadedAttachments.length ? { attachments: uploadedAttachments } : {}),
         sourceImages: sourceImages?.length ? sourceImages : undefined,

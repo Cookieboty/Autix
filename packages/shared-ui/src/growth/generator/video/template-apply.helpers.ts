@@ -1,4 +1,3 @@
-import type { VideoTemplate } from '@autix/sdk';
 import type {
   VideoAspectRatio,
   VideoModelCapability,
@@ -10,7 +9,6 @@ import {
 } from '@autix/domain';
 import {
   resolvePromptVariables,
-  resolveVideoTemplateVariables,
 } from '../../../video/workbench/constants';
 
 export type StudioTemplateSelection = {
@@ -34,8 +32,26 @@ export type ApplyTemplateResult = {
 
 export type ClampedField = 'resolution' | 'duration' | 'ratio' | 'audio' | 'model';
 
+interface VideoTemplateLike {
+  id: string;
+  title: string;
+  prompt?: string | null;
+  variables?: Array<{
+    key: string;
+    default?: unknown;
+  }>;
+  coverImage?: string | null;
+  modelHint?: string | null;
+  durationSec?: number | null;
+  defaultParams?: {
+    ratio?: string;
+    resolution?: string;
+    generateAudio?: boolean;
+  } | null;
+}
+
 export interface ApplyTemplateInput {
-  template: VideoTemplate;
+  template: VideoTemplateLike;
   capability: VideoModelCapability;
   availableModelIds: string[];
   currentModelId: string | null;
@@ -122,7 +138,7 @@ export function applyTemplateToStudioForm(input: ApplyTemplateInput): ApplyTempl
   const { template, capability, availableModelIds, currentModelId, now } = input;
   const clampedFields: ClampedField[] = [];
 
-  const variableValues = resolveVideoTemplateVariables(template);
+  const variableValues = resolveTemplateVariables(template);
   const rawPrompt = template.prompt ?? '';
   const renderedPrompt = resolvePromptVariables(rawPrompt, variableValues);
   const unresolvedVariables = collectUnresolvedVariables(renderedPrompt);
@@ -172,4 +188,13 @@ function collectUnresolvedVariables(prompt: string): string[] {
     if (key) set.add(key);
   }
   return Array.from(set);
+}
+
+function resolveTemplateVariables(template: VideoTemplateLike): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const variable of template.variables ?? []) {
+    if (variable.default == null) continue;
+    values[variable.key] = String(variable.default);
+  }
+  return values;
 }

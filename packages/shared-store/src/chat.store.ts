@@ -87,6 +87,7 @@ interface ChatState {
     options?: { kind?: ConversationKind; agentId?: string | null },
   ) => Promise<string>;
   setActiveSession: (id: string) => Promise<void>;
+  reloadSessionMessages: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
   addMessage: (sessionId: string, message: Omit<Message, 'id'>) => void;
   appendToLastAssistantMessage: (sessionId: string, chunk: string) => void;
@@ -176,6 +177,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }));
     } catch {
       // 加载失败静默处理
+    }
+  },
+
+  // 强制从后端重新拉取会话消息（忽略 messagesLoaded 缓存）。
+  // 用于流式生图完成后，把后端已持久化的图片消息同步进本地 store，避免必须手动刷新才显示。
+  reloadSessionMessages: async (id: string) => {
+    try {
+      const res = await getConversationMessages(id);
+      const messages = (res.data as ConversationMessage[]).map(toLocalMessage);
+      set((state) => ({
+        sessions: state.sessions.map((s) =>
+          s.id === id ? { ...s, messages, messagesLoaded: true } : s,
+        ),
+      }));
+    } catch {
+      // 刷新失败静默处理
     }
   },
 

@@ -17,7 +17,9 @@ import {
 import { useTranslations } from 'next-intl';
 import {
   buildImageSizeResolutionGroups,
+  getUniqueImageAspectOptions,
   resolveImageSizeSelection,
+  selectImageSizeAspect,
   selectImageSizeResolution,
   type ImageModelCapability,
 } from '@autix/domain/image';
@@ -37,42 +39,6 @@ import {
   buildPublicImageGenerationSettings,
   type PublicImageGenerationPayload,
 } from './public-image-generation';
-
-function getUniqueImageAspectOptions(groups: ReturnType<typeof buildImageSizeResolutionGroups>) {
-  const seen = new Map<string, { label: string; value: string; aspectValue: string }>();
-  for (const group of groups) {
-    for (const option of group.options) {
-      if (!seen.has(option.aspectValue)) {
-        seen.set(option.aspectValue, {
-          label: option.label,
-          value: option.value,
-          aspectValue: option.aspectValue,
-        });
-      }
-    }
-  }
-  return Array.from(seen.values());
-}
-
-function selectImageSizeAspect(
-  currentSizeValue: string,
-  nextAspectValue: string,
-  groups: ReturnType<typeof buildImageSizeResolutionGroups>,
-) {
-  const current = resolveImageSizeSelection(currentSizeValue, groups);
-  const currentGroup = current.group;
-  const sameResolution = currentGroup?.options.find(
-    (option) => option.aspectValue === nextAspectValue,
-  );
-  if (sameResolution) return sameResolution.value;
-
-  for (const group of groups) {
-    const candidate = group.options.find((option) => option.aspectValue === nextAspectValue);
-    if (candidate) return candidate.value;
-  }
-
-  return current.option?.value ?? currentSizeValue;
-}
 
 function limitPublicUploadedReferences(
   refs: PublicUploadedReference[],

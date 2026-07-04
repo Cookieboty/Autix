@@ -4,6 +4,7 @@ export interface MembershipInfo {
 }
 
 export * from './pricing-dimensions';
+export * from './pricing-rule-mapping';
 
 export interface UserMembership {
   id: string;

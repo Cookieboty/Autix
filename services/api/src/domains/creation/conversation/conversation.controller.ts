@@ -325,12 +325,14 @@ export class ConversationController {
     modelId?: string,
     options?: {
       images?: string[];
+      chatModelId?: string;
       sourceImages?: Array<{
         url: string;
         prompt?: string;
         generationId?: string;
         index?: number;
       }>;
+      imageSettings?: Record<string, unknown>;
     },
   ) {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');

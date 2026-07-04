@@ -40,10 +40,11 @@ describe('conversation stream events', () => {
     const event: WorkflowStepEvent = {
       type: 'image_generated',
       taskId: 'img-1',
-      images: ['https://img.test/1.png'],
+      images: [{ url: 'https://img.test/1.png', generationId: 'gen-1', index: 0 }],
       prompt: 'A product photo',
       model: 'gpt-image-2',
       sourceImages: [{ url: 'https://img.test/source.png', prompt: 'source' }],
+      referenceImages: [{ url: 'https://img.test/ref.png', prompt: 'ref' }],
     };
 
     expect(workflowEventToStreamMessage(event, timestamp)).toEqual({
@@ -51,10 +52,11 @@ describe('conversation stream events', () => {
       timestamp,
       payload: {
         taskId: 'img-1',
-        images: ['https://img.test/1.png'],
+        images: [{ url: 'https://img.test/1.png', generationId: 'gen-1', index: 0 }],
         prompt: 'A product photo',
         model: 'gpt-image-2',
         sourceImages: [{ url: 'https://img.test/source.png', prompt: 'source' }],
+        referenceImages: [{ url: 'https://img.test/ref.png', prompt: 'ref' }],
       },
     });
   });

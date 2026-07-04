@@ -498,6 +498,35 @@ export function usePreviewAdminPricingRuleMutation(callbacks?: MutationCallbacks
   });
 }
 
+export function useExportAdminPricingRulesMutation(callbacks?: MutationCallbacks) {
+  return useMutation({
+    mutationFn: (input: {
+      taskType: string;
+      models: Array<{ provider: string; modelName: string }>;
+      qualities?: string[];
+      resolutions?: string[];
+      modelTiers?: string[];
+    }) => membershipAdminActions.exportPricingRules(input),
+    onSuccess: () => callOnSuccess(callbacks),
+    onError: (error) => callOnError(error, callbacks),
+  });
+}
+
+export function useImportAdminPricingRulesMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { file: File; taskType: string; dryRun: boolean }) =>
+      membershipAdminActions.importPricingRules(input),
+    onSuccess: async (result) => {
+      if (result && !result.dryRun) {
+        await invalidatePricingRules(queryClient);
+      }
+      await callOnSuccess(callbacks);
+    },
+    onError: (error) => callOnError(error, callbacks),
+  });
+}
+
 export function useAdminMembershipOrdersQuery(params: AdminMembershipOrderParams) {
   return useQuery({
     queryKey: membershipAdminQueryKeys.orders(params),

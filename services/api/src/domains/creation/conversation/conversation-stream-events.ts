@@ -99,7 +99,8 @@ export function workflowEventToStreamMessage(
           images: event.images,
           prompt: event.prompt,
           model: event.model,
-          sourceImages: event.sourceImages,
+          ...(event.sourceImages ? { sourceImages: event.sourceImages } : {}),
+          ...(event.referenceImages ? { referenceImages: event.referenceImages } : {}),
         },
       } as StreamMessage;
     case 'step_artifact':

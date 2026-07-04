@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { ChevronDown, Globe, ImagePlus, Settings } from 'lucide-react';
+import { ChevronDown, Globe, Image as ImageIcon, ImagePlus, MessageSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
+  buildImageSizeView,
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
 } from '@autix/domain/image';
@@ -70,19 +71,21 @@ export function ChatToolbar({
   const chatCandidates = availableModels.filter((m) =>
     hasChatCapability(m.capabilities ?? []),
   );
+
+  // 图片模式需要一个文本对话模型来理解需求并驱动生图工具。若尚未选择，默认选中第一个可用对话模型，
+  // 确保发送请求时一定携带 chatModelId，避免后端回退到不支持对话的默认模型。
+  useEffect(() => {
+    if (kind !== 'image') return;
+    if (selectedChatModelId) return;
+    if (chatCandidates.length === 0) return;
+    setSelectedChatModel(chatCandidates[0].id);
+  }, [kind, selectedChatModelId, chatCandidates, setSelectedChatModel]);
   const primaryCandidates = kind === 'image' ? imageCandidates : chatCandidates;
   const primaryValue = selectedModelId;
   const selectedImageModel = kind === 'image'
     ? imageCandidates.find((model) => model.id === selectedModelId) ?? imageCandidates[0]
     : null;
   const imageCapability = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(selectedImageModel)];
-  const imageSizeOptions = useMemo(
-    () => imageCapability.sizes.map((option) => ({
-      value: option.value,
-      label: option.value === 'auto' ? t('imageParams.smartRatio') : option.label,
-    })),
-    [imageCapability],
-  );
   const imageQualityOptions = useMemo(
     () => imageCapability.qualities.map((option) => ({
       value: option.value,
@@ -93,8 +96,11 @@ export function ChatToolbar({
 
   useEffect(() => {
     if (kind !== 'image') return;
-    if (!imageCapability.sizes.some((option) => option.value === imageSize)) {
-      onImageSizeChange(imageCapability.defaults.size);
+    // 切换模型后旧尺寸若非法，归一化到最接近的合法长宽比（与图片工作台一致），
+    // 而非粗暴回退到默认 1:1。
+    const sizeView = buildImageSizeView(imageCapability, imageSize);
+    if (!sizeView.isValid) {
+      onImageSizeChange(sizeView.value);
     }
     if (imageCapability.qualities.length === 0) {
       if (imageQuality !== '') onImageQualityChange('');
@@ -135,7 +141,11 @@ export function ChatToolbar({
               type="button"
               className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
             >
-              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+              {kind === 'image' ? (
+                <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
               <span className="max-w-[120px] truncate">
                 {primaryCandidates.find((m) => m.id === primaryValue)?.name ?? (labels?.selectModel ?? t('toolbar.selectModel'))}
               </span>
@@ -159,10 +169,14 @@ export function ChatToolbar({
           trigger={
             <button
               type="button"
-              className="inline-flex items-center justify-center size-7 rounded-lg border border-border text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
               title={labels?.chatModelTooltip ?? t('toolbar.chatModelTooltip')}
             >
-              <Settings className="size-3.5" />
+              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="max-w-[120px] truncate">
+                {chatCandidates.find((m) => m.id === selectedChatModelId)?.name ?? (labels?.selectModel ?? t('toolbar.selectModel'))}
+              </span>
+              <ChevronDown className="h-3 w-3" />
             </button>
           }
         />
@@ -174,7 +188,7 @@ export function ChatToolbar({
           <ImageParamsPopover
             size={imageSize}
             quality={imageQuality}
-            sizeOptions={imageSizeOptions}
+            capability={imageCapability}
             qualityOptions={imageQualityOptions}
             onSizeChange={onImageSizeChange}
             onQualityChange={onImageQualityChange}

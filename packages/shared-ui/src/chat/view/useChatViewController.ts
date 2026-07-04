@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from '../../navigation';
 import { useChatStore } from '@autix/shared-store';
+import { mapSessionMessagesToAIUIMessages } from '../chat-history-mapper';
 import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
@@ -31,6 +32,7 @@ export function useChatViewController({ sessionId }: UseChatViewControllerParams
     fetchSessions,
     createSession,
     setActiveSession,
+    reloadSessionMessages,
     addMessage,
     appendToLastAssistantMessage,
     setStreaming,
@@ -134,14 +136,33 @@ export function useChatViewController({ sessionId }: UseChatViewControllerParams
     visibleInputMode,
   } = modeState;
 
+  // 流式生图完成后：强制从后端拉取消息，并显式重映射到 aiUIMessages。
+  // 不能只依赖会话对账 effect —— 乐观占位消息（用户 + 空 assistant）与后端消息（用户 + 图片 assistant）
+  // 条数相同，effect 的 messages.length 依赖不变、不会触发，因此这里直接重刷。
+  const resyncMessagesFromServer = useCallback(
+    async (conversationId: string) => {
+      await reloadSessionMessages(conversationId);
+      const session = useChatStore
+        .getState()
+        .sessions.find((item) => item.id === conversationId);
+      if (session) {
+        setAIUIMessages(mapSessionMessagesToAIUIMessages(session.messages));
+      }
+    },
+    [reloadSessionMessages, setAIUIMessages],
+  );
+
   const handleChatStreamMessage = useChatStreamMessageHandler({
     abortRef,
     addAIUIMessage,
     appendToLastAssistantMessage,
     clearProgress,
     finalizeAIUIStreaming,
+    imageWorkflowRunningRef,
     loadArtifactById,
+    reloadSessionMessages: resyncMessagesFromServer,
     setChatError,
+    setIsImageWorkflowRunning,
     setIsWaitingFirstResponse,
     setProgress,
     setSelectedSourceImages,
@@ -216,9 +237,12 @@ export function useChatViewController({ sessionId }: UseChatViewControllerParams
     finalizeAIUIStreaming,
     getAgentKindLabel: (kind) => t(`agentKind.${kind}`),
     handleChatStreamMessage,
+    imageQuality,
+    imageSize,
     isStreaming,
     modeComingSoonMessage: (kindLabel) => t('error.modeComingSoon', { kind: kindLabel }),
     requestErrorMessage: t('requestError'),
+    selectedChatModelId,
     selectedModelId,
     selectedSourceImages,
     setChatError,

@@ -310,6 +310,7 @@ export interface ImageResultItem {
   generationId?: string;
   prompt?: string;
   sourceImages?: Array<{ url: string; prompt?: string }>;
+  referenceImages?: Array<{ url: string; prompt?: string }>;
 }
 
 export interface ImageResultPayload {
@@ -318,6 +319,7 @@ export interface ImageResultPayload {
   prompt: string;
   model: string;
   sourceImages?: Array<{ url: string; prompt?: string }>;
+  referenceImages?: Array<{ url: string; prompt?: string }>;
 }
 
 export interface StreamMessage {

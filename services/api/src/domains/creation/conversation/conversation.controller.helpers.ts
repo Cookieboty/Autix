@@ -40,8 +40,10 @@ export interface ChatSourceImagesOptions {
 export interface ChatRequestPayload extends ChatSourceImagesOptions {
   message: string;
   modelId?: string;
+  chatModelId?: string;
   images?: string[];
   attachments?: ChatAttachmentBody[];
+  imageSettings?: ImageGenerationSettings;
 }
 
 export interface NormalizedChatRequest {
@@ -56,6 +58,8 @@ export interface NormalizedChatRequest {
   streamOptions: {
     images: string[];
     sourceImages?: SourceImageRef[];
+    chatModelId?: string;
+    imageSettings?: ImageGenerationSettings;
   };
 }
 
@@ -135,19 +139,49 @@ export function buildProcessingRequestHash(
   message: string,
   imageUrls: string[],
   attachments: ChatAttachmentBody[],
+  options?: {
+    chatModelId?: string;
+    sourceImages?: SourceImageRef[];
+    imageSettings?: ImageGenerationSettings;
+  },
 ): string {
   const attachmentHash = attachments
     .map((attachment) => attachment.url)
     .join('|')
     .slice(0, 256);
-  return `${message.length}:${message.slice(0, 64)}:${imageUrls.length}:${imageUrls.join('|').slice(0, 256)}:${attachments.length}:${attachmentHash}`;
+  const baseHash = `${message.length}:${message.slice(0, 64)}:${imageUrls.length}:${imageUrls.join('|').slice(0, 256)}:${attachments.length}:${attachmentHash}`;
+  if (
+    !options?.chatModelId &&
+    !options?.sourceImages?.length &&
+    !options?.imageSettings
+  ) {
+    return baseHash;
+  }
+
+  const sourceImageHash = (options?.sourceImages ?? [])
+    .map((image) => image.url)
+    .join('|')
+    .slice(0, 256);
+  const settingsHash = options?.imageSettings
+    ? JSON.stringify(options.imageSettings).slice(0, 256)
+    : '';
+  return [
+    baseHash,
+    options?.chatModelId ?? '',
+    sourceImageHash,
+    settingsHash,
+  ].join(':');
 }
 
 export function normalizeChatRequest(body: ChatRequestPayload): NormalizedChatRequest {
   const message = normalizeChatMessage(body.message);
   const attachments = sanitizeChatAttachments(body.attachments);
   const imageUrls = sanitizeChatImageUrls(body.images);
-  const requestHash = buildProcessingRequestHash(message, imageUrls, attachments);
+  const requestHash = buildProcessingRequestHash(message, imageUrls, attachments, {
+    chatModelId: typeof body.chatModelId === 'string' ? body.chatModelId : undefined,
+    sourceImages: body.sourceImages,
+    imageSettings: body.imageSettings,
+  });
 
   return {
     message,
@@ -158,6 +192,8 @@ export function normalizeChatRequest(body: ChatRequestPayload): NormalizedChatRe
     streamOptions: {
       images: imageUrls,
       sourceImages: body.sourceImages,
+      chatModelId: typeof body.chatModelId === 'string' ? body.chatModelId : undefined,
+      imageSettings: body.imageSettings,
     },
   };
 }

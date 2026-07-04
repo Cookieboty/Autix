@@ -25,8 +25,11 @@ export function useChatStreamMessageHandler({
   appendToLastAssistantMessage,
   clearProgress,
   finalizeAIUIStreaming,
+  imageWorkflowRunningRef,
   loadArtifactById,
+  reloadSessionMessages,
   setChatError,
+  setIsImageWorkflowRunning,
   setIsWaitingFirstResponse,
   setProgress,
   setSelectedSourceImages,
@@ -40,8 +43,11 @@ export function useChatStreamMessageHandler({
   appendToLastAssistantMessage: (conversationId: string, content: string) => void;
   clearProgress: () => void;
   finalizeAIUIStreaming: (metadata?: { durationMs: number }) => void;
+  imageWorkflowRunningRef: RefObject<boolean>;
   loadArtifactById: (artifactId: string) => Promise<unknown>;
+  reloadSessionMessages: (id: string) => Promise<void>;
   setChatError: (error: string | null) => void;
+  setIsImageWorkflowRunning: (running: boolean) => void;
   setIsWaitingFirstResponse: (waiting: boolean) => void;
   setProgress: (progress: {
     stepKey: string;
@@ -124,6 +130,11 @@ export function useChatStreamMessageHandler({
       case 'image_editing':
       case 'image_result':
         if (options.includeImageMessages) {
+          // 生图/改图进行中：标记图片工作流运行中，隐藏通用"正在整理回答"指示器，改为展示"正在生图中"。
+          if (msg.messageType === 'image_generating' || msg.messageType === 'image_editing') {
+            imageWorkflowRunningRef.current = true;
+            setIsImageWorkflowRunning(true);
+          }
           addAIUIMessage({
             id: `${msg.messageType}-${Date.now()}`,
             role: 'assistant',
@@ -153,6 +164,13 @@ export function useChatStreamMessageHandler({
       case 'done': {
         setStreaming(false);
         clearProgress();
+        // 图片流结束：收起"正在生图中"，并从后端强制刷新消息，
+        // 让已持久化的图片消息进入本地 store（否则流式图片只存在于临时 aiUIMessages，会被会话对账清掉，需手动刷新才显示）。
+        if (imageWorkflowRunningRef.current) {
+          imageWorkflowRunningRef.current = false;
+          setIsImageWorkflowRunning(false);
+          void reloadSessionMessages(conversationId);
+        }
         const donePayload = msg.payload as { durationMs?: number } | null;
         finalizeAIUIStreaming(
           donePayload && typeof donePayload.durationMs === 'number'
@@ -168,6 +186,12 @@ export function useChatStreamMessageHandler({
         console.error(options.errorLogLabel ?? 'Server returned an error', errMsg);
         setChatError(errMsg);
         setStreaming(false);
+        if (imageWorkflowRunningRef.current) {
+          imageWorkflowRunningRef.current = false;
+          setIsImageWorkflowRunning(false);
+          // 生图失败：从后端重刷消息，清掉悬挂的"正在生图中"占位卡片。
+          void reloadSessionMessages(conversationId);
+        }
         if (options.clearWaitingOnError) setIsWaitingFirstResponse(false);
         finalizeAIUIStreaming();
         abortRef.current?.abort();
@@ -180,8 +204,11 @@ export function useChatStreamMessageHandler({
     appendToLastAssistantMessage,
     clearProgress,
     finalizeAIUIStreaming,
+    imageWorkflowRunningRef,
     loadArtifactById,
+    reloadSessionMessages,
     setChatError,
+    setIsImageWorkflowRunning,
     setIsWaitingFirstResponse,
     setProgress,
     setSelectedSourceImages,

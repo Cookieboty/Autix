@@ -120,8 +120,10 @@ describe('conversation controller helpers', () => {
   it('normalizes chat request payloads and duplicate request checks', () => {
     const normalized = normalizeChatRequest({
       message: 'hello',
+      chatModelId: 'chat-model-1',
       images: ['https://img.test/a.png', 'bad'],
       sourceImages: [{ url: 'https://img.test/source.png', prompt: 'source' }],
+      imageSettings: { size: '1024x1024', quality: 'medium' },
       attachments: [
         {
           url: 'https://file.test/a.png',
@@ -145,7 +147,7 @@ describe('conversation controller helpers', () => {
         },
       ],
       imageUrls: ['https://img.test/a.png', 'bad'],
-      requestHash: '5:hello:2:https://img.test/a.png|bad:1:https://file.test/a.png',
+      requestHash: '5:hello:2:https://img.test/a.png|bad:1:https://file.test/a.png:chat-model-1:https://img.test/source.png:{"size":"1024x1024","quality":"medium"}',
       userMetadata: {
         images: ['https://img.test/a.png', 'bad'],
         attachments: [
@@ -161,6 +163,8 @@ describe('conversation controller helpers', () => {
       streamOptions: {
         images: ['https://img.test/a.png', 'bad'],
         sourceImages: [{ url: 'https://img.test/source.png', prompt: 'source' }],
+        chatModelId: 'chat-model-1',
+        imageSettings: { size: '1024x1024', quality: 'medium' },
       },
     });
 

@@ -9,7 +9,11 @@ import {
 import {
   PRICING_DIMENSIONS,
   pricingConditionFieldsForCategory,
+  buildPricingModelKey,
+  parsePricingModelKey,
+  rowToUpsert,
   type PricingConditionField,
+  type PricingRuleRow,
 } from '@autix/domain/billing';
 import {
   canSharePricingRuleModels,
@@ -107,24 +111,6 @@ export type PreviewForm = {
   hasAudioInput: boolean;
   priority: boolean;
   membershipLevel: number;
-};
-
-type SanitizedRulePayload = {
-  baseUnit: string;
-  baseCost: number;
-  fixedExtraCost: number;
-  inputTokenCostPerK: number | null;
-  outputTokenCostPerK: number | null;
-  contextTokenCostPerK: number | null;
-  toolCallCost: number | null;
-  batchUnitCost: number | null;
-  reasoningMultiplier: number;
-  referenceImageFixedCost: number | null;
-  referenceImageMultiplier: number | null;
-  videoInputMultiplier: number | null;
-  audioInputMultiplier: number | null;
-  priorityMultiplier: number | null;
-  isActive: boolean;
 };
 
 const REGISTERED_CONDITION_FIELDS = new Set(
@@ -281,33 +267,13 @@ export function getTaskDescription(t: Translate, task: BusinessTask) {
   return t(`tasks.${task.taskType}.description`);
 }
 
-export function buildPricingModelKey(provider: unknown, modelName: unknown) {
-  const normalizedProvider = String(provider ?? '').trim();
-  const normalizedModel = String(modelName ?? '').trim();
-  if (!normalizedProvider || !normalizedModel) return '';
-  return JSON.stringify([normalizedProvider, normalizedModel]);
-}
+// Model-key helpers are the canonical domain implementations (single source of
+// truth shared with the backend Excel import/export). Re-exported for existing
+// call sites that import them from this module.
+export { buildPricingModelKey, parsePricingModelKey };
 
 export function modelKeyFromSystemModel(model: Pick<ModelConfigItem, 'provider' | 'model'>) {
   return buildPricingModelKey(model.provider, model.model);
-}
-
-export function parsePricingModelKey(key: string): { provider: string; modelName: string } | null {
-  try {
-    const parsed = JSON.parse(key) as unknown;
-    if (
-      Array.isArray(parsed) &&
-      typeof parsed[0] === 'string' &&
-      typeof parsed[1] === 'string' &&
-      parsed[0] &&
-      parsed[1]
-    ) {
-      return { provider: parsed[0], modelName: parsed[1] };
-    }
-  } catch {
-    // Older local drafts used plain strings; they are handled below as best-effort labels.
-  }
-  return null;
 }
 
 export function modelsForBusinessTask(
@@ -488,30 +454,6 @@ function conditionTexts(value: unknown) {
   return Array.from(new Set(scopeTextListFromCondition(value)));
 }
 
-function conditionIn(values: string[]) {
-  if (values.length === 0) return undefined;
-  return { in: values };
-}
-
-function numberConditionIn(values: string[]) {
-  const numbers = values
-    .map((value) => Number(value))
-    .filter((value) => Number.isFinite(value));
-  if (numbers.length === 0) return undefined;
-  return { in: Array.from(new Set(numbers)) };
-}
-
-function scopedCondition(field: ScopeField, values: string[]) {
-  const condition = field === 'membershipLevel'
-    ? numberConditionIn(values)
-    : conditionIn(values);
-  return condition ? { [field]: condition } : {};
-}
-
-function booleanCondition(field: 'hasVideoInput' | 'hasAudioInput' | 'priority', value: boolean) {
-  return value ? { [field]: true } : {};
-}
-
 function secondsRangeFromConditions(conditions: Record<string, unknown> | null | undefined) {
   const seconds = conditions?.seconds;
   if (!seconds || typeof seconds !== 'object' || Array.isArray(seconds)) {
@@ -639,14 +581,14 @@ export function sanitizePayload(
   scopeModels?: PricingScopeModel[],
   context?: PricingScopeContext,
 ) {
-  const fields = new Set<RuleField>(task?.fields ?? ['baseCost']);
+  // Frontend-only validation against the live model catalog / scope options.
+  // (These need `scopeModels` + `context`, which the pure domain mapper must
+  // not depend on — hence they stay here.)
   const modelKeys = compatibleModelKeysForTask(
     task,
     scopeModels as ModelConfigItem[] | undefined,
     Array.from(new Set(data.modelKeys.map((key) => key.trim()).filter(Boolean))),
   );
-  const minDurationSeconds = optionalInt(data.minDurationSeconds);
-  const maxDurationSeconds = optionalInt(data.maxDurationSeconds);
   const modelTiers = optionalScopeValues(task, 'modelTier', data.modelTiers, scopeModels, context);
   const qualities = optionalScopeValues(task, 'quality', data.qualities, scopeModels, context);
   const resolutions = optionalScopeValues(task, 'resolution', data.resolutions, scopeModels, context);
@@ -658,93 +600,61 @@ export function sanitizePayload(
     membershipScopeModels,
     context,
   );
-  const conditions = {
-    ...(conditionsWithoutGeneratedScope(data.conditions) ?? {}),
-    ...(modelKeys.length > 0 ? { modelKey: { in: modelKeys } } : {}),
-    ...(showScopeField(task, 'modelTier') ? scopedCondition('modelTier', modelTiers) : {}),
-    ...(showScopeField(task, 'quality') ? scopedCondition('quality', qualities) : {}),
-    ...(showScopeField(task, 'resolution') ? scopedCondition('resolution', resolutions) : {}),
-    ...(showScopeField(task, 'membershipLevel') ? scopedCondition('membershipLevel', membershipLevels) : {}),
-    ...(task?.category === 'video' ? booleanCondition('hasVideoInput', data.requireVideoInput) : {}),
-    ...(task?.category === 'video' ? booleanCondition('hasAudioInput', data.requireAudioInput) : {}),
-    ...(task?.category === 'video' ? booleanCondition('priority', data.requirePriority) : {}),
-    ...(task?.category === 'video' && (minDurationSeconds != null || maxDurationSeconds != null)
-      ? { seconds: { ...(minDurationSeconds != null ? { min: minDurationSeconds } : {}), ...(maxDurationSeconds != null ? { max: maxDurationSeconds } : {}) } }
-      : {}),
-  };
-  const componentSource: SanitizedRulePayload = {
-    baseUnit: (task?.baseUnit ?? data.baseUnit) || 'task',
-    baseCost: toInt(data.baseCost),
-    fixedExtraCost: fields.has('fixedExtraCost') ? toInt(data.fixedExtraCost) : 0,
-    inputTokenCostPerK: fields.has('inputTokenCostPerK') ? optionalNumber(data.inputTokenCostPerK) : null,
-    outputTokenCostPerK: fields.has('outputTokenCostPerK') ? optionalNumber(data.outputTokenCostPerK) : null,
-    contextTokenCostPerK: fields.has('contextTokenCostPerK') ? optionalNumber(data.contextTokenCostPerK) : null,
-    toolCallCost: fields.has('toolCallCost') ? optionalInt(data.toolCallCost) : null,
-    batchUnitCost: fields.has('batchUnitCost') ? optionalInt(data.batchUnitCost) : null,
-    reasoningMultiplier: fields.has('reasoningMultiplier') ? optionalNumber(data.reasoningMultiplier) ?? 1 : 1,
-    referenceImageFixedCost: fields.has('referenceImageFixedCost') ? optionalInt(data.referenceImageFixedCost) : null,
-    referenceImageMultiplier: fields.has('referenceImageMultiplier') ? optionalNumber(data.referenceImageMultiplier) : null,
-    videoInputMultiplier: fields.has('videoInputMultiplier') ? optionalNumber(data.videoInputMultiplier) : null,
-    audioInputMultiplier: fields.has('audioInputMultiplier') ? optionalNumber(data.audioInputMultiplier) : null,
-    priorityMultiplier: fields.has('priorityMultiplier') ? optionalNumber(data.priorityMultiplier) : null,
-    isActive: data.isActive !== false,
-  };
 
-  return {
+  // All conditions/components assembly is delegated to the shared domain mapper
+  // so the editor and the Excel importer stay byte-for-byte consistent.
+  const row: PricingRuleRow = {
     taskType: task.taskType,
     name: optionalText(data.name) ?? task.defaultName,
-    baseUnit: componentSource.baseUnit,
+    baseUnit: (task?.baseUnit ?? data.baseUnit) || 'task',
     priority: toInt(data.priority),
-    conditions: Object.keys(conditions).length > 0 ? conditions : undefined,
-    components: buildRuleComponents(componentSource, data, fields),
     isActive: data.isActive !== false,
+    modelKeys,
+    modelTiers,
+    qualities,
+    resolutions,
+    membershipLevels,
+    requireVideoInput: data.requireVideoInput,
+    requireAudioInput: data.requireAudioInput,
+    requirePriority: data.requirePriority,
+    minDurationSeconds: optionalInt(data.minDurationSeconds),
+    maxDurationSeconds: optionalInt(data.maxDurationSeconds),
+    extraConditions: data.conditions ?? null,
+    baseCost: optionalNumber(data.baseCost),
+    fixedExtraCost: optionalNumber(data.fixedExtraCost),
+    inputTokenCostPerK: optionalNumber(data.inputTokenCostPerK),
+    outputTokenCostPerK: optionalNumber(data.outputTokenCostPerK),
+    contextTokenCostPerK: optionalNumber(data.contextTokenCostPerK),
+    toolCallCost: optionalNumber(data.toolCallCost),
+    mcpCallCost: optionalNumber(data.mcpCallCost),
+    skillCallCost: optionalNumber(data.skillCallCost),
+    batchUnitCost: optionalNumber(data.batchUnitCost),
+    reasoningMultiplier: optionalNumber(data.reasoningMultiplier),
+    referenceImageFixedCost: optionalNumber(data.referenceImageFixedCost),
+    referenceImageMultiplier: optionalNumber(data.referenceImageMultiplier),
+    videoInputMultiplier: optionalNumber(data.videoInputMultiplier),
+    audioInputMultiplier: optionalNumber(data.audioInputMultiplier),
+    priorityMultiplier: optionalNumber(data.priorityMultiplier),
   };
-}
 
-function buildRuleComponents(
-  payload: SanitizedRulePayload,
-  data: RuleForm,
-  fields: Set<RuleField>,
-) {
-  const components: Array<{
-    componentType: string;
-    unitCost?: number;
-    multiplier?: number;
-    sort: number;
-    isActive: boolean;
-  }> = [];
-  const addAmount = (componentType: string, value: unknown, sort: number, enabled = true) => {
-    if (!enabled) return;
-    const amount = optionalNumber(value);
-    if (amount == null || amount <= 0) return;
-    components.push({ componentType, unitCost: amount, sort, isActive: true });
+  const upsert = rowToUpsert(row, {
+    spec: {
+      taskType: task.taskType,
+      category: task.category,
+      baseUnit: task.baseUnit,
+      fields: task.fields,
+    },
+  });
+
+  return {
+    taskType: upsert.taskType,
+    name: upsert.name,
+    baseUnit: upsert.baseUnit,
+    priority: upsert.priority,
+    conditions: upsert.conditions,
+    components: upsert.components,
+    isActive: upsert.isActive,
   };
-  const addMultiplier = (componentType: string, value: unknown, sort: number, enabled = true) => {
-    if (!enabled) return;
-    const multiplier = optionalNumber(value);
-    if (multiplier == null || multiplier === 1) return;
-    components.push({ componentType, multiplier, sort, isActive: true });
-  };
-
-  const baseComponent = baseComponentType(payload.baseUnit);
-
-  addAmount(baseComponent, payload.baseCost, 10);
-  addAmount('fixed_extra', payload.fixedExtraCost, 20, fields.has('fixedExtraCost'));
-  addAmount('input_token_per_1k', payload.inputTokenCostPerK, 30, fields.has('inputTokenCostPerK'));
-  addAmount('output_token_per_1k', payload.outputTokenCostPerK, 40, fields.has('outputTokenCostPerK'));
-  addAmount('context_token_per_1k', payload.contextTokenCostPerK, 50, fields.has('contextTokenCostPerK'));
-  addAmount('per_tool_call', payload.toolCallCost, 60, fields.has('toolCallCost'));
-  addAmount('per_mcp_call', data.mcpCallCost, 70, fields.has('mcpCallCost'));
-  addAmount('per_skill_call', data.skillCallCost, 80, fields.has('skillCallCost'));
-  addAmount('per_batch', payload.batchUnitCost, 90, fields.has('batchUnitCost'));
-  addAmount('per_reference_image', payload.referenceImageFixedCost, 100, fields.has('referenceImageFixedCost'));
-  addMultiplier('reasoning_multiplier', payload.reasoningMultiplier, 120, fields.has('reasoningMultiplier'));
-  addMultiplier('reference_image_multiplier', payload.referenceImageMultiplier, 130, fields.has('referenceImageMultiplier'));
-  addMultiplier('video_input_multiplier', payload.videoInputMultiplier, 140, fields.has('videoInputMultiplier'));
-  addMultiplier('audio_input_multiplier', payload.audioInputMultiplier, 150, fields.has('audioInputMultiplier'));
-  addMultiplier('priority_multiplier', payload.priorityMultiplier, 160, fields.has('priorityMultiplier'));
-
-  return components;
 }
 
 export function formatRuleCost(rule: GenerationPricingRule, _t: Translate) {

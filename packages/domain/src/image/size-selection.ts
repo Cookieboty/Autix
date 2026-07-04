@@ -1,4 +1,5 @@
 import type { ImageModelCapability } from './capabilities';
+import { mapEquivalentSize } from './coerce';
 
 export interface ImageSizeAspectOption {
   label: string;
@@ -160,4 +161,93 @@ export function selectImageSizeResolution(
     ? nextGroup.options.find((option) => option.aspectValue === current.option?.aspectValue)
     : undefined;
   return sameAspect?.value ?? nextGroup.options[0]?.value ?? current.option?.value ?? currentSizeValue;
+}
+
+/**
+ * The aspect-first pivot of {@link buildImageSizeResolutionGroups}: one entry per
+ * distinct aspect ratio, taking the first occurrence's encoded value as a stand-in.
+ * Used by UIs that expose aspect and resolution as two separate menus.
+ */
+export function getUniqueImageAspectOptions(
+  groups: ImageSizeResolutionGroup[],
+): ImageSizeAspectOption[] {
+  const seen = new Map<string, ImageSizeAspectOption>();
+  for (const group of groups) {
+    for (const option of group.options) {
+      if (!seen.has(option.aspectValue)) seen.set(option.aspectValue, option);
+    }
+  }
+  return Array.from(seen.values());
+}
+
+/**
+ * Switch the aspect ratio while keeping the current resolution tier when that
+ * tier offers the requested aspect; otherwise fall back to any tier that has it.
+ * Mirror of {@link selectImageSizeResolution} (which keeps aspect across tiers).
+ */
+export function selectImageSizeAspect(
+  currentSizeValue: string,
+  nextAspectValue: string,
+  groups: ImageSizeResolutionGroup[],
+): string {
+  const current = resolveImageSizeSelection(currentSizeValue, groups);
+  const sameResolution = current.group?.options.find(
+    (option) => option.aspectValue === nextAspectValue,
+  );
+  if (sameResolution) return sameResolution.value;
+
+  for (const group of groups) {
+    const candidate = group.options.find((option) => option.aspectValue === nextAspectValue);
+    if (candidate) return candidate.value;
+  }
+
+  return current.option?.value ?? currentSizeValue;
+}
+
+/**
+ * Unified read-model for every image-size picker. Given a model capability and
+ * the currently-stored value, this computes everything a renderer needs —
+ * resolution tiers, deduped aspect options, the resolved selection, a summary
+ * label, and a normalized value — plus the two change actions. Rendering stays
+ * per-site (popover / sidebar / dual dropdown); this is the single source of the
+ * *rules*.
+ *
+ * `value` is normalized via nearest-aspect mapping when `currentValue` is not a
+ * legal option for this capability (e.g. right after switching models); callers
+ * should persist `value` back through their onChange when `isValid` is false.
+ */
+export interface ImageSizeView {
+  groups: ImageSizeResolutionGroup[];
+  aspectOptions: ImageSizeAspectOption[];
+  hasResolutionTiers: boolean;
+  selectedTier: ImageSizeResolutionGroup | null;
+  selectedAspect: ImageSizeAspectOption | null;
+  displayLabel: string;
+  value: string;
+  isValid: boolean;
+  pickAspect: (nextAspectValue: string) => string;
+  pickResolution: (nextResolutionValue: string) => string;
+}
+
+export function buildImageSizeView(
+  capability: ImageModelCapability,
+  currentValue: string,
+): ImageSizeView {
+  const groups = buildImageSizeResolutionGroups(capability);
+  const isValid = capability.sizes.some((option) => option.value === currentValue);
+  const value = isValid ? currentValue : mapEquivalentSize(currentValue, capability);
+  const selection = resolveImageSizeSelection(value, groups);
+
+  return {
+    groups,
+    aspectOptions: getUniqueImageAspectOptions(groups),
+    hasResolutionTiers: groups.length > 1,
+    selectedTier: selection.group,
+    selectedAspect: selection.option,
+    displayLabel: selection.option?.sourceLabel ?? value,
+    value,
+    isValid,
+    pickAspect: (nextAspectValue) => selectImageSizeAspect(value, nextAspectValue, groups),
+    pickResolution: (nextResolutionValue) => selectImageSizeResolution(value, nextResolutionValue, groups),
+  };
 }

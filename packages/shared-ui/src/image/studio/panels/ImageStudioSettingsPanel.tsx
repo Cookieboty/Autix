@@ -3,9 +3,7 @@
 import { Crop, Images, SlidersHorizontal, Wand2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  buildImageSizeResolutionGroups,
-  resolveImageSizeSelection,
-  selectImageSizeResolution,
+  buildImageSizeView,
   type ImageModelCapability,
 } from '@autix/domain/image';
 import {
@@ -37,9 +35,10 @@ export function ImageStudioSettingsPanel({
 }) {
   const t = useTranslations('imageStudio');
   const tStyle = useTranslations('imageStudio.stylePresets');
-  const sizeGroups = buildImageSizeResolutionGroups(capability);
-  const selectedSize = resolveImageSizeSelection(settings.size, sizeGroups);
-  const selectedGroup = selectedSize.group;
+  const sizeView = buildImageSizeView(capability, settings.size);
+  const sizeGroups = sizeView.groups;
+  const selectedGroup = sizeView.selectedTier;
+  const selectedAspect = sizeView.selectedAspect;
   const aspectOptions = selectedGroup?.options ?? [];
 
   return (
@@ -84,7 +83,7 @@ export function ImageStudioSettingsPanel({
                     active={selectedGroup?.value === group.value}
                     onClick={() =>
                       onSettingsChange({
-                        size: selectImageSizeResolution(settings.size, group.value, sizeGroups),
+                        size: sizeView.pickResolution(group.value),
                       })
                     }
                   >
@@ -101,7 +100,7 @@ export function ImageStudioSettingsPanel({
               {aspectOptions.map((opt) => (
                 <ChipButton
                   key={opt.value}
-                  active={selectedSize.option?.value === opt.value}
+                  active={selectedAspect?.value === opt.value}
                   onClick={() => onSettingsChange({ size: opt.value })}
                 >
                   {opt.label}

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { buildImageSizeView, type ImageModelCapability } from '@autix/domain/image';
 
 export interface ImageParamOption {
   label: string;
@@ -12,7 +13,7 @@ export interface ImageParamOption {
 interface ImageParamsPopoverProps {
   size: string;
   quality: string;
-  sizeOptions: ImageParamOption[];
+  capability: ImageModelCapability;
   qualityOptions: ImageParamOption[];
   onSizeChange: (v: string) => void;
   onQualityChange: (v: string) => void;
@@ -21,7 +22,7 @@ interface ImageParamsPopoverProps {
 export function ImageParamsPopover({
   size,
   quality,
-  sizeOptions,
+  capability,
   qualityOptions,
   onSizeChange,
   onQualityChange,
@@ -39,7 +40,12 @@ export function ImageParamsPopover({
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const sizeLabel = sizeOptions.find((r) => r.value === size)?.label ?? size;
+  // 与图片工作台共用同一套计算规则：按「分辨率档位 → 长宽比」分组，
+  // 避免对话模式下把 Gemini 的几十个尺寸铺成一整片。样式各站点自定，规则同源。
+  const sizeView = useMemo(() => buildImageSizeView(capability, size), [capability, size]);
+  const { hasResolutionTiers, selectedTier, selectedAspect } = sizeView;
+  const aspectOptions = selectedTier?.options ?? [];
+  const sizeLabel = sizeView.displayLabel;
 
   return (
     <div ref={ref} className="relative">
@@ -77,18 +83,40 @@ export function ImageParamsPopover({
               </div>
             )}
 
+            {hasResolutionTiers && (
+              <div>
+                <div className="mb-2 text-xs font-medium text-foreground">{t('resolution')}</div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {sizeView.groups.map((group) => (
+                    <button
+                      key={group.value}
+                      type="button"
+                      onClick={() => onSizeChange(sizeView.pickResolution(group.value))}
+                      className={`rounded-lg px-2 py-2 text-xs transition-colors ${
+                        selectedTier?.value === group.value
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-foreground hover:bg-secondary/80'
+                      }`}
+                    >
+                      {group.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <div className="mb-2 text-xs font-medium text-foreground">{t('size')}</div>
               <div className="grid grid-cols-4 gap-1.5">
-                {sizeOptions.map((ratio) => (
+                {aspectOptions.map((ratio) => (
                   <button
                     key={ratio.value}
                     type="button"
                     onClick={() => onSizeChange(ratio.value)}
                     className={`rounded-lg px-2 py-2 text-xs transition-colors ${
-                      size === ratio.value
+                      selectedAspect?.value === ratio.value
                         ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-foreground hover:bg-secondary/80'
+                        : 'bg-secondary text-foreground hover:bg-secondary/80'
                     }`}
                   >
                     {ratio.label}

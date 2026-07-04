@@ -1125,7 +1125,7 @@ describe('ImageGenerationFlowService', () => {
     expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
   });
 
-  it('skips platform points for user-owned image models', async () => {
+  it('charges platform points even for user-created image models', async () => {
     const { service, pointsService } = createService();
     jest.spyOn(service, 'callImageApi').mockResolvedValue({
       images: ['https://img.test/1.png'],
@@ -1171,8 +1171,8 @@ describe('ImageGenerationFlowService', () => {
       1,
     );
 
-    expect(pointsService.estimateCost).not.toHaveBeenCalled();
-    expect(pointsService.createHold).not.toHaveBeenCalled();
-    expect(pointsService.confirmHold).not.toHaveBeenCalled();
+    // 自有模型不再免费：即使 createdBy === userId 也照常估价 + 冻结积分。
+    expect(pointsService.estimateCost).toHaveBeenCalled();
+    expect(pointsService.createHold).toHaveBeenCalled();
   });
 });

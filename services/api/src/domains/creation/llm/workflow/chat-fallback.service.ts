@@ -8,6 +8,25 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { WorkflowStepEvent } from './workflow.types';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
 import { toRuntimeModelConfig } from './workflow-step-executor';
+import { ImageGenerationFlowService, type SourceImageRef } from './image-generation-flow.service';
+import type { ImageGenerationSettings } from './image-generation-call-params';
+import type { ImageTemplateContext } from './image-chat.service';
+import {
+  invokeModelWithImageActionTools,
+  messageContentToText,
+  parseImageToolActionFromMessage,
+  parseImageToolActionFromText,
+  type ImageToolAction,
+} from './image-tool-actions';
+
+export interface ChatFallbackImageToolOptions {
+  conversationId: string;
+  imageModelConfigId?: string;
+  template: ImageTemplateContext;
+  sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
+  settings?: ImageGenerationSettings;
+}
 
 @Injectable()
 export class ChatFallbackService {
@@ -15,6 +34,7 @@ export class ChatFallbackService {
     private readonly modelConfigService: ModelConfigService,
     private readonly billing: CallBillingService,
     private readonly systemPromptService: SystemPromptService,
+    private readonly imageGenerationFlowService: ImageGenerationFlowService,
   ) {}
 
   async *chat(
@@ -22,6 +42,9 @@ export class ChatFallbackService {
     message: string,
     modelConfigId?: string,
     images?: string[],
+    options?: {
+      imageTool?: ChatFallbackImageToolOptions;
+    },
   ): AsyncGenerator<WorkflowStepEvent> {
     const resolvedId = modelConfigId ?? (await this.resolveDefaultModelId(userId));
     const dbConfig = toRuntimeModelConfig(
@@ -29,30 +52,35 @@ export class ChatFallbackService {
     );
     const model = createChatModelFromDbConfig(dbConfig);
 
-    const isOwnModel = dbConfig.createdBy === userId;
+    // 自有模型不再免费：所有对话调用一律计费（tracked model）。
     const pointCostWeight = dbConfig.pointCostWeight;
-    const invokeModel = isOwnModel
-      ? model
-      : createTrackedModel(model, this.billing, {
-          userId,
-          modelConfigId: resolvedId,
-          modelName: dbConfig.model ?? dbConfig.name,
-          modelProvider: dbConfig.provider,
-          modelTier: this.resolveBillingTier(dbConfig),
-          pointCostWeight,
-        });
-
-    const systemPrompt = await this.systemPromptService.render('assistant.general', {
-      language: 'zh-CN',
-      appName: 'Autix',
+    const invokeModel = createTrackedModel(model, this.billing, {
+      userId,
+      modelConfigId: resolvedId,
+      modelName: dbConfig.model ?? dbConfig.name,
+      modelProvider: dbConfig.provider,
+      modelTier: this.resolveBillingTier(dbConfig),
+      pointCostWeight,
     });
 
-    const result = await invokeModel.invoke([
+    const systemPrompt = await this.renderSystemPrompt(options?.imageTool);
+
+    const messages = [
       new SystemMessage(systemPrompt.content),
       this.buildUserMessage(message, images),
-    ]);
+    ];
+    const result = options?.imageTool?.imageModelConfigId
+      ? await invokeModelWithImageActionTools(invokeModel, messages)
+      : { message: await invokeModel.invoke(messages), usedNativeTools: false };
 
-    const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
+    const content = messageContentToText(asRecord(result.message)?.content);
+    const imageAction =
+      parseImageToolActionFromMessage(result.message) ??
+      parseImageToolActionFromText(content);
+    if (imageAction && options?.imageTool?.imageModelConfigId) {
+      yield* this.executeImageToolAction(userId, options.imageTool, imageAction);
+      return;
+    }
 
     yield { type: 'llm_token', stepKey: 'chat', content };
   }
@@ -77,6 +105,108 @@ export class ChatFallbackService {
     });
   }
 
+  private async renderSystemPrompt(imageTool?: ChatFallbackImageToolOptions) {
+    if (!imageTool) {
+      return this.systemPromptService.render('assistant.general', {
+        language: 'zh-CN',
+        appName: 'Autix',
+      });
+    }
+
+    return this.systemPromptService.render('assistant.generalWithImageTool', {
+      language: 'zh-CN',
+      appName: 'Autix',
+      templateTitle: imageTool.template.title,
+      templatePrompt: imageTool.template.prompt,
+      templateVariables: JSON.stringify(imageTool.template.variables ?? []),
+      sourceImages: imageTool.sourceImages?.length
+        ? imageTool.sourceImages
+          .map((image, index) => `${index + 1}. ${image.url}${image.prompt ? ` | prompt: ${image.prompt}` : ''}`)
+          .join('\n')
+        : '',
+      referenceImages: imageTool.referenceImages?.length
+        ? imageTool.referenceImages
+          .map((image, index) => `${index + 1}. ${image.url}${image.prompt ? ` | note: ${image.prompt}` : ''}`)
+          .join('\n')
+        : '',
+    });
+  }
+
+  private async *executeImageToolAction(
+    userId: string,
+    tool: ChatFallbackImageToolOptions,
+    action: ImageToolAction,
+  ): AsyncGenerator<WorkflowStepEvent> {
+    const prompt = action.type === 'generate_image' ? action.prompt : action.instruction;
+    const imageRefs = this.resolveImageToolRefs(action, tool);
+    const resolveInput = {
+      userId,
+      conversationId: tool.conversationId,
+      templateId: tool.template.id,
+      modelConfigId: tool.imageModelConfigId!,
+      promptOverride: prompt,
+      sourceImages: imageRefs.sourceImages,
+      referenceImages: imageRefs.referenceImages,
+      settings: {
+        ...tool.settings,
+        skipPromptTuning: true,
+      },
+    };
+    const request = await this.imageGenerationFlowService.resolveImageRequest(resolveInput);
+    const taskId = `chat-image-tool:${userId}:${Date.now()}`;
+
+    if (request.mode === 'edit') {
+      yield {
+        type: 'image_editing',
+        taskId,
+        model: request.modelConfig.model,
+        sourceImages: request.sourceImages ?? [],
+        count: 1,
+      };
+    } else {
+      yield {
+        type: 'image_generating',
+        taskId,
+        model: request.modelConfig.model,
+        count: 1,
+      };
+    }
+
+    const result = await this.imageGenerationFlowService.generateAndPersistImage(
+      resolveInput,
+      request,
+      1,
+    );
+
+    yield {
+      type: 'image_generated',
+      taskId,
+      images: result.images,
+      prompt: result.prompt,
+      model: result.model,
+      sourceImages: request.sourceImages,
+      referenceImages: request.referenceImages,
+    };
+  }
+
+  private resolveImageToolRefs(
+    action: ImageToolAction,
+    tool: ChatFallbackImageToolOptions,
+  ): { sourceImages?: SourceImageRef[]; referenceImages?: SourceImageRef[] } {
+    if (action.type === 'generate_image') {
+      return { referenceImages: tool.referenceImages };
+    }
+
+    if (tool.sourceImages?.length) {
+      return {
+        sourceImages: tool.sourceImages,
+        referenceImages: tool.referenceImages,
+      };
+    }
+
+    return { sourceImages: tool.referenceImages };
+  }
+
   private resolveBillingTier(config: unknown): string | undefined {
     const metadata = config && typeof config === 'object'
       ? (config as { metadata?: unknown }).metadata
@@ -86,4 +216,10 @@ export class ChatFallbackService {
       : undefined;
     return typeof tier === 'string' ? tier : undefined;
   }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
