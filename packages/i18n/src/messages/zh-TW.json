@@ -1801,7 +1801,11 @@
       "download": "下載",
       "quickEditPrompt": "基於這張圖繼續編輯：{label}",
       "upscalePrompt": "放大這張圖，保留原構圖和質感",
-      "removeBgPrompt": "去掉這張圖的背景，保留主體"
+      "removeBgPrompt": "去掉這張圖的背景，保留主體",
+      "fitSize": "自適應尺寸",
+      "quickEditPlaceholder": "描述要修改的內容…",
+      "quickEditSubmit": "生成",
+      "close": "關閉"
     },
     "prompt": {
       "title": "編輯提示詞",
@@ -1851,6 +1855,8 @@
       "newConversation": "新建對話",
       "renameFailed": "會話標題儲存失敗",
       "noModel": "沒有可用的圖片模型",
+      "noVideoModel": "沒有可用的影片模型，請先在工具列選擇一個影片模型",
+      "videoFailed": "影片生成失敗，請稍後重試",
       "modelLoading": "載入模型…",
       "modelEmpty": "暫無模型",
       "modelSearchPlaceholder": "搜尋模型",

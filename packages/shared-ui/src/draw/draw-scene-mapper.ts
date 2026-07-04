@@ -23,6 +23,7 @@ export interface PersistedMessage {
   role: 'user' | 'assistant';
   text: string;
   images?: string[];
+  videos?: string[];
 }
 
 /** Structural subset of an Excalidraw element we read/write. */

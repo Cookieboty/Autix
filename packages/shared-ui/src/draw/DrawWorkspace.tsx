@@ -103,6 +103,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   images?: string[];
+  videos?: string[];
   pending?: boolean;
   error?: boolean;
 }
@@ -126,6 +127,7 @@ interface CanvasImageRef {
 interface SelectionInfo extends CanvasImageRef {
   screenX: number;
   screenY: number;
+  zoom: number;
   assetUrl: string | null;
 }
 
@@ -171,6 +173,8 @@ export function DrawWorkspace({
   const titleSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const placeCountRef = useRef(0);
   const modelIdRef = useRef(modelConfigId ?? '');
+  const videoModelIdRef = useRef('');
+  const videoProjectIdRef = useRef<string | null>(null);
   const selectedElementIdsRef = useRef<string[]>([]);
   const drawStrokeColorRef = useRef(DEFAULT_STROKE_COLOR);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -182,6 +186,8 @@ export function DrawWorkspace({
   const [tool, setTool] = useState<Tool>('selection');
   const [zoom, setZoom] = useState(1);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
+  const [quickEditOpen, setQuickEditOpen] = useState(false);
+  const [quickEditInput, setQuickEditInput] = useState('');
   const [selectedImages, setSelectedImages] = useState<CanvasImageRef[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesRef = useRef(messages);
@@ -193,8 +199,10 @@ export function DrawWorkspace({
   const [mode, setMode] = useState<GenerationMode>('image');
   const [title, setTitle] = useState(t('untitled'));
   const [imageModels, setImageModels] = useState<ModelConfigItem[]>([]);
+  const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(modelConfigId ?? null);
+  const [selectedVideoModelId, setSelectedVideoModelId] = useState<string | null>(null);
   const [drawStrokeColor, setDrawStrokeColor] = useState(DEFAULT_STROKE_COLOR);
   const [credits, setCredits] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -216,6 +224,16 @@ export function DrawWorkspace({
     () => imageModels.find((model) => model.id === selectedModelId) ?? null,
     [imageModels, selectedModelId],
   );
+  const selectedVideoModel = useMemo(
+    () => videoModels.find((model) => model.id === selectedVideoModelId) ?? null,
+    [videoModels, selectedVideoModelId],
+  );
+  // The model picker follows the active mode: video mode lists video models,
+  // image mode lists image models, each with its own remembered selection.
+  const isVideoMode = mode === 'video';
+  const pickerModels = isVideoMode ? videoModels : imageModels;
+  const pickerSelectedModel = isVideoMode ? selectedVideoModel : selectedImageModel;
+  const pickerSelectedModelId = isVideoMode ? selectedVideoModelId : selectedModelId;
 
   const refreshConversations = useCallback(async () => {
     const items = await drawBoardActions.listConversations();
@@ -232,6 +250,7 @@ export function DrawWorkspace({
     selectedElementIdsRef.current = [];
     setComposerImages([]);
     placeCountRef.current = 0;
+    videoProjectIdRef.current = null;
 
     (async () => {
       try {
@@ -286,8 +305,9 @@ export function DrawWorkspace({
     setModelsLoading(true);
     (async () => {
       try {
-        const [models, balance] = await Promise.all([
+        const [models, videos, balance] = await Promise.all([
           drawBoardActions.listImageModels(),
+          drawBoardActions.listVideoModels(),
           drawBoardActions.getCredits().catch(() => null),
         ]);
         if (cancelled) return;
@@ -298,6 +318,12 @@ export function DrawWorkspace({
         const chosen = selected ?? models.find((model) => model.isDefault) ?? models[0] ?? null;
         modelIdRef.current = chosen?.id ?? '';
         setSelectedModelId(chosen?.id ?? null);
+
+        setVideoModels(videos);
+        const chosenVideo = videos.find((model) => model.isDefault) ?? videos[0] ?? null;
+        videoModelIdRef.current = chosenVideo?.id ?? '';
+        setSelectedVideoModelId(chosenVideo?.id ?? null);
+
         if (balance !== null) setCredits(balance);
       } catch {
         // Non-fatal; the send action will surface a concrete error if no model exists.
@@ -400,6 +426,10 @@ export function DrawWorkspace({
     const dataURL = await toExcalidrawDataUrl(url);
     api.addFiles([{ id: fileId as never, dataURL: dataURL as never, mimeType: 'image/png' as never, created: Date.now() }]);
 
+    // Size the element to the image's real aspect ratio (longest side =
+    // DEFAULT_IMAGE_SIZE) so non-square images are never stretched.
+    const { width, height } = fitWithinBox(await measureImage(dataURL), DEFAULT_IMAGE_SIZE);
+
     const n = placeCountRef.current++;
     const skeleton = mod
       .convertToExcalidrawElements([
@@ -408,8 +438,8 @@ export function DrawWorkspace({
           fileId: fileId as never,
           x: position?.x ?? 80 + (n % 4) * (DEFAULT_IMAGE_SIZE + 28),
           y: position?.y ?? 80 + Math.floor(n / 4) * (DEFAULT_IMAGE_SIZE + 28),
-          width: DEFAULT_IMAGE_SIZE,
-          height: DEFAULT_IMAGE_SIZE,
+          width,
+          height,
         },
       ])
       .map((el) => ({ ...el, customData: { assetUrl: url, label } })) as unknown as DrawElement[];
@@ -438,18 +468,43 @@ export function DrawWorkspace({
     }
   }, [placeImage]);
 
-  const tileHistoryToCanvas = useCallback(async () => {
+  // Place conversation image artifacts that aren't already on the canvas.
+  // `respectDeleted` includes deleted tombstones in the "already present" set
+  // so user-removed images are not resurrected — used by the auto-reconcile on
+  // load. The manual "tile all" button re-adds everything the user can't see.
+  const tileHistoryToCanvas = useCallback(async (respectDeleted = false) => {
     const api = apiRef.current;
     if (!api) return;
+    const known = respectDeleted
+      ? (api.getSceneElementsIncludingDeleted() as unknown as DrawElement[])
+      : (api.getSceneElements() as unknown as DrawElement[]).filter((e) => !e.isDeleted);
     const onCanvas = new Set(
-      (api.getSceneElements() as unknown as DrawElement[])
-        .filter((e) => e.type === 'image' && !e.isDeleted)
+      known
+        .filter((e) => e.type === 'image')
         .map((e) => String(e.customData?.assetUrl ?? '')),
     );
     for (const url of conversationImageUrls(toPersistedMessages(messagesRef.current))) {
       if (!onCanvas.has(url)) await placeImage(url, '');
     }
   }, [placeImage]);
+
+  // On load, once the board scene and the Excalidraw API are ready, reconcile
+  // the conversation's image artifacts onto the canvas so every generated image
+  // is visible without the user having to press "tile all".
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < 40 && !apiRef.current && !cancelled; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      if (cancelled || !apiRef.current) return;
+      await tileHistoryToCanvas(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, boardId, conversationId, tileHistoryToCanvas]);
 
   const createVideoFlow = useCallback(async (prompt: string, attachmentImages: ComposerImage[]) => {
     const api = apiRef.current;
@@ -568,12 +623,16 @@ export function DrawWorkspace({
     scheduleSave();
   }, [placeImage, scheduleSave, selectedImages, t]);
 
-  const submit = useCallback(async () => {
-    const prompt = input.trim();
+  // `quick` drives the inline quick-edit box anchored under a canvas image:
+  // it forces image mode, sources the prompt/reference from the box, and leaves
+  // the main composer untouched. Without it this is the normal composer submit.
+  const submit = useCallback(async (quick?: { prompt: string; referenceUrls: string[] }) => {
+    const prompt = (quick?.prompt ?? input).trim();
     if (!prompt || generating) return;
+    const isVideo = !quick && mode === 'video';
 
-    const attachmentImages = composerImagesRef.current;
-    const selectedReferenceUrls = selectedImages.map((item) => item.url).filter(Boolean);
+    const attachmentImages = quick ? [] : composerImagesRef.current;
+    const selectedReferenceUrls = quick ? quick.referenceUrls : selectedImages.map((item) => item.url).filter(Boolean);
     const attachmentUrls = attachmentImages.map((item) => item.url);
     const referenceImageUrls = uniqueStrings([...selectedReferenceUrls, ...attachmentUrls]);
     const pendingId = newId('m');
@@ -584,8 +643,10 @@ export function DrawWorkspace({
       userMessage,
       { id: pendingId, role: 'assistant', text: '', pending: true },
     ]);
-    setInput('');
-    setComposerImages([]);
+    if (!quick) {
+      setInput('');
+      setComposerImages([]);
+    }
     setGenerating(true);
 
     try {
@@ -594,21 +655,51 @@ export function DrawWorkspace({
         role: 'USER',
         content: prompt,
         metadata: {
-          messageType: mode === 'video' ? 'draw_video_prompt' : 'draw_image_prompt',
+          messageType: isVideo ? 'draw_video_prompt' : 'draw_image_prompt',
           images: referenceImageUrls,
         },
       }).catch(() => undefined);
 
-      if (mode === 'video') {
+      if (isVideo) {
+        if (!videoModelIdRef.current) {
+          throw new Error(t('chat.noVideoModel'));
+        }
+
+        // Draw the flow diagram for visual context, then run a real generation.
         await createVideoFlow(prompt, attachmentImages);
-        const text = t('chat.videoFlowReady');
+
+        const started = await drawBoardActions.startVideoGeneration({
+          projectId: videoProjectIdRef.current ?? undefined,
+          title: title || t('untitled'),
+          prompt,
+          modelConfigId: videoModelIdRef.current,
+          referenceImageUrls,
+        });
+        videoProjectIdRef.current = started.projectId;
+
+        const result = await drawBoardActions.pollVideoGeneration(started.projectId, started.generationId);
+        if (result.status !== 'completed' || !result.videoUrl) {
+          throw new Error(result.error || t('chat.videoFailed'));
+        }
+
+        const videoUrl = result.videoUrl;
+        // Excalidraw can't play video, so drop a poster frame on the canvas (if
+        // any) and surface the playable clip in the chat panel.
+        if (result.thumbnailUrl) {
+          await placeImage(result.thumbnailUrl, prompt).catch(() => undefined);
+        }
+        const text = `${t('chat.done')}：${prompt}`;
         setMessages((m) => m.map((msg) => (
-          msg.id === pendingId ? { ...msg, pending: false, text } : msg
+          msg.id === pendingId ? { ...msg, pending: false, text, videos: [videoUrl] } : msg
         )));
         void drawBoardActions.appendConversationMessage(conversationId, {
           role: 'ASSISTANT',
           content: text,
-          metadata: { messageType: 'draw_video_flow', images: referenceImageUrls },
+          metadata: {
+            messageType: 'draw_video_result',
+            videos: [videoUrl],
+            thumbnailUrl: result.thumbnailUrl ?? undefined,
+          },
         }).catch(() => undefined);
         return;
       }
@@ -672,8 +763,25 @@ export function DrawWorkspace({
     refreshConversations,
     selectedImages,
     setConversationTitleFromPrompt,
+    title,
     t,
   ]);
+
+  const submitQuickEdit = useCallback(async () => {
+    const prompt = quickEditInput.trim();
+    if (!prompt || generating || !selection?.assetUrl) return;
+    const referenceUrl = selection.assetUrl;
+    setQuickEditInput('');
+    await submit({ prompt, referenceUrls: [referenceUrl] });
+    setQuickEditOpen(false);
+  }, [quickEditInput, generating, selection, submit]);
+
+  // Close the inline quick-edit box whenever the selected element changes
+  // (or is deselected) so it never lingers over the wrong image.
+  useEffect(() => {
+    setQuickEditOpen(false);
+    setQuickEditInput('');
+  }, [selection?.elementId]);
 
   const onChange = useCallback((elements: readonly unknown[], appState: AppStateLike) => {
     const drawElements = elements as DrawElement[];
@@ -718,6 +826,7 @@ export function DrawWorkspace({
         ...el,
         screenX: (el.x + (appState.scrollX ?? 0)) * zoomV,
         screenY: (el.y + (appState.scrollY ?? 0)) * zoomV,
+        zoom: zoomV,
         assetUrl: el.url,
       });
     } else {
@@ -850,6 +959,39 @@ export function DrawWorkspace({
     downloadUrl(selection.assetUrl, `${selection.label || 'draw-image'}.png`);
   }, [selection]);
 
+  // Resize the selected image to its natural aspect ratio, keeping the current
+  // longest side and the top-left corner anchored, so a stretched image snaps
+  // back to the right proportions.
+  const fitSelectedToRatio = useCallback(async () => {
+    const api = apiRef.current;
+    if (!api || !selection?.assetUrl) return;
+    const natural = await measureImage(selection.assetUrl);
+    if (!(natural.width > 0) || !(natural.height > 0)) return;
+
+    const mod = await import('@excalidraw/excalidraw');
+    const elements = api.getSceneElements() as unknown as DrawElement[];
+    const target = elements.find((e) => e.id === selection.elementId && !e.isDeleted);
+    if (!target) return;
+
+    const maxSide = Math.max(
+      Number(target.width) || DEFAULT_IMAGE_SIZE,
+      Number(target.height) || DEFAULT_IMAGE_SIZE,
+    );
+    const fitted = fitWithinBox(natural, maxSide);
+    if (fitted.width === Math.round(Number(target.width)) && fitted.height === Math.round(Number(target.height))) {
+      return;
+    }
+
+    const next = elements.map((e) => (
+      e.id === selection.elementId ? { ...e, width: fitted.width, height: fitted.height } : e
+    ));
+    api.updateScene({
+      elements: next as never,
+      captureUpdate: mod.CaptureUpdateAction.IMMEDIATELY as never,
+    });
+    scheduleSave();
+  }, [selection, scheduleSave]);
+
   const shareCurrentConversation = useCallback(async () => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
     if (!url) return;
@@ -944,11 +1086,24 @@ export function DrawWorkspace({
             <ContextualToolbar
               t={t}
               info={selection}
-              onQuickEdit={() => useSelectedForPrompt(t('context.quickEditPrompt', { label: selection.label }))}
+              onQuickEdit={() => setQuickEditOpen(true)}
               onUpscale={() => useSelectedForPrompt(t('context.upscalePrompt'))}
               onRemoveBg={() => useSelectedForPrompt(t('context.removeBgPrompt'))}
               onEraser={() => setActiveTool('eraser')}
+              onFitSize={() => void fitSelectedToRatio()}
               onDownload={downloadSelected}
+            />
+          )}
+
+          {selection && quickEditOpen && (
+            <QuickEditBox
+              t={t}
+              info={selection}
+              value={quickEditInput}
+              generating={generating}
+              onChange={setQuickEditInput}
+              onSubmit={() => void submitQuickEdit()}
+              onClose={() => setQuickEditOpen(false)}
             />
           )}
 
@@ -1001,26 +1156,22 @@ export function DrawWorkspace({
                   }}
                 />
                 <IconBtn title={t('chat.share')} onClick={() => void shareCurrentConversation()}><Share2 className="size-4" /></IconBtn>
-                <IconBtn
-                  title={t('chat.collapse')}
-                  onClick={() => {
-                    setConversationMenuOpen(false);
-                    setPanelOpen(false);
-                  }}
-                >
-                  <PanelRightClose className="size-4" />
-                </IconBtn>
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <DrawModelPicker
                   t={t}
-                  models={imageModels}
-                  selectedModel={selectedImageModel}
-                  selectedModelId={selectedModelId}
+                  models={pickerModels}
+                  selectedModel={pickerSelectedModel}
+                  selectedModelId={pickerSelectedModelId}
                   loading={modelsLoading}
                   onChange={(id) => {
-                    modelIdRef.current = id ?? '';
-                    setSelectedModelId(id);
+                    if (isVideoMode) {
+                      videoModelIdRef.current = id ?? '';
+                      setSelectedVideoModelId(id);
+                    } else {
+                      modelIdRef.current = id ?? '';
+                      setSelectedModelId(id);
+                    }
                   }}
                 />
                 <IconBtn title={t('chat.tileAll')} onClick={() => void tileHistoryToCanvas()}><LayoutGrid className="size-4" /></IconBtn>
@@ -1277,6 +1428,7 @@ function ContextualToolbar(props: {
   onUpscale: () => void;
   onRemoveBg: () => void;
   onEraser: () => void;
+  onFitSize: () => void;
   onDownload: () => void;
 }) {
   const { t, info } = props;
@@ -1287,6 +1439,7 @@ function ContextualToolbar(props: {
     { label: t('context.upscale'), onClick: props.onUpscale },
     { label: t('context.removeBg'), onClick: props.onRemoveBg },
     { label: t('context.eraser'), onClick: props.onEraser },
+    { label: t('context.fitSize'), onClick: props.onFitSize },
   ];
   return (
     <>
@@ -1304,6 +1457,57 @@ function ContextualToolbar(props: {
         <span className="text-white/45">{info.width} x {info.height}</span>
       </div>
     </>
+  );
+}
+
+function QuickEditBox(props: {
+  t: Tr;
+  info: SelectionInfo;
+  value: string;
+  generating: boolean;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  onClose: () => void;
+}) {
+  const { t, info } = props;
+  const left = Math.max(16, info.screenX);
+  const imageBottom = info.screenY + info.height * info.zoom;
+  const top = Math.max(72, imageBottom + 12);
+  const width = Math.min(460, Math.max(260, info.width * info.zoom));
+  const canSubmit = !props.generating && props.value.trim().length > 0;
+  return (
+    <div
+      className="pointer-events-auto absolute z-30 flex items-center gap-1.5 rounded-xl border border-white/12 bg-black/90 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+      style={{ left, top, width }}
+    >
+      <Wand2 className="ml-1 size-4 shrink-0 text-primary" />
+      <input
+        autoFocus
+        value={props.value}
+        disabled={props.generating}
+        onChange={(event) => props.onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            if (canSubmit) props.onSubmit();
+          } else if (event.key === 'Escape') {
+            props.onClose();
+          }
+        }}
+        placeholder={t('context.quickEditPlaceholder')}
+        className="min-w-0 flex-1 bg-transparent px-1 text-sm text-white placeholder:text-white/40 focus:outline-none"
+      />
+      <button
+        type="button"
+        title={t('context.quickEditSubmit')}
+        onClick={props.onSubmit}
+        disabled={!canSubmit}
+        className="grid size-7 shrink-0 place-items-center rounded-md bg-white text-black transition hover:bg-white/90 disabled:opacity-40"
+      >
+        {props.generating ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+      </button>
+      <IconBtn title={t('context.close')} onClick={props.onClose}><X className="size-4" /></IconBtn>
+    </div>
   );
 }
 
@@ -1360,6 +1564,13 @@ function MessageBubble({ message, t, onImageClick }: { message: ChatMessage; t: 
               ))}
             </div>
           )}
+          {message.videos && message.videos.length > 0 && (
+            <div className="space-y-2">
+              {message.videos.map((url) => (
+                <video key={url} src={url} controls className="w-full rounded-xl border border-white/12" />
+              ))}
+            </div>
+          )}
           {message.text && (
             <p className={`inline-block max-w-full rounded-2xl px-3 py-2 text-left text-sm leading-6 ${
               message.error
@@ -1390,7 +1601,7 @@ function firstUserPrompt(messages: ChatMessage[]): string | null {
 function toPersistedMessages(messages: ChatMessage[]): PersistedMessage[] {
   return messages
     .filter((m) => !m.pending)
-    .map((m) => ({ id: m.id, role: m.role, text: m.text, images: m.images }));
+    .map((m) => ({ id: m.id, role: m.role, text: m.text, images: m.images, videos: m.videos }));
 }
 
 function combinedSignature(elements: readonly DrawElement[], conversation: readonly PersistedMessage[]): string {
@@ -1399,6 +1610,7 @@ function combinedSignature(elements: readonly DrawElement[], conversation: reado
     role: m.role,
     text: m.text,
     images: m.images ?? [],
+    videos: m.videos ?? [],
   })));
   return `${sceneSignature(elements)}##${conv}`;
 }
@@ -1406,18 +1618,24 @@ function combinedSignature(elements: readonly DrawElement[], conversation: reado
 function conversationMessageToChatMessage(message: ConversationMessage): ChatMessage {
   const metadata = asRecord(message.metadata);
   const images = extractImagesFromMetadata(metadata);
+  const videos = extractUrlsFromMetadata(metadata, 'videos');
   return {
     id: message.id,
     role: message.role === 'USER' ? 'user' : 'assistant',
     text: message.content,
     images: images.length > 0 ? images : undefined,
+    videos: videos.length > 0 ? videos : undefined,
     error: metadata?.messageType === 'error',
   };
 }
 
 function extractImagesFromMetadata(metadata: Record<string, unknown> | null): string[] {
+  return extractUrlsFromMetadata(metadata, 'images');
+}
+
+function extractUrlsFromMetadata(metadata: Record<string, unknown> | null, key: string): string[] {
   if (!metadata) return [];
-  const raw = metadata.images;
+  const raw = metadata[key];
   if (!Array.isArray(raw)) return [];
   return raw
     .map((item) => {
@@ -1487,6 +1705,34 @@ async function toExcalidrawDataUrl(url: string): Promise<string> {
   } catch {
     return url;
   }
+}
+
+/** Read an image's intrinsic pixel dimensions (0×0 if it fails to decode). */
+function measureImage(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve({ width: 0, height: 0 });
+    img.src = src;
+  });
+}
+
+/**
+ * Fit an image into a square `max`×`max` box while preserving aspect ratio, so
+ * the longest side equals `max` and the image is never distorted. Falls back to
+ * a square box when the natural size is unknown.
+ */
+function fitWithinBox(
+  natural: { width: number; height: number },
+  max: number,
+): { width: number; height: number } {
+  const { width, height } = natural;
+  if (!(width > 0) || !(height > 0)) return { width: max, height: max };
+  const scale = max / Math.max(width, height);
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
 }
 
 function isConflict(error: unknown): boolean {

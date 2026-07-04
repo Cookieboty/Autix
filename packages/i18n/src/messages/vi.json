@@ -1801,7 +1801,11 @@
       "download": "Download",
       "quickEditPrompt": "Tiếp tục chỉnh sửa ảnh này: {label}",
       "upscalePrompt": "Phóng to ảnh này và giữ bố cục, chất liệu",
-      "removeBgPrompt": "Xóa nền và giữ chủ thể"
+      "removeBgPrompt": "Xóa nền và giữ chủ thể",
+      "fitSize": "Vừa kích thước",
+      "quickEditPlaceholder": "Mô tả thay đổi…",
+      "quickEditSubmit": "Tạo",
+      "close": "Đóng"
     },
     "prompt": {
       "title": "Prompt chỉnh sửa",
@@ -1851,6 +1855,8 @@
       "newConversation": "Cuộc trò chuyện mới",
       "renameFailed": "Lưu tiêu đề thất bại",
       "noModel": "Không có model ảnh khả dụng",
+      "noVideoModel": "Không có model video khả dụng. Hãy chọn một model video trên thanh công cụ trước.",
+      "videoFailed": "Tạo video thất bại. Vui lòng thử lại sau.",
       "modelLoading": "Đang tải model...",
       "modelEmpty": "Không có model",
       "modelSearchPlaceholder": "Tìm model",

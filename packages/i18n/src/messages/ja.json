@@ -1801,7 +1801,11 @@
       "download": "Download",
       "quickEditPrompt": "この画像を続けて編集: {label}",
       "upscalePrompt": "構図と質感を保ったままこの画像をアップスケール",
-      "removeBgPrompt": "背景を削除して被写体を残す"
+      "removeBgPrompt": "背景を削除して被写体を残す",
+      "fitSize": "サイズを自動調整",
+      "quickEditPlaceholder": "変更内容を入力…",
+      "quickEditSubmit": "生成",
+      "close": "閉じる"
     },
     "prompt": {
       "title": "編集プロンプト",
@@ -1851,6 +1855,8 @@
       "newConversation": "新しい会話",
       "renameFailed": "会話タイトルの保存に失敗しました",
       "noModel": "利用可能な画像モデルがありません",
+      "noVideoModel": "利用可能な動画モデルがありません。先にツールバーで動画モデルを選択してください。",
+      "videoFailed": "動画の生成に失敗しました。しばらくしてから再試行してください。",
       "modelLoading": "モデルを読み込み中...",
       "modelEmpty": "モデルなし",
       "modelSearchPlaceholder": "モデルを検索",

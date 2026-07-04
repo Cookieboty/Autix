@@ -2285,7 +2285,11 @@
       "download": "下载",
       "quickEditPrompt": "基于这张图继续编辑：{label}",
       "upscalePrompt": "放大这张图，保留原构图和质感",
-      "removeBgPrompt": "去掉这张图的背景，保留主体"
+      "removeBgPrompt": "去掉这张图的背景，保留主体",
+      "fitSize": "自适应尺寸",
+      "quickEditPlaceholder": "描述要修改的内容…",
+      "quickEditSubmit": "生成",
+      "close": "关闭"
     },
     "prompt": {
       "title": "编辑提示词",
@@ -2335,6 +2339,8 @@
       "newConversation": "新建对话",
       "renameFailed": "会话标题保存失败",
       "noModel": "没有可用的图片模型",
+      "noVideoModel": "没有可用的视频模型，请先在工具栏选择一个视频模型",
+      "videoFailed": "视频生成失败，请稍后重试",
       "modelLoading": "加载模型…",
       "modelEmpty": "暂无模型",
       "modelSearchPlaceholder": "搜索模型",

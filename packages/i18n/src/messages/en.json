@@ -2285,7 +2285,11 @@
       "download": "Download",
       "quickEditPrompt": "Continue editing this image: {label}",
       "upscalePrompt": "Upscale this image while keeping the composition and texture",
-      "removeBgPrompt": "Remove the background and keep the subject"
+      "removeBgPrompt": "Remove the background and keep the subject",
+      "fitSize": "Fit size",
+      "quickEditPlaceholder": "Describe the change…",
+      "quickEditSubmit": "Generate",
+      "close": "Close"
     },
     "prompt": {
       "title": "Edit prompt",
@@ -2335,6 +2339,8 @@
       "newConversation": "New conversation",
       "renameFailed": "Failed to save conversation title",
       "noModel": "No image model is available",
+      "noVideoModel": "No video model is available. Pick a video model in the toolbar first.",
+      "videoFailed": "Video generation failed. Please try again later.",
       "modelLoading": "Loading models...",
       "modelEmpty": "No model",
       "modelSearchPlaceholder": "Search models",

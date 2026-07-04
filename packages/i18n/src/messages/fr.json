@@ -1801,7 +1801,11 @@
       "download": "Download",
       "quickEditPrompt": "Continuer l'édition de cette image : {label}",
       "upscalePrompt": "Agrandir cette image en conservant composition et texture",
-      "removeBgPrompt": "Supprimer l'arrière-plan et conserver le sujet"
+      "removeBgPrompt": "Supprimer l'arrière-plan et conserver le sujet",
+      "fitSize": "Ajuster la taille",
+      "quickEditPlaceholder": "Décrivez la modification…",
+      "quickEditSubmit": "Générer",
+      "close": "Fermer"
     },
     "prompt": {
       "title": "Prompt d'édition",
@@ -1851,6 +1855,8 @@
       "newConversation": "Nouvelle conversation",
       "renameFailed": "Échec de l'enregistrement du titre",
       "noModel": "Aucun modèle image disponible",
+      "noVideoModel": "Aucun modèle vidéo disponible. Choisissez d'abord un modèle vidéo dans la barre d'outils.",
+      "videoFailed": "Échec de la génération vidéo. Veuillez réessayer plus tard.",
       "modelLoading": "Chargement des modèles...",
       "modelEmpty": "Aucun modèle",
       "modelSearchPlaceholder": "Rechercher un modèle",

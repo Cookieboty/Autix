@@ -7,6 +7,7 @@ import {
   getConversations,
   pointsApi,
   updateConversationTitle,
+  videoProjectApi,
   type CanvasBoardStateResponse,
   type CanvasChatGenerateResponse,
   type CanvasSaveStateResponse,
@@ -14,7 +15,7 @@ import {
   type ConversationMessage,
   type ModelConfigItem,
 } from '@autix/sdk';
-import type { CanvasBoardState } from '@autix/domain';
+import { hasImageCapability, isVideoModel, type CanvasBoardState } from '@autix/domain';
 
 export type {
   CanvasBoardStateResponse,
@@ -28,7 +29,11 @@ const DRAW_BOARD_DESCRIPTION_PREFIX = 'draw:conversation:';
 let firstDrawConversationInFlight: Promise<Conversation> | null = null;
 
 function isImageModel(model: ModelConfigItem): boolean {
-  return Boolean(model.metadata?.imageModelKind) || model.type === 'image';
+  // Match the backend, which classifies image models by capability
+  // (hasImageCapability). The old `type === 'image'` check was dead — the
+  // ModelType enum has no `image` value — so capability-only models that lack a
+  // metadata.imageModelKind were dropped, showing "暂无模型".
+  return hasImageCapability(model.capabilities ?? []) || Boolean(model.metadata?.imageModelKind);
 }
 
 async function createFirstDrawConversation(): Promise<Conversation> {
@@ -148,6 +153,96 @@ export const drawBoardActions = {
     const imageModels = await drawBoardActions.listImageModels();
     const chosen = imageModels.find((m) => m.isDefault) ?? imageModels[0];
     return chosen?.id ?? null;
+  },
+
+  /** Available video models — used when the workspace is in video mode. */
+  listVideoModels: async (): Promise<ModelConfigItem[]> => {
+    const res = await getAvailableModels();
+    const models = res.data ?? [];
+    return models.filter(isVideoModel);
+  },
+
+  /**
+   * Start a video generation from the draw workspace. Draw conversations are
+   * `kind:'image'`, which the video-project API refuses to bind, so we use a
+   * standalone project purely as the generation vehicle and surface the result
+   * back in the draw UI ourselves. Pass a cached `projectId` to reuse one
+   * standalone project across a session (each call adds a fresh clip).
+   */
+  startVideoGeneration: async (opts: {
+    projectId?: string;
+    title: string;
+    prompt: string;
+    modelConfigId: string;
+    referenceImageUrls?: string[];
+    duration?: number;
+    ratio?: string;
+    resolution?: string;
+  }): Promise<{ projectId: string; generationId: string }> => {
+    const projectId =
+      opts.projectId ??
+      ((await videoProjectApi.create({ title: opts.title || '绘制视频', standalone: true }))
+        .data as { id: string }).id;
+
+    const clip = (await videoProjectApi.addClip(projectId, {
+      prompt: opts.prompt,
+      params: {
+        modelConfigId: opts.modelConfigId,
+        generationMode: 'standard',
+        duration: opts.duration ?? 5,
+        ratio: opts.ratio ?? '16:9',
+        resolution: opts.resolution ?? '1080p',
+        generateAudio: true,
+      },
+    }).then((res) => res.data as { id: string }));
+
+    // Only http(s) URLs can be sent as materials; data: URLs (composer uploads)
+    // aren't reachable by the generation backend, so we skip them.
+    const httpRefs = (opts.referenceImageUrls ?? []).filter((url) => /^https?:/i.test(url));
+    for (let i = 0; i < httpRefs.length; i += 1) {
+      await videoProjectApi.addMaterial(projectId, clip.id, {
+        role: i === 0 ? 'first_frame' : 'reference_image',
+        sourceType: 'image_generation',
+        url: httpRefs[i],
+      });
+    }
+
+    const gen = (await videoProjectApi.generateClip(projectId, clip.id)).data;
+    return { projectId, generationId: gen.generationId };
+  },
+
+  /**
+   * Poll a video generation until it reaches a terminal state. There is no time
+   * limit — a generation always resolves to a result (the backend eventually
+   * marks it completed/failed/expired), and transient network errors just retry
+   * on the next tick.
+   */
+  pollVideoGeneration: async (
+    projectId: string,
+    generationId: string,
+    onTick?: (status: string) => void,
+  ): Promise<{ status: string; videoUrl?: string | null; thumbnailUrl?: string | null; error?: string | null }> => {
+    const TERMINAL = new Set(['completed', 'failed', 'expired']);
+    const INTERVAL_MS = 3_000;
+    for (;;) {
+      await new Promise((resolve) => setTimeout(resolve, INTERVAL_MS));
+      let hit: { status: string; videoUrl?: string | null; thumbnailUrl?: string | null; error?: string | null } | undefined;
+      try {
+        hit = (await videoProjectApi.refreshGeneration(projectId, generationId)).data;
+      } catch {
+        try {
+          const list = (await videoProjectApi.getGenerations(projectId)).data ?? [];
+          hit = list.find((item) => item.id === generationId);
+        } catch {
+          continue;
+        }
+      }
+      if (!hit) continue;
+      onTick?.(hit.status);
+      if (TERMINAL.has(hit.status)) {
+        return { status: hit.status, videoUrl: hit.videoUrl, thumbnailUrl: hit.thumbnailUrl, error: hit.error };
+      }
+    }
   },
 
   /** Spendable points balance for the credits indicator. */
