@@ -1,4 +1,8 @@
+export { FeaturedModelsShowcase } from './home/FeaturedModelsShowcase';
 export { FinalHomeCta } from './home/FinalHomeCta';
+export { HomeFeatureTags } from './home/HomeFeatureTags';
+export { HomeGallerySection } from './home/HomeGallerySection';
+export { HomeStarterSection } from './home/HomeStarterSection';
 export { HomeReleaseGallery } from './home/HomeReleaseGallery';
 export { HomeTemplateFlow } from './home/HomeTemplateFlow';
 export { PresetRunway } from './home/PresetRunway';

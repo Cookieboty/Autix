@@ -103,7 +103,7 @@ export function HomeReleaseGallery({
     <section className="relative overflow-hidden border-y border-border bg-background py-12 md:py-20">
       <div className="growth-rb-ambient pointer-events-none absolute inset-0 opacity-70" />
       <div className="growth-grid-noise-lg pointer-events-none absolute inset-0 opacity-[0.1]" />
-      <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+      <div className="relative mx-auto max-w-[1920px] px-4 md:px-6">
         <HomeSectionIntro eyebrow={eyebrow} title={title} subtitle={subtitle} />
 
         <div className="grid gap-3 lg:grid-cols-[1.16fr_0.84fr]">

@@ -21,6 +21,7 @@ import {
 import { findVideoModelByHint } from './generator-video-presenters';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
+import type { ImageStudioMode } from './generator/generator-studio-helpers';
 import type { PublicGrowthMediaItem } from './types';
 import { ImageGeneratorStudio } from './generator/image/ImageGeneratorStudio';
 import { VideoGeneratorStudio } from './generator/video/VideoGeneratorStudio';
@@ -36,10 +37,12 @@ export function PublicGeneratorStudioView({
   kind,
   examples,
   initialModel,
+  initialMode,
 }: {
   kind: GeneratorKind;
   examples?: PublicGrowthMediaItem[] | null;
   initialModel?: string | null;
+  initialMode?: ImageStudioMode;
 }) {
   const t = useTranslations('publicGrowth');
   const items = useMemo(
@@ -186,6 +189,7 @@ export function PublicGeneratorStudioView({
           selectedModelValue={selectedImageModelValue}
           modelsLoading={imageModelsLoading}
           onModelChange={setSelectedImageModelId}
+          initialMode={initialMode}
         />
       )}
     </div>

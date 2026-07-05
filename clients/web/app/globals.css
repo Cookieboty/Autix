@@ -76,8 +76,8 @@
   --info-foreground: var(--info);
   --info-bg: color-mix(in srgb, var(--info) 12%, transparent);
   --info-border: color-mix(in srgb, var(--info) 28%, transparent);
-  --growth-accent: oklch(0.82 0.09 235);        /* CTA/主操作:冷雾青蓝,贴近 --info 家族 */
-  --growth-accent-hover: oklch(0.86 0.09 235);  /* hover/active 抬一档,hue/chroma 不变 */
+  --growth-accent: #d1fe17;                     /* CTA/主操作:亮柠檬绿(brand lime) ≈ oklch(0.93 0.22 122) */
+  --growth-accent-hover: oklch(0.96 0.19 122);  /* hover/active 抬一档,提亮不变 hue */
   --growth-accent-soft: color-mix(in srgb, var(--growth-accent) 16%, transparent);
   --growth-plan-0: var(--growth-accent);  /* primary plan accent = brand teal */
   --growth-plan-1: #7dd3fc;       /* sky-cyan: info accent */
@@ -180,8 +180,8 @@
   --info-foreground: var(--info);
   --info-bg: color-mix(in srgb, var(--info) 14%, transparent);
   --info-border: color-mix(in srgb, var(--info) 34%, transparent);
-  --growth-accent: oklch(0.82 0.09 235);        /* CTA/主操作:冷雾青蓝,贴近 --info 家族 */
-  --growth-accent-hover: oklch(0.86 0.09 235);  /* hover/active 抬一档,hue/chroma 不变 */
+  --growth-accent: #d1fe17;                     /* CTA/主操作:亮柠檬绿(brand lime) ≈ oklch(0.93 0.22 122) */
+  --growth-accent-hover: oklch(0.96 0.19 122);  /* hover/active 抬一档,提亮不变 hue */
   --growth-accent-soft: color-mix(in srgb, var(--growth-accent) 16%, transparent);
   --growth-plan-0: var(--growth-accent);  /* primary plan accent = brand teal */
   --growth-plan-1: #7dd3fc;
@@ -1226,6 +1226,56 @@
 /* App navigation header drop shadow */
 .growth-nav-shadow {
   box-shadow: 0 16px 60px rgb(0 0 0 / 0.35);
+}
+
+/* Nav right-cluster glass button: translucent fill + top inner highlight */
+.growth-nav-btn {
+  border-radius: 8px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.05);
+  box-shadow:
+    0 2px 1.5px -0.5px rgb(0 0 0 / 0.03),
+    inset 0 2px 3px 0 rgb(255 255 255 / 0.03);
+  backdrop-filter: blur(12px);
+}
+.growth-nav-btn:hover {
+  background: rgb(255 255 255 / 0.09);
+  border-color: rgb(255 255 255 / 0.14);
+}
+
+/* 引导卡片流光滑动：斜向白光条周期性扫过（含停顿） */
+@keyframes growth-sheen-slide {
+  0% {
+    transform: translateX(-160%) skewX(-14deg);
+  }
+  55% {
+    transform: translateX(320%) skewX(-14deg);
+  }
+  100% {
+    transform: translateX(320%) skewX(-14deg);
+  }
+}
+.growth-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 42%;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.12) 50%,
+    transparent 100%
+  );
+  transform: translateX(-160%) skewX(-14deg);
+  animation: growth-sheen-slide 5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .growth-sheen::after {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 /* Tooltip drop shadow */

@@ -33,6 +33,7 @@ export function ImageGeneratorStudio({
   selectedModelValue,
   modelsLoading,
   onModelChange,
+  initialMode = 'history',
 }: {
   items: PublicGrowthMediaItem[];
   imageCapability: ImageModelCapability;
@@ -42,9 +43,10 @@ export function ImageGeneratorStudio({
   selectedModelValue?: string | null;
   modelsLoading: boolean;
   onModelChange: (modelId: string) => void;
+  initialMode?: ImageStudioMode;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const [mode, setMode] = useState<ImageStudioMode>('history');
+  const [mode, setMode] = useState<ImageStudioMode>(initialMode);
   const templateMode = mode === 'templates';
   const [templateDensity, setTemplateDensity] = useState<TemplateDensity>('normal');
   const [templates, setTemplates] = useState<ImageTemplate[]>([]);
