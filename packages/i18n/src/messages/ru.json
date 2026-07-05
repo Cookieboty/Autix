@@ -1807,6 +1807,10 @@
       "quickEditSubmit": "Сгенерировать",
       "close": "Закрыть"
     },
+    "contextMenu": {
+      "wrapSelectionInFrame": "Обернуть выделение во фрейм",
+      "copyElementLink": "Скопировать ссылку на объект"
+    },
     "prompt": {
       "title": "Промпт редактирования",
       "placeholder": "Опишите, что сгенерировать или изменить...",
@@ -1831,6 +1835,7 @@
       "pen": "Pen",
       "text": "Text",
       "genImage": "Generate image",
+      "arrangeVideo": "Автораскладка",
       "genVideo": "Generate video",
       "genText": "Generate text",
       "color": "Color"

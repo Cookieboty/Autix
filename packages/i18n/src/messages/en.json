@@ -2291,6 +2291,10 @@
       "quickEditSubmit": "Generate",
       "close": "Close"
     },
+    "contextMenu": {
+      "wrapSelectionInFrame": "Wrap selection in frame",
+      "copyElementLink": "Copy link to object"
+    },
     "prompt": {
       "title": "Edit prompt",
       "placeholder": "Describe what to generate or change...",
@@ -2315,6 +2319,7 @@
       "pen": "Pen",
       "text": "Text",
       "genImage": "Generate image",
+      "arrangeVideo": "Auto layout",
       "genVideo": "Generate video",
       "genText": "Generate text",
       "color": "Color"

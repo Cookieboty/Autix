@@ -45,12 +45,14 @@ function findVideoModelByHint(models: { id: string; name?: string | null; model?
 }
 
 export function VideoWorkbenchWorkspace({
+  initialProjectId = null,
   initialTemplateId = null,
   initialWorkflowTemplateId = null,
   initialModelId = null,
   initialDraft,
   onInitialDraftCleared,
 }: {
+  initialProjectId?: string | null;
   initialTemplateId?: string | null;
   initialWorkflowTemplateId?: string | null;
   initialModelId?: string | null;
@@ -181,8 +183,12 @@ export function VideoWorkbenchWorkspace({
   const draftAppliedRef = useRef(false);
 
   useEffect(() => {
+    if (initialProjectId) {
+      void loadProject(initialProjectId);
+      return;
+    }
     void loadOrCreateStandaloneProject();
-  }, [loadOrCreateStandaloneProject]);
+  }, [initialProjectId, loadOrCreateStandaloneProject, loadProject]);
 
   const clips = project?.clips ?? [];
   const selectedClip = clips.find((clip) => clip.id === selectedClipId) ?? clips[0] ?? null;

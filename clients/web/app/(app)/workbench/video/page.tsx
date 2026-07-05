@@ -63,6 +63,7 @@ export default function VideoWorkbenchPage() {
   };
   return (
     <VideoWorkbenchWorkspace
+      initialProjectId={searchParams.get('projectId')}
       initialTemplateId={searchParams.get('templateId')}
       initialWorkflowTemplateId={searchParams.get('workflowTemplateId')}
       initialModelId={searchParams.get('model')}

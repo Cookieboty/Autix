@@ -1807,6 +1807,10 @@
       "quickEditSubmit": "生成",
       "close": "關閉"
     },
+    "contextMenu": {
+      "wrapSelectionInFrame": "將選區包入畫框",
+      "copyElementLink": "複製物件連結"
+    },
     "prompt": {
       "title": "編輯提示詞",
       "placeholder": "描述要生成或修改的內容...",
@@ -1831,6 +1835,7 @@
       "pen": "畫筆",
       "text": "文字",
       "genImage": "生成圖片",
+      "arrangeVideo": "一鍵排版",
       "genVideo": "生成影片",
       "genText": "生成文字",
       "color": "顏色"

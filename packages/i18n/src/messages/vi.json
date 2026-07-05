@@ -1807,6 +1807,10 @@
       "quickEditSubmit": "Tạo",
       "close": "Đóng"
     },
+    "contextMenu": {
+      "wrapSelectionInFrame": "Bọc vùng chọn trong khung",
+      "copyElementLink": "Sao chép liên kết đối tượng"
+    },
     "prompt": {
       "title": "Prompt chỉnh sửa",
       "placeholder": "Mô tả nội dung cần tạo hoặc chỉnh sửa...",
@@ -1831,6 +1835,7 @@
       "pen": "Pen",
       "text": "Text",
       "genImage": "Generate image",
+      "arrangeVideo": "Tự sắp xếp",
       "genVideo": "Generate video",
       "genText": "Generate text",
       "color": "Color"

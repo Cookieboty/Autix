@@ -682,7 +682,8 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
     const { modelConfigId, modelConfig, apiKey, baseUrl } = modelContext;
     const resolvedPrompt = resolveStoryboardVideoPrompt({ clips, params });
-    const content = this.seedanceApi.buildContent([], resolvedPrompt);
+    const storyboardMaterials = clips.flatMap((clip) => clip.materials ?? []);
+    const content = this.seedanceApi.buildContent(storyboardMaterials, resolvedPrompt);
     if (content.length === 0)
       throw new BadRequestException('项目缺少分镜 prompt');
 
@@ -719,6 +720,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
         promptPreview: resolvedPrompt.slice(0, 400),
         contentCount: content.length,
         contentTypes: content.map((item) => item.type),
+        materialCount: storyboardMaterials.length,
       })}`,
     );
 

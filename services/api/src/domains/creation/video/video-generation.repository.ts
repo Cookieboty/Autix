@@ -376,6 +376,7 @@ export class VideoGenerationRepository {
     return this.prisma.video_clips.findMany({
       where: { projectId },
       orderBy: { order: 'asc' },
+      include: { materials: true },
     });
   }
 

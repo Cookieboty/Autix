@@ -419,6 +419,7 @@ describe('VideoGenerationFlowService billing', () => {
         },
         status: VideoClipStatus.pending,
         chainFromPrev: false,
+        materials: [],
       },
       {
         id: 'clip-2',
@@ -436,6 +437,7 @@ describe('VideoGenerationFlowService billing', () => {
         },
         status: VideoClipStatus.pending,
         chainFromPrev: true,
+        materials: [],
       },
     ];
     const { service, prisma, seedanceApi, pointsService } = makeService({
@@ -470,6 +472,121 @@ describe('VideoGenerationFlowService billing', () => {
         data: { status: VideoClipStatus.generating },
       }),
     );
+  });
+
+  it('passes storyboard clip materials into the single provider task', async () => {
+    const projectClips = [
+      {
+        id: 'clip-1',
+        projectId: 'project-1',
+        order: 1,
+        title: '开场',
+        prompt: '赛博朋克城市远景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '720p',
+          duration: 2,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: false,
+        materials: [
+          {
+            id: 'mat-1',
+            clipId: 'clip-1',
+            role: 'first_frame',
+            sourceType: 'upload',
+            sourceId: null,
+            url: 'https://img.test/a.png',
+            name: 'A',
+            metadata: null,
+            createdAt: new Date(),
+          },
+          {
+            id: 'mat-2',
+            clipId: 'clip-1',
+            role: 'last_frame',
+            sourceType: 'upload',
+            sourceId: null,
+            url: 'https://img.test/b.png',
+            name: 'B',
+            metadata: null,
+            createdAt: new Date(),
+          },
+        ],
+      },
+      {
+        id: 'clip-2',
+        projectId: 'project-1',
+        order: 2,
+        title: '特写',
+        prompt: '红衣少女半身近景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '720p',
+          duration: 3,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: true,
+        materials: [
+          {
+            id: 'mat-3',
+            clipId: 'clip-2',
+            role: 'first_frame',
+            sourceType: 'upload',
+            sourceId: null,
+            url: 'https://img.test/b.png',
+            name: 'B',
+            metadata: null,
+            createdAt: new Date(),
+          },
+          {
+            id: 'mat-4',
+            clipId: 'clip-2',
+            role: 'last_frame',
+            sourceType: 'upload',
+            sourceId: null,
+            url: 'https://img.test/c.png',
+            name: 'C',
+            metadata: null,
+            createdAt: new Date(),
+          },
+        ],
+      },
+    ];
+    const { service, prisma, seedanceApi } = makeService({ projectClips });
+    prisma.video_projects.findUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+    });
+
+    await service.generateAllClips('project-1', 'user-1');
+
+    expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
+    expect(seedanceApi.buildContent).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ role: 'first_frame', url: 'https://img.test/a.png' }),
+        expect.objectContaining({ role: 'last_frame', url: 'https://img.test/b.png' }),
+        expect.objectContaining({ role: 'first_frame', url: 'https://img.test/b.png' }),
+        expect.objectContaining({ role: 'last_frame', url: 'https://img.test/c.png' }),
+      ],
+      expect.stringContaining('完整分镜脚本'),
+    );
+    const createTaskCalls = seedanceApi.createTask.mock.calls as unknown as Array<
+      [string, { content: Array<{ type: string; image_url?: { url: string } }> }]
+    >;
+    const taskRequest = createTaskCalls.at(-1)?.[1];
+    expect(taskRequest?.content.filter((item) => item.type === 'image_url').map((item) => item.image_url?.url)).toEqual([
+      'https://img.test/a.png',
+      'https://img.test/b.png',
+      'https://img.test/b.png',
+      'https://img.test/c.png',
+    ]);
   });
 
   it('uses the total duration of all storyboard clips for entitlement, risk, billing, and provider request', async () => {

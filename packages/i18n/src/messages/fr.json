@@ -1807,6 +1807,10 @@
       "quickEditSubmit": "Générer",
       "close": "Fermer"
     },
+    "contextMenu": {
+      "wrapSelectionInFrame": "Encadrer la sélection",
+      "copyElementLink": "Copier le lien de l’objet"
+    },
     "prompt": {
       "title": "Prompt d'édition",
       "placeholder": "Décrivez ce qu'il faut générer ou modifier...",
@@ -1831,6 +1835,7 @@
       "pen": "Pen",
       "text": "Text",
       "genImage": "Generate image",
+      "arrangeVideo": "Mise en page auto",
       "genVideo": "Generate video",
       "genText": "Generate text",
       "color": "Couleur"

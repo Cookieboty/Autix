@@ -1807,6 +1807,10 @@
       "quickEditSubmit": "生成",
       "close": "閉じる"
     },
+    "contextMenu": {
+      "wrapSelectionInFrame": "選択範囲をフレームで囲む",
+      "copyElementLink": "オブジェクトリンクをコピー"
+    },
     "prompt": {
       "title": "編集プロンプト",
       "placeholder": "生成または変更したい内容を記述...",
@@ -1831,6 +1835,7 @@
       "pen": "Pen",
       "text": "Text",
       "genImage": "Generate image",
+      "arrangeVideo": "自動整列",
       "genVideo": "Generate video",
       "genText": "Generate text",
       "color": "Color"

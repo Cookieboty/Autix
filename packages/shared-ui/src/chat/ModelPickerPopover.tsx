@@ -134,6 +134,7 @@ export function ModelPickerPopover({
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         align="start"
+        data-model-picker-popover="true"
         className="w-80 max-h-[70vh] overflow-hidden p-0"
         onKeyDown={handleKeyDown}
       >
