@@ -4,6 +4,7 @@ export * from './billing';
 export * from './canvas';
 export * from './common';
 export * from './conversation';
+export * from './gallery';
 export * from './image';
 export * from './marketplace';
 export * from './model';
