@@ -682,6 +682,7 @@ enum ResourceType {
   AGENT
   IMAGE_TEMPLATE
   VIDEO_TEMPLATE
+  GALLERY_POST
 }
 
 enum RuntimeReq {

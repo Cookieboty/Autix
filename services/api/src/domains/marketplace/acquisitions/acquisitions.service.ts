@@ -15,7 +15,8 @@ const ACQUIRABLE_TYPES = new Set<ResourceType>([
   ResourceType.AGENT,
 ]);
 
-const TASK_TYPE_BY_RESOURCE: Record<ResourceType, string> = {
+// 非获取类资源（如 GALLERY_POST）不进此映射：用 Partial 避免每加一种 ResourceType 都要改穷尽映射。
+const TASK_TYPE_BY_RESOURCE: Partial<Record<ResourceType, string>> = {
   SKILL: 'skill_acquisition',
   MCP: 'mcp_acquisition',
   AGENT: 'agent_acquisition',
@@ -54,6 +55,9 @@ export class AcquisitionsService {
     if (!resource) throw new NotFoundException('资源不存在');
 
     const cost = resource.pointsCost ?? 0;
+    // ACQUIRABLE_TYPES 已保证 type 命中映射；兜底仅为 Partial 的类型安全。
+    const taskType =
+      TASK_TYPE_BY_RESOURCE[type] ?? `${type.toLowerCase()}_acquisition`;
 
     // 扣分与写 acquisition 必须同生共死：任一失败整体回滚，杜绝"扣了分但没记录"。
     const acq = await this.acquisitions.createAcquisitionInTransaction(
@@ -71,8 +75,8 @@ export class AcquisitionsService {
               cost,
               PointsSource.TASK,
               resourceId,
-              `${TASK_TYPE_BY_RESOURCE[type]}: ${resource.title}`,
-              TASK_TYPE_BY_RESOURCE[type],
+              `${taskType}: ${resource.title}`,
+              taskType,
             ).then(() => undefined)
         : undefined,
     );
