@@ -1,9 +1,15 @@
-import { buildGrowthPageMetadata, renderGrowthPage } from '@/lib/growth-page-route';
+// import { buildGrowthPageMetadata, renderGrowthPage } from '@/lib/growth-page-route';
+//
+// const slug = 'original-series';
+//
+// export const generateMetadata = () => buildGrowthPageMetadata(slug);
+//
+// export default function OriginalSeriesPage() {
+//   return renderGrowthPage(slug);
+// }
 
-const slug = 'original-series';
-
-export const generateMetadata = () => buildGrowthPageMetadata(slug);
+import { notFound } from 'next/navigation';
 
 export default function OriginalSeriesPage() {
-  return renderGrowthPage(slug);
+  notFound();
 }

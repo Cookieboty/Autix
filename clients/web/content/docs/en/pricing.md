@@ -39,8 +39,8 @@ Different generation modes consume different amounts:
 
 Choose annual billing for a **20% discount**:
 
-- Basic: $3.29/mo (was $4.14/mo)
-- Pro: $9.00/mo (was $11.29/mo)
+- Basic: $3.31/mo (was $4.14/mo)
+- Pro: $9.03/mo (was $11.29/mo)
 
 ## Credit Expiration
 

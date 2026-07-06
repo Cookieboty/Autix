@@ -24,30 +24,11 @@ describe('buildGeneratorNavItems', () => {
     }
   });
 
-  test('opens canvas through the draw workspace', () => {
-    const canvas = buildGeneratorNavItems('image').find((i) => i.key === 'canvas');
-    expect(canvas).toBeDefined();
-    expect(canvas!.href).toBe('/draw');
-    expect(canvas!.disabled).toBeUndefined();
-    expect(canvas!.badge).toBeUndefined();
-  });
-
-  test('disables marketing and cinema as coming-soon entries', () => {
-    const items = buildGeneratorNavItems('image');
-    for (const key of ['marketing', 'cinema']) {
-      const item = items.find((i) => i.key === key);
-      expect(item).toBeDefined();
-      expect(item!.disabled).toBe(true);
-      expect(item!.badge).toBeUndefined();
+  test('hides marketing, cinema, originals and canvas entries', () => {
+    const keys = buildGeneratorNavItems('image').map((i) => i.key);
+    for (const hidden of ['marketing', 'cinema', 'originals', 'canvas']) {
+      expect(keys).not.toContain(hidden);
     }
-  });
-
-  test('flags originals with a launching-soon badge', () => {
-    const items = buildGeneratorNavItems('image');
-    const item = items.find((i) => i.key === 'originals');
-    expect(item).toBeDefined();
-    expect(item!.disabled).toBe(true);
-    expect(item!.badge).toBe('soon');
   });
 
   test('places the separator after the video entry', () => {
@@ -63,16 +44,11 @@ describe('buildGeneratorNavItems', () => {
     expect(items[0]?.active).toBe(true);
   });
 
-  test('lists secondary entries after community with canvas enabled', () => {
+  test('ends with the community entry after video', () => {
     const items = buildGeneratorNavItems('image');
     const communityIndex = items.findIndex((i) => i.key === 'community');
-    for (const key of ['marketing', 'cinema', 'originals']) {
-      const item = items.find((i) => i.key === key);
-      expect(item?.disabled).toBe(true);
-      expect(items.findIndex((i) => i.key === key)).toBeGreaterThan(communityIndex);
-    }
-    const canvas = items.find((i) => i.key === 'canvas');
-    expect(canvas?.disabled).toBeUndefined();
-    expect(items.findIndex((i) => i.key === 'canvas')).toBeGreaterThan(communityIndex);
+    const videoIndex = items.findIndex((i) => i.key === 'video');
+    expect(communityIndex).toBeGreaterThan(videoIndex);
+    expect(items[items.length - 1]?.key).toBe('community');
   });
 });

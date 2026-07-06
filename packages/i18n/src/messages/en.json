@@ -3430,7 +3430,7 @@
       "studioLabel": "Amux Studio"
     },
     "promoBar": {
-      "discountBadge": "Up to 40% off"
+      "discountBadge": "{percent}% OFF"
     },
     "generator": {
       "promo": "{title}: generate directly on this page",
@@ -3451,7 +3451,7 @@
       "imageModelValue": "Nano image",
       "videoModelValue": "Seedance",
       "studio": {
-        "topPromo": "20% off sitewide, 40% off GPT-Image 2, 30% off Nano Banana, and 20% off memberships",
+        "topPromo": "{percent}% off sitewide, including GPT-Image 2, Nano Banana, and memberships",
         "history": "History",
         "community": "Community",
         "templates": "Templates",
@@ -3667,7 +3667,7 @@
       "billingMonthly": "Monthly",
       "billingYearly": "Yearly",
       "yearlyHint": "Benefits start now; credits are delivered monthly",
-      "yearlyDiscountBadge": "20% OFF",
+      "yearlyDiscountBadge": "{percent}% OFF",
       "yearlyDiscountCaption": "Yearly discount",
       "selectedPlan": "Selected plan",
       "currentFreeCta": "Available now",
@@ -3982,7 +3982,7 @@
     "collection": {},
     "account": {},
     "common": {
-      "discountBadge": "30% OFF"
+      "discountBadge": "{percent}% OFF"
     }
   },
   "videoShare": {

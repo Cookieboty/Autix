@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from 'react';
 import { ArrowRight, Check, Crown } from 'lucide-react';
+import { buildDiscountTranslationValues } from '../discount';
 import { formatCount, type BillingCycle, type PricingPlan } from '../public-pricing-helpers';
 import { renderFeatureItem, type TFunc } from './pricing-parts';
 
@@ -109,7 +110,7 @@ export function PlanCard({
           <h3 className="text-2xl font-semibold text-foreground">{planName}</h3>
           {plan.hasYearlyDiscount ? (
             <span className="growth-discount-badge rounded-md px-2.5 py-1 text-xs font-black italic uppercase leading-none text-foreground">
-              {t('yearlyDiscountBadge')}
+              {t('yearlyDiscountBadge', buildDiscountTranslationValues())}
             </span>
           ) : null}
         </div>

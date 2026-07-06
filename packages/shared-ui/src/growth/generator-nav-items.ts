@@ -15,9 +15,9 @@ export function buildGeneratorNavItems(
     { key: 'image', href: '/ai/image', active: kind === 'image' },
     { key: 'video', href: '/ai/video', active: kind === 'video', separatorAfter: true },
     { key: 'community', href: '/community', active: kind === 'community' },
-    { key: 'marketing', href: '/marketing-studio', active: false, disabled: true },
-    { key: 'cinema', href: '/original-series', active: false, disabled: true },
-    { key: 'originals', href: '/original-series', active: false, disabled: true, badge: 'soon' },
-    { key: 'canvas', href: '/draw', active: false },
+    // { key: 'marketing', href: '/marketing-studio', active: false, disabled: true },
+    // { key: 'cinema', href: '/original-series', active: false, disabled: true },
+    // { key: 'originals', href: '/original-series', active: false, disabled: true, badge: 'soon' },
+    // { key: 'canvas', href: '/draw', active: false },
   ];
 }

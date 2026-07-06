@@ -3238,7 +3238,7 @@
       "studioLabel": "Amux Studio"
     },
     "promoBar": {
-      "discountBadge": "Giảm đến 40%"
+      "discountBadge": "Giảm {percent}%"
     },
     "generator": {
       "promo": "{title}: generate directly on this page",
@@ -3259,7 +3259,7 @@
       "imageModelValue": "Nano image",
       "videoModelValue": "Seedance",
       "studio": {
-        "topPromo": "20% off sitewide, 40% off GPT-Image 2, 30% off Nano Banana, and 20% off memberships",
+        "topPromo": "Giảm {percent}% toàn bộ, gồm GPT-Image 2, Nano Banana và gói thành viên",
         "history": "History",
         "community": "Community",
         "templates": "Templates",
@@ -3475,7 +3475,7 @@
       "billingMonthly": "Hàng tháng",
       "billingYearly": "Hàng năm",
       "yearlyHint": "Quyền lợi có hiệu lực ngay; tín dụng được cộng hàng tháng",
-      "yearlyDiscountBadge": "Giảm 20%",
+      "yearlyDiscountBadge": "Giảm {percent}%",
       "yearlyDiscountCaption": "Ưu đãi thanh toán năm",
       "selectedPlan": "Gói đã chọn",
       "currentFreeCta": "Khả dụng ngay",
@@ -3790,7 +3790,7 @@
     "collection": {},
     "account": {},
     "common": {
-      "discountBadge": "Giảm 30%"
+      "discountBadge": "Giảm {percent}%"
     }
   },
   "videoShare": {

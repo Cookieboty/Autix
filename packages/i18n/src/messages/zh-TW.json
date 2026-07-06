@@ -3238,7 +3238,7 @@
       "studioLabel": "Amux Studio"
     },
     "promoBar": {
-      "discountBadge": "最高享 4 折優惠"
+      "discountBadge": "立減 {percent}%"
     },
     "generator": {
       "promo": "{title}：在目前頁面直接生成",
@@ -3259,7 +3259,7 @@
       "imageModelValue": "Nano 圖片",
       "videoModelValue": "Seedance",
       "studio": {
-        "topPromo": "全站 8 折優惠，GPT-Image 2 6 折優惠，Nano Banana 7 折優惠，8 折開通會員",
+        "topPromo": "全站 {zhe} 折優惠，包含 GPT-Image 2、Nano Banana 與會員開通",
         "history": "歷史",
         "community": "社群",
         "templates": "範本",
@@ -3475,7 +3475,7 @@
       "billingMonthly": "月付",
       "billingYearly": "年付",
       "yearlyHint": "權益即時生效，積分按月發放",
-      "yearlyDiscountBadge": "8 折優惠",
+      "yearlyDiscountBadge": "{zhe} 折優惠",
       "yearlyDiscountCaption": "年付折扣",
       "selectedPlan": "已選方案",
       "currentFreeCta": "目前可用",
@@ -3790,7 +3790,7 @@
     "collection": {},
     "account": {},
     "common": {
-      "discountBadge": "立減30%"
+      "discountBadge": "立減{percent}%"
     }
   },
   "videoShare": {

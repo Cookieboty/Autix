@@ -3238,7 +3238,7 @@
       "studioLabel": "Amux Studio"
     },
     "promoBar": {
-      "discountBadge": "最大40%オフ"
+      "discountBadge": "{percent}% オフ"
     },
     "generator": {
       "promo": "{title}: generate directly on this page",
@@ -3259,7 +3259,7 @@
       "imageModelValue": "Nano image",
       "videoModelValue": "Seedance",
       "studio": {
-        "topPromo": "20% off sitewide, 40% off GPT-Image 2, 30% off Nano Banana, and 20% off memberships",
+        "topPromo": "全商品 {percent}% オフ（GPT-Image 2、Nano Banana、会員登録を含む）",
         "history": "History",
         "community": "Community",
         "templates": "Templates",
@@ -3475,7 +3475,7 @@
       "billingMonthly": "月払い",
       "billingYearly": "年払い",
       "yearlyHint": "特典はすぐに有効になり、クレジットは毎月付与されます",
-      "yearlyDiscountBadge": "20% 割引",
+      "yearlyDiscountBadge": "{percent}% 割引",
       "yearlyDiscountCaption": "年払い割引",
       "selectedPlan": "選択中のプラン",
       "currentFreeCta": "現在利用可能",
@@ -3790,7 +3790,7 @@
     "collection": {},
     "account": {},
     "common": {
-      "discountBadge": "30%オフ"
+      "discountBadge": "{percent}% オフ"
     }
   },
   "videoShare": {

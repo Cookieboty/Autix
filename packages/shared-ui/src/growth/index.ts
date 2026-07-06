@@ -1,4 +1,5 @@
 export * from './types';
+export * from './discount';
 export * from './fallback';
 export * from './PublicGrowthShell';
 export * from './PublicGeneratorAppNav';

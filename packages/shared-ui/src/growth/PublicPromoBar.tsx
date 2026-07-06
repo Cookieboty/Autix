@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getStorage } from '@autix/platform';
+import { buildDiscountTranslationValues } from './discount';
 
 function storageKey(label: string, href: string) {
   return `amux.publicPromo.dismissed.${href}.${label}`.slice(0, 180);
@@ -47,7 +48,7 @@ export function PublicPromoBar({
       <a href={href} className="inline-flex max-w-full items-center justify-center gap-2">
         <span className="truncate">{label}</span>
         <span className="growth-promo-badge rounded-md px-2 py-0.5 text-[10px] font-black uppercase italic text-foreground">
-          {t('discountBadge')}
+          {t('discountBadge', buildDiscountTranslationValues())}
         </span>
       </a>
       <button

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Folder, Gem, Search } from 'lucide-react';
 import { useMessages, useTranslations } from 'next-intl';
 import { BrandMark } from '../brand';
+import { buildDiscountTranslationValues } from './discount';
 import { buildGeneratorNavItems } from './generator-nav-items';
 import { PublicAccountMenu } from './PublicAccountMenu';
 
@@ -78,101 +79,98 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
     <header className="sticky top-0 z-30 bg-background">
       <div className="mx-auto w-full max-w-[1920px] px-3 md:px-5">
         <div
-          className={`flex items-center justify-between gap-4 transition-all duration-300 ${
-            scrolled ? 'h-9' : 'h-[52px]'
-          }`}
+          className={`flex items-center justify-between gap-4 transition-all duration-300 ${scrolled ? 'h-9' : 'h-[52px]'
+            }`}
         >
-        <div className="flex min-w-0 items-center gap-3">
-          <a
-            href="/"
-            aria-label="Amux Studio"
-            className="grid shrink-0 place-items-center rounded-xl"
-          >
-            <BrandMark size={32} />
-          </a>
-          <nav className="hide-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
-            {navItems.map((item) => (
-              <span key={`${item.href}-${item.label}`} className="contents">
-                {item.disabled ? (
-                  <span
-                    aria-disabled="true"
-                    className={`group relative inline-flex shrink-0 cursor-not-allowed items-center gap-1 rounded-md font-semibold text-foreground/30 transition-all duration-300 ${linkSize}`}
-                  >
-                    {item.label}
-                    {item.badge ? (
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${item.badgeVariant === 'soon'
+          <div className="flex min-w-0 items-center gap-3">
+            <a
+              href="/"
+              aria-label="Amux Studio"
+              className="grid shrink-0 place-items-center rounded-xl"
+            >
+              <BrandMark size={32} />
+            </a>
+            <nav className="hide-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
+              {navItems.map((item) => (
+                <span key={`${item.href}-${item.label}`} className="contents">
+                  {item.disabled ? (
+                    <span
+                      aria-disabled="true"
+                      className={`group relative inline-flex shrink-0 cursor-not-allowed items-center gap-1 rounded-md font-semibold text-foreground/30 transition-all duration-300 ${linkSize}`}
+                    >
+                      {item.label}
+                      {item.badge ? (
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${item.badgeVariant === 'soon'
                             ? 'bg-growth-accent/18 text-growth-accent'
                             : 'bg-secondary text-foreground/40'
-                          }`}
+                            }`}
+                        >
+                          {item.badge}
+                        </span>
+                      ) : null}
+                      <span
+                        role="tooltip"
+                        className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground/85 opacity-0 growth-tooltip-shadow transition group-hover:opacity-100 group-focus-within:opacity-100"
                       >
-                        {item.badge}
+                        {item.badgeVariant === 'soon' ? item.badge : comingSoonLabel}
                       </span>
-                    ) : null}
-                    <span
-                      role="tooltip"
-                      className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground/85 opacity-0 growth-tooltip-shadow transition group-hover:opacity-100 group-focus-within:opacity-100"
-                    >
-                      {item.badgeVariant === 'soon' ? item.badge : comingSoonLabel}
                     </span>
-                  </span>
-                ) : (
-                  <a
-                    href={item.href}
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-md font-semibold transition-all duration-300 ${linkSize} ${item.active
-                      ? 'text-growth-accent'
-                      : 'text-foreground/55 hover:bg-secondary hover:text-foreground'
-                      }`}
-                  >
-                    {item.label}
-                    {item.badge ? (
-                      <span className="rounded bg-growth-accent/18 px-1.5 py-0.5 text-[10px] font-bold text-growth-accent">
-                        {item.badge}
-                      </span>
-                    ) : null}
-                  </a>
-                )}
-                {item.separatorAfter ? (
-                  <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-border" />
-                ) : null}
-              </span>
-            ))}
-          </nav>
-        </div>
+                  ) : (
+                    <a
+                      href={item.href}
+                      className={`inline-flex shrink-0 items-center gap-1 rounded-md font-semibold transition-all duration-300 ${linkSize} ${item.active
+                        ? 'text-growth-accent'
+                        : 'text-foreground/55 hover:bg-secondary hover:text-foreground'
+                        }`}
+                    >
+                      {item.label}
+                      {item.badge ? (
+                        <span className="rounded bg-growth-accent/18 px-1.5 py-0.5 text-[10px] font-bold text-growth-accent">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </a>
+                  )}
+                  {item.separatorAfter ? (
+                    <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-border" />
+                  ) : null}
+                </span>
+              ))}
+            </nav>
+          </div>
 
-        <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          <button
-            type="button"
-            aria-label={navLabel('search')}
-            className={`growth-nav-btn grid place-items-center text-foreground/60 transition-all duration-300 hover:text-foreground ${
-              scrolled ? 'size-7' : 'size-9'
-            }`}
-          >
-            <Search className="size-4" />
-          </button>
-          <a
-            href="/pricing"
-            className={`growth-nav-btn relative inline-flex items-center gap-2 font-semibold text-foreground transition-all duration-300 ${pillSize}`}
-          >
-            <Gem className="size-4" />
-            {navLabel('pricing')}
-            <span
-              className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[60%] whitespace-nowrap rounded-md growth-nav-discount-badge font-bold text-foreground transition-all duration-300 ${
-                scrolled ? 'px-1 py-0 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'
-              }`}
+          <div className="hidden shrink-0 items-center gap-2 lg:flex">
+            <button
+              type="button"
+              aria-label={navLabel('search')}
+              className={`growth-nav-btn grid place-items-center text-foreground/60 transition-all duration-300 hover:text-foreground ${scrolled ? 'size-7' : 'size-9'
+                }`}
             >
-              {tCommon('discountBadge')}
-            </span>
-          </a>
-          <a
-            href="/materials"
-            className={`growth-nav-btn inline-flex items-center gap-2 font-semibold text-foreground transition-all duration-300 ${pillSize}`}
-          >
-            <Folder className="size-4 growth-assets-icon" />
-            {navLabel('assets')}
-          </a>
-          <PublicAccountMenu compact={scrolled} />
-        </div>
+              <Search className="size-4" />
+            </button>
+            <a
+              href="/pricing"
+              className={`growth-nav-btn relative inline-flex items-center gap-2 font-semibold text-foreground transition-all duration-300 ${pillSize}`}
+            >
+              <Gem className="size-4" />
+              {navLabel('pricing')}
+              <span
+                className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[60%] whitespace-nowrap rounded-md growth-nav-discount-badge font-bold text-foreground transition-all duration-300 ${scrolled ? 'px-1 py-0 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'
+                  }`}
+              >
+                {tCommon('discountBadge', buildDiscountTranslationValues())}
+              </span>
+            </a>
+            <a
+              href="/materials"
+              className={`growth-nav-btn inline-flex items-center gap-2 font-semibold text-foreground transition-all duration-300 ${pillSize}`}
+            >
+              <Folder className="size-4 growth-assets-icon" />
+              {navLabel('assets')}
+            </a>
+            <PublicAccountMenu compact={scrolled} />
+          </div>
         </div>
       </div>
     </header>
