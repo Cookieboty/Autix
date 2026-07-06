@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, type ComponentType, type SVGProps } from 'react';
+import { useTranslations } from 'next-intl';
 import { Clock, Image as ImageIcon, Video } from 'lucide-react';
 
 /* ----------------------------- 厂商图标（官方品牌 SVG） ----------------------------- */
@@ -141,17 +142,42 @@ const QUALITY_MODELS: QualityModel[] = [
 ];
 
 // 新手引导任务（样式占位，逻辑后续对接）
+// 文案走 i18n；模型/产品名（model）为品牌数据，作为参数注入不翻译
 const ONBOARDING_TASKS = [
-  { id: 'nano-banana-pro', title: 'Try Nano Banana Pro', subtitle: 'The best image model', cta: 'Try it', points: 50 },
-  { id: 'seedance', title: 'Explore Seedance 2.0', subtitle: 'The best AI video model', cta: 'Explore', points: 80 },
-  { id: 'marketing', title: 'Explore Marketing Studio', subtitle: 'From prompt to campaign', cta: 'Explore', points: 20 },
-];
+  {
+    id: 'nano-banana-pro',
+    model: 'Nano Banana Pro',
+    titleKey: 'onboardTryModel',
+    subtitleKey: 'onboardSubBestImage',
+    ctaKey: 'onboardCtaTry',
+    points: 50,
+  },
+  {
+    id: 'seedance',
+    model: 'Seedance 2.0',
+    titleKey: 'onboardExploreModel',
+    subtitleKey: 'onboardSubBestVideo',
+    ctaKey: 'onboardCtaExplore',
+    points: 80,
+  },
+  {
+    id: 'marketing',
+    model: 'Marketing Studio',
+    titleKey: 'onboardExploreModel',
+    subtitleKey: 'onboardSubPromptCampaign',
+    ctaKey: 'onboardCtaExplore',
+    points: 20,
+  },
+] as const;
 
 /* ----------------------------- 组件 ----------------------------- */
 
 function OnboardingPanel() {
+  const t = useTranslations('publicGrowth.home');
   const total = ONBOARDING_TASKS.reduce((sum, task) => sum + task.points, 0);
   const completed = 0;
+  const firstTask = ONBOARDING_TASKS[0];
+  const nextTaskTitle = t(firstTask.titleKey, { model: firstTask.model });
 
   return (
     <div className="growth-sheen relative overflow-hidden rounded-2xl border border-growth-accent/25 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--growth-accent)_38%,#0a1206)_0%,color-mix(in_srgb,var(--growth-accent)_16%,#0a1206)_48%,#0a1206_100%)] p-2 lg:h-full lg:w-[544px] lg:shrink-0">
@@ -159,20 +185,22 @@ function OnboardingPanel() {
         {/* 促销/进度列（直接叠在渐变上） */}
         <div className="flex min-w-0 flex-col justify-between p-3 sm:w-[44%]">
           <div>
-            <h3 className="text-xl font-black uppercase leading-[1.1] text-white">Welcome Bonus</h3>
-            <p className="mt-2 text-xs leading-5 text-white/65">
-              Complete guided tasks and earn credits.
-            </p>
+            <h3 className="text-xl font-black uppercase leading-[1.1] text-white">
+              {t('welcomeBonusTitle')}
+            </h3>
+            <p className="mt-2 text-xs leading-5 text-white/65">{t('welcomeBonusDesc')}</p>
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#6d1533]/90 px-2.5 py-1.5 text-xs font-bold text-[#ff6b98]">
               <Clock className="size-3.5" />
-              Earn up to {total} credits
+              {t('earnUpToCredits', { count: total })}
             </div>
           </div>
           <div className="border-l-2 border-white/30 pl-2.5">
             <div className="text-[13px] font-bold text-white">
-              {completed} of {ONBOARDING_TASKS.length} completed
+              {t('tasksCompleted', { completed, total: ONBOARDING_TASKS.length })}
             </div>
-            <div className="mt-0.5 text-xs text-white/55">Next task: {ONBOARDING_TASKS[0].title}</div>
+            <div className="mt-0.5 text-xs text-white/55">
+              {t('nextTask', { task: nextTaskTitle })}
+            </div>
           </div>
         </div>
 
@@ -183,14 +211,16 @@ function OnboardingPanel() {
               <div className="flex items-center gap-3 py-2.5">
                 <span className="grid size-5 shrink-0 place-items-center rounded-full border-2 border-white/25" />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-semibold text-white">{task.title}</div>
-                  <div className="truncate text-xs text-white/45">{task.subtitle}</div>
+                  <div className="truncate text-[13px] font-semibold text-white">
+                    {t(task.titleKey, { model: task.model })}
+                  </div>
+                  <div className="truncate text-xs text-white/45">{t(task.subtitleKey)}</div>
                 </div>
                 <button
                   type="button"
                   className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-neutral-900 transition hover:bg-white/90"
                 >
-                  {task.cta}
+                  {t(task.ctaKey)}
                 </button>
               </div>
               {index < ONBOARDING_TASKS.length - 1 ? (

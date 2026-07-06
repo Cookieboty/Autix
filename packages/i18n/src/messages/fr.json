@@ -3427,7 +3427,25 @@
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
       "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
-      "studioLabel": "Amux Studio"
+      "studioLabel": "Amux Studio",
+      "imageGalleryTitle": "Galerie d'images",
+      "imageGallerySubtitle": "Explorez les modèles de la communauté et créez en un clic.",
+      "videoGalleryTitle": "Galerie vidéo",
+      "videoGallerySubtitle": "Donnez vie à vos idées avec des modèles vidéo prêts à l'emploi.",
+      "featureTagsTitle": "Découvrir plus de fonctionnalités IA",
+      "viewAllOf": "Voir tout : {title}",
+      "welcomeBonusTitle": "Bonus de bienvenue",
+      "welcomeBonusDesc": "Accomplissez les tâches guidées et gagnez des points.",
+      "earnUpToCredits": "Jusqu'à {count} points",
+      "tasksCompleted": "{completed} sur {total} terminées",
+      "nextTask": "Tâche suivante : {task}",
+      "onboardTryModel": "Essayer {model}",
+      "onboardExploreModel": "Explorer {model}",
+      "onboardSubBestImage": "Le meilleur modèle d'image",
+      "onboardSubBestVideo": "Le meilleur modèle vidéo IA",
+      "onboardSubPromptCampaign": "Du prompt à la campagne",
+      "onboardCtaTry": "Essayer",
+      "onboardCtaExplore": "Explorer"
     },
     "promoBar": {
       "discountBadge": "-{percent} %"

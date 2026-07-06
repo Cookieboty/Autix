@@ -3235,7 +3235,25 @@
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
       "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
-      "studioLabel": "Amux Studio"
+      "studioLabel": "Amux Studio",
+      "imageGalleryTitle": "Thư viện ảnh",
+      "imageGallerySubtitle": "Khám phá mẫu cộng đồng và bắt đầu sáng tạo chỉ với một cú nhấp.",
+      "videoGalleryTitle": "Thư viện video",
+      "videoGallerySubtitle": "Biến ý tưởng thành hiện thực với các mẫu video sẵn dùng.",
+      "featureTagsTitle": "Khám phá thêm tính năng AI",
+      "viewAllOf": "Xem tất cả {title}",
+      "welcomeBonusTitle": "Quà chào mừng",
+      "welcomeBonusDesc": "Hoàn thành nhiệm vụ hướng dẫn để nhận points.",
+      "earnUpToCredits": "Tối đa {count} points",
+      "tasksCompleted": "Đã hoàn thành {completed}/{total}",
+      "nextTask": "Nhiệm vụ tiếp theo: {task}",
+      "onboardTryModel": "Dùng thử {model}",
+      "onboardExploreModel": "Khám phá {model}",
+      "onboardSubBestImage": "Mô hình ảnh tốt nhất",
+      "onboardSubBestVideo": "Mô hình video AI tốt nhất",
+      "onboardSubPromptCampaign": "Từ prompt đến chiến dịch",
+      "onboardCtaTry": "Dùng thử",
+      "onboardCtaExplore": "Khám phá"
     },
     "promoBar": {
       "discountBadge": "Giảm {percent}%"

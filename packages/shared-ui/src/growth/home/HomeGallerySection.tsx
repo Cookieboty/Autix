@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ArrowUpRight } from 'lucide-react';
 import { publicGeneratorActions, type ImageTemplate } from '@autix/shared-store';
 import { ImageTemplateGrid } from '../generator/image/ImageTemplateWall';
@@ -24,6 +25,7 @@ export function HomeGallerySection({
   viewAllHref: string;
   source?: HomeGallerySource;
 }) {
+  const t = useTranslations('publicGrowth.home');
   const [templates, setTemplates] = useState<ImageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ImageTemplate | null>(null);
@@ -91,7 +93,7 @@ export function HomeGallerySection({
                 href={viewAllHref}
                 className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-growth-accent/35 bg-growth-accent/20 px-5 py-2.5 text-sm font-bold text-growth-accent backdrop-blur-md transition hover:bg-growth-accent/30"
               >
-                View all of {title}
+                {t('viewAllOf', { title })}
                 <ArrowUpRight className="size-4" />
               </a>
             </div>

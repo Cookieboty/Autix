@@ -21,20 +21,20 @@ export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
         <HomeStarterSection />
 
         <HomeGallerySection
-          title="Image Gallery"
-          subtitle="Explore community templates and start creating in one click."
+          title={t('home.imageGalleryTitle')}
+          subtitle={t('home.imageGallerySubtitle')}
           viewAllHref="/ai/image?mode=templates"
           source="image"
         />
 
         <HomeGallerySection
-          title="Video Gallery"
-          subtitle="Bring your ideas to life with ready-to-use video templates."
+          title={t('home.videoGalleryTitle')}
+          subtitle={t('home.videoGallerySubtitle')}
           viewAllHref="/ai/video?mode=templates"
           source="video"
         />
 
-        <HomeFeatureTags title="Explore more AI features" />
+        <HomeFeatureTags title={t('home.featureTagsTitle')} />
       </main>
     </PublicGrowthShell>
   );

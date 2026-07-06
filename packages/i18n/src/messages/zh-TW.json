@@ -3235,7 +3235,25 @@
       "collectionsEyebrow": "集合",
       "collectionsTitle": "面向活動、模型和視覺世界的主題頁面",
       "collectionsSubtitle": "每個集合都可以成為落地頁、分享目標或精選社群入口。",
-      "studioLabel": "Amux Studio"
+      "studioLabel": "Amux Studio",
+      "imageGalleryTitle": "圖片藝廊",
+      "imageGallerySubtitle": "瀏覽社群範本，一鍵開始創作。",
+      "videoGalleryTitle": "影片藝廊",
+      "videoGallerySubtitle": "用開箱即用的影片範本，讓你的創意成真。",
+      "featureTagsTitle": "探索更多 AI 功能",
+      "viewAllOf": "查看全部{title}",
+      "welcomeBonusTitle": "新手禮包",
+      "welcomeBonusDesc": "完成引導任務，賺取積分。",
+      "earnUpToCredits": "最多可賺 {count} 積分",
+      "tasksCompleted": "已完成 {completed}/{total}",
+      "nextTask": "下一個任務：{task}",
+      "onboardTryModel": "試用 {model}",
+      "onboardExploreModel": "探索 {model}",
+      "onboardSubBestImage": "最強影像模型",
+      "onboardSubBestVideo": "最強 AI 影片模型",
+      "onboardSubPromptCampaign": "從提示詞到行銷活動",
+      "onboardCtaTry": "試用",
+      "onboardCtaExplore": "探索"
     },
     "promoBar": {
       "discountBadge": "立減 {percent}%"

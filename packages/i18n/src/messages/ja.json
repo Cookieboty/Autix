@@ -3235,7 +3235,25 @@
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
       "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
-      "studioLabel": "Amux Studio"
+      "studioLabel": "Amux Studio",
+      "imageGalleryTitle": "画像ギャラリー",
+      "imageGallerySubtitle": "コミュニティのテンプレートを探して、ワンクリックで作成を始めましょう。",
+      "videoGalleryTitle": "動画ギャラリー",
+      "videoGallerySubtitle": "すぐに使える動画テンプレートでアイデアを形にしましょう。",
+      "featureTagsTitle": "その他の AI 機能を見る",
+      "viewAllOf": "{title}をすべて見る",
+      "welcomeBonusTitle": "ウェルカムボーナス",
+      "welcomeBonusDesc": "ガイド付きタスクを完了してポイントを獲得しましょう。",
+      "earnUpToCredits": "最大 {count} ポイント獲得",
+      "tasksCompleted": "{total} 件中 {completed} 件完了",
+      "nextTask": "次のタスク：{task}",
+      "onboardTryModel": "{model} を試す",
+      "onboardExploreModel": "{model} を体験する",
+      "onboardSubBestImage": "最高の画像モデル",
+      "onboardSubBestVideo": "最高の AI 動画モデル",
+      "onboardSubPromptCampaign": "プロンプトからキャンペーンまで",
+      "onboardCtaTry": "試す",
+      "onboardCtaExplore": "体験する"
     },
     "promoBar": {
       "discountBadge": "{percent}% オフ"

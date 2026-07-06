@@ -3235,7 +3235,25 @@
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
       "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
-      "studioLabel": "Amux Studio"
+      "studioLabel": "Amux Studio",
+      "imageGalleryTitle": "Галерея изображений",
+      "imageGallerySubtitle": "Изучайте шаблоны сообщества и начинайте творить в один клик.",
+      "videoGalleryTitle": "Галерея видео",
+      "videoGallerySubtitle": "Воплощайте идеи с готовыми видеошаблонами.",
+      "featureTagsTitle": "Больше возможностей ИИ",
+      "viewAllOf": "Показать все: {title}",
+      "welcomeBonusTitle": "Приветственный бонус",
+      "welcomeBonusDesc": "Выполняйте задания и получайте points.",
+      "earnUpToCredits": "До {count} points",
+      "tasksCompleted": "Выполнено {completed} из {total}",
+      "nextTask": "Следующее задание: {task}",
+      "onboardTryModel": "Попробовать {model}",
+      "onboardExploreModel": "Открыть {model}",
+      "onboardSubBestImage": "Лучшая модель для изображений",
+      "onboardSubBestVideo": "Лучшая ИИ-модель для видео",
+      "onboardSubPromptCampaign": "От промпта до кампании",
+      "onboardCtaTry": "Попробовать",
+      "onboardCtaExplore": "Открыть"
     },
     "promoBar": {
       "discountBadge": "-{percent}%"
