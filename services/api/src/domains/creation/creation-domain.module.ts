@@ -4,6 +4,7 @@ import { ArtifactModule } from './artifact/artifact.module';
 import { CanvasModule } from './canvas/canvas.module';
 import { ConversationModule } from './conversation/conversation.module';
 import { DocumentModule } from './document/document.module';
+import { GalleryModule } from './gallery/gallery.module';
 import { ImageGenModule } from './image-gen/image-gen.module';
 import { LlmModule } from './llm/llm.module';
 import { MaterialsModule } from './materials/materials.module';
@@ -21,6 +22,7 @@ import { VideoModule } from './video/video.module';
     ArenaModule,
     DocumentModule,
     CanvasModule,
+    GalleryModule,
     ImageGenModule,
     VideoModule,
     MaterialsModule,
@@ -35,6 +37,7 @@ import { VideoModule } from './video/video.module';
     ArenaModule,
     DocumentModule,
     CanvasModule,
+    GalleryModule,
     ImageGenModule,
     VideoModule,
     MaterialsModule,
