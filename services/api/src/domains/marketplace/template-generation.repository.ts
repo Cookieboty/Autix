@@ -12,7 +12,7 @@ interface CreateImageGenerationInput {
   referenceImage?: string;
 }
 
-interface CreateVideoGenerationInput extends CreateImageGenerationInput {}
+type CreateVideoGenerationInput = CreateImageGenerationInput;
 
 interface UpdateImageGenerationInput {
   generatedImages?: string[];

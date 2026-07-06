@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { setSafeFetchResolver } from '../core/safe-fetch';
 import { OpenAIImageAdapter } from './openai.adapter';
 import { UpstreamParamsInvalidError } from '../core/errors';
 import type { ImageCallContext } from './types';
@@ -9,10 +10,13 @@ describe('OpenAIImageAdapter', () => {
 
   beforeEach(() => {
     globalThis.fetch = vi.fn();
+    // stub DNS，让 SSRF 校验对测试用的保留域名放行
+    setSafeFetchResolver(async () => [{ address: '93.184.216.34', family: 4 }]);
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    setSafeFetchResolver(null);
   });
 
   describe('generate', () => {

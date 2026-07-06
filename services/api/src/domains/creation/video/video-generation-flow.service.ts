@@ -281,42 +281,38 @@ export class VideoGenerationFlowService implements OnModuleInit {
       })}`,
     );
     let holdId: string | null = null;
-    try {
-      const estimate = await this.pointsService.estimateCost(estimateInput);
-      this.logger.log(
-        `generateClip cost estimated: ${JSON.stringify({
-          generationId,
-          billingTaskType,
-          estimatedCost: estimate.estimatedCost,
-        })}`,
-      );
+    const estimate = await this.pointsService.estimateCost(estimateInput);
+    this.logger.log(
+      `generateClip cost estimated: ${JSON.stringify({
+        generationId,
+        billingTaskType,
+        estimatedCost: estimate.estimatedCost,
+      })}`,
+    );
 
-      const { hold } = await this.pointsService.createHold(
-        input.userId,
-        buildVideoHoldInput({
-          billingTaskType,
-          generationId,
-          estimatedCost: estimate.estimatedCost,
-          pricingSnapshot: estimate.pricingSnapshot,
-          refundPolicy: estimate.refundPolicy,
-          projectId: input.projectId,
-          clipId: input.clipId,
-          modelConfigId,
-          taskRequest,
-        }),
-      );
-      holdId = hold.id;
-      this.logger.log(
-        `generateClip point hold created: ${JSON.stringify({
-          generationId,
-          holdId,
-          billingTaskType,
-          estimatedCost: estimate.estimatedCost,
-        })}`,
-      );
-    } catch (err) {
-      throw err;
-    }
+    const { hold } = await this.pointsService.createHold(
+      input.userId,
+      buildVideoHoldInput({
+        billingTaskType,
+        generationId,
+        estimatedCost: estimate.estimatedCost,
+        pricingSnapshot: estimate.pricingSnapshot,
+        refundPolicy: estimate.refundPolicy,
+        projectId: input.projectId,
+        clipId: input.clipId,
+        modelConfigId,
+        taskRequest,
+      }),
+    );
+    holdId = hold.id;
+    this.logger.log(
+      `generateClip point hold created: ${JSON.stringify({
+        generationId,
+        holdId,
+        billingTaskType,
+        estimatedCost: estimate.estimatedCost,
+      })}`,
+    );
 
     try {
       await this.repository.createPendingGenerationAndMarkRunning(
@@ -408,7 +404,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
           : {};
       const isStoryboardProjectGeneration =
         generationParams.generationMode === 'storyboard';
-      let failureReason = resolveSucceededGenerationFailureReason({
+      const failureReason = resolveSucceededGenerationFailureReason({
         sourceUrl: outcome.sourceUrl,
       });
       if (failureReason) {

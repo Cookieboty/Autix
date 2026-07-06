@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { setSafeFetchResolver } from '../core/safe-fetch';
 import { OpenAICompatibleImageAdapter } from './openai-compatible.adapter';
 import type { ImageCallContext } from './types';
 
@@ -8,10 +9,12 @@ describe('OpenAICompatibleImageAdapter', () => {
 
   beforeEach(() => {
     globalThis.fetch = vi.fn();
+    setSafeFetchResolver(async () => [{ address: '93.184.216.34', family: 4 }]);
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    setSafeFetchResolver(null);
   });
 
   describe('generate', () => {

@@ -1,5 +1,5 @@
 import type { UIAction, SSEEvent } from './ai-ui-types';
-import { authFetch, getApiBaseUrl, getValidAccessToken } from './client';
+import { authFetch, getApiBaseUrl, getValidAccessToken } from './client-core';
 
 export class AIUIClient {
   private baseUrl: string;

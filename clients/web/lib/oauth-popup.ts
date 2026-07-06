@@ -36,6 +36,8 @@ export function driveOAuthPopup(
 ): Promise<OAuthPopupResult> {
   return new Promise<OAuthPopupResult>((resolve) => {
     let settled = false;
+    // 需为 let：cleanup 闭包在下方 setTimeout 赋值之前就已捕获该变量（前向引用），不能改为 const。
+    // eslint-disable-next-line prefer-const
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     let bc: BroadcastChannel | undefined;
 

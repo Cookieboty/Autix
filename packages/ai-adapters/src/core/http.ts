@@ -1,3 +1,5 @@
+import { safeFetch } from './safe-fetch';
+
 /**
  * Normalize baseUrl + endpoint, deduplicating `/v1` if both contain it.
  */
@@ -14,7 +16,7 @@ export function buildEndpoint(baseUrl: string, endpoint: string): string {
  * Fetch a URL and return its content as a base64 data URL.
  */
 export async function fetchUrlAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
-  const res = await fetch(url);
+  const res = await safeFetch(url);
   if (!res.ok) {
     throw new Error(`Failed to fetch image: ${url} (${res.status})`);
   }
@@ -28,7 +30,7 @@ export async function fetchUrlAsBase64(url: string): Promise<{ base64: string; m
  * Fetch a URL and return it as a Blob.
  */
 export async function fetchUrlAsBlob(url: string): Promise<Blob> {
-  const res = await fetch(url);
+  const res = await safeFetch(url);
   if (!res.ok) {
     throw new Error(`Failed to fetch image: ${url} (${res.status})`);
   }

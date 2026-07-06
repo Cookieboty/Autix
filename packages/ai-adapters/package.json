@@ -27,7 +27,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "bun --bun vitest run"
   },
   "dependencies": {
     "@autix/domain": "workspace:*"

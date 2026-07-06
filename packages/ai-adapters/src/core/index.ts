@@ -7,4 +7,5 @@ export {
   readOpenAIImageResponse,
   assertResponseOk,
 } from './http';
+export { safeFetch, assertSafeFetchUrl, isPrivateIpAddress } from './safe-fetch';
 export { UpstreamParamsInvalidError, UPSTREAM_PARAMS_INVALID } from './errors';

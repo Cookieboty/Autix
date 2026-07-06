@@ -23,7 +23,7 @@ export class ConversationService {
 
   async create(userId: string, input: CreateConversationInput = {}) {
     const kind = input.kind ?? AgentKind.chat;
-    let agentId = input.agentId ?? null;
+    const agentId = input.agentId ?? null;
 
     if (agentId) {
       const agent = await this.repository.findAgentForConversation(agentId);

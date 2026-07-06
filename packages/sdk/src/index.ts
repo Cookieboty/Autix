@@ -1,4 +1,5 @@
 export * from './client';
+export * from './client-core';
 export * from './modules/auth.api';
 export * from './modules/user.api';
 export * from './modules/conversation.api';
@@ -13,18 +14,17 @@ export * from './modules/document.api';
 export * from './modules/admin.api';
 export * from './modules/public-growth.api';
 
+export { chatApi, userApi } from './client';
 export {
   authFetch,
   authFetchEventSource,
-  chatApi,
   getApiBaseUrl,
   getApiUrl,
   getValidAccessToken,
   normalizeApiBase,
   refreshAuthSession,
   uploadToPresignedUrl,
-  userApi,
-} from './client';
+} from './client-core';
 
 export * from './ai-ui-api';
 export * from './ai-ui-types';

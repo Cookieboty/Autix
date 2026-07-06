@@ -13,6 +13,7 @@
     "@autix/domain": "workspace:*",
     "@autix/i18n": "workspace:*",
     "@autix/platform": "workspace:*",
+    "@autix/sdk": "workspace:*",
     "@autix/shared-store": "workspace:*",
     "@autix/shared-ui": "workspace:*",
     "@monaco-editor/react": "^4.7.0",

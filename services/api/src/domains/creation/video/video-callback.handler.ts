@@ -1,4 +1,13 @@
 import { UnauthorizedException } from '@nestjs/common';
+import { createHash, timingSafeEqual } from 'node:crypto';
+
+// 常量时间比较（先 sha256 等长化，避免长度侧信道），任一为空即失败。
+function secretsMatch(provided: string | undefined, expected: string): boolean {
+  if (!provided) return false;
+  const a = createHash('sha256').update(provided).digest();
+  const b = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(a, b);
+}
 
 type LoggerLike = {
   log(message: string): void;
@@ -22,7 +31,12 @@ export async function handleVideoCallbackRequest(args: {
   logger: LoggerLike;
 }) {
   const secret = args.config.get<string>('VIDEO_CALLBACK_SECRET');
-  if (secret && args.token !== secret) {
+  // fail-closed：未配置密钥时拒绝，避免任何人伪造回调驱动状态机/计费。
+  if (!secret) {
+    args.logger.error('Rejected video callback: VIDEO_CALLBACK_SECRET not configured');
+    throw new UnauthorizedException();
+  }
+  if (!secretsMatch(args.token, secret)) {
     args.logger.warn('Rejected video callback: invalid or missing token');
     throw new UnauthorizedException();
   }

@@ -49,20 +49,18 @@ describe('VideoCallbackController auth', () => {
     expect(res).toEqual({ received: true });
   });
 
-  it('degrades to open processing when no secret is configured', async () => {
+  it('fails closed (rejects) when no secret is configured', async () => {
     const { config, flow, logger } = make(undefined);
 
-    await handleVideoCallbackRequest({
-      token: undefined,
-      body: { id: 't2' },
-      config,
-      generationFlow: flow,
-      logger,
-    });
-
-    expect(flow.handleCallback).toHaveBeenCalledWith(
-      't2',
-      expect.objectContaining({ id: 't2' }),
-    );
+    await expect(
+      handleVideoCallbackRequest({
+        token: undefined,
+        body: { id: 't2' },
+        config,
+        generationFlow: flow,
+        logger,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(flow.handleCallback).not.toHaveBeenCalled();
   });
 });

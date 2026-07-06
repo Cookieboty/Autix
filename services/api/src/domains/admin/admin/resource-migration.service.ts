@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { safeFetch } from '@autix/ai-adapters/core';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 
 /** Fields whose URLs should be re-hosted to R2 on import (actual media assets). */
@@ -25,7 +26,8 @@ export class ResourceMigrationService {
    */
   async migrateUrl(url: string, folder: string): Promise<string> {
     this.logger.log(`[migrate] downloading: ${url}`);
-    const response = await fetch(url);
+    // SSRF 防护：管理端导入的任意 URL 抓取前须校验，拒绝内网/元数据地址。
+    const response = await safeFetch(url);
     if (!response.ok) {
       throw new Error(`Failed to download ${url}: ${response.status}`);
     }

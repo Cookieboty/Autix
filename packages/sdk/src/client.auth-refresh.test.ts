@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { authFetch } from './client';
+import { authFetch } from './client-core';
 import { registerPlatform } from '@autix/platform';
 
 function createAuthHarness(initialTokens = { access: 'old-access', refresh: 'refresh-1' }) {

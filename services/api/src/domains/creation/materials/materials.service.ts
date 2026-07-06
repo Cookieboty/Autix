@@ -128,6 +128,7 @@ export class MaterialsService {
       fileName: opts.fileName,
       contentType: opts.contentType,
       folder: opts.folder ?? 'amux-studio/materials',
+      userId,
     });
   }
 

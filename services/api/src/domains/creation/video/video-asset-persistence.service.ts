@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { safeFetch } from '@autix/ai-adapters/core';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 
 @Injectable()
@@ -17,7 +18,8 @@ export class VideoAssetPersistenceService {
     const MAX_ATTEMPTS = 3;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        const response = await fetch(sourceUrl);
+        // SSRF 防护：供应商回源地址抓取前校验，拒绝内网/元数据地址。
+        const response = await safeFetch(sourceUrl);
         if (!response.ok) {
           throw new Error(`fetch source failed: HTTP ${response.status}`);
         }

@@ -33,6 +33,21 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule, { bodyParser: false });
+  // 代理部署下需配置 trust proxy，否则限流/req.ip 取到的是负载均衡器 IP（所有用户同一桶）。
+  // 值须与实际代理层级匹配：盲目信任 X-Forwarded-For 会让客户端伪造 IP 绕过限流，故由 env 显式配置。
+  // TRUST_PROXY 取值：数字(信任的代理跳数) | true/false | 逗号分隔的 IP/子网(如 "loopback, uniquelocal")。
+  const trustProxyEnv = process.env.TRUST_PROXY?.trim();
+  if (trustProxyEnv) {
+    let trustProxy: boolean | number | string;
+    if (trustProxyEnv === 'true' || trustProxyEnv === 'false') {
+      trustProxy = trustProxyEnv === 'true';
+    } else if (/^\d+$/.test(trustProxyEnv)) {
+      trustProxy = Number(trustProxyEnv);
+    } else {
+      trustProxy = trustProxyEnv;
+    }
+    app.getHttpAdapter().getInstance().set('trust proxy', trustProxy);
+  }
   app.setGlobalPrefix('api', {
     exclude: [{ path: 'internal/{*splat}', method: RequestMethod.ALL }],
   });

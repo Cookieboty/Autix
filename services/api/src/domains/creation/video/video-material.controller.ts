@@ -46,8 +46,10 @@ export class VideoMaterialController {
 
   @Post('upload')
   createUploadUrl(
+    @CurrentUser() user: AuthUser,
     @Body() body: { fileName: string; contentType: string; folder?: string },
   ) {
-    return this.materialService.createPresignedUpload(body);
+    const userId = getCurrentUserId(user);
+    return this.materialService.createPresignedUpload({ ...body, userId });
   }
 }

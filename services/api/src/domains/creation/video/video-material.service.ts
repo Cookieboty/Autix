@@ -102,11 +102,13 @@ export class VideoMaterialService {
     fileName: string;
     contentType: string;
     folder?: string;
+    userId?: string;
   }) {
     return this.r2Service.createPresignedUpload({
       fileName: opts.fileName,
       contentType: opts.contentType,
       folder: opts.folder ?? 'amux-studio/video-materials',
+      userId: opts.userId,
     });
   }
 }
