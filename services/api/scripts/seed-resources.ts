@@ -14,8 +14,8 @@
  */
 
 import { createPrismaClient, ensureSeedAuthor } from './db';
-import { normalizeMcpConfig } from '../src/common/mcp-config.parser';
-import { parseSkillMarkdown } from '../src/common/skill-markdown.parser';
+import { normalizeMcpConfig } from '../src/domains/platform/common/mcp-config.parser';
+import { parseSkillMarkdown } from '../src/domains/platform/common/skill-markdown.parser';
 
 const prisma = createPrismaClient();
 

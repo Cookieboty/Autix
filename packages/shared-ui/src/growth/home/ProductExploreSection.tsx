@@ -69,7 +69,7 @@ export function ProductExploreSection({
     <section className="relative overflow-hidden border-y border-border bg-background py-6 md:py-7">
       <div className="growth-rb-ambient pointer-events-none absolute inset-0 opacity-60" />
       <div className="growth-grid-noise-explore pointer-events-none absolute inset-0 opacity-[0.08]" />
-      <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+      <div className="relative mx-auto max-w-[1920px] px-4 md:px-6">
         <HomeSectionIntro eyebrow={eyebrow} title={title} subtitle={subtitle} compact />
 
         <div className="grid gap-3 lg:grid-cols-[0.82fr_1.18fr] lg:items-stretch">

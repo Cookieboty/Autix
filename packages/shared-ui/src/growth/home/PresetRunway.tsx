@@ -53,7 +53,7 @@ export function PresetRunway({
       <div className="absolute inset-x-0 top-0 h-px bg-border" />
       <div className="absolute inset-x-0 bottom-0 h-px bg-border" />
       <div className="growth-rb-ambient pointer-events-none absolute inset-0 opacity-60" />
-      <div className="mx-auto max-w-7xl px-4 md:px-6">
+      <div className="mx-auto max-w-[1920px] px-4 md:px-6">
         <HomeSectionIntro
           eyebrow={eyebrow}
           title={title}

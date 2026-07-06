@@ -62,6 +62,101 @@ export function ImageHeroCollage({ items }: { items: PublicGrowthMediaItem[] }) 
   );
 }
 
+export function ImageTemplateGrid({
+  templates,
+  density,
+  onSelectTemplate,
+  onUseTemplate,
+  limit = 24,
+  compact = false,
+}: {
+  templates: ImageTemplate[];
+  density: TemplateDensity;
+  onSelectTemplate: (template: ImageTemplate) => void;
+  onUseTemplate: (template: ImageTemplate) => void;
+  limit?: number;
+  /** 精简悬浮：只显示左上作者 + 右上点赞，隐藏底部分类/标题/浏览量/Use */
+  compact?: boolean;
+}) {
+  const t = useTranslations('publicGrowth.generator.studio');
+  const previewTemplates = templates.slice(0, limit);
+
+  return (
+    <div className={`opacity-95 ${TEMPLATE_DENSITY_WALL_CLASS[density]}`}>
+      {previewTemplates.map((template, index) => {
+        const cover = imageTemplateCover(template);
+        const author = template.authorName || template.authorUrl || t('unknownAuthor');
+        const handleUseTemplate = (event: MouseEvent<HTMLButtonElement>) => {
+          event.stopPropagation();
+          onUseTemplate(template);
+        };
+        return (
+          <article
+            key={template.id}
+            className="growth-generator-masonry group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-md bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
+            style={{ animationDelay: `${(index % 9) * 80}ms` }}
+          >
+            {cover ? (
+              <img
+                src={cover}
+                alt={template.title}
+                loading={index < 8 ? 'eager' : 'lazy'}
+                className="block h-auto w-full"
+              />
+            ) : (
+              <div className="grid aspect-[3/4] w-full place-items-center bg-secondary text-foreground/32">
+                <ImageIcon className="size-10" />
+              </div>
+            )}
+            <button
+              type="button"
+              aria-label={template.title}
+              className="absolute inset-0 z-10 cursor-pointer"
+              onClick={() => onSelectTemplate(template)}
+            >
+              <span className="sr-only">{template.title}</span>
+            </button>
+            <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex translate-y-[-6px] items-start justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+              <span className="growth-inset-ring inline-flex min-w-0 items-center gap-2 rounded-full bg-background/36 px-2.5 py-1.5 text-xs font-bold text-foreground backdrop-blur-md">
+                <UserRound className="size-3.5 shrink-0" />
+                <span className="truncate">{author}</span>
+              </span>
+              <span className="growth-inset-ring-bright inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-sm font-black text-foreground backdrop-blur-md">
+                <Heart className="size-4" />
+                {formatTemplateMetric(template.likeCount)}
+              </span>
+            </div>
+            {compact ? null : (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-3 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                <div className="min-w-0">
+                  <span className="mb-1 inline-flex rounded-md bg-growth-accent px-2 py-1 text-[10px] font-black uppercase text-background">
+                    {template.category || t('templates')}
+                  </span>
+                  <p className="line-clamp-2 text-sm font-black text-foreground">{template.title}</p>
+                </div>
+                <div className="pointer-events-none flex shrink-0 flex-col items-end gap-2 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
+                  <span className="growth-inset-ring inline-flex items-center gap-1 rounded-full bg-background/36 px-2.5 py-1.5 text-xs font-bold text-foreground/86 backdrop-blur-md">
+                    <Eye className="size-3.5" />
+                    {formatTemplateMetric(template.viewCount)}
+                  </span>
+                  <button
+                    type="button"
+                    className="growth-btn-drop-shadow inline-flex min-h-10 cursor-pointer items-center justify-center rounded-md bg-growth-accent px-4 text-sm font-black text-background transition duration-200 hover:bg-foreground"
+                    onClick={handleUseTemplate}
+                  >
+                    {t('usePrompt')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PublicImageTemplateWall({
   templates,
   loading,
@@ -110,76 +205,12 @@ export function PublicImageTemplateWall({
 
   return (
     <div className={scrollFrameClass}>
-      <div className={`opacity-95 ${TEMPLATE_DENSITY_WALL_CLASS[density]}`}>
-        {previewTemplates.map((template, index) => {
-          const cover = imageTemplateCover(template);
-          const author = template.authorName || template.authorUrl || t('unknownAuthor');
-          const handleUseTemplate = (event: MouseEvent<HTMLButtonElement>) => {
-            event.stopPropagation();
-            onUseTemplate(template);
-          };
-          return (
-            <article
-              key={template.id}
-              className="growth-generator-masonry group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-md bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
-              style={{ animationDelay: `${(index % 9) * 80}ms` }}
-            >
-              {cover ? (
-                <img
-                  src={cover}
-                  alt={template.title}
-                  loading={index < 8 ? 'eager' : 'lazy'}
-                  className="block h-auto w-full"
-                />
-              ) : (
-                <div className="grid aspect-[3/4] w-full place-items-center bg-secondary text-foreground/32">
-                  <ImageIcon className="size-10" />
-                </div>
-              )}
-              <button
-                type="button"
-                aria-label={template.title}
-                className="absolute inset-0 z-10 cursor-pointer"
-                onClick={() => onSelectTemplate(template)}
-              >
-                <span className="sr-only">{template.title}</span>
-              </button>
-              <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex translate-y-[-6px] items-start justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                <span className="growth-inset-ring inline-flex min-w-0 items-center gap-2 rounded-full bg-background/36 px-2.5 py-1.5 text-xs font-bold text-foreground backdrop-blur-md">
-                  <UserRound className="size-3.5 shrink-0" />
-                  <span className="truncate">{author}</span>
-                </span>
-                <span className="growth-inset-ring-bright inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-sm font-black text-foreground backdrop-blur-md">
-                  <Heart className="size-4" />
-                  {formatTemplateMetric(template.likeCount)}
-                </span>
-              </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-3 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                <div className="min-w-0">
-                  <span className="mb-1 inline-flex rounded-md bg-growth-accent px-2 py-1 text-[10px] font-black uppercase text-background">
-                    {template.category || t('templates')}
-                  </span>
-                  <p className="line-clamp-2 text-sm font-black text-foreground">{template.title}</p>
-                </div>
-                <div className="pointer-events-none flex shrink-0 flex-col items-end gap-2 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
-                  <span className="growth-inset-ring inline-flex items-center gap-1 rounded-full bg-background/36 px-2.5 py-1.5 text-xs font-bold text-foreground/86 backdrop-blur-md">
-                    <Eye className="size-3.5" />
-                    {formatTemplateMetric(template.viewCount)}
-                  </span>
-                  <button
-                    type="button"
-                    className="growth-btn-drop-shadow inline-flex min-h-10 cursor-pointer items-center justify-center rounded-md bg-growth-accent px-4 text-sm font-black text-background transition duration-200 hover:bg-foreground"
-                    onClick={handleUseTemplate}
-                  >
-                    {t('usePrompt')}
-                  </button>
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+      <ImageTemplateGrid
+        templates={previewTemplates}
+        density={density}
+        onSelectTemplate={onSelectTemplate}
+        onUseTemplate={onUseTemplate}
+      />
     </div>
   );
 }

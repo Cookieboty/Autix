@@ -49,7 +49,7 @@ export function FinalHomeCta({
       ) : null}
       <div className="growth-rb-ambient pointer-events-none absolute inset-0 opacity-70" />
       <div className="growth-cta-diagonal-tint pointer-events-none absolute inset-0 opacity-[0.09]" />
-      <div className="relative mx-auto max-w-7xl px-4 py-14 md:px-6 md:py-20">
+      <div className="relative mx-auto max-w-[1920px] px-4 py-14 md:px-6 md:py-20">
         <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-end">
           <div>
             <div className="growth-shiny-label mb-4 inline-flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">

@@ -1,6 +1,9 @@
-import { Command, Folder, Gem, Search } from 'lucide-react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Folder, Gem, Search } from 'lucide-react';
 import { useMessages, useTranslations } from 'next-intl';
-import { ThemeLogo } from '../brand';
+import { BrandMark } from '../brand';
 import { buildGeneratorNavItems } from './generator-nav-items';
 import { PublicAccountMenu } from './PublicAccountMenu';
 
@@ -25,6 +28,18 @@ const NAV_LABEL_FALLBACKS: Record<string, string> = {
 };
 
 export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKind }) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // 默认 52px / 收缩 36px；内部元素尺寸随之收缩
+  const linkSize = scrolled ? 'min-h-6 px-2 text-[13px]' : 'min-h-8 px-2.5 text-sm';
+  const pillSize = scrolled ? 'min-h-7 px-2.5 text-[13px]' : 'min-h-9 px-3 text-sm';
+
   const tCommon = useTranslations('publicGrowth.common');
   const messages = useMessages() as Record<string, unknown>;
   const navMessages =
@@ -60,11 +75,20 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
   });
 
   return (
-    <header className="relative z-30 border-b border-border bg-card/96 px-3 growth-nav-shadow backdrop-blur-xl md:px-5">
-      <div className="flex min-h-16 items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 bg-background">
+      <div className="mx-auto w-full max-w-[1920px] px-3 md:px-5">
+        <div
+          className={`flex items-center justify-between gap-4 transition-all duration-300 ${
+            scrolled ? 'h-9' : 'h-[52px]'
+          }`}
+        >
         <div className="flex min-w-0 items-center gap-3">
-          <a href="/" className="grid size-9 shrink-0 place-items-center rounded-md bg-foreground">
-            <ThemeLogo alt="Amux Studio" size={28} variant="dark" />
+          <a
+            href="/"
+            aria-label="Amux Studio"
+            className="grid shrink-0 place-items-center rounded-xl"
+          >
+            <BrandMark size={32} />
           </a>
           <nav className="hide-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
             {navItems.map((item) => (
@@ -72,7 +96,7 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
                 {item.disabled ? (
                   <span
                     aria-disabled="true"
-                    className="group relative inline-flex min-h-9 shrink-0 cursor-not-allowed items-center gap-1 rounded-md px-2.5 text-sm font-semibold text-foreground/30"
+                    className={`group relative inline-flex shrink-0 cursor-not-allowed items-center gap-1 rounded-md font-semibold text-foreground/30 transition-all duration-300 ${linkSize}`}
                   >
                     {item.label}
                     {item.badge ? (
@@ -95,8 +119,8 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
                 ) : (
                   <a
                     href={item.href}
-                    className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2.5 text-sm font-semibold transition ${item.active
-                      ? 'bg-secondary text-foreground'
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-md font-semibold transition-all duration-300 ${linkSize} ${item.active
+                      ? 'text-growth-accent'
                       : 'text-foreground/55 hover:bg-secondary hover:text-foreground'
                       }`}
                   >
@@ -117,31 +141,38 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          <div className="flex h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm text-foreground/42">
+          <button
+            type="button"
+            aria-label={navLabel('search')}
+            className={`growth-nav-btn grid place-items-center text-foreground/60 transition-all duration-300 hover:text-foreground ${
+              scrolled ? 'size-7' : 'size-9'
+            }`}
+          >
             <Search className="size-4" />
-            <span className="w-24">{navLabel('search')}</span>
-            <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] text-foreground/45">
-              <Command className="inline size-3" /> K
-            </span>
-          </div>
+          </button>
           <a
             href="/pricing"
-            className="relative inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm font-semibold text-foreground hover:bg-accent"
+            className={`growth-nav-btn relative inline-flex items-center gap-2 font-semibold text-foreground transition-all duration-300 ${pillSize}`}
           >
             <Gem className="size-4" />
             {navLabel('pricing')}
-            <span className="absolute -bottom-4 left-3 rounded-md growth-nav-discount-badge px-1.5 py-0.5 text-[10px] font-bold text-foreground">
+            <span
+              className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[60%] whitespace-nowrap rounded-md growth-nav-discount-badge font-bold text-foreground transition-all duration-300 ${
+                scrolled ? 'px-1 py-0 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'
+              }`}
+            >
               {tCommon('discountBadge')}
             </span>
           </a>
           <a
             href="/materials"
-            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm font-semibold text-foreground hover:bg-accent"
+            className={`growth-nav-btn inline-flex items-center gap-2 font-semibold text-foreground transition-all duration-300 ${pillSize}`}
           >
             <Folder className="size-4 growth-assets-icon" />
             {navLabel('assets')}
           </a>
-          <PublicAccountMenu />
+          <PublicAccountMenu compact={scrolled} />
+        </div>
         </div>
       </div>
     </header>

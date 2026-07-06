@@ -163,7 +163,7 @@ export function HomeTemplateFlow({
       ) : null}
       <div className="growth-rb-ambient pointer-events-none absolute inset-0 opacity-80" />
       <div className="growth-grid-noise-md pointer-events-none absolute inset-0 opacity-[0.08]" />
-      <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+      <div className="relative mx-auto max-w-[1920px] px-4 md:px-6">
         <HomeSectionIntro
           eyebrow={eyebrow}
           title={title}

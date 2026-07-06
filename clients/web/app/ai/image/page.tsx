@@ -18,6 +18,15 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PublicImagePage({ searchParams }: Props) {
   const params = await searchParams;
   const model = Array.isArray(params?.model) ? params?.model[0] : params?.model;
+  const modeParam = Array.isArray(params?.mode) ? params?.mode[0] : params?.mode;
+  const initialMode = modeParam === 'templates' ? 'templates' : undefined;
   const creations = await getPublicCreations({ mediaType: 'image', pageSize: 12 });
-  return <PublicGeneratorStudioView kind="image" examples={creations?.items} initialModel={model} />;
+  return (
+    <PublicGeneratorStudioView
+      kind="image"
+      examples={creations?.items}
+      initialModel={model}
+      initialMode={initialMode}
+    />
+  );
 }

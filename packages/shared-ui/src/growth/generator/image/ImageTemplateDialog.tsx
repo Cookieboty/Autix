@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Copy, Image as ImageIcon, Info, Sparkles, WandSparkles, X } from 'lucide-react';
+import { ChevronDown, Copy, Image as ImageIcon, Info, Sparkles, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ImageTemplate } from '@autix/shared-store';
 import { resolveTemplatePrompt } from '../../../image/studio/constants';
@@ -18,12 +18,14 @@ export function PublicImageTemplateDialog({
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const [copied, setCopied] = useState(false);
+  const [promptExpanded, setPromptExpanded] = useState(false);
   const cover = template ? imageTemplateCover(template) : null;
   const prompt = template ? resolveTemplatePrompt(template) || template.prompt : '';
 
   useEffect(() => {
     if (!template) return;
     setCopied(false);
+    setPromptExpanded(false);
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
@@ -42,6 +44,7 @@ export function PublicImageTemplateDialog({
   };
 
   const author = template.authorName || template.authorUrl || t('unknownAuthor');
+  const authorInitial = author.trim()[0]?.toUpperCase() || 'A';
 
   return (
     <div
@@ -56,30 +59,35 @@ export function PublicImageTemplateDialog({
         aria-label={t('close')}
         onClick={onClose}
       />
-      <div className="relative z-10 grid min-h-0 w-full grid-cols-1 gap-4 p-4 md:grid-cols-[minmax(0,1fr)_390px] md:p-6">
-        <div className="relative flex min-h-[52svh] items-center justify-center overflow-hidden rounded-md bg-secondary">
+      <div className="relative z-10 grid min-h-0 w-full grid-cols-1 gap-4 p-4 md:grid-cols-[minmax(0,1fr)_400px] md:p-6">
+        <div className="relative flex min-h-[52svh] items-center justify-center overflow-hidden rounded-xl bg-secondary">
           {cover ? (
             <img
               src={cover}
               alt={template.title}
-              className="max-h-[calc(100svh-3rem)] max-w-full rounded-md object-contain"
+              className="max-h-[calc(100svh-3rem)] max-w-full rounded-xl object-contain"
             />
           ) : (
-            <div className="grid size-40 place-items-center rounded-md bg-secondary text-foreground/36">
+            <div className="grid size-40 place-items-center rounded-xl bg-secondary text-foreground/36">
               <ImageIcon className="size-12" />
             </div>
           )}
         </div>
 
-        <aside className="growth-dialog-shadow flex min-h-0 flex-col rounded-md border border-border bg-card/96 p-4">
-          <div className="mb-6 flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-growth-accent text-background">
-                <WandSparkles className="size-5" />
+        <aside className="growth-dialog-shadow flex min-h-0 flex-col rounded-xl border border-border bg-card p-4">
+          {/* 头部：作者 */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-growth-accent text-sm font-black text-background">
+                {template.authorUrl && template.authorName ? (
+                  <img src={template.authorUrl} alt={author} className="h-full w-full object-cover" />
+                ) : (
+                  authorInitial
+                )}
               </span>
               <div className="min-w-0">
-                <h2 className="truncate text-base font-black">{template.title}</h2>
-                <p className="truncate text-sm font-semibold text-foreground/45">{author}</p>
+                <div className="truncate text-sm font-bold text-foreground">{author}</div>
+                <div className="text-xs text-foreground/45">Author</div>
               </div>
             </div>
             <button
@@ -92,33 +100,53 @@ export function PublicImageTemplateDialog({
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-            <section className="rounded-md bg-secondary p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="inline-flex items-center gap-2 text-xs font-black uppercase text-foreground/50">
-                  <Sparkles className="size-4" />
+          <div className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+            {/* PROMPT */}
+            <section>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h3 className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-foreground/50">
+                  <Sparkles className="size-3.5" />
                   {t('prompt')}
                 </h3>
                 <button
                   type="button"
-                  className="inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-3 text-xs font-bold text-foreground/72 hover:bg-secondary hover:text-foreground"
+                  className="inline-flex min-h-7 cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 text-xs font-bold text-foreground/72 hover:bg-secondary hover:text-foreground"
                   onClick={copyPrompt}
                 >
                   <Copy className="size-3.5" />
                   {copied ? t('copied') : t('copyPrompt')}
                 </button>
               </div>
-              <p className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-background/18 p-3 text-sm font-medium leading-6 text-foreground/62">
+              <p
+                className={`whitespace-pre-wrap text-sm leading-6 text-foreground/70 ${
+                  promptExpanded ? '' : 'line-clamp-4'
+                }`}
+              >
                 {prompt || t('noPrompt')}
               </p>
+              {prompt ? (
+                <button
+                  type="button"
+                  className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1 rounded-md border border-border py-1.5 text-xs font-semibold text-foreground/55 transition hover:bg-secondary hover:text-foreground"
+                  onClick={() => setPromptExpanded((value) => !value)}
+                >
+                  {promptExpanded ? 'Show less' : 'See all'}
+                  <ChevronDown
+                    className={`size-3.5 transition-transform ${promptExpanded ? 'rotate-180' : ''}`}
+                  />
+                </button>
+              ) : null}
             </section>
 
-            <section className="rounded-md bg-secondary p-4">
-              <h3 className="mb-3 inline-flex items-center gap-2 text-xs font-black uppercase text-foreground/50">
-                <Info className="size-4" />
+            <div className="h-px bg-border" />
+
+            {/* INFORMATION */}
+            <section>
+              <h3 className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-foreground/50">
+                <Info className="size-3.5" />
                 {t('information')}
               </h3>
-              <div className="divide-y divide-border text-sm">
+              <div className="mt-2 divide-y divide-border/60 text-sm">
                 <TemplateInfoRow label={t('model')} value={template.modelHint || t('auto')} />
                 <TemplateInfoRow label={t('category')} value={template.category || '-'} />
                 <TemplateInfoRow label={t('usageCount')} value={String(template.useCount ?? 0)} />
@@ -128,7 +156,7 @@ export function PublicImageTemplateDialog({
 
           <button
             type="button"
-            className="growth-accent-glow-sm mt-5 inline-flex min-h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-growth-accent px-4 text-base font-black text-background hover:bg-foreground"
+            className="growth-accent-glow-sm mt-5 inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-growth-accent px-4 text-base font-black text-background transition hover:bg-growth-accent-hover"
             onClick={() => onUsePrompt(template)}
           >
             <WandSparkles className="size-5" />
@@ -142,9 +170,9 @@ export function PublicImageTemplateDialog({
 
 function TemplateInfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-h-11 items-center justify-between gap-4 py-2">
+    <div className="flex min-h-10 items-center justify-between gap-4 py-2">
       <span className="text-foreground/42">{label}</span>
-      <span className="min-w-0 truncate text-right font-bold text-foreground/78">{value}</span>
+      <span className="min-w-0 truncate text-right font-bold text-foreground/82">{value}</span>
     </div>
   );
 }

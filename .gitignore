@@ -31,3 +31,6 @@ uploads/
 .cursor
 .superpowers
 .tmp-bun
+
+# Editor
+.vscode/
