@@ -1360,6 +1360,41 @@ export const marketplaceApi = {
   platformStats: () => chatApi.get<PlatformStats>('/api/marketplace/platform-stats'),
 };
 
+// ── Resource Metrics / Interactions (统一指标与互动，gallery-design.md §9) ──
+export interface ResourceMetrics {
+  resourceType: ResourceType;
+  resourceId: string;
+  pvCount: number;
+  uvCount: number;
+  viewCount: number;
+  likeCount: number;
+  favoriteCount: number;
+  commentCount: number;
+  shareCount: number;
+  referenceCount: number;
+  citationCount: number;
+  hotScore: number;
+  boostScore: number;
+}
+
+export const getResourceMetrics = (type: ResourceType, id: string) =>
+  chatApi.get<ResourceMetrics>(`/api/resources/${type}/${id}/metrics`);
+
+export const likeResource = (type: ResourceType, id: string) =>
+  chatApi.post<ResourceMetrics>(`/api/resources/${type}/${id}/like`);
+
+export const unlikeResource = (type: ResourceType, id: string) =>
+  chatApi.delete<ResourceMetrics>(`/api/resources/${type}/${id}/like`);
+
+export const favoriteResource = (type: ResourceType, id: string) =>
+  chatApi.post<ResourceMetrics>(`/api/resources/${type}/${id}/favorite`);
+
+export const unfavoriteResource = (type: ResourceType, id: string) =>
+  chatApi.delete<ResourceMetrics>(`/api/resources/${type}/${id}/favorite`);
+
+export const shareResource = (type: ResourceType, id: string) =>
+  chatApi.post<ResourceMetrics>(`/api/resources/${type}/${id}/share`);
+
 // ── Public Growth Pages ─────────────────────────────────────────────────
 export type PublicCreationMediaType = 'image' | 'video';
 export type PublicPromptVisibility = 'hidden' | 'public';

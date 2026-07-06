@@ -5,10 +5,15 @@ import { useTranslations } from 'next-intl';
 import { ArrowLeft, Eye, Heart, Pencil, Play } from 'lucide-react';
 import { useAuthStore, useTemplateStore } from '@autix/shared-store';
 import { Button } from '../ui';
+import { InteractionActions, MetricsBar } from '../metrics';
 import { FallbackImage } from './FallbackImage';
 import { TemplateFormDrawer } from './TemplateFormDrawer';
 import { VariableEditor } from './VariableEditor';
 import { getTemplateCategoryI18nKey } from './category-utils';
+
+// TemplateDetailView 目前只服务图片模板（templateApi === imageTemplateApi，见
+// packages/sdk/src/client.ts）。等视频模板走同一视图时，再从 tpl 上派生真实 kind。
+const TEMPLATE_RESOURCE_TYPE = 'IMAGE_TEMPLATE' as const;
 
 export interface TemplateDetailViewProps {
   templateId?: string;
@@ -130,6 +135,14 @@ export function TemplateDetailView({
               <Play className="w-4 h-4 mr-1" /> {t('selectTemplateGenerate')}
             </Button>
           </div>
+        </div>
+
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg"
+          style={{ backgroundColor: 'var(--panel-muted)', border: '1px solid var(--border)' }}
+        >
+          <MetricsBar type={TEMPLATE_RESOURCE_TYPE} id={tpl.id} />
+          <InteractionActions type={TEMPLATE_RESOURCE_TYPE} id={tpl.id} />
         </div>
 
         <div className="grid grid-cols-[1fr_300px] gap-6">

@@ -6,6 +6,7 @@ export * from './modules/conversation.api';
 export * from './modules/video.api';
 export * from './modules/image.api';
 export * from './modules/marketplace.api';
+export * from './modules/metrics.api';
 export * from './modules/membership.api';
 export * from './modules/order.api';
 export * from './modules/materials.api';

@@ -43,6 +43,8 @@ export * from './material.store';
 export * from './material-folder.store';
 export * from './resource.store';
 export * from './resource-panel.store';
+export * from './resource-metrics.actions';
+export * from './resource-metrics.queries';
 export * from './image-generation.store';
 export * from './image-workbench.actions';
 export * from './video-generation.store';

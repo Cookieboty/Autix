@@ -14,6 +14,7 @@
     "./arena": "./src/arena/index.ts",
     "./artifact": "./src/artifact/index.ts",
     "./template": "./src/template/index.ts",
+    "./metrics": "./src/metrics/index.ts",
     "./library": "./src/library/index.ts",
     "./materials": "./src/materials/index.ts",
     "./notifications": "./src/notifications/index.ts",
