@@ -5,12 +5,27 @@ import { FeaturedSlotsAdminController } from './featured-slots-admin.controller'
 import { FeaturedSlotsController } from './featured-slots.controller';
 import { FeaturedSlotsRepository } from './featured-slots.repository';
 import { FeaturedSlotsService } from './featured-slots.service';
+import { BoostAdminController } from './boost-admin.controller';
+import { BoostRepository } from './boost.repository';
+import { BoostService } from './boost.service';
 
-/** 运营位编排（Featured Slots）域模块。见 gallery-design.md §5.5 / §十。 */
+/**
+ * 运营配置域模块：运营位编排（Featured Slots，§十）+ 内容加热（Boost，§十一）。
+ * 见 gallery-design.md §5.5 / §十 / §十一。
+ */
 @Module({
   imports: [PrismaModule, AuthModule],
-  controllers: [FeaturedSlotsController, FeaturedSlotsAdminController],
-  providers: [FeaturedSlotsRepository, FeaturedSlotsService],
-  exports: [FeaturedSlotsService],
+  controllers: [
+    FeaturedSlotsController,
+    FeaturedSlotsAdminController,
+    BoostAdminController,
+  ],
+  providers: [
+    FeaturedSlotsRepository,
+    FeaturedSlotsService,
+    BoostRepository,
+    BoostService,
+  ],
+  exports: [FeaturedSlotsService, BoostService],
 })
 export class OperationsModule {}
