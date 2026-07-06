@@ -6,6 +6,7 @@ import { ResourceMetricsService } from './resource-metrics.service';
 import { ResourceMetricsController } from './resource-metrics.controller';
 import { ResourceViewPipelineService } from './resource-view.pipeline';
 import { TelemetryController } from './telemetry.controller';
+import { ResourceMetricsCron } from './resource-metrics.cron';
 
 @Module({
   imports: [PrismaModule, AuthModule],
@@ -14,6 +15,7 @@ import { TelemetryController } from './telemetry.controller';
     ResourceMetricsRepository,
     ResourceMetricsService,
     ResourceViewPipelineService,
+    ResourceMetricsCron,
   ],
   exports: [ResourceMetricsService, ResourceViewPipelineService],
 })

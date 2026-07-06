@@ -26,6 +26,26 @@ export class ResourceMetricsRepository {
     });
   }
 
+  /** 近期活跃资源（lastActivityAt >= since），供热度重算 cron 使用。 */
+  findActiveSince(since: Date) {
+    return this.prisma.resource_metrics.findMany({
+      where: { lastActivityAt: { gte: since } },
+    });
+  }
+
+  /** SET（非 INCR）hotScore + 刷新 hotScoreVersion，供热度重算幂等写回使用。 */
+  setHotScore(
+    resourceType: ResourceType,
+    resourceId: string,
+    hotScore: number,
+    hotScoreVersion: string,
+  ) {
+    return this.prisma.resource_metrics.update({
+      where: { resourceType_resourceId: { resourceType, resourceId } },
+      data: { hotScore, hotScoreVersion },
+    });
+  }
+
   like(userId: string, resourceType: ResourceType, resourceId: string) {
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.resource_likes.findUnique({
