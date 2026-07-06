@@ -4,12 +4,13 @@ import type {
   PublicCollectionKind,
   PublicCreatorDetail,
   PublicGrowthCollection,
-  PublicGrowthHome,
   PublicGrowthMediaItem,
   PublicGrowthPage,
   MembershipLevel,
   PointsPackage,
 } from '@autix/shared-store';
+import type { PublicGrowthHome } from '@autix/shared-ui/growth';
+import type { ResolvedFeaturedSlot } from '@autix/domain';
 
 function getApiOrigin(): string {
   return (process.env.API_URL || 'http://localhost:4000')
@@ -36,8 +37,14 @@ async function fetchPublicGrowth<T>(path: string): Promise<T | null> {
   }
 }
 
-export const getPublicHome = () =>
-  fetchPublicGrowth<PublicGrowthHome>('/api/public/home');
+export const getPublicHome = async (): Promise<PublicGrowthHome | null> => {
+  const [home, heroSlots] = await Promise.all([
+    fetchPublicGrowth<PublicGrowthHome>('/api/public/home'),
+    fetchPublicGrowth<ResolvedFeaturedSlot[]>('/api/featured-slots?placement=home_hero'),
+  ]);
+  if (!home) return null;
+  return { ...home, heroSlots: heroSlots ?? [] };
+};
 
 export const getPublicGrowthPage = (slug: string) =>
   fetchPublicGrowth<PublicGrowthPage>(`/api/public/pages/${encodeURIComponent(slug)}`);

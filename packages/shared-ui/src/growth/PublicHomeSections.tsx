@@ -1,4 +1,5 @@
 export { FeaturedModelsShowcase } from './home/FeaturedModelsShowcase';
+export { HomeHeroCuratedBar } from './home/HomeHeroCuratedBar';
 export { FinalHomeCta } from './home/FinalHomeCta';
 export { HomeFeatureTags } from './home/HomeFeatureTags';
 export { HomeGallerySection } from './home/HomeGallerySection';
