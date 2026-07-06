@@ -1,6 +1,7 @@
 import { getDatabaseUrl, PrismaClient } from '@autix/database';
 import type { PermissionAction, PermissionType } from '@autix/database';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { seedFeaturedSlots } from './seeds/featured-slots';
 
 const adapter = new PrismaPg({
   connectionString: getDatabaseUrl(),
@@ -542,6 +543,9 @@ async function main() {
       create: { roleId: cmsSystemEditor.id, permissionId: permission.id },
     });
   }
+
+  // ==================== 6. 首页 Hero 精选位 ====================
+  await seedFeaturedSlots(prisma);
 
   console.log('\n✅ Seed completed successfully!');
   console.log('\n📋 Created resources:');
