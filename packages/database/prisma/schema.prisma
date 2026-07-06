@@ -2255,3 +2255,249 @@ model canvas_board_asset_refs {
   @@index([boardId, refType])
   @@index([refType, refId])
 }
+
+// ============================================================
+// Gallery（广场）+ Resource Metrics（统一指标）+ Operations（运营位/加热）
+// 见 docs/gallery-design.md §五。外部引用（author/template/generation/post）一律弱引用
+// （无 @relation），存在性由 Service 校验，避免触及 User/模板/生成等既有模型。
+// 复用既有表：resource_likes / resource_favorites / resource_views / admin_audit_logs。
+// ============================================================
+
+enum GalleryKind {
+  IMAGE
+  VIDEO
+}
+
+enum GalleryStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+  HIDDEN
+  REMOVED
+}
+
+enum GallerySource {
+  USER_UPLOAD
+  FROM_GENERATION
+  FROM_TEMPLATE
+  ADMIN_CURATED
+}
+
+enum FeaturedSlotKind {
+  RESOURCE
+  CUSTOM
+}
+
+enum BoostReason {
+  MANUAL
+  CAMPAIGN
+  EDITORIAL_PICK
+  CORRECTION
+}
+
+enum GalleryReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+model gallery_posts {
+  id          String      @id @default(cuid())
+  kind        GalleryKind
+  title       String?     @db.VarChar(200)
+  description String?
+  category    String      @db.VarChar(50)
+  tags        String[]    @default([])
+
+  coverImage  String?
+  mediaUrls   String[] @default([])
+  aspectRatio String?  @db.VarChar(20)
+  durationSec Int?
+
+  sourceType        GallerySource @default(USER_UPLOAD)
+  imageTemplateId   String?
+  videoTemplateId   String?
+  imageGenerationId String?
+  videoGenerationId String?
+
+  status       GalleryStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  rejectReason String?       @db.VarChar(500)
+  isFeatured   Boolean       @default(false)
+  isPinned     Boolean       @default(false)
+
+  authorId       String?
+  authorSnapshot Json?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+
+  @@index([status, publishedAt(sort: Desc), id(sort: Desc)])
+  @@index([status, kind, publishedAt(sort: Desc), id(sort: Desc)])
+  @@index([category])
+  @@index([isFeatured])
+  @@index([authorId])
+  @@index([imageTemplateId])
+  @@index([videoTemplateId])
+}
+
+model gallery_comments {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String?
+  parentId  String?
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId, createdAt])
+  @@index([userId])
+}
+
+model gallery_reports {
+  id           String              @id @default(cuid())
+  postId       String
+  reporterId   String?
+  reason       String              @db.VarChar(500)
+  status       GalleryReportStatus @default(PENDING)
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime            @default(now())
+
+  @@index([status, createdAt])
+  @@index([postId])
+}
+
+model resource_metrics {
+  resourceType ResourceType
+  resourceId   String
+
+  pvCount        Int @default(0)
+  uvCount        Int @default(0)
+  viewCount      Int @default(0)
+  likeCount      Int @default(0)
+  favoriteCount  Int @default(0)
+  commentCount   Int @default(0)
+  shareCount     Int @default(0)
+  referenceCount Int @default(0)
+  citationCount  Int @default(0)
+
+  hotScore        Float     @default(0)
+  hotScoreVersion String?
+  boostScore      Float     @default(0)
+  boostExpiresAt  DateTime?
+
+  firstSeenAt    DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@id([resourceType, resourceId])
+  @@index([resourceType, hotScore(sort: Desc), resourceId(sort: Desc)])
+  @@index([resourceType, pvCount(sort: Desc)])
+  @@index([resourceType, likeCount(sort: Desc)])
+  @@index([boostExpiresAt])
+}
+
+model resource_view_events {
+  id           String       @id @default(cuid())
+  resourceType ResourceType
+  resourceId   String
+  scope        String       @db.VarChar(20)
+  viewerKey    String       @db.VarChar(80)
+  userId       String?
+  visitorId    String?      @db.VarChar(64)
+  sessionId    String?      @db.VarChar(64)
+  minuteBucket Int
+  dayBucket    Int
+  createdAt    DateTime     @default(now())
+
+  @@unique([resourceType, resourceId, viewerKey, minuteBucket, scope])
+  @@index([resourceType, resourceId, dayBucket])
+}
+
+model resource_uv_days {
+  resourceType ResourceType
+  resourceId   String
+  viewerKey    String       @db.VarChar(80)
+  dayBucket    Int
+  firstScope   String       @db.VarChar(20)
+  createdAt    DateTime     @default(now())
+
+  @@id([resourceType, resourceId, viewerKey, dayBucket])
+  @@index([resourceType, resourceId, dayBucket])
+}
+
+model resource_metric_daily_stats {
+  resourceType ResourceType
+  resourceId   String
+  dayBucket    Int
+  pvCount      Int          @default(0)
+  uvCount      Int          @default(0)
+  viewCount    Int          @default(0)
+  updatedAt    DateTime     @updatedAt
+
+  @@id([resourceType, resourceId, dayBucket])
+  @@index([dayBucket])
+}
+
+model resource_reference_events {
+  id           String       @id @default(cuid())
+  resourceType ResourceType
+  resourceId   String
+  refType      String       @db.VarChar(30)
+  refUserId    String?
+  refPayload   Json?
+  createdAt    DateTime     @default(now())
+
+  @@index([resourceType, resourceId, createdAt])
+}
+
+model resource_boosts {
+  id           String       @id @default(cuid())
+  resourceType ResourceType
+  resourceId   String
+  boostScore   Float
+  reason       BoostReason  @default(MANUAL)
+  note         String?      @db.VarChar(500)
+  startsAt     DateTime     @default(now())
+  endsAt       DateTime
+  isActive     Boolean      @default(true)
+  createdById  String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([resourceType, resourceId, isActive])
+  @@index([endsAt])
+}
+
+model featured_slots {
+  id           String           @id @default(cuid())
+  placement    String           @db.VarChar(40)
+  kind         FeaturedSlotKind
+  resourceType ResourceType?
+  resourceId   String?
+
+  overrideTitle       String? @db.VarChar(200)
+  overrideDescription String? @db.VarChar(500)
+  overrideCoverImage  String?
+  overrideCoverVideo  String?
+  overrideCtaText     String? @db.VarChar(50)
+  overrideCtaHref     String? @db.VarChar(500)
+
+  position  Int       @default(0)
+  isEnabled Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([placement, position])
+  @@index([placement, isEnabled, position])
+  @@index([resourceType, resourceId])
+  @@index([startsAt, endsAt])
+}
