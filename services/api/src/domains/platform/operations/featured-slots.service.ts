@@ -12,6 +12,7 @@ import {
 } from './featured-slots.repository';
 import { assertFeaturedSlot, resolveSlot } from './featured-slots.helpers';
 import { toDomainFeaturedSlot } from './featured-slots.mapper';
+import { ResourceVisibilityRepository } from './resource-visibility.repository';
 
 /** 控制器传入的创建入参：日期为 ISO 字符串（DTO 层已用 @IsDateString 校验）。 */
 export interface CreateFeaturedSlotInput {
@@ -59,6 +60,7 @@ export class FeaturedSlotsService {
   constructor(
     private readonly repo: FeaturedSlotsRepository,
     private readonly prisma: PrismaService,
+    private readonly resourceVisibility: ResourceVisibilityRepository,
   ) {}
 
   /** 前台：解析出 placement 下当前应展示的运营位（仅 enabled + 命中排期窗口）。 */
@@ -69,12 +71,18 @@ export class FeaturedSlotsService {
       enabledOnly: true,
       now: new Date(),
     });
-    return rows.map((row) => {
-      const slot = toDomainFeaturedSlot(row);
-      // TODO(P6): fetch source title/cover for RESOURCE slots（跨域读取模板/广场作品详情）
-      const source = undefined;
-      return resolveSlot(slot, source);
-    });
+    return Promise.all(
+      rows.map(async (row) => {
+        const slot = toDomainFeaturedSlot(row);
+        // kind=RESOURCE 时取模板/广场作品的真实标题+封面作为 source；
+        // best-effort——资源已下线/被删除时 getResourceSource 回 null，回落到纯 override。
+        const source =
+          slot.kind === 'RESOURCE' && slot.resourceType && slot.resourceId
+            ? await this.repo.getResourceSource(slot.resourceType, slot.resourceId)
+            : undefined;
+        return resolveSlot(slot, source);
+      }),
+    );
   }
 
   /** 后台：某 placement 下的全部运营位（含禁用）。 */
@@ -92,6 +100,12 @@ export class FeaturedSlotsService {
       resourceType: input.resourceType ?? null,
       resourceId: input.resourceId ?? null,
     });
+    if (input.kind === FeaturedSlotKind.RESOURCE) {
+      await this.resourceVisibility.assertResourceVisible(
+        input.resourceType as ResourceType,
+        input.resourceId as string,
+      );
+    }
 
     let position = input.position;
     if (position === undefined) {
@@ -128,15 +142,25 @@ export class FeaturedSlotsService {
       throw new NotFoundException('运营位不存在');
     }
 
+    const mergedKind = input.kind ?? existing.kind;
+    const mergedResourceType =
+      input.resourceType !== undefined
+        ? input.resourceType
+        : existing.resourceType;
+    const mergedResourceId =
+      input.resourceId !== undefined ? input.resourceId : existing.resourceId;
+
     assertFeaturedSlot({
-      kind: input.kind ?? existing.kind,
-      resourceType:
-        input.resourceType !== undefined
-          ? input.resourceType
-          : existing.resourceType,
-      resourceId:
-        input.resourceId !== undefined ? input.resourceId : existing.resourceId,
+      kind: mergedKind,
+      resourceType: mergedResourceType,
+      resourceId: mergedResourceId,
     });
+    if (mergedKind === FeaturedSlotKind.RESOURCE) {
+      await this.resourceVisibility.assertResourceVisible(
+        mergedResourceType as ResourceType,
+        mergedResourceId as string,
+      );
+    }
 
     const updated = await this.repo.update(id, {
       ...input,

@@ -27,6 +27,18 @@ function parseResourceType(typeStr: string): ResourceType {
   return type;
 }
 
+/**
+ * P1-1：通用互动的写路径（like/favorite/share）禁止直接作用于 GALLERY_POST——
+ * gallery.service.ts 在 /gallery/:id/like|favorite 前会先校验作品存在且 PUBLISHED，
+ * 若走这条通用路径会绕过该校验，允许对不存在/DRAFT/HIDDEN 的作品留下孤立指标行。
+ * 读路径（GET metrics）不受影响，仍对全部类型开放。
+ */
+function assertNotGalleryWrite(type: ResourceType): void {
+  if (type === ResourceType.GALLERY_POST) {
+    throw new BadRequestException('gallery 互动请走 /gallery/:id/like|favorite');
+  }
+}
+
 @Controller('resources')
 export class ResourceMetricsController {
   constructor(private readonly service: ResourceMetricsService) {}
@@ -47,6 +59,7 @@ export class ResourceMetricsController {
   ) {
     const userId = getCurrentUserId(user);
     const type = parseResourceType(typeStr);
+    assertNotGalleryWrite(type);
     return this.service.like(userId, type, id);
   }
 
@@ -59,6 +72,7 @@ export class ResourceMetricsController {
   ) {
     const userId = getCurrentUserId(user);
     const type = parseResourceType(typeStr);
+    assertNotGalleryWrite(type);
     return this.service.unlike(userId, type, id);
   }
 
@@ -71,6 +85,7 @@ export class ResourceMetricsController {
   ) {
     const userId = getCurrentUserId(user);
     const type = parseResourceType(typeStr);
+    assertNotGalleryWrite(type);
     return this.service.favorite(userId, type, id);
   }
 
@@ -83,6 +98,7 @@ export class ResourceMetricsController {
   ) {
     const userId = getCurrentUserId(user);
     const type = parseResourceType(typeStr);
+    assertNotGalleryWrite(type);
     return this.service.unfavorite(userId, type, id);
   }
 
@@ -92,6 +108,7 @@ export class ResourceMetricsController {
   @HttpCode(HttpStatus.OK)
   share(@Param('type') typeStr: string, @Param('id') id: string) {
     const type = parseResourceType(typeStr);
+    assertNotGalleryWrite(type);
     return this.service.share(type, id);
   }
 }

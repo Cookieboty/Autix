@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { isMetricResourceType } from '../prisma/resource-type.helpers';
 import { BoostRepository, UpdateBoostData } from './boost.repository';
 import { isBoostActiveAt } from './boost.helpers';
+import { ResourceVisibilityRepository } from './resource-visibility.repository';
 
 /** 控制器传入的创建入参：日期为 ISO 字符串（DTO 层已用 @IsDateString 校验）。 */
 export interface CreateBoostInput {
@@ -35,6 +36,7 @@ export class BoostService {
   constructor(
     private readonly repo: BoostRepository,
     private readonly prisma: PrismaService,
+    private readonly resourceVisibility: ResourceVisibilityRepository,
   ) {}
 
   async createBoost(
@@ -44,6 +46,7 @@ export class BoostService {
     input: CreateBoostInput,
   ) {
     const resourceType = this.assertResourceType(resourceTypeRaw);
+    await this.resourceVisibility.assertResourceVisible(resourceType, resourceId);
 
     const created = await this.repo.create({
       resourceType,

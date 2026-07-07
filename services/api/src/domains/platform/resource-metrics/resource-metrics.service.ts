@@ -113,6 +113,9 @@ export class ResourceMetricsService {
         ageHours,
         halfLifeHours,
         boostScore: row.boostScore,
+        // P2：这里恒传 0 是对的——row.boostScore 已经是 boost.repository.ts#sumActiveByResource
+        // 用 decayedBoostSum 按各条加热自身 age 衰减求和后的结果（aggregateActiveBoosts 每
+        // ~10min SET 一次），不需要在这里再按"加热年龄"衰减第二遍。
         boostAgeHours: 0,
       });
 

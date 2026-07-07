@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { FeaturedSlotKind, Prisma, ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
+import type { FeaturedSlotSource } from './featured-slots.helpers';
 
 export interface CreateFeaturedSlotData {
   placement: string;
@@ -138,5 +139,69 @@ export class FeaturedSlotsRepository {
       orderBy: { publishedAt: 'desc' },
       take: 20,
     });
+  }
+
+  /**
+   * kind=RESOURCE 运营位的展示来源（§十 resolveSlot 的 source 入参）：best-effort，
+   * 找不到目标资源（已被删除/下线）时返回 null，交由调用方回落到 override-only。
+   * 目前只覆盖会出现在运营位里的三类资源：图片/视频模板、广场作品。
+   */
+  async getResourceSource(
+    resourceType: ResourceType,
+    resourceId: string,
+  ): Promise<FeaturedSlotSource | null> {
+    switch (resourceType) {
+      case ResourceType.IMAGE_TEMPLATE: {
+        const row = await this.prisma.image_templates.findUnique({
+          where: { id: resourceId },
+          select: {
+            title: true,
+            description: true,
+            coverImage: true,
+            exampleImages: true,
+          },
+        });
+        if (!row) return null;
+        return {
+          title: row.title,
+          description: row.description,
+          coverImage: row.coverImage ?? row.exampleImages[0] ?? null,
+          href: `/marketplace/image-templates/${resourceId}`,
+        };
+      }
+      case ResourceType.VIDEO_TEMPLATE: {
+        const row = await this.prisma.video_templates.findUnique({
+          where: { id: resourceId },
+          select: {
+            title: true,
+            description: true,
+            coverImage: true,
+            exampleMedia: true,
+          },
+        });
+        if (!row) return null;
+        return {
+          title: row.title,
+          description: row.description,
+          coverImage: row.coverImage ?? row.exampleMedia[0] ?? null,
+          href: `/marketplace/video-templates/${resourceId}`,
+        };
+      }
+      case ResourceType.GALLERY_POST: {
+        const row = await this.prisma.gallery_posts.findUnique({
+          where: { id: resourceId },
+          select: { title: true, description: true, coverImage: true },
+        });
+        if (!row) return null;
+        return {
+          title: row.title,
+          description: row.description,
+          coverImage: row.coverImage,
+          href: `/gallery/${resourceId}`,
+        };
+      }
+      default:
+        return null;
+    }
   }
 }

@@ -56,17 +56,18 @@ export class ResourceMetricsRepository {
     });
   }
 
+  /**
+   * P1-2：不再"先读后写"（findUnique→create）——两个并发的首次点赞都会 miss 掉那次
+   * findUnique，然后同时 create，其中一个必然撞上 `resource_likes` 的联合唯一约束
+   * 抛 P2002/500。改为直接尝试 create，把 P2002 当作"已点赞"吞掉（幂等、不抛错、
+   * 不重复计数）；只有真正插入新行时才 INCR 计数器，避免并发下重复计数。
+   */
   like(userId: string, resourceType: ResourceType, resourceId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.resource_likes.findUnique({
-        where: {
-          userId_resourceType_resourceId: { userId, resourceType, resourceId },
-        },
-      });
-      if (!existing) {
-        await tx.resource_likes.create({
-          data: { userId, resourceType, resourceId },
-        });
+      const inserted = await this.tryCreateUnique(() =>
+        tx.resource_likes.create({ data: { userId, resourceType, resourceId } }),
+      );
+      if (inserted) {
         await this.bumpCounter(tx, resourceType, resourceId, 'likeCount', 1);
       }
       return this.readMetrics(tx, resourceType, resourceId);
@@ -88,17 +89,15 @@ export class ResourceMetricsRepository {
     });
   }
 
+  /** P1-2：同 like()——create-first + 吞掉 P2002，避免并发首次收藏 500。 */
   favorite(userId: string, resourceType: ResourceType, resourceId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.resource_favorites.findUnique({
-        where: {
-          userId_resourceType_resourceId: { userId, resourceType, resourceId },
-        },
-      });
-      if (!existing) {
-        await tx.resource_favorites.create({
+      const inserted = await this.tryCreateUnique(() =>
+        tx.resource_favorites.create({
           data: { userId, resourceType, resourceId },
-        });
+        }),
+      );
+      if (inserted) {
         await this.bumpCounter(tx, resourceType, resourceId, 'favoriteCount', 1);
       }
       return this.readMetrics(tx, resourceType, resourceId);
@@ -154,6 +153,23 @@ export class ResourceMetricsRepository {
     return tx.resource_metrics.findUnique({
       where: { resourceType_resourceId: { resourceType, resourceId } },
     });
+  }
+
+  /**
+   * P1-2：尝试 insert 一条唯一约束行；命中 P2002（唯一约束冲突，即"已存在"）时
+   * 视为幂等的 no-op 返回 false，而不是让异常冒泡成 500——DB 唯一约束才是并发正确性的
+   * 保证，这里只是把"别人先插入了"翻译成"什么都不用做"。其它错误照常抛出。
+   */
+  private async tryCreateUnique(create: () => Promise<unknown>): Promise<boolean> {
+    try {
+      await create();
+      return true;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        return false;
+      }
+      throw err;
+    }
   }
 
   /**

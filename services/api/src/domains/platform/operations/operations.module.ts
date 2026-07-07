@@ -9,6 +9,7 @@ import { BoostAdminController } from './boost-admin.controller';
 import { BoostRepository } from './boost.repository';
 import { BoostService } from './boost.service';
 import { BoostCron } from './boost.cron';
+import { ResourceVisibilityRepository } from './resource-visibility.repository';
 
 /**
  * 运营配置域模块：运营位编排（Featured Slots，§十）+ 内容加热（Boost，§十一）。
@@ -27,6 +28,7 @@ import { BoostCron } from './boost.cron';
     BoostRepository,
     BoostService,
     BoostCron,
+    ResourceVisibilityRepository,
   ],
   exports: [FeaturedSlotsService, BoostService],
 })
