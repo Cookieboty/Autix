@@ -268,6 +268,17 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* 顶层（非 @layer）规则，优先级高于 @layer，确保不被覆盖：
+   - 禁用文档滚动到顶/底的 macOS 橡皮筋回弹（overscroll bounce）
+   - html 兜底深色背景：即使个别浏览器仍有回弹，也不会露出白色 */
+html {
+  overscroll-behavior: none;
+  background-color: #050505;
+}
+body {
+  overscroll-behavior: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
