@@ -2141,6 +2141,42 @@ export const riskAdminApi = {
     chatApi.post(`/api/admin/risk/users/${id}/unblock`, data ?? {}),
 };
 
+// ── Gallery Admin (广场审核) ─────────────────────────────────────────────
+export interface GalleryPostAdminItem {
+  id: string;
+  kind: 'IMAGE' | 'VIDEO';
+  title: string | null;
+  coverImage: string | null;
+  mediaUrls: string[];
+  category: string;
+  status: 'DRAFT' | 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN' | 'REMOVED';
+  authorSnapshot: { displayName: string; avatarUrl?: string; at: string } | null;
+  createdAt: string;
+  sourceType: 'USER_UPLOAD' | 'FROM_GENERATION' | 'FROM_TEMPLATE' | 'ADMIN_CURATED';
+}
+
+export interface GalleryPendingPage {
+  items: GalleryPostAdminItem[];
+  nextCursor: string | null;
+}
+
+export const galleryAdminApi = {
+  listPending: (cursor?: string) =>
+    chatApi.get<GalleryPendingPage>('/api/admin/gallery/pending', {
+      params: cursor ? { cursor } : undefined,
+    }),
+  approve: (id: string) =>
+    chatApi.post<GalleryPostAdminItem>(`/api/admin/gallery/${id}/approve`, {}),
+  reject: (id: string, reason: string) =>
+    chatApi.post<GalleryPostAdminItem>(`/api/admin/gallery/${id}/reject`, { reason }),
+  hide: (id: string) =>
+    chatApi.post<GalleryPostAdminItem>(`/api/admin/gallery/${id}/hide`, {}),
+  remove: (id: string) =>
+    chatApi.post<GalleryPostAdminItem>(`/api/admin/gallery/${id}/remove`, {}),
+  resolveReport: (reportId: string, status: 'RESOLVED' | 'DISMISSED') =>
+    chatApi.post(`/api/admin/gallery/reports/${reportId}/resolve`, { status }),
+};
+
 // P2-C-1: 与后端 AdminAuditStore 返回结构保持一致
 export interface AdminAuditEntry {
   id: number;

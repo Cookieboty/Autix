@@ -43,5 +43,8 @@ export * from './audit';
 export * from './campaigns';
 export * from './risk';
 
+// Gallery
+export * from './gallery/GalleryModerationView';
+
 // System
 export * from './system';

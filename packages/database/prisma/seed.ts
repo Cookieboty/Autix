@@ -283,6 +283,14 @@ async function main() {
       nameVi: 'Prompt hệ thống',
       path: '/prompts', icon: 'FileText', sort: 10,
     },
+    {
+      code: 'gallery-review',
+      name: '广场审核', nameEn: 'Gallery Review',
+      nameZhTW: '廣場審核', nameFr: 'Modération de la galerie',
+      nameJa: 'ギャラリー審査', nameRu: 'Модерация галереи',
+      nameVi: 'Duyệt thư viện',
+      path: '/gallery', icon: 'ShieldAlert', sort: 7,
+    },
   ] as const;
 
   const chatMenus: { id: string }[] = [];
