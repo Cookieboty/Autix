@@ -3164,7 +3164,7 @@
       "freePlan": "免費方案",
       "credits": "積分",
       "creditsLeft": "{count} 可用",
-      "goPremium": "升級高級會員",
+      "goPremium": "升級 Pro",
       "managePlan": "管理會員",
       "upgrade": "升級",
       "viewProfile": "個人中心",
@@ -3296,7 +3296,7 @@
         "getUnlimited": "取得不限量",
         "imageOffer": "Nano Banana Pro 與 Nano Banana 2 不限量",
         "videoOffer": "Seedance 2.0 系列不限量",
-        "premiumPlans": "Premium 套餐可用",
+        "premiumPlans": "Pro 套餐可用",
         "promptPlaceholder": "描述你想像中的場景",
         "templatePromptPlaceholder": "選擇範本後描述想生成的場景",
         "nanoModel": "Nano Banana Pro",
@@ -3610,7 +3610,7 @@
       "picksTitle": "預設卡片與已發布範例",
       "usePreset": "使用預設",
       "detailPromo": "{title}：把這個預設作為私密生成起點",
-      "premiumBadge": "Premium-ready 預設"
+      "premiumBadge": "Pro-ready 預設"
     },
     "creation": {
       "promo": "用公開作品頁分享已確認的圖片和影片",

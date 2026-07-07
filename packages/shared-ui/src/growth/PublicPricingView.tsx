@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -36,16 +36,7 @@ export function PublicPricingView({
   const checkoutMutation = useCreateOrderMutation();
   const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
   const plans = useMemo(() => buildPricingPlans(levels, cycle), [levels, cycle]);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const packages = useMemo(() => normalizePointsPackages(pointsPackages), [pointsPackages]);
-  const selectedPlan = useMemo(
-    () =>
-      plans.find((plan) => plan.id === selectedPlanId) ??
-      plans.find((plan) => plan.recommended) ??
-      plans[0] ??
-      null,
-    [plans, selectedPlanId],
-  );
 
   const planGridClass =
     plans.length === 1
@@ -54,19 +45,7 @@ export function PublicPricingView({
         ? 'grid gap-4 lg:grid-cols-2'
         : 'grid gap-4 md:grid-cols-2 xl:grid-cols-4';
 
-  useEffect(() => {
-    if (!plans.length) {
-      setSelectedPlanId(null);
-      return;
-    }
-    setSelectedPlanId((current) => {
-      if (current && plans.some((plan) => plan.id === current)) return current;
-      return plans.find((plan) => plan.recommended)?.id ?? plans[0]?.id ?? null;
-    });
-  }, [plans]);
-
   const handlePurchase = async (plan: PricingPlan) => {
-    setSelectedPlanId(plan.id);
     if (!isAuthenticated) {
       openAuthModal({ mode: plan.isFree ? 'register' : 'entry', returnTo: '/pricing' });
       return;
@@ -122,13 +101,11 @@ export function PublicPricingView({
                   key={plan.id}
                   plan={plan}
                   showYearlyHint={cycle === 'YEARLY'}
-                  selected={selectedPlan?.id === plan.id}
                   purchasing={
                     checkoutMutation.isPending &&
                     Boolean(plan.planId) &&
                     checkoutMutation.variables?.productId === plan.planId
                   }
-                  onSelect={() => setSelectedPlanId(plan.id)}
                   onPurchase={() => handlePurchase(plan)}
                   t={t}
                 />

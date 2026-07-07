@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowUpRight, History, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { buildDiscountTranslationValues } from '../discount';
 import type { ImageStudioMode, TemplateDensity } from './generator-studio-helpers';
 
 const TEMPLATE_DENSITY_VALUES: TemplateDensity[] = ['relaxed', 'normal', 'dense'];
@@ -63,7 +64,7 @@ export function OfferStrip({
         {t('goUnlimited')}
       </span>
       <span className="rounded-[7px] bg-hot px-2 py-1 text-[10px] font-black text-foreground">
-        {tCommon('discountBadge')}
+        {tCommon('discountBadge', buildDiscountTranslationValues())}
       </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="hidden text-foreground/40 md:inline">{premium}</span>

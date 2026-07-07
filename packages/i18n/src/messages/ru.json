@@ -3164,7 +3164,7 @@
       "freePlan": "Free Plan",
       "credits": "Credits",
       "creditsLeft": "{count} left",
-      "goPremium": "Go Premium",
+      "goPremium": "Go Pro",
       "managePlan": "Manage plan",
       "upgrade": "Upgrade",
       "viewProfile": "View profile",
@@ -3296,7 +3296,7 @@
         "getUnlimited": "Get Unlimited",
         "imageOffer": "Unlimited Nano Banana Pro & Nano Banana 2",
         "videoOffer": "Unlimited Seedance 2.0 Family",
-        "premiumPlans": "Available on Premium plans",
+        "premiumPlans": "Available on Pro plans",
         "promptPlaceholder": "Describe the scene you imagine",
         "templatePromptPlaceholder": "Describe the scene after choosing a template",
         "nanoModel": "Nano Banana Pro",
@@ -3610,7 +3610,7 @@
       "picksTitle": "Preset cards and published examples",
       "usePreset": "Use preset",
       "detailPromo": "{title}: use this preset as a private generation start",
-      "premiumBadge": "Premium-ready preset"
+      "premiumBadge": "Pro-ready preset"
     },
     "creation": {
       "promo": "Use public creation pages to share approved images and videos",

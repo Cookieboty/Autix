@@ -41,17 +41,13 @@ export function BillingCycleSwitch({
 export function PlanCard({
   plan,
   showYearlyHint,
-  selected,
   purchasing,
-  onSelect,
   onPurchase,
   t,
 }: {
   plan: PricingPlan;
   showYearlyHint: boolean;
-  selected: boolean;
   purchasing: boolean;
-  onSelect: () => void;
   onPurchase: () => void;
   t: TFunc;
 }) {
@@ -69,18 +65,8 @@ export function PlanCard({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      className={`growth-tilt-card group relative flex min-h-[460px] cursor-pointer flex-col rounded-lg border bg-foreground/[0.045] p-5 text-left transition duration-300 hover:bg-foreground/[0.07] xl:min-h-[430px] ${selected || plan.recommended ? 'growth-plan-card-featured' : 'growth-plan-card'}`}
+      className={`growth-tilt-card group relative flex min-h-[460px] flex-col rounded-lg border bg-foreground/[0.045] p-5 text-left transition duration-300 hover:bg-foreground/[0.07] xl:min-h-[430px] ${plan.recommended ? 'growth-plan-card-featured' : 'growth-plan-card'}`}
       style={{ '--plan-accent': plan.accent } as CSSProperties}
-      aria-pressed={selected}
-      onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
     >
       <div className="mb-5">
         <div className="mb-4 flex items-start justify-between gap-4">
@@ -91,11 +77,6 @@ export function PlanCard({
             <Crown className="size-5" />
           </div>
           <div className="flex min-w-0 flex-col items-end gap-2">
-            {selected ? (
-              <span className="rounded-md border border-foreground/14 bg-foreground px-2 py-1 text-xs font-semibold text-background">
-                {t('selectedPlan')}
-              </span>
-            ) : null}
             {badgeLabel ? (
               <span
                 className="max-w-full truncate rounded-md px-2 py-1 text-xs font-semibold text-background"
@@ -156,13 +137,7 @@ export function PlanCard({
           type="button"
           className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-semibold transition disabled:cursor-not-allowed growth-plan-cta"
           disabled={purchasing}
-          onKeyDown={(event) => {
-            event.stopPropagation();
-          }}
-          onClick={(event) => {
-            event.stopPropagation();
-            onPurchase();
-          }}
+          onClick={onPurchase}
         >
           {purchasing ? '...' : ctaLabel}
           <ArrowRight className="size-4" />

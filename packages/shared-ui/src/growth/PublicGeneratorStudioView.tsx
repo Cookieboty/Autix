@@ -21,6 +21,7 @@ import {
 import { findVideoModelByHint } from './generator-video-presenters';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
+import { buildDiscountTranslationValues } from './discount';
 import type { ImageStudioMode } from './generator/generator-studio-helpers';
 import type { PublicGrowthMediaItem } from './types';
 import { ImageGeneratorStudio } from './generator/image/ImageGeneratorStudio';
@@ -165,7 +166,7 @@ export function PublicGeneratorStudioView({
   return (
     <div className="min-h-svh bg-card text-foreground" style={{ paddingTop: headerHeight }}>
       <div ref={headerRef} className="fixed inset-x-0 top-0 z-50">
-        <PublicPromoBar label={t('generator.studio.topPromo')} href="/pricing" />
+        <PublicPromoBar label={t('generator.studio.topPromo', buildDiscountTranslationValues())} href="/pricing" />
         <PublicGeneratorAppNav kind={kind} />
       </div>
       {kind === 'video' ? (
