@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
-import { clampDecrement } from './resource-metrics.util';
 
 type Tx = Prisma.TransactionClient;
 
@@ -10,6 +9,17 @@ type CounterField =
   | 'favoriteCount'
   | 'shareCount'
   | 'referenceCount';
+
+/**
+ * I1：DECR 路径改为原子 SQL，列名必须来自本白名单——禁止把 `field` 参数（哪怕类型已收窄）
+ * 直接拼进原始 SQL 字符串，任何新增计数器字段都必须显式在这里登记后才能被解出真实列名。
+ */
+const COUNTER_COLUMNS: Record<CounterField, string> = {
+  likeCount: 'likeCount',
+  favoriteCount: 'favoriteCount',
+  shareCount: 'shareCount',
+  referenceCount: 'referenceCount',
+};
 
 /**
  * 统一指标 / 互动体系的数据访问层（见 gallery-design.md §9）。
@@ -149,7 +159,8 @@ export class ResourceMetricsRepository {
   /**
    * INCR/DECR 单个计数器，并顺带把 lastActivityAt 刷新为 now。
    * - INCR：upsert，行不存在则以 1 建行，存在则原子 increment（无需先读）。
-   * - DECR：先读当前值，用 clampDecrement 夹紧到 >= 0 后整体 set，避免打成负数。
+   * - DECR（I1）：改为原子 SQL `GREATEST(col - 1, 0)`，避免"先读后写"在并发点赞/取消下
+   *   丢更新或漂移；若行本就不存在则是 no-op（没有可扣减的行本就正确，无需建行）。
    */
   private async bumpCounter(
     tx: Tx,
@@ -179,23 +190,17 @@ export class ResourceMetricsRepository {
       return;
     }
 
-    const current = await tx.resource_metrics.findUnique({
-      where: { resourceType_resourceId: { resourceType, resourceId } },
-    });
-    const next = clampDecrement(current?.[field] ?? 0, 1);
-    const create: Prisma.resource_metricsUncheckedCreateInput = {
-      resourceType,
-      resourceId,
-      lastActivityAt: now,
-    };
-    const update: Prisma.resource_metricsUncheckedUpdateInput = {
-      lastActivityAt: now,
-      [field]: next,
-    };
-    await tx.resource_metrics.upsert({
-      where: { resourceType_resourceId: { resourceType, resourceId } },
-      create,
-      update,
-    });
+    const column = COUNTER_COLUMNS[field];
+    if (!column) {
+      // 理论上不可达（field 类型已被 CounterField 收窄），但显式白名单校验防御性拦截。
+      throw new Error(`未知计数器字段: ${field}`);
+    }
+    await tx.$executeRaw`
+      UPDATE "resource_metrics"
+      SET ${Prisma.raw(`"${column}"`)} = GREATEST(${Prisma.raw(`"${column}"`)} - 1, 0),
+          "lastActivityAt" = ${now},
+          "updatedAt" = ${now}
+      WHERE "resourceType" = ${resourceType}::"ResourceType" AND "resourceId" = ${resourceId}
+    `;
   }
 }

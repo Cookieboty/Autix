@@ -102,17 +102,22 @@ export class BoostRepository {
     });
   }
 
-  /** SET（非 INCR）resource_metrics.boostScore/boostExpiresAt；行不存在则建行。 */
+  /**
+   * SET（非 INCR）resource_metrics.boostScore/boostExpiresAt；行不存在则建行。
+   * I2：同时刷新 lastActivityAt，否则纯靠加热（无 PV/UV/互动）的资源会掉出
+   * recomputeHotScores 的活跃窗口，加热永远不会体现到 hotScore 上。
+   */
   upsertMetricBoost(
     resourceType: ResourceType,
     resourceId: string,
     boostScore: number,
     boostExpiresAt: Date | null,
   ) {
+    const now = new Date();
     return this.prisma.resource_metrics.upsert({
       where: { resourceType_resourceId: { resourceType, resourceId } },
-      create: { resourceType, resourceId, boostScore, boostExpiresAt },
-      update: { boostScore, boostExpiresAt },
+      create: { resourceType, resourceId, boostScore, boostExpiresAt, lastActivityAt: now },
+      update: { boostScore, boostExpiresAt, lastActivityAt: now },
     });
   }
 

@@ -13,6 +13,10 @@ const TRANSITIONS: Record<string, GalleryActor[]> = {
   'HIDDEN->PUBLISHED': ['admin'],
   'PUBLISHED->REMOVED': ['author', 'admin'],
   'HIDDEN->REMOVED': ['author', 'admin'],
+  // I5：作者可删除自己尚未发布的草稿/待审/被拒作品（DELETE /gallery/:id）。
+  'DRAFT->REMOVED': ['author'],
+  'PENDING->REMOVED': ['author'],
+  'REJECTED->REMOVED': ['author'],
 };
 
 /** 校验状态机转移；非法转移 / 角色无权 → 400。 */
@@ -66,6 +70,9 @@ export function assertSource(
       return;
 
     case 'FROM_GENERATION':
+      if (hasTemplate) {
+        throw new BadRequestException('FROM_GENERATION 不允许携带模板引用');
+      }
       if (!matchesKind(p.imageGenerationId, p.videoGenerationId)) {
         throw new BadRequestException(
           'FROM_GENERATION 需提供与 kind 一致的单一 generationId',
@@ -89,5 +96,8 @@ export function assertSource(
         throw new BadRequestException('ADMIN_CURATED 仅管理员可创建');
       }
       return;
+
+    default:
+      throw new BadRequestException(`未知来源类型: ${p.sourceType as string}`);
   }
 }

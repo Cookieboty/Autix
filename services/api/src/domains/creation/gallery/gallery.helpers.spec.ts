@@ -27,6 +27,12 @@ describe('assertTransition (§5.1.1 状态机)', () => {
   it('非法转移抛错（如 PUBLISHED→PENDING）', () => {
     expect(() => assertTransition('PUBLISHED', 'PENDING', 'admin')).toThrow();
   });
+
+  it('I5：作者可删除自己尚未发布的 DRAFT/PENDING/REJECTED 作品', () => {
+    expect(() => assertTransition('DRAFT', 'REMOVED', 'author')).not.toThrow();
+    expect(() => assertTransition('PENDING', 'REMOVED', 'author')).not.toThrow();
+    expect(() => assertTransition('REJECTED', 'REMOVED', 'author')).not.toThrow();
+  });
 });
 
 describe('assertSource (§6.4 来源强校验)', () => {
@@ -76,6 +82,20 @@ describe('assertSource (§6.4 来源强校验)', () => {
     ).toThrow();
   });
 
+  it('M1：FROM_GENERATION 不允许携带模板引用（与 FROM_TEMPLATE 对称）', () => {
+    expect(() =>
+      assertSource(
+        {
+          kind: 'IMAGE',
+          sourceType: 'FROM_GENERATION',
+          imageGenerationId: 'g1',
+          imageTemplateId: 't1',
+        },
+        'author',
+      ),
+    ).toThrow();
+  });
+
   it('FROM_TEMPLATE：需模板引用、禁生成引用', () => {
     expect(() =>
       assertSource(
@@ -102,6 +122,15 @@ describe('assertSource (§6.4 来源强校验)', () => {
     ).not.toThrow();
     expect(() =>
       assertSource({ kind: 'IMAGE', sourceType: 'ADMIN_CURATED' }, 'author'),
+    ).toThrow();
+  });
+
+  it('M1：未知 sourceType 兜底抛错（default 分支）', () => {
+    expect(() =>
+      assertSource(
+        { kind: 'IMAGE', sourceType: 'UNKNOWN' as never },
+        'author',
+      ),
     ).toThrow();
   });
 });

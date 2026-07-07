@@ -87,7 +87,7 @@ export class GalleryController {
   @UseGuards(JwtAuthGuard)
   @Post(':id/like')
   like(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.metrics.like(getCurrentUserId(user), ResourceType.GALLERY_POST, id);
+    return this.service.like(getCurrentUserId(user), id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -99,7 +99,7 @@ export class GalleryController {
   @UseGuards(JwtAuthGuard)
   @Post(':id/favorite')
   favorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.metrics.favorite(getCurrentUserId(user), ResourceType.GALLERY_POST, id);
+    return this.service.favorite(getCurrentUserId(user), id);
   }
 
   @UseGuards(JwtAuthGuard)

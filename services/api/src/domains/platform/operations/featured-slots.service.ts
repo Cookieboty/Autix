@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   FeaturedSlot,
   MetricResourceType,
@@ -95,8 +95,13 @@ export class FeaturedSlotsService {
 
     let position = input.position;
     if (position === undefined) {
+      // I3：用 max(position)+1 而非 existing.length——中间删除过槽位后
+      // length 会与已存在的最大 position+1 不一致，撞上 @@unique([placement, position])。
       const existing = await this.repo.listAllByPlacement(input.placement);
-      position = existing.length;
+      position =
+        existing.length === 0
+          ? 0
+          : Math.max(...existing.map((s) => s.position)) + 1;
     }
 
     const created = await this.repo.create({
@@ -162,6 +167,21 @@ export class FeaturedSlotsService {
     orderedIds: string[],
   ): Promise<FeaturedSlot[]> {
     const before = await this.repo.listAllByPlacement(placement);
+
+    // I4：orderedIds 必须与该 placement 下现有槽位一一对应——不能缺失、不能多出、
+    // 不能重复，否则两阶段 reorder 里途中会撞上 @@unique([placement, position]) 抛 500。
+    const existingIds = new Set(before.map((s) => s.id));
+    const uniqueProvidedIds = new Set(orderedIds);
+    const isExactPermutation =
+      uniqueProvidedIds.size === orderedIds.length &&
+      uniqueProvidedIds.size === existingIds.size &&
+      orderedIds.every((id) => existingIds.has(id));
+    if (!isExactPermutation) {
+      throw new BadRequestException(
+        'orderedIds 必须与该 placement 下全部槽位一一对应（不能缺失/多余/重复）',
+      );
+    }
+
     await this.repo.reorder(placement, orderedIds);
     const after = await this.repo.listAllByPlacement(placement);
 

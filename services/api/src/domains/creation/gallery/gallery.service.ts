@@ -5,7 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthUser } from '@autix/domain';
-import { GalleryStatus } from '../../platform/prisma/generated';
+import { GalleryStatus, Prisma, ResourceType } from '../../platform/prisma/generated';
+import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
 import { GalleryRepository } from './gallery.repository';
 import { assertSource, assertTransition, type GallerySourcePayload } from './gallery.helpers';
 import type { CreateGalleryDraftDto } from './dto/create-gallery-draft.dto';
@@ -52,7 +53,10 @@ function toSourcePayload(row: {
 
 @Injectable()
 export class GalleryService {
-  constructor(private readonly repo: GalleryRepository) {}
+  constructor(
+    private readonly repo: GalleryRepository,
+    private readonly metrics: ResourceMetricsService,
+  ) {}
 
   private async assertOwnership(dto: {
     sourceType: string;
@@ -161,10 +165,38 @@ export class GalleryService {
     return this.repo.update(id, { status: GalleryStatus.PENDING });
   }
 
-  /** PATCH /gallery/:id：作者本人可编辑基础字段（不改 status/kind）。 */
+  /**
+   * PATCH /gallery/:id：作者本人可编辑基础字段（不改 kind；status 不接受调用方指定 ——
+   * UpdateGalleryPostDto 本就不含 status 字段）。
+   * C1 修复（先审后发不可绕过）：
+   *   (a) 用"当前记录字段 + 本次 dto 覆盖"合并出的来源字段重新跑 assertSource；
+   *   (b) 若编辑前状态是 PUBLISHED/HIDDEN，则打回 PENDING 重新进入审核队列，
+   *       并清空 publishedAt/reviewedById/reviewedAt；
+   *   (c) DRAFT/PENDING/REJECTED 编辑后保持原状态，仍在发布前审核车道内。
+   */
   async updatePost(authorId: string, id: string, dto: UpdateGalleryPostDto) {
-    await this.getOwned(id, authorId);
-    return this.repo.update(id, { ...dto });
+    const post = await this.getOwned(id, authorId);
+
+    const merged: GallerySourcePayload = {
+      kind: post.kind as GallerySourcePayload['kind'],
+      sourceType: (dto.sourceType ?? post.sourceType) as GallerySourcePayload['sourceType'],
+      mediaUrls: dto.mediaUrls ?? post.mediaUrls,
+      imageTemplateId: dto.imageTemplateId ?? post.imageTemplateId,
+      videoTemplateId: dto.videoTemplateId ?? post.videoTemplateId,
+      imageGenerationId: dto.imageGenerationId ?? post.imageGenerationId,
+      videoGenerationId: dto.videoGenerationId ?? post.videoGenerationId,
+    };
+    assertSource(merged, 'author');
+    await this.assertOwnership(merged, authorId);
+
+    const data: Prisma.gallery_postsUncheckedUpdateInput = { ...dto };
+    if (post.status === GalleryStatus.PUBLISHED || post.status === GalleryStatus.HIDDEN) {
+      data.status = GalleryStatus.PENDING;
+      data.publishedAt = null;
+      data.reviewedById = null;
+      data.reviewedAt = null;
+    }
+    return this.repo.update(id, data);
   }
 
   /** DELETE /gallery/:id：作者本人 → REMOVED；非法转移/非作者由 assertTransition/getOwned 抛错。 */
@@ -195,6 +227,25 @@ export class GalleryService {
       reporterId,
       reason: dto.reason,
     });
+  }
+
+  /** M2：点赞/收藏前校验目标作品存在且已发布，避免在 DRAFT/HIDDEN/REMOVED/不存在的 id 上留下孤立指标行。 */
+  private async assertLikeableOrFavoritable(id: string): Promise<void> {
+    const post = await this.repo.findById(id);
+    if (!post) throw new NotFoundException('作品不存在');
+    if (post.status !== GalleryStatus.PUBLISHED) {
+      throw new BadRequestException('仅已发布作品可点赞/收藏');
+    }
+  }
+
+  async like(userId: string, id: string) {
+    await this.assertLikeableOrFavoritable(id);
+    return this.metrics.like(userId, ResourceType.GALLERY_POST, id);
+  }
+
+  async favorite(userId: string, id: string) {
+    await this.assertLikeableOrFavoritable(id);
+    return this.metrics.favorite(userId, ResourceType.GALLERY_POST, id);
   }
 
   // ── 管理端 ──────────────────────────────────────────────────────────
