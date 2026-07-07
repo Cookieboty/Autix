@@ -1,17 +1,5 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  PublicCollectionKind,
-  PublicCreationMediaType,
-  PublicPromptVisibility,
-} from '../../platform/prisma/generated';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { PublicCollectionKind } from '../../platform/prisma/generated';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import {
   CurrentUser,
@@ -21,14 +9,6 @@ import {
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import type { AuthUser } from '@autix/domain';
 import { PublicGrowthService } from './public-growth.service';
-
-interface PublishBody {
-  title?: string;
-  description?: string;
-  tags?: string[];
-  promptVisibility?: PublicPromptVisibility;
-  collectionSlug?: string;
-}
 
 @Controller('public')
 export class PublicGrowthController {
@@ -62,64 +42,9 @@ export class PublicGrowthController {
   }
 
   @Public()
-  @Get('creations')
-  listCreations(
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
-    @Query('mediaType') mediaType?: PublicCreationMediaType,
-    @Query('tag') tag?: string,
-    @Query('collectionSlug') collectionSlug?: string,
-  ) {
-    return this.service.listCreations({
-      page: page ? +page : undefined,
-      pageSize: pageSize ? +pageSize : undefined,
-      mediaType,
-      tag,
-      collectionSlug,
-    });
-  }
-
-  @Public()
-  @Get('creations/:id')
-  getCreation(@Param('id') id: string) {
-    return this.service.getCreation(id);
-  }
-
-  @Public()
-  @Post('creations/:id/view')
-  recordView(@Param('id') id: string) {
-    return this.service.recordView(id);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('creations/:id/like')
-  likeCreation(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.service.likeCreation(id, getCurrentUserId(user));
-  }
-
-  @Public()
-  @Post('creations/:id/share')
-  recordShare(@Param('id') id: string) {
-    return this.service.recordShare(id);
-  }
-
-  @Public()
   @Get('creators/:handle')
   getCreator(@Param('handle') handle: string) {
     return this.service.getCreator(handle);
-  }
-
-  @Public()
-  @Get('creators/:handle/creations')
-  getCreatorCreations(
-    @Param('handle') handle: string,
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
-  ) {
-    return this.service.getCreatorCreations(handle, {
-      page: page ? +page : undefined,
-      pageSize: pageSize ? +pageSize : undefined,
-    });
   }
 
   @UseGuards(JwtAuthGuard)
@@ -145,37 +70,5 @@ export class PublicGrowthController {
       ...body,
       userId: user?.id,
     });
-  }
-}
-
-@UseGuards(JwtAuthGuard)
-@Controller()
-export class PublicGrowthPublishController {
-  constructor(private readonly service: PublicGrowthService) {}
-
-  @Post('generations/image/:id/publish')
-  publishImageGeneration(
-    @CurrentUser() user: AuthUser,
-    @Param('id') generationId: string,
-    @Body() body: PublishBody,
-  ) {
-    return this.service.publishImageGeneration(
-      generationId,
-      getCurrentUserId(user),
-      body,
-    );
-  }
-
-  @Post('video-projects/:id/publish')
-  publishVideoProject(
-    @CurrentUser() user: AuthUser,
-    @Param('id') projectId: string,
-    @Body() body: PublishBody,
-  ) {
-    return this.service.publishVideoProject(
-      projectId,
-      getCurrentUserId(user),
-      body,
-    );
   }
 }

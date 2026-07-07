@@ -1,7 +1,6 @@
 import type {
   PublicCollectionKind,
   PublicCreationMediaType,
-  PublicPromptVisibility,
 } from '../../platform/prisma/generated';
 
 export interface PublicGrowthAuthor {
@@ -90,12 +89,4 @@ export interface PublicGrowthHome {
   tagRail: Array<{ label: string; href: string }>;
   sections: PublicGrowthHomeSection[];
   collections: PublicGrowthCollection[];
-}
-
-export interface PublishPublicCreationInput {
-  title?: string;
-  description?: string;
-  tags?: string[];
-  promptVisibility?: PublicPromptVisibility;
-  collectionSlug?: string;
 }

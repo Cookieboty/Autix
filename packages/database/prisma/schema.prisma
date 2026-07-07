@@ -120,8 +120,6 @@ model User {
   materialAssets                 material_assets[]            @relation("MaterialAssetUser")
   materialFolders                material_folders[]           @relation("MaterialFolderUser")
   canvasBoards                   canvas_boards[]              @relation("CanvasBoardUser")
-  publicCreations                public_creations[]           @relation("PublicCreationUser")
-  publicCreationLikes            public_creation_likes[]      @relation("PublicCreationLikeUser")
   creatorProfile                 creator_profiles?            @relation("CreatorProfileUser")
   creatorFollows                 creator_follows[]            @relation("CreatorFollowFollower")
   creatorFollowers               creator_follows[]            @relation("CreatorFollowCreator")
@@ -1168,74 +1166,24 @@ model home_sections {
 }
 
 model home_section_items {
-  id           String            @id @default(cuid())
+  id           String        @id @default(cuid())
   sectionId    String
-  section      home_sections     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  title        String            @db.VarChar(200)
+  section      home_sections @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title        String        @db.VarChar(200)
   subtitle     String?
   mediaUrl     String?
   posterUrl    String?
   href         String?
-  badge        String?           @db.VarChar(80)
+  badge        String?       @db.VarChar(80)
   resourceType ResourceType?
   resourceId   String?
-  creationId   String?
-  creation     public_creations? @relation(fields: [creationId], references: [id], onDelete: SetNull)
-  sort         Int               @default(0)
+  sort         Int           @default(0)
   config       Json?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([sectionId, sort])
   @@index([resourceType, resourceId])
-  @@index([creationId])
-}
-
-model public_creations {
-  id               String                   @id @default(cuid())
-  userId           String
-  user             User                     @relation("PublicCreationUser", fields: [userId], references: [id], onDelete: Cascade)
-  sourceType       PublicCreationSourceType
-  sourceId         String                   @db.VarChar(200)
-  mediaType        PublicCreationMediaType
-  mediaUrl         String
-  posterUrl        String?
-  title            String                   @db.VarChar(200)
-  description      String?
-  promptVisibility PublicPromptVisibility   @default(hidden)
-  promptSnapshot   String?
-  modelUsed        String?                  @db.VarChar(120)
-  templateId       String?
-  status           PublicCreationStatus     @default(PUBLISHED)
-  tags             String[]                 @default([])
-  collectionSlug   String?                  @db.VarChar(120)
-  likeCount        Int                      @default(0)
-  viewCount        Int                      @default(0)
-  shareCount       Int                      @default(0)
-  publishedAt      DateTime                 @default(now())
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
-  sectionItems     home_section_items[]
-  likes            public_creation_likes[]
-
-  @@unique([sourceType, sourceId])
-  @@index([userId, publishedAt])
-  @@index([status, publishedAt])
-  @@index([mediaType, publishedAt])
-  @@index([collectionSlug, publishedAt])
-  @@index([templateId])
-}
-
-model public_creation_likes {
-  id         String           @id @default(cuid())
-  creationId String
-  creation   public_creations @relation(fields: [creationId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User             @relation("PublicCreationLikeUser", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt  DateTime         @default(now())
-
-  @@unique([creationId, userId])
-  @@index([userId, createdAt])
 }
 
 model creator_profiles {

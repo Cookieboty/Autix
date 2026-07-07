@@ -1,37 +1,22 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   PublicCollectionKind,
   PublicCreationMediaType,
-  PublicCreationSourceType,
-  PublicCreationStatus,
-  PublicPromptVisibility,
-  ResourceType,
   type Prisma,
 } from '../../platform/prisma/generated';
 import {
   type PublicGrowthFallbackBundle,
   getPublicGrowthFallbacks,
 } from './public-growth.fallbacks';
-import {
-  PublicGrowthRepository,
-  isLivePublicCreationStatus,
-  normalizeHandle,
-} from './public-growth.repository';
+import { PublicGrowthRepository, normalizeHandle } from './public-growth.repository';
 import type {
   PublicGrowthCollection,
   PublicGrowthHome,
   PublicGrowthHomeSection,
   PublicGrowthMediaItem,
   PublicGrowthPage,
-  PublishPublicCreationInput,
 } from './public-growth.types';
 
-type CreationRow = NonNullable<Awaited<ReturnType<PublicGrowthRepository['findCreation']>>>;
 type HomeSectionRow = Awaited<ReturnType<PublicGrowthRepository['findHomeSections']>>[number];
 type CollectionRow = NonNullable<Awaited<ReturnType<PublicGrowthRepository['findCollection']>>>;
 
@@ -41,21 +26,14 @@ export class PublicGrowthService {
 
   async getHome(locale?: string): Promise<PublicGrowthHome> {
     const fallbacks = getPublicGrowthFallbacks(locale);
-    const [sections, featuredCreations, templateCards, collections] =
-      await Promise.all([
-        this.repository.findHomeSections(),
-        this.repository.findFeaturedPublicCreations(18),
-        this.repository.findApprovedTemplateCards(8),
-        this.repository.listCollections(PublicCollectionKind.COMMUNITY),
-      ]);
+    const [sections, templateCards, collections] = await Promise.all([
+      this.repository.findHomeSections(),
+      this.repository.findApprovedTemplateCards(8),
+      this.repository.listCollections(PublicCollectionKind.COMMUNITY),
+    ]);
 
-    const mediaFromCreations = featuredCreations.map((item) => this.toMediaItem(item));
     const mediaFromTemplates = this.templatesToMediaItems(templateCards, fallbacks);
-    const mediaRail = [
-      ...mediaFromCreations,
-      ...mediaFromTemplates,
-      ...fallbacks.mediaItems,
-    ].slice(0, 18);
+    const mediaRail = [...mediaFromTemplates, ...fallbacks.mediaItems].slice(0, 18);
     const mappedSections = sections
       .map((section) => this.toHomeSection(section))
       .filter((section) => section.items.length > 0);
@@ -109,14 +87,7 @@ export class PublicGrowthService {
 
   async getCollection(slug: string, locale?: string) {
     const fallbacks = getPublicGrowthFallbacks(locale);
-    const [collection, creations] = await Promise.all([
-      this.repository.findCollection(slug),
-      this.repository.listCreations({
-        page: 1,
-        pageSize: 40,
-        collectionSlug: slug,
-      }),
-    ]);
+    const collection = await this.repository.findCollection(slug);
     const fallback = fallbacks.collections.find((item) => item.slug === slug);
     if (!collection && !fallback) throw new NotFoundException('集合不存在');
 
@@ -126,151 +97,13 @@ export class PublicGrowthService {
     );
     return {
       collection: mappedCollection,
-      items: creations.items.length
-        ? creations.items.map((item) => this.toMediaItem(item))
-        : fallbackItems.length ? fallbackItems : fallbacks.mediaItems,
+      items: fallbackItems.length ? fallbackItems : fallbacks.mediaItems,
     };
-  }
-
-  async listCreations(input: {
-    page?: number;
-    pageSize?: number;
-    mediaType?: PublicCreationMediaType;
-    tag?: string;
-    collectionSlug?: string;
-  }) {
-    const page = Math.max(1, input.page ?? 1);
-    const pageSize = Math.min(Math.max(1, input.pageSize ?? 24), 60);
-    const result = await this.repository.listCreations({
-      page,
-      pageSize,
-      mediaType: input.mediaType,
-      tag: input.tag,
-      collectionSlug: input.collectionSlug,
-    });
-    return {
-      ...result,
-      items: result.items.map((item) => this.toMediaItem(item)),
-    };
-  }
-
-  async getCreation(id: string) {
-    const creation = await this.repository.findCreation(id);
-    if (!creation) throw new NotFoundException('公开作品不存在');
-    return this.toMediaItem(creation, { includePrompt: true });
-  }
-
-  async recordView(id: string) {
-    await this.ensureLiveCreation(id);
-    const updated = await this.repository.incrementCreationCounter(id, 'viewCount');
-    return { viewCount: updated.viewCount };
-  }
-
-  async recordShare(id: string) {
-    await this.ensureLiveCreation(id);
-    const updated = await this.repository.incrementCreationCounter(id, 'shareCount');
-    return { shareCount: updated.shareCount };
-  }
-
-  async likeCreation(id: string, userId: string) {
-    await this.ensureLiveCreation(id);
-    const updated = await this.repository.likeCreation(id, userId);
-    return { liked: true, likeCount: updated.likeCount };
-  }
-
-  async publishImageGeneration(
-    generationId: string,
-    userId: string,
-    input: PublishPublicCreationInput,
-  ) {
-    const generation = await this.repository.findImageGenerationForPublish(generationId);
-    if (!generation) throw new NotFoundException('生成记录不存在');
-    if (generation.userId !== userId) throw new ForbiddenException('只能发布自己的生成结果');
-    const mediaUrl = generation.generatedImages[0];
-    if (!mediaUrl) throw new BadRequestException('暂无可发布的图片');
-
-    await this.repository.ensureCreatorProfile(userId);
-    const tags = this.cleanTags(input.tags?.length ? input.tags : [
-      generation.template.category,
-      ...generation.template.tags,
-    ]);
-    const title = this.resolveTitle(input.title, generation.template.title);
-
-    return this.toMediaItem(
-      await this.repository.upsertPublicCreation({
-        userId,
-        sourceType: PublicCreationSourceType.IMAGE_GENERATION,
-        sourceId: generation.id,
-        mediaType: PublicCreationMediaType.image,
-        mediaUrl,
-        posterUrl: generation.template.coverImage ?? mediaUrl,
-        title,
-        description: input.description,
-        promptVisibility: input.promptVisibility ?? PublicPromptVisibility.hidden,
-        promptSnapshot: generation.resolvedPrompt,
-        modelUsed: generation.modelUsed,
-        templateId: generation.templateId,
-        status: PublicCreationStatus.PUBLISHED,
-        tags,
-        collectionSlug: input.collectionSlug,
-      }),
-      { includePrompt: true },
-    );
-  }
-
-  async publishVideoProject(
-    projectId: string,
-    userId: string,
-    input: PublishPublicCreationInput,
-  ) {
-    const project = await this.repository.findVideoProjectForPublish(projectId);
-    if (!project) throw new NotFoundException('视频项目不存在');
-    if (project.userId !== userId) throw new ForbiddenException('只能发布自己的视频项目');
-
-    const latestGeneration = project.clips
-      .flatMap((clip) => clip.generations)
-      .filter((generation) => generation.videoUrl)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-    if (!latestGeneration?.videoUrl) {
-      throw new BadRequestException('暂无可发布的视频');
-    }
-
-    await this.repository.ensureCreatorProfile(userId);
-    const title = this.resolveTitle(input.title, project.title);
-    const prompt = project.clips
-      .map((clip) => clip.prompt)
-      .filter((value): value is string => Boolean(value?.trim()))
-      .join('\n\n');
-
-    return this.toMediaItem(
-      await this.repository.upsertPublicCreation({
-        userId,
-        sourceType: PublicCreationSourceType.VIDEO_PROJECT,
-        sourceId: project.id,
-        mediaType: PublicCreationMediaType.video,
-        mediaUrl: latestGeneration.videoUrl,
-        posterUrl: latestGeneration.thumbnailUrl ?? latestGeneration.lastFrameUrl ?? project.coverImage,
-        title,
-        description: input.description,
-        promptVisibility: input.promptVisibility ?? PublicPromptVisibility.hidden,
-        promptSnapshot: prompt || latestGeneration.resolvedPrompt,
-        modelUsed: latestGeneration.model,
-        status: PublicCreationStatus.PUBLISHED,
-        tags: this.cleanTags(input.tags?.length ? input.tags : ['video', 'storyboard']),
-        collectionSlug: input.collectionSlug,
-      }),
-      { includePrompt: true },
-    );
   }
 
   async getCreator(handle: string) {
     const profile = await this.repository.findCreatorProfile(normalizeHandle(handle));
     if (!profile) throw new NotFoundException('创作者不存在');
-    const creations = await this.repository.listCreations({
-      page: 1,
-      pageSize: 24,
-      userId: profile.userId,
-    });
     return {
       profile: {
         userId: profile.userId,
@@ -282,23 +115,6 @@ export class PublicGrowthService {
         followingCount: profile.followingCount,
         externalLinks: profile.externalLinks,
       },
-      creations: creations.items.map((item) => this.toMediaItem(item)),
-    };
-  }
-
-  async getCreatorCreations(handle: string, input: { page?: number; pageSize?: number }) {
-    const profile = await this.repository.findCreatorProfile(normalizeHandle(handle));
-    if (!profile) throw new NotFoundException('创作者不存在');
-    const page = Math.max(1, input.page ?? 1);
-    const pageSize = Math.min(Math.max(1, input.pageSize ?? 24), 60);
-    const result = await this.repository.listCreations({
-      page,
-      pageSize,
-      userId: profile.userId,
-    });
-    return {
-      ...result,
-      items: result.items.map((item) => this.toMediaItem(item)),
     };
   }
 
@@ -329,12 +145,6 @@ export class PublicGrowthService {
     });
   }
 
-  private async ensureLiveCreation(id: string) {
-    const creation = await this.repository.findCreation(id);
-    if (!creation) throw new NotFoundException('公开作品不存在');
-    return creation;
-  }
-
   private toHomeSection(section: HomeSectionRow): PublicGrowthHomeSection {
     return {
       key: section.key,
@@ -343,76 +153,19 @@ export class PublicGrowthService {
       subtitle: section.subtitle,
       layout: section.layout,
       items: section.items
-        .map((item) => {
-          if (item.creation) {
-            if (!isLivePublicCreationStatus(item.creation.status)) return null;
-            return this.toMediaItem(item.creation, {
-              title: item.title,
-              subtitle: item.subtitle,
-              href: item.href,
-              badge: item.badge,
-            });
-          }
-          if (!item.mediaUrl) return null;
-          return {
-            id: item.id,
-            title: item.title,
-            subtitle: item.subtitle,
-            mediaType: PublicCreationMediaType.image,
-            mediaUrl: item.mediaUrl,
-            posterUrl: item.posterUrl,
-            href: item.href ?? '#',
-            badge: item.badge,
-            tags: this.asStringArray(this.asRecord(item.config).tags),
-            author: null,
-          } satisfies PublicGrowthMediaItem;
-        })
-        .filter((item): item is PublicGrowthMediaItem => Boolean(item)),
-    };
-  }
-
-  private toMediaItem(
-    row: CreationRow,
-    options: {
-      includePrompt?: boolean;
-      title?: string;
-      subtitle?: string | null;
-      href?: string | null;
-      badge?: string | null;
-    } = {},
-  ): PublicGrowthMediaItem {
-    const profile = row.user.creatorProfile;
-    const handle = profile?.handle ?? normalizeHandle(row.user.username);
-    const prompt =
-      options.includePrompt && row.promptVisibility === PublicPromptVisibility.public
-        ? row.promptSnapshot
-        : null;
-
-    return {
-      id: row.id,
-      title: options.title ?? row.title,
-      subtitle: options.subtitle ?? row.description,
-      description: row.description,
-      mediaType: row.mediaType,
-      mediaUrl: row.mediaUrl,
-      posterUrl: row.posterUrl,
-      href: options.href ?? `/p/${row.id}`,
-      badge: options.badge ?? row.modelUsed,
-      tags: row.tags,
-      author: {
-        userId: row.user.id,
-        handle,
-        displayName: profile?.displayName ?? row.user.realName ?? row.user.username,
-        avatar: profile?.avatar ?? row.user.avatar,
-        bio: profile?.bio,
-        followerCount: profile?.followerCount,
-      },
-      modelUsed: row.modelUsed,
-      prompt,
-      likeCount: row.likeCount,
-      viewCount: row.viewCount,
-      shareCount: row.shareCount,
-      publishedAt: row.publishedAt,
+        .filter((item) => Boolean(item.mediaUrl))
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          subtitle: item.subtitle,
+          mediaType: PublicCreationMediaType.image,
+          mediaUrl: item.mediaUrl as string,
+          posterUrl: item.posterUrl,
+          href: item.href ?? '#',
+          badge: item.badge,
+          tags: this.asStringArray(this.asRecord(item.config).tags),
+          author: null,
+        } satisfies PublicGrowthMediaItem)),
     };
   }
 
@@ -458,23 +211,6 @@ export class PublicGrowthService {
       heroMedia: row.heroMedia,
       tags: row.tags,
     };
-  }
-
-  private resolveTitle(inputTitle: string | undefined, fallback: string) {
-    const title = inputTitle?.trim() || fallback?.trim();
-    if (!title) throw new BadRequestException('发布公开作品需要标题');
-    return title.slice(0, 200);
-  }
-
-  private cleanTags(tags: string[] | undefined) {
-    return Array.from(
-      new Set(
-        (tags ?? [])
-          .map((tag) => tag.trim().toLowerCase())
-          .filter(Boolean)
-          .slice(0, 12),
-      ),
-    );
   }
 
   private asRecord(value: unknown): Record<string, unknown> {
