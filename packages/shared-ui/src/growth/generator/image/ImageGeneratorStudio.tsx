@@ -185,9 +185,9 @@ export function ImageGeneratorStudio({
   };
 
   return (
-    <main className="relative min-h-[calc(100svh-104px)] overflow-hidden bg-background">
-      <div className="growth-image-studio-bg absolute inset-0" />
-      <div className="growth-generator-noise absolute inset-0 opacity-[0.13]" />
+    <div className="relative h-full">
+      {/* 背景由 PublicGeneratorStudioView 的全屏固定底层统一提供，此处不再自带背景，避免滑动时错位漏底 */}
+      <main className="relative h-full overflow-hidden">
       {templateMode ? (
         <PublicImageTemplateWall
           templates={templates}
@@ -199,53 +199,42 @@ export function ImageGeneratorStudio({
       ) : null}
       {templateMode ? <div className="growth-template-scroll-overlay pointer-events-none absolute inset-0" /> : null}
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1720px] flex-col gap-3 px-4 pt-3 md:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <ModeTabs active={mode} onChange={setMode} />
-          <StudioDensitySlider
-            label={t('density')}
-            value={templateDensity}
-            onChange={setTemplateDensity}
-          />
+      {!templateMode ? (
+        <div className="relative z-10 h-full overflow-y-auto overscroll-contain">
+          <div className="mx-auto flex w-full max-w-[1720px] flex-col gap-3 px-4 pb-36 pt-14 md:px-6">
+            {mode === 'history' && (historyItems.length > 0 || pendingGeneration) ? (
+              <section className="text-left">
+                <PublicImageHistoryPanel
+                  items={historyItems}
+                  loading={historyLoading}
+                  density={templateDensity}
+                  pending={pendingGeneration}
+                />
+              </section>
+            ) : (
+              <section className="flex min-h-[calc(100svh-374px)] flex-col items-center justify-center pb-12 pt-2 text-center">
+                <ImageHeroCollage items={items} />
+                <h1 className="text-4xl font-black uppercase leading-[0.96] tracking-normal text-foreground md:text-5xl">
+                  {t('imageBlankTitle')}
+                  <span className="block text-growth-accent">{t('imageBlankAccent', { model: selectedModel?.name ?? imageCapability.displayName })}</span>
+                </h1>
+                <p className="mt-4 max-w-xl text-base font-medium text-foreground/42">
+                  {t('imageBlankDescription')}
+                </p>
+                {mode === 'history' ? (
+                  <div className="mt-8 w-full max-w-2xl">
+                    <PublicImageHistoryPanel
+                      items={historyItems}
+                      loading={historyLoading}
+                      density={templateDensity}
+                      pending={pendingGeneration}
+                    />
+                  </div>
+                ) : null}
+              </section>
+            )}
+          </div>
         </div>
-
-        {!templateMode ? (
-          mode === 'history' && (historyItems.length > 0 || pendingGeneration) ? (
-            <section className="pb-36 text-left">
-              <PublicImageHistoryPanel
-                items={historyItems}
-                loading={historyLoading}
-                density={templateDensity}
-                pending={pendingGeneration}
-              />
-            </section>
-          ) : (
-            <section className="flex min-h-[calc(100svh-374px)] flex-col items-center justify-center pb-12 pt-2 text-center">
-              <ImageHeroCollage items={items} />
-              <h1 className="text-4xl font-black uppercase leading-[0.96] tracking-normal text-foreground md:text-5xl">
-                {t('imageBlankTitle')}
-                <span className="block text-growth-accent">{t('imageBlankAccent', { model: selectedModel?.name ?? imageCapability.displayName })}</span>
-              </h1>
-              <p className="mt-4 max-w-xl text-base font-medium text-foreground/42">
-                {t('imageBlankDescription')}
-              </p>
-              {mode === 'history' ? (
-                <div className="mt-8 w-full max-w-2xl">
-                  <PublicImageHistoryPanel
-                    items={historyItems}
-                    loading={historyLoading}
-                    density={templateDensity}
-                    pending={pendingGeneration}
-                  />
-                </div>
-              ) : null}
-            </section>
-          )
-        ) : null}
-      </div>
-
-      {templateMode ? (
-        <section className="pointer-events-none relative z-10 min-h-[calc(100svh-320px)]" aria-label={t('templateMode')} />
       ) : null}
 
       <div className="pointer-events-none fixed inset-x-0 bottom-[30px] z-40">
@@ -268,6 +257,22 @@ export function ImageGeneratorStudio({
         onClose={() => setSelectedTemplate(null)}
         onUsePrompt={useTemplatePrompt}
       />
-    </main>
+      </main>
+
+      {/* 顶部悬浮控件：绝对定位、不占内容流（图片直接顶到导航下方），
+          左右两个控件浮在内容之上；整层不拦截点击，仅控件本身可交互 */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 px-4 py-2 md:px-6">
+        <div className="pointer-events-auto">
+          <ModeTabs active={mode} onChange={setMode} />
+        </div>
+        <div className="pointer-events-auto">
+          <StudioDensitySlider
+            label={t('density')}
+            value={templateDensity}
+            onChange={setTemplateDensity}
+          />
+        </div>
+      </div>
+    </div>
   );
 }

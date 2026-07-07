@@ -163,9 +163,8 @@ export function VideoGeneratorStudio({
   };
 
   return (
-    <div className="relative min-h-[calc(100svh-104px)] bg-background">
-      <div className="growth-video-studio-bg absolute inset-0" />
-      <div className="growth-generator-noise absolute inset-0 opacity-[0.1]" />
+    <div className="relative min-h-[calc(100svh-104px)]">
+      {/* 背景由 PublicGeneratorStudioView 的全屏固定底层统一提供，此处不再自带背景，避免滑动时错位漏底 */}
       <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-3 px-4 py-3 lg:flex-row lg:px-6">
         {/* Keep the original DOM (form first, display second) so the display stays
             a direct flex child. Only flip the desktop visual order: form → right,
