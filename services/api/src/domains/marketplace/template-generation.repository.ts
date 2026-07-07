@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ResourceType, type Prisma } from '../platform/prisma/generated';
 import { PrismaService } from '../platform/prisma/prisma.service';
+import { ResourceMetricsService } from '../platform/resource-metrics/resource-metrics.service';
 
 interface CreateImageGenerationInput {
   id: string;
@@ -34,10 +35,15 @@ type TemplateResourceType = Extract<
 
 @Injectable()
 export class TemplateGenerationRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(TemplateGenerationRepository.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly resourceMetrics: ResourceMetricsService,
+  ) {}
 
   async createImageGeneration(input: CreateImageGenerationInput) {
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       const created = await tx.image_generations.create({
         data: {
           id: input.id,
@@ -58,10 +64,18 @@ export class TemplateGenerationRepository {
 
       return created;
     });
+
+    await this.syncUseCountMetric(
+      ResourceType.IMAGE_TEMPLATE,
+      input.templateId,
+      input.userId,
+    );
+
+    return created;
   }
 
   async createVideoGeneration(input: CreateVideoGenerationInput) {
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       const created = await tx.video_generations.create({
         data: {
           id: input.id,
@@ -82,6 +96,40 @@ export class TemplateGenerationRepository {
 
       return created;
     });
+
+    await this.syncUseCountMetric(
+      ResourceType.VIDEO_TEMPLATE,
+      input.templateId,
+      input.userId,
+    );
+
+    return created;
+  }
+
+  /**
+   * P0-1 dual-write：template useCount 之外，向 resource_metrics 补一条 'use_template'
+   * 引用事件（referenceCount+1），使新表不再随旧列漂移。best-effort——失败只记日志，
+   * 不影响已提交的生成记录。
+   */
+  private async syncUseCountMetric(
+    type: Extract<ResourceType, 'IMAGE_TEMPLATE' | 'VIDEO_TEMPLATE'>,
+    templateId: string,
+    userId?: string,
+  ) {
+    try {
+      await this.resourceMetrics.recordReference(
+        type,
+        templateId,
+        'use_template',
+        userId,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `resource_metrics use_template 引用同步失败 type=${type} templateId=${templateId}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
 
   findImageGeneration(id: string) {

@@ -6,6 +6,7 @@ import { MembershipModule } from '../../billing/membership/membership.module';
 import { ModelConfigModule } from '../../creation/model-config/model-config.module';
 import { AdminModule } from '../../admin/admin/admin.module';
 import { CommonModule } from '../../platform/common/common.module';
+import { ResourceMetricsModule } from '../../platform/resource-metrics/resource-metrics.module';
 import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 import { TemplateGenerationRepository } from '../template-generation.repository';
 import { VideoTemplatesService } from './video-templates.service';
@@ -24,6 +25,7 @@ import {
     ModelConfigModule,
     AdminModule,
     CommonModule,
+    ResourceMetricsModule,
   ],
   controllers: [
     VideoTemplatesController,

@@ -39,10 +39,18 @@ function createPrisma() {
   return { prisma, tx };
 }
 
+function createResourceMetrics() {
+  return { recordReference: jest.fn(async () => ({})) };
+}
+
 describe('TemplateGenerationRepository', () => {
   it('creates an image generation and increments template use count atomically', async () => {
     const { prisma, tx } = createPrisma();
-    const repository = new TemplateGenerationRepository(prisma as never);
+    const resourceMetrics = createResourceMetrics();
+    const repository = new TemplateGenerationRepository(
+      prisma as never,
+      resourceMetrics as never,
+    );
 
     const generation = await repository.createImageGeneration({
       id: 'gen-1',
@@ -74,11 +82,21 @@ describe('TemplateGenerationRepository', () => {
     expect(generation).toEqual(
       expect.objectContaining({ id: 'gen-1', status: 'pending' }),
     );
+    expect(resourceMetrics.recordReference).toHaveBeenCalledWith(
+      ResourceType.IMAGE_TEMPLATE,
+      'tpl-1',
+      'use_template',
+      'u1',
+    );
   });
 
   it('creates a video generation and increments template use count atomically', async () => {
     const { prisma, tx } = createPrisma();
-    const repository = new TemplateGenerationRepository(prisma as never);
+    const resourceMetrics = createResourceMetrics();
+    const repository = new TemplateGenerationRepository(
+      prisma as never,
+      resourceMetrics as never,
+    );
 
     await repository.createVideoGeneration({
       id: 'gen-2',
@@ -106,12 +124,21 @@ describe('TemplateGenerationRepository', () => {
       where: { id: 'tpl-2' },
       data: { useCount: { increment: 1 } },
     });
+    expect(resourceMetrics.recordReference).toHaveBeenCalledWith(
+      ResourceType.VIDEO_TEMPLATE,
+      'tpl-2',
+      'use_template',
+      'u1',
+    );
   });
 
   it('uses resource type when appending generation turns', async () => {
     const { prisma } = createPrisma();
     prisma.generation_turns.create.mockResolvedValue({ id: 'turn-1' });
-    const repository = new TemplateGenerationRepository(prisma as never);
+    const repository = new TemplateGenerationRepository(
+      prisma as never,
+      createResourceMetrics() as never,
+    );
 
     await repository.addTurn(ResourceType.IMAGE_TEMPLATE, 'gen-1', {
       role: 'USER',

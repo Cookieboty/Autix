@@ -2,18 +2,18 @@ import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   resourceMetricsActions,
+  type MetricResourceType,
   type ResourceMetrics,
-  type ResourceType,
 } from './resource-metrics.actions';
 
 export const resourceMetricsQueryKeys = {
   root: () => ['resourceMetrics'] as const,
-  detail: (type: ResourceType, id: string) =>
+  detail: (type: MetricResourceType, id: string) =>
     [...resourceMetricsQueryKeys.root(), type, id] as const,
 };
 
 export function useResourceMetrics(
-  type: ResourceType,
+  type: MetricResourceType,
   id: string | undefined,
   enabled = true,
 ) {
@@ -34,7 +34,7 @@ interface OptimisticContext {
  * 后端接口不返回"当前用户是否已点赞/收藏"，因此 liked/favorited 是纯前端本地状态
  * （默认 false，随交互切换），仅用于驱动按钮的乐观 UI，不代表服务端已知状态。
  */
-export function useResourceInteractions(type: ResourceType, id: string) {
+export function useResourceInteractions(type: MetricResourceType, id: string) {
   const queryClient = useQueryClient();
   const queryKey = resourceMetricsQueryKeys.detail(type, id);
   const [liked, setLiked] = useState(false);

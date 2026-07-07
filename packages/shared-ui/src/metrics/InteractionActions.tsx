@@ -1,11 +1,11 @@
 'use client';
 
 import { Bookmark, Heart, Share2 } from 'lucide-react';
-import { useResourceInteractions, type ResourceType } from '@autix/shared-store';
+import { useResourceInteractions, type MetricResourceType } from '@autix/shared-store';
 import { Button } from '../ui';
 
 export interface InteractionActionsProps {
-  type: ResourceType;
+  type: MetricResourceType;
   id: string;
 }
 

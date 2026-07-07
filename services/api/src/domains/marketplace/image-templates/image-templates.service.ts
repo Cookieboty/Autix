@@ -13,6 +13,7 @@ import { MembershipService } from '../../billing/membership/membership.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
+import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
 import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 import { TemplateGenerationRepository } from '../template-generation.repository';
 
@@ -49,8 +50,9 @@ export class ImageTemplatesService extends BaseResourceService {
     private readonly modelConfigService: ModelConfigService,
     private readonly generations: TemplateGenerationRepository,
     private readonly membershipService: MembershipService,
+    resourceMetrics: ResourceMetricsService,
   ) {
-    super(resourceInteractions);
+    super(resourceInteractions, resourceMetrics);
   }
 
   protected get delegate() {

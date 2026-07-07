@@ -1358,8 +1358,13 @@ export const marketplaceApi = {
 };
 
 // ── Resource Metrics / Interactions (统一指标与互动，gallery-design.md §9) ──
+// gallery 帖子不属于 marketplace ResourceType，但共用同一套指标/互动接口，
+// 因此这里在 marketplace ResourceType 之外单独 union 上 'GALLERY_POST'，
+// 不把它加入 marketplace 的 ResourceType（保持 marketplace 映射不变）。
+export type MetricResourceType = ResourceType | 'GALLERY_POST';
+
 export interface ResourceMetrics {
-  resourceType: ResourceType;
+  resourceType: MetricResourceType;
   resourceId: string;
   pvCount: number;
   uvCount: number;
@@ -1374,22 +1379,22 @@ export interface ResourceMetrics {
   boostScore: number;
 }
 
-export const getResourceMetrics = (type: ResourceType, id: string) =>
+export const getResourceMetrics = (type: MetricResourceType, id: string) =>
   chatApi.get<ResourceMetrics>(`/api/resources/${type}/${id}/metrics`);
 
-export const likeResource = (type: ResourceType, id: string) =>
+export const likeResource = (type: MetricResourceType, id: string) =>
   chatApi.post<ResourceMetrics>(`/api/resources/${type}/${id}/like`);
 
-export const unlikeResource = (type: ResourceType, id: string) =>
+export const unlikeResource = (type: MetricResourceType, id: string) =>
   chatApi.delete<ResourceMetrics>(`/api/resources/${type}/${id}/like`);
 
-export const favoriteResource = (type: ResourceType, id: string) =>
+export const favoriteResource = (type: MetricResourceType, id: string) =>
   chatApi.post<ResourceMetrics>(`/api/resources/${type}/${id}/favorite`);
 
-export const unfavoriteResource = (type: ResourceType, id: string) =>
+export const unfavoriteResource = (type: MetricResourceType, id: string) =>
   chatApi.delete<ResourceMetrics>(`/api/resources/${type}/${id}/favorite`);
 
-export const shareResource = (type: ResourceType, id: string) =>
+export const shareResource = (type: MetricResourceType, id: string) =>
   chatApi.post<ResourceMetrics>(`/api/resources/${type}/${id}/share`);
 
 // ── Public Growth Pages ─────────────────────────────────────────────────

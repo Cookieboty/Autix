@@ -10,6 +10,7 @@ import {
 import { BaseResourceService } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { RuntimeDetectorService } from '../../platform/common/runtime-detector.service';
+import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
 import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 
 export interface CreateAgentDto {
@@ -36,8 +37,9 @@ export class AgentsService extends BaseResourceService {
     resourceInteractions: ResourceInteractionRepository,
     private readonly repository: MarketplaceResourceCrudRepository,
     private readonly detector: RuntimeDetectorService,
+    resourceMetrics: ResourceMetricsService,
   ) {
-    super(resourceInteractions);
+    super(resourceInteractions, resourceMetrics);
   }
 
   protected get delegate() {

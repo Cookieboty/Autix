@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Eye, Heart, Pencil, Play } from 'lucide-react';
+import { ArrowLeft, Pencil, Play } from 'lucide-react';
 import { useAuthStore, useTemplateStore } from '@autix/shared-store';
 import { Button } from '../ui';
 import { InteractionActions, MetricsBar } from '../metrics';
@@ -32,7 +32,6 @@ export function TemplateDetailView({
   const {
     currentTemplate: tpl,
     fetchTemplate,
-    likeTemplate,
     createGeneration,
   } = useTemplateStore();
 
@@ -230,36 +229,6 @@ export function TemplateDetailView({
                 </span>
               </div>
             )}
-
-            <div
-              className="flex items-center gap-6 p-3 rounded-lg"
-              style={{
-                backgroundColor: 'var(--panel-muted)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <div className="flex items-center gap-1.5">
-                <Eye className="w-4 h-4" style={{ color: 'var(--muted)' }} />
-                <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                  {tpl.useCount}
-                </span>
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>
-                  {t('uses')}
-                </span>
-              </div>
-              <button
-                className="flex items-center gap-1.5 cursor-pointer"
-                onClick={() => likeTemplate(tpl.id)}
-              >
-                <Heart className="w-4 h-4" style={{ color: 'var(--muted)' }} />
-                <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                  {tpl.likeCount}
-                </span>
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>
-                  {t('likes')}
-                </span>
-              </button>
-            </div>
 
             {tpl.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">

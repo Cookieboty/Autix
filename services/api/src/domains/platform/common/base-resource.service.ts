@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -9,6 +10,7 @@ import {
   DetectionSrc,
 } from '../prisma/generated';
 import { ResourceInteractionRepository } from './resource-interaction.repository';
+import { ResourceMetricsService } from '../resource-metrics/resource-metrics.service';
 
 export interface BaseResourceDto {
   title: string;
@@ -48,8 +50,17 @@ export interface RuntimeOverrideDto {
  */
 export abstract class BaseResourceService {
   protected readonly resourceInteractions: ResourceInteractionRepository;
+  private readonly baseResourceLogger = new Logger(BaseResourceService.name);
 
-  constructor(resourceInteractions: ResourceInteractionRepository) {
+  /**
+   * resourceMetrics 是可选的（未注入时 dual-write 静默跳过）：这样手写 new
+   * Xxx(resourceInteractions) 的单测（见 base-resource.service.spec.ts）不必跟着改。
+   * 生产环境各具体 ResourceService 均通过 DI 注入真实 ResourceMetricsService。
+   */
+  constructor(
+    resourceInteractions: ResourceInteractionRepository,
+    private readonly resourceMetrics?: ResourceMetricsService,
+  ) {
     this.resourceInteractions = resourceInteractions;
   }
 
@@ -149,6 +160,7 @@ export abstract class BaseResourceService {
         where: { id },
         data: { likeCount: { decrement: 1 } } as unknown,
       });
+      await this.syncMetrics((m) => m.unlike(userId, this.resourceType, id));
       return { liked: false };
     }
     await this.resourceInteractions.createLike(userId, this.resourceType, id);
@@ -156,6 +168,7 @@ export abstract class BaseResourceService {
       where: { id },
       data: { likeCount: { increment: 1 } } as unknown,
     });
+    await this.syncMetrics((m) => m.like(userId, this.resourceType, id));
     return { liked: true };
   }
 
@@ -173,6 +186,7 @@ export abstract class BaseResourceService {
         where: { id },
         data: { favoriteCount: { decrement: 1 } } as unknown,
       });
+      await this.syncMetrics((m) => m.unfavorite(userId, this.resourceType, id));
       return { favorited: false };
     }
     await this.resourceInteractions.createFavorite(userId, this.resourceType, id);
@@ -180,11 +194,32 @@ export abstract class BaseResourceService {
       where: { id },
       data: { favoriteCount: { increment: 1 } } as unknown,
     });
+    await this.syncMetrics((m) => m.favorite(userId, this.resourceType, id));
     return { favorited: true };
   }
 
   async recordView(userId: string | undefined, id: string) {
     await this.resourceInteractions.createView(userId, this.resourceType, id);
+  }
+
+  /**
+   * P0-1 dual-write：把 likeCount/favoriteCount 的旧列写入同步一份到 resource_metrics，
+   * 避免它相对新表持续漂移。best-effort——resourceMetrics 未注入或调用失败都只记日志，
+   * 绝不影响上面已经落地的旧列写入 / 交互记录。
+   */
+  private async syncMetrics(
+    op: (metrics: ResourceMetricsService) => Promise<unknown>,
+  ): Promise<void> {
+    if (!this.resourceMetrics) return;
+    try {
+      await op(this.resourceMetrics);
+    } catch (err) {
+      this.baseResourceLogger.warn(
+        `resource_metrics 同步失败 resourceType=${this.resourceType}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
 
   private async attachViewCount<T>(row: T): Promise<T & { viewCount: number }> {

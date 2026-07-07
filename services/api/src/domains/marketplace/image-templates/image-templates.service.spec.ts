@@ -62,6 +62,7 @@ function createMocks() {
     models as never,
     generations as never,
     membership as never,
+    {} as never,
   );
   return { service, prisma, tx, points, models, generations, resources, membership };
 }

@@ -2,11 +2,11 @@
 
 import type { ReactNode } from 'react';
 import { Bookmark, Eye, Heart, Quote, Share2, Users } from 'lucide-react';
-import { useResourceMetrics, type ResourceType } from '@autix/shared-store';
+import { useResourceMetrics, type MetricResourceType } from '@autix/shared-store';
 import { formatMetricCount } from './format';
 
 export interface MetricsBarProps {
-  type: ResourceType;
+  type: MetricResourceType;
   id: string;
 }
 
