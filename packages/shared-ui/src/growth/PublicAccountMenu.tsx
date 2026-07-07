@@ -172,6 +172,8 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
   const membershipQuery = useMyMembershipQuery(isAuthenticated);
   const pointsQuery = usePointsBalanceQuery(isAuthenticated);
   const pointsSummaryQuery = usePointsSummaryQuery(isAuthenticated);
+  // 悬浮关闭延时器：hook 必须在任何条件 return 之前声明，否则未登录/已登录切换时 hook 数量不一致
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 头像外环进度 = 已消耗积分 / 已发放积分总额
   const usageRatio = (() => {
@@ -221,7 +223,6 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
   };
 
   // 悬浮打开：进入触发器/面板即打开，离开后延时关闭以便跨过两者间隙
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelClose = () => {
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);
