@@ -1001,6 +1001,7 @@ export interface ImageWorkbenchGenerateInput {
   sourceImages?: ConversationSourceImage[];
   referenceImages?: ConversationSourceImage[];
   settings?: ConversationImageSettings & Record<string, unknown>;
+  visibility?: 'private' | 'public';
 }
 
 export interface ImageWorkbenchRefinePromptInput {

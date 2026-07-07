@@ -171,6 +171,7 @@ export function ImageGeneratorStudio({
         prompt: payload.prompt,
         referenceImages: payload.referenceImages.map((url, index) => ({ url, index })),
         settings: payload.settings,
+        visibility: payload.visibility,
       });
       const nextHistoryItem = buildPublicImageHistoryItem({
         data,

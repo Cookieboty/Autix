@@ -3302,6 +3302,7 @@
         "nanoModel": "Nano Banana Pro",
         "draw": "繪製",
         "private": "私密",
+        "public": "公開",
         "selectModel": "選擇模型",
         "aspectRatio": "選擇比例",
         "selectResolution": "切換解析度",

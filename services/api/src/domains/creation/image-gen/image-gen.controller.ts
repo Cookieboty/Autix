@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
   Param,
   Post,
   Req,
@@ -20,6 +21,8 @@ import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flo
 import { ImageWorkbenchService } from './image-workbench.service';
 import type { AuthUser } from '@autix/domain';
 import { mergeAnnotationDataUrls } from './image-merge-annotation';
+import { GalleryService } from '../gallery/gallery.service';
+import { buildGallerySubmissionDto, deriveAspectRatioFromSize } from './image-gen-gallery-submission';
 
 function extractAmuxHeaders(req: Request) {
   const baseUrl = req.headers['x-amux-base-url'] as string | undefined;
@@ -33,9 +36,12 @@ function extractAmuxHeaders(req: Request) {
 @UseGuards(JwtAuthGuard)
 @Controller('image-gen')
 export class ImageGenController {
+  private readonly logger = new Logger(ImageGenController.name);
+
   constructor(
     private readonly imageGenerationFlowService: ImageGenerationFlowService,
     private readonly imageWorkbenchService: ImageWorkbenchService,
+    private readonly galleryService: GalleryService,
   ) {}
 
   @Get('workbench/history')
@@ -147,6 +153,7 @@ export class ImageGenController {
         quality?: string;
         [key: string]: unknown;
       };
+      visibility?: 'private' | 'public';
     },
   ) {
     const userId = getCurrentUserId(user);
@@ -188,12 +195,40 @@ export class ImageGenController {
       { persistedRequest },
     );
 
+    if (body.visibility === 'public') {
+      await this.submitToGalleryBestEffort(userId, result, body.settings?.size);
+    }
+
     return {
       images: result.images,
       prompt: result.prompt,
       model: result.model,
       appliedSettings: result.appliedSettings,
     };
+  }
+
+  /**
+   * 公开生成 → 自动提交画廊审核队列（先审后发，直接 PENDING）。
+   * best-effort：投稿失败仅记日志，不影响本次生成结果返回给用户。
+   */
+  private async submitToGalleryBestEffort(
+    userId: string,
+    result: { images: Array<{ url: string; generationId: string }> },
+    size: string | undefined,
+  ): Promise<void> {
+    try {
+      const dto = buildGallerySubmissionDto({
+        images: result.images,
+        generationId: result.images[0]?.generationId,
+        aspectRatio: deriveAspectRatioFromSize(size),
+      });
+      if (!dto) return;
+      await this.galleryService.createSubmission(userId, dto);
+    } catch (err) {
+      this.logger.error(
+        `gallery auto-submit failed: user=${userId} reason=${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   @Post('generate')

@@ -6,6 +6,7 @@ import {
   Coins,
   Crop,
   Diamond,
+  Globe2,
   ImagePlus,
   Loader2,
   Lock,
@@ -24,7 +25,6 @@ import {
   type ImageModelCapability,
 } from '@autix/domain/image';
 import { publicGeneratorActions, type ModelConfigItem } from '@autix/shared-store';
-import { ComingSoonControl } from '../../ComingSoonControl';
 import { MagneticButton, SpotlightPanel } from '../../GrowthInteractions';
 import {
   getImageCountControl,
@@ -79,6 +79,7 @@ export function ImageComposer({
   const [size, setSize] = useState(imageCapability.defaults.size);
   const [quality, setQuality] = useState(imageCapability.defaults.quality);
   const [count, setCount] = useState(imageCapability.defaults.count);
+  const [visibility, setVisibility] = useState<'private' | 'public'>('private');
   const [uploadedRefs, setUploadedRefs] = useState<PublicUploadedReference[]>([]);
   const [uploading, setUploading] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
@@ -252,6 +253,7 @@ export function ImageComposer({
         prompt: trimmedPrompt,
         referenceImages: uploadedRefs.map((ref) => ref.url),
         settings,
+        visibility,
       });
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : t('generateFailed'));
@@ -408,7 +410,22 @@ export function ImageComposer({
                   </button>
                 </div>
               ) : null}
-              <ComingSoonControl label={t('private')} icon={<Lock className="size-4" />} badgeLabel={t('comingSoon')} />
+              <button
+                type="button"
+                title={visibility === 'private' ? t('private') : t('public')}
+                aria-pressed={visibility === 'public'}
+                onClick={() =>
+                  setVisibility((current) => (current === 'private' ? 'public' : 'private'))
+                }
+                className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
+              >
+                {visibility === 'private' ? (
+                  <Lock className="size-4" />
+                ) : (
+                  <Globe2 className="size-4 text-growth-accent" />
+                )}
+                {visibility === 'private' ? t('private') : t('public')}
+              </button>
               <a
                 href="/draw"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"

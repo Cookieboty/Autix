@@ -22,6 +22,7 @@ export interface PublicImageGenerationPayload {
   referenceImages: string[];
   settings: PublicImageGenerationSettings;
   model: string;
+  visibility: 'private' | 'public';
 }
 
 export interface PublicImageHistoryImage {

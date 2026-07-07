@@ -3302,6 +3302,7 @@
         "nanoModel": "Nano Banana Pro",
         "draw": "Draw",
         "private": "Private",
+        "public": "Публичный",
         "selectModel": "Select model",
         "aspectRatio": "Aspect ratio",
         "selectResolution": "Select resolution",
