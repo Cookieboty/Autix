@@ -1,4 +1,5 @@
 import {
+  batchJobApi,
   galleryAdminApi,
   type GalleryAdminStatus,
   type GalleryPendingPage,
@@ -25,4 +26,14 @@ export const galleryAdminActions = {
   remove: (id: string) => galleryAdminApi.remove(id),
   resolveReport: (reportId: string, status: 'RESOLVED' | 'DISMISSED') =>
     galleryAdminApi.resolveReport(reportId, status),
+  importGallery: (items: Record<string, any>[]) => galleryAdminApi.importGallery(items),
+  getGalleryImportTemplate: async (): Promise<Record<string, any>[]> => {
+    const { data } = await galleryAdminApi.getGalleryImportTemplate();
+    return data;
+  },
+  /** 复用与模板导入相同的通用 batch-job 轮询接口，不新建第二套轮询。 */
+  getBatchJob: async (jobId: string) => {
+    const { data } = await batchJobApi.get(jobId);
+    return data;
+  },
 };

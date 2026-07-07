@@ -13,6 +13,7 @@ interface TplRecord {
 function makeMockPrisma() {
   const jobs = new Map<string, any>();
   const imageStore = new Map<string, TplRecord>();
+  const galleryStore = new Map<string, TplRecord>();
   let jobSeq = 0;
 
   const tplDelegate = (store: Map<string, TplRecord>) => ({
@@ -45,6 +46,15 @@ function makeMockPrisma() {
   const prisma = {
     _jobs: jobs,
     _imageStore: imageStore,
+    _galleryStore: galleryStore,
+    gallery_posts: {
+      create: async ({ data }: { data: any }) => {
+        const id = `gallery-${galleryStore.size + 1}`;
+        const rec = { id, ...data };
+        galleryStore.set(id, rec);
+        return rec;
+      },
+    },
     batch_jobs: {
       create: async ({ data }: { data: any }) => {
         const id = `job-${++jobSeq}`;
@@ -78,7 +88,7 @@ function makeService(overrides?: { migration?: any; prisma?: any }) {
       migrateMediaFields: async (data: Record<string, any>) => ({ data, errors: [] }),
     };
   const repository = new BatchJobRepository(prisma as any);
-  const service = new BatchJobService(repository, noopSse as any, migration as any);
+  const service = new BatchJobService(repository, noopSse as any, migration as any, prisma as any);
   return { service, prisma, migration };
 }
 

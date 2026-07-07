@@ -1,6 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { Prisma, ResourceType, TemplateStatus } from '../../platform/prisma/generated';
+import {
+  GalleryKind,
+  GallerySource,
+  GalleryStatus,
+  Prisma,
+  ResourceType,
+  TemplateStatus,
+} from '../../platform/prisma/generated';
+import { PrismaService } from '../../platform/prisma/prisma.service';
 import { SseService, type TaskEventPayload } from '../../platform/sse/sse.service';
 import { ResourceMigrationService, type ResourcePayload } from './resource-migration.service';
 import { BatchJobRepository } from './batch-job.repository';
@@ -37,6 +45,7 @@ export class BatchJobService {
     private readonly repository: BatchJobRepository,
     private readonly sse: SseService,
     private readonly migration: ResourceMigrationService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -150,6 +159,14 @@ export class BatchJobService {
     'externalId', 'externalSlug', 'externalMetadata',
   ]);
 
+  private static readonly GALLERY_FIELDS = new Set([
+    'kind', 'title', 'description', 'category', 'tags',
+    'coverImage', 'mediaUrls', 'aspectRatio', 'durationSec',
+  ]);
+
+  /** 广场作品导入时仅迁移这两个媒体字段（不同于模板的 exampleImages/exampleMedia）。 */
+  private static readonly GALLERY_MEDIA_FIELDS = ['coverImage', 'mediaUrls'] as const;
+
   private pickAllowedFields(
     data: ResourcePayload,
     resourceType: ResourceType,
@@ -157,12 +174,38 @@ export class BatchJobService {
     const allowed =
       resourceType === ResourceType.IMAGE_TEMPLATE
         ? BatchJobService.IMAGE_FIELDS
-        : BatchJobService.VIDEO_FIELDS;
+        : resourceType === ResourceType.GALLERY_POST
+          ? BatchJobService.GALLERY_FIELDS
+          : BatchJobService.VIDEO_FIELDS;
     const result: ResourcePayload = {};
     for (const [key, value] of Object.entries(data)) {
       if (allowed.has(key)) result[key] = value;
     }
     return result;
+  }
+
+  /**
+   * 广场作品导入直接落 gallery_posts 表（不经过 marketplace 的 repository.delegateFor，
+   * 后者只认识 image_templates/video_templates）。管理员导入的作品视为运营精选，直接发布。
+   */
+  private async createGalleryPost(userId: string, data: ResourcePayload) {
+    return this.prisma.gallery_posts.create({
+      data: {
+        kind: (data.kind as GalleryKind) ?? GalleryKind.IMAGE,
+        title: (data.title as string) ?? null,
+        description: (data.description as string) ?? null,
+        category: (data.category as string) ?? '',
+        tags: (data.tags as string[]) ?? [],
+        coverImage: (data.coverImage as string) ?? null,
+        mediaUrls: (data.mediaUrls as string[]) ?? [],
+        aspectRatio: (data.aspectRatio as string) ?? null,
+        durationSec: (data.durationSec as number) ?? null,
+        sourceType: GallerySource.ADMIN_CURATED,
+        status: GalleryStatus.PUBLISHED,
+        publishedAt: new Date(),
+        authorId: userId,
+      },
+    });
   }
 
   private async processImport(
@@ -184,8 +227,12 @@ export class BatchJobService {
           `[Import ${jobId}] item[${i}] "${String(item.title ?? '')}" — starting migration`,
         );
 
+        const mediaFields =
+          resourceType === ResourceType.GALLERY_POST
+            ? BatchJobService.GALLERY_MEDIA_FIELDS
+            : undefined;
         const { data, errors: migrateErrors } =
-          await this.migration.migrateMediaFields(item, folder);
+          await this.migration.migrateMediaFields(item, folder, mediaFields);
 
         if (migrateErrors.length > 0) {
           this.logger.warn(
@@ -195,22 +242,28 @@ export class BatchJobService {
 
         const filtered = this.pickAllowedFields(data, resourceType);
 
-        const existing = filtered.externalId && filtered.sourcePlatform
-          ? await this.repository.findImportedResource(
-              resourceType,
-              filtered.externalId,
-              filtered.sourcePlatform,
-            )
-          : null;
-
-        if (existing) {
-          await this.repository.updateResource(resourceType, existing.id, filtered);
-          this.logger.log(
-            `[Import ${jobId}] item[${i}] ✓ updated existing (id=${existing.id})`,
-          );
+        if (resourceType === ResourceType.GALLERY_POST) {
+          // 广场作品导入没有 externalId/sourcePlatform 去重字段，管理员导入即视为新作品直接发布。
+          await this.createGalleryPost(userId, filtered);
+          this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully (gallery)`);
         } else {
-          await this.repository.createImportedResource(resourceType, userId, filtered);
-          this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully`);
+          const existing = filtered.externalId && filtered.sourcePlatform
+            ? await this.repository.findImportedResource(
+                resourceType,
+                filtered.externalId,
+                filtered.sourcePlatform,
+              )
+            : null;
+
+          if (existing) {
+            await this.repository.updateResource(resourceType, existing.id, filtered);
+            this.logger.log(
+              `[Import ${jobId}] item[${i}] ✓ updated existing (id=${existing.id})`,
+            );
+          } else {
+            await this.repository.createImportedResource(resourceType, userId, filtered);
+            this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully`);
+          }
         }
 
         processed++;

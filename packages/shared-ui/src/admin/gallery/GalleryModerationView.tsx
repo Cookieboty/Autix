@@ -9,11 +9,16 @@ import {
   RefreshCw,
   ImageOff,
   Flame,
+  Upload,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useGalleryPendingQueue,
   useGalleryByStatus,
   useGalleryModeration,
+  useImportGalleryMutation,
+  useGalleryBatchJobPoller,
+  galleryAdminQueryKeys,
   type GalleryPostAdminItem,
 } from '@autix/shared-store';
 import { Button } from '../../ui/button';
@@ -37,6 +42,22 @@ import {
 } from '../../ui/dialog';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../../ui/empty';
 import { BoostDialog } from '../boosts/BoostDialog';
+import { TemplateImportDialog } from '../TemplateImportDialog';
+
+/** 广场作品 JSON 导入模板：与后端 GET /api/admin/gallery/import-template 返回结构保持一致。 */
+const GALLERY_IMPORT_TEMPLATE = [
+  {
+    kind: 'IMAGE',
+    title: '',
+    description: '',
+    category: '',
+    tags: [],
+    coverImage: '',
+    mediaUrls: [],
+    aspectRatio: '',
+    durationSec: 0,
+  },
+];
 
 const SOURCE_LABEL: Record<GalleryPostAdminItem['sourceType'], string> = {
   USER_UPLOAD: '用户上传',
@@ -67,6 +88,10 @@ const TABS: { value: GalleryAdminTab; label: string }[] = [
 
 export function GalleryModerationView() {
   const [tab, setTab] = useState<GalleryAdminTab>('PENDING');
+  const [importOpen, setImportOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const importGalleryMutation = useImportGalleryMutation();
+  const pollBatchJob = useGalleryBatchJobPoller();
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
@@ -77,25 +102,47 @@ export function GalleryModerationView() {
             审核用户投稿到广场的作品，管理已发布作品并支持内联加热。
           </p>
         </div>
-        <div className="inline-flex items-center gap-1 rounded-md border bg-muted/40 p-1">
-          {TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              className={`cursor-pointer rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-                tab === t.value
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              onClick={() => setTab(t.value)}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="h-3.5 w-3.5 mr-1" />
+            导入
+          </Button>
+          <div className="inline-flex items-center gap-1 rounded-md border bg-muted/40 p-1">
+            {TABS.map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                className={`cursor-pointer rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                  tab === t.value
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setTab(t.value)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {tab === 'PENDING' ? <PendingPanel /> : <PublishedPanel />}
+
+      <TemplateImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => {
+          void queryClient.invalidateQueries({ queryKey: galleryAdminQueryKeys.root() });
+        }}
+        importFn={(items) => importGalleryMutation.mutateAsync(items).then((r) => r.data)}
+        pollJob={pollBatchJob}
+        template={GALLERY_IMPORT_TEMPLATE}
+      />
     </div>
   );
 }

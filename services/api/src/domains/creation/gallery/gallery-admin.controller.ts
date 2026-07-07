@@ -14,15 +14,21 @@ import {
   CurrentUser,
   getCurrentUserId,
 } from '../../identity/auth/decorators/current-user.decorator';
+import { BatchJobService } from '../../admin/admin/batch-job.service';
+import type { ResourcePayload } from '../../admin/admin/resource-migration.service';
+import { ResourceType } from '../../platform/prisma/generated';
 import { GalleryService } from './gallery.service';
 import { RejectGalleryPostDto } from './dto/reject-post.dto';
 import { ResolveGalleryReportDto } from './dto/resolve-report.dto';
 
-/** 广场审核后台：待审列表 + 通过/驳回/下架/移除 + 举报处理。均需管理员权限。 */
+/** 广场审核后台：待审列表 + 通过/驳回/下架/移除 + 举报处理 + JSON 批量导入。均需管理员权限。 */
 @Controller('admin/gallery')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class GalleryAdminController {
-  constructor(private readonly service: GalleryService) {}
+  constructor(
+    private readonly service: GalleryService,
+    private readonly batchJobService: BatchJobService,
+  ) {}
 
   @Get('pending')
   listPending(@Query('cursor') cursor?: string) {
@@ -32,6 +38,37 @@ export class GalleryAdminController {
   @Get()
   listByStatus(@Query('status') status?: string, @Query('cursor') cursor?: string) {
     return this.service.listByStatus(status, cursor, 20);
+  }
+
+  @Post('import')
+  importGallery(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { items: ResourcePayload[] },
+  ) {
+    const userId = getCurrentUserId(user);
+    return this.batchJobService.createAndProcess(
+      userId,
+      'IMPORT',
+      ResourceType.GALLERY_POST,
+      { items: body.items ?? [] },
+    );
+  }
+
+  @Get('import-template')
+  getImportTemplate() {
+    return [
+      {
+        kind: 'IMAGE',
+        title: '',
+        description: '',
+        category: '',
+        tags: [],
+        coverImage: '',
+        mediaUrls: [],
+        aspectRatio: '',
+        durationSec: 0,
+      },
+    ];
   }
 
   @Post(':id/approve')
