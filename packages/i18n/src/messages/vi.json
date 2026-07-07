@@ -3303,6 +3303,8 @@
         "draw": "Draw",
         "private": "Private",
         "public": "Công khai",
+        "privateHint": "Riêng tư: chỉ bạn thấy, không đưa lên thư viện.",
+        "publicHint": "Công khai: sau khi tạo sẽ tự động gửi vào thư viện để duyệt và hiển thị công khai sau khi được duyệt.",
         "selectModel": "Select model",
         "aspectRatio": "Aspect ratio",
         "selectResolution": "Select resolution",

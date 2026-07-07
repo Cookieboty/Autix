@@ -3303,6 +3303,8 @@
         "draw": "Draw",
         "private": "Private",
         "public": "Публичный",
+        "privateHint": "Приватно: видно только вам, не публикуется в галерее.",
+        "publicHint": "Публично: после генерации автоматически отправляется на модерацию в галерею и публикуется после одобрения.",
         "selectModel": "Select model",
         "aspectRatio": "Aspect ratio",
         "selectResolution": "Select resolution",

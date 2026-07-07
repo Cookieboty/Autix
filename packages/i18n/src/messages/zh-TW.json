@@ -3303,6 +3303,8 @@
         "draw": "繪製",
         "private": "私密",
         "public": "公開",
+        "privateHint": "私密：僅自己可見，不會進入廣場。",
+        "publicHint": "公開：生成後自動提交廣場審核，通過後公開展示。",
         "selectModel": "選擇模型",
         "aspectRatio": "選擇比例",
         "selectResolution": "切換解析度",

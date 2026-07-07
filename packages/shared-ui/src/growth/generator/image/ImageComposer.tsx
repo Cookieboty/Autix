@@ -33,6 +33,7 @@ import {
 import { readFilesAsDataUrls } from '../../../image/studio/constants';
 import { OfferStrip } from '../parts';
 import type { PublicUploadedReference } from '../generator-studio-helpers';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../ui/tooltip';
 import { ImageModelParamMenu, ImageOptionParamMenu } from './ImageParamMenus';
 import {
   buildPublicImageEstimateInput,
@@ -410,22 +411,35 @@ export function ImageComposer({
                   </button>
                 </div>
               ) : null}
-              <button
-                type="button"
-                title={visibility === 'private' ? t('private') : t('public')}
-                aria-pressed={visibility === 'public'}
-                onClick={() =>
-                  setVisibility((current) => (current === 'private' ? 'public' : 'private'))
-                }
-                className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
-              >
-                {visibility === 'private' ? (
-                  <Lock className="size-4" />
-                ) : (
-                  <Globe2 className="size-4 text-growth-accent" />
-                )}
-                {visibility === 'private' ? t('private') : t('public')}
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-pressed={visibility === 'public'}
+                    onClick={() =>
+                      setVisibility((current) => (current === 'private' ? 'public' : 'private'))
+                    }
+                    className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
+                  >
+                    {visibility === 'private' ? (
+                      <Lock className="size-4" />
+                    ) : (
+                      <Globe2 className="size-4 text-growth-accent" />
+                    )}
+                    {visibility === 'private' ? t('private') : t('public')}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[260px] text-left">
+                  <p className="flex items-start gap-1.5">
+                    <Lock className="mt-0.5 size-3.5 shrink-0" />
+                    <span>{t('privateHint')}</span>
+                  </p>
+                  <p className="mt-1.5 flex items-start gap-1.5">
+                    <Globe2 className="mt-0.5 size-3.5 shrink-0" />
+                    <span>{t('publicHint')}</span>
+                  </p>
+                </TooltipContent>
+              </Tooltip>
               <a
                 href="/draw"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"

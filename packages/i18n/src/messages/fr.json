@@ -3495,6 +3495,8 @@
         "draw": "Draw",
         "private": "Private",
         "public": "Public",
+        "privateHint": "Privé : visible par vous seul, jamais partagé dans la galerie.",
+        "publicHint": "Public : après génération, envoyé automatiquement à la galerie pour validation, puis affiché une fois approuvé.",
         "selectModel": "Select model",
         "aspectRatio": "Aspect ratio",
         "selectResolution": "Select resolution",

@@ -3303,6 +3303,8 @@
         "draw": "Draw",
         "private": "Private",
         "public": "パブリック",
+        "privateHint": "プライベート：自分だけが閲覧でき、ギャラリーには公開されません。",
+        "publicHint": "パブリック：生成後にギャラリーへ自動送信され、承認後に公開されます。",
         "selectModel": "Select model",
         "aspectRatio": "Aspect ratio",
         "selectResolution": "Select resolution",
