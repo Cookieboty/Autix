@@ -2152,6 +2152,7 @@ export interface GalleryPostAdminItem {
   status: 'DRAFT' | 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN' | 'REMOVED';
   authorSnapshot: { displayName: string; avatarUrl?: string; at: string } | null;
   createdAt: string;
+  publishedAt: string | null;
   sourceType: 'USER_UPLOAD' | 'FROM_GENERATION' | 'FROM_TEMPLATE' | 'ADMIN_CURATED';
 }
 
@@ -2160,10 +2161,16 @@ export interface GalleryPendingPage {
   nextCursor: string | null;
 }
 
+export type GalleryAdminStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED';
+
 export const galleryAdminApi = {
   listPending: (cursor?: string) =>
     chatApi.get<GalleryPendingPage>('/api/admin/gallery/pending', {
       params: cursor ? { cursor } : undefined,
+    }),
+  listByStatus: (status: GalleryAdminStatus, cursor?: string) =>
+    chatApi.get<GalleryPendingPage>('/api/admin/gallery', {
+      params: cursor ? { status, cursor } : { status },
     }),
   approve: (id: string) =>
     chatApi.post<GalleryPostAdminItem>(`/api/admin/gallery/${id}/approve`, {}),

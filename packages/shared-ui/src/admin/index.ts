@@ -47,6 +47,7 @@ export * from './risk';
 export * from './gallery/GalleryModerationView';
 export * from './featured-slots/FeaturedSlotsAdminView';
 export * from './boosts/BoostAdminView';
+export * from './boosts/BoostDialog';
 
 // System
 export * from './system';

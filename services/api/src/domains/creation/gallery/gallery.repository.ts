@@ -21,8 +21,13 @@ export class GalleryRepository {
 
   /** 待审列表（PENDING，createdAt 升序，游标为上一页最后一条的 id）。 */
   async findPendingPage(cursor: string | undefined, take: number) {
+    return this.findByStatusPage(GalleryStatus.PENDING, cursor, take);
+  }
+
+  /** 按状态分页（createdAt 升序，游标为上一页最后一条的 id）。管理端待审/已审列表复用。 */
+  async findByStatusPage(status: GalleryStatus, cursor: string | undefined, take: number) {
     const rows = await this.prisma.gallery_posts.findMany({
-      where: { status: GalleryStatus.PENDING },
+      where: { status },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

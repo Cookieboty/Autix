@@ -29,6 +29,11 @@ export class GalleryAdminController {
     return this.service.listPending(cursor, 20);
   }
 
+  @Get()
+  listByStatus(@Query('status') status?: string, @Query('cursor') cursor?: string) {
+    return this.service.listByStatus(status, cursor, 20);
+  }
+
   @Post(':id/approve')
   approve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.approve(getCurrentUserId(user), id);

@@ -254,6 +254,21 @@ export class GalleryService {
     return this.repo.findPendingPage(cursor, take);
   }
 
+  /** 管理端按状态分页；status 需为 PENDING/PUBLISHED/HIDDEN/REJECTED 之一，非法值报 400。 */
+  async listByStatus(status: string | undefined, cursor: string | undefined, take: number) {
+    const allowed = [
+      GalleryStatus.PENDING,
+      GalleryStatus.PUBLISHED,
+      GalleryStatus.HIDDEN,
+      GalleryStatus.REJECTED,
+    ] as const;
+    const normalized = allowed.find((s) => s === status);
+    if (!normalized) {
+      throw new BadRequestException('status 仅支持 PENDING/PUBLISHED/HIDDEN/REJECTED');
+    }
+    return this.repo.findByStatusPage(normalized, cursor, take);
+  }
+
   private async requirePost(id: string) {
     const post = await this.repo.findById(id);
     if (!post) throw new NotFoundException('作品不存在');

@@ -1,14 +1,22 @@
 import {
   galleryAdminApi,
+  type GalleryAdminStatus,
   type GalleryPendingPage,
   type GalleryPostAdminItem,
 } from '@autix/sdk';
 
-export type { GalleryPendingPage, GalleryPostAdminItem };
+export type { GalleryAdminStatus, GalleryPendingPage, GalleryPostAdminItem };
 
 export const galleryAdminActions = {
   listPending: async (cursor?: string): Promise<GalleryPendingPage> => {
     const { data } = await galleryAdminApi.listPending(cursor);
+    return data;
+  },
+  listByStatus: async (
+    status: GalleryAdminStatus,
+    cursor?: string,
+  ): Promise<GalleryPendingPage> => {
+    const { data } = await galleryAdminApi.listByStatus(status, cursor);
     return data;
   },
   approve: (id: string) => galleryAdminApi.approve(id),
