@@ -49,6 +49,34 @@ export const EMPTY_FORM: CampaignForm = {
 export const EMPTY_CAMPAIGNS: Campaign[] = [];
 export const EMPTY_REWARDS: CampaignReward[] = [];
 export const CAMPAIGN_REWARDS_PARAMS = { take: 80 };
+export const BUILTIN_CAMPAIGN_CODES = [
+  'INVITATION_REWARD',
+  'REGISTRATION_BONUS',
+  'HOME_QUEST_NANO_BANANA_PRO',
+  'HOME_QUEST_SEEDANCE',
+  'HOME_QUEST_MARKETING',
+] as const;
+
+export function isBuiltinCampaignCode(code?: string | null) {
+  const normalized = String(code ?? '').trim();
+  return (
+    BUILTIN_CAMPAIGN_CODES.includes(normalized as (typeof BUILTIN_CAMPAIGN_CODES)[number]) ||
+    normalized.startsWith('HOME_QUEST_')
+  );
+}
+
+export function isFixedCampaign(campaign: Pick<Campaign, 'code' | 'metadata'>) {
+  const metadata = campaign.metadata;
+  const metadataRecord =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+      ? metadata as Record<string, unknown>
+      : null;
+  return (
+    isBuiltinCampaignCode(campaign.code) ||
+    metadataRecord?.fixed === true ||
+    metadataRecord?.builtin === true
+  );
+}
 
 export function rewardPoints(expression: unknown) {
   if (typeof expression === 'number') return expression;

@@ -7,6 +7,7 @@ import {
   PointsSource,
 } from '../../platform/prisma/generated';
 import {
+  assertBuiltinCampaignUpdateAllowed,
   assertCampaignCanGrant,
   buildCampaignCreateData,
   buildCampaignPointGrantInput,
@@ -19,6 +20,7 @@ import {
   buildManualCampaignRewardInput,
   buildSuccessfulGenerationStreakUpdateData,
   isEffectiveFeedback,
+  isBuiltinCampaign,
   isRewardCapExceeded,
   isUniqueConstraintError,
   normalizeTags,
@@ -151,6 +153,28 @@ describe('campaign reward helpers', () => {
     });
   });
 
+  it('guards fixed built-in campaign code and type while allowing operational fields', () => {
+    const fixed = {
+      code: 'INVITATION_REWARD',
+      type: CampaignType.INVITATION,
+      metadata: { fixed: true },
+    };
+
+    expect(isBuiltinCampaign(fixed)).toBe(true);
+    expect(() =>
+      assertBuiltinCampaignUpdateAllowed(fixed, {
+        status: CampaignStatus.PAUSED,
+        rewardPoints: 80,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertBuiltinCampaignUpdateAllowed(fixed, { code: 'OTHER_CODE' }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      assertBuiltinCampaignUpdateAllowed(fixed, { type: CampaignType.FEEDBACK }),
+    ).toThrow(BadRequestException);
+  });
+
   it('FIX-15: builds a deterministic per-campaign-per-user manual trigger key (idempotent grant-once)', () => {
     expect(buildManualCampaignRewardInput('camp-1', 'user-1', 'admin-1')).toEqual({
       userId: 'user-1',
@@ -187,6 +211,7 @@ describe('campaign reward helpers', () => {
       userId: 'user-1',
       triggerKey: `${cycleKey}:campaign-1`,
       triggerEventId: 'generation-1',
+      pointGrantSourceId: `${cycleKey}:campaign-1`,
       metadata: {
         generationType: 'image',
         generationId: 'generation-1',
@@ -213,6 +238,7 @@ describe('campaign reward helpers', () => {
       userId: 'user-1',
       triggerKey: 'feedback:user-1:feedback-1:campaign-1',
       triggerEventId: 'feedback-1',
+      pointGrantSourceId: 'feedback:user-1:feedback-1:campaign-1',
       metadata: {
         channel: 'modal',
         feedbackId: 'feedback-1',
@@ -310,10 +336,24 @@ describe('campaign reward helpers', () => {
         campaignId: 'campaign-1',
         campaignCode: 'weekly',
         triggerKey: 'trigger-1',
+        pointGrantSourceId: 'campaign-1',
         foo: 'bar',
       },
       remark: '活动奖励：连续使用奖励',
     });
+    expect(
+      buildCampaignPointGrantInput(
+        campaign,
+        { ...rewardInput, pointGrantSourceId: 'event-source-1' },
+        50,
+        new Date('2026-06-14T00:00:00.000Z'),
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        sourceId: 'event-source-1',
+        metadata: expect.objectContaining({ pointGrantSourceId: 'event-source-1' }),
+      }),
+    );
   });
 
   it('presents reward outcomes and unique constraint checks', () => {

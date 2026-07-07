@@ -794,7 +794,8 @@
     "navAdminRoles": "Rôles",
     "navAdminPermissions": "Autorisations",
     "navSystemModels": "Configuration des modèles système",
-    "navSystemSettings": "Configuration système"
+    "navSystemSettings": "Configuration système",
+    "navCampaignRewards": "Centre des récompenses"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -840,7 +841,7 @@
     "systemSettingsDesc": "Gérer les fonctionnalités, paiements, stockage et e-mails",
     "systemModels": "Configuration des modèles système",
     "systemModelsDesc": "Maintenir les modèles publics, modèles par défaut et identifiants",
-    "campaignRewards": "Récompenses de campagne",
+    "campaignRewards": "Centre des récompenses",
     "campaignRewardsDesc": "Configurer les campagnes, budgets et historiques d'attribution",
     "auditLogsAction": "Journaux d'audit",
     "auditLogsActionDesc": "Consulter les opérations admin / historique des ajustements de points"
@@ -4084,7 +4085,7 @@
     "duplicateFolderName": "Un dossier portant ce nom existe déjà"
   },
   "adminCampaigns": {
-    "title": "Récompenses de campagne",
+    "title": "Centre des récompenses",
     "summary": "{count} campagnes · {active} actives · {used} points attribués",
     "loadFailed": "Échec du chargement des campagnes",
     "saveFailed": "Échec de l’enregistrement de la campagne",
@@ -4092,6 +4093,10 @@
     "createCampaign": "Nouvelle campagne",
     "editCampaign": "Modifier la campagne",
     "empty": "Aucune campagne",
+    "fixedActivities": "Activités fixes ({count})",
+    "dynamicActivities": "Activités dynamiques ({count})",
+    "fixedActivity": "Fixe",
+    "dynamicActivity": "Dynamique",
     "campaign": "Campagne",
     "typeLabel": "Type",
     "reward": "Récompense",
@@ -4129,6 +4134,8 @@
       "CONTINUOUS_USE": "Utilisation continue",
       "INVITATION": "Prime d’invitation",
       "FEEDBACK": "Retour utilisateur",
+      "REGISTRATION": "Bonus d’inscription",
+      "QUEST": "Récompense de quête",
       "CUSTOM": "Don opérationnel"
     },
     "status": {

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { MailService } from '../../platform/mail/mail.service';
 import { InviteService } from '../../billing/invite/invite.service';
+import { CampaignRewardService } from '../../billing/campaign/campaign-reward.service';
 import { JwtPayload, TokenPair, AuthUser } from '@autix/domain';
 import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
 import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto, ActivateAccountDto } from './dto/login.dto';
@@ -41,6 +42,7 @@ export class AuthService {
     private jwtService: JwtService,
     private mailService: MailService,
     private inviteService: InviteService,
+    private campaignRewardService: CampaignRewardService,
     private identityRepository: AuthIdentityRepository,
     private sessionRepository: AuthSessionRepository,
     private tokenFactory: AuthTokenFactory,
@@ -253,6 +255,7 @@ export class AuthService {
 
     // FIX-2: 邮箱激活成功后结算邀请奖励（best-effort，失败不影响激活）。
     await this.settleInvitationReward(user.id);
+    await this.grantRegistrationBonus(user.id, 'email_activation');
 
     return { message: '激活成功，现在可以登录使用' };
   }
@@ -384,6 +387,17 @@ export class AuthService {
     } catch (err) {
       this.logger.error(
         'Failed to settle invitation reward',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
+
+  private async grantRegistrationBonus(userId: string, source: 'email_activation' | 'oauth_first_login') {
+    try {
+      await this.campaignRewardService.grantRegistrationBonus(userId, source);
+    } catch (err) {
+      this.logger.error(
+        'Failed to grant registration bonus',
         err instanceof Error ? err.stack : String(err),
       );
     }

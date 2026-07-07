@@ -3,6 +3,7 @@ import type { Campaign } from '@autix/shared-store';
 import {
   campaignTotals,
   formFromCampaign,
+  isFixedCampaign,
   payloadFromForm,
   rewardPoints,
 } from '../src/admin/campaigns/campaign-form';
@@ -93,5 +94,13 @@ describe('admin campaign form helpers', () => {
         campaign({ id: 'campaign-2', status: 'DRAFT', usedBudget: 5, _count: { rewards: 3 } }),
       ]),
     ).toEqual({ active: 1, used: 125, rewardsCount: 5 });
+  });
+
+  test('detects fixed built-in campaigns by code or metadata', () => {
+    expect(isFixedCampaign(campaign({ code: 'INVITATION_REWARD' }))).toBe(true);
+    expect(isFixedCampaign(campaign({ code: 'HOME_QUEST_CUSTOM_MODEL' }))).toBe(true);
+    expect(isFixedCampaign(campaign({ code: 'custom', metadata: { fixed: true } }))).toBe(true);
+    expect(isFixedCampaign(campaign({ code: 'custom', metadata: { builtin: true } }))).toBe(true);
+    expect(isFixedCampaign(campaign({ code: 'custom', metadata: null }))).toBe(false);
   });
 });

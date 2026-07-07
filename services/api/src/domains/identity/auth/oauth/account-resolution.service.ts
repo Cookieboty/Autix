@@ -9,7 +9,7 @@ export type ResolveContext = {
   signupIp?: string; signupDeviceId?: string; inviteCode?: string;
 };
 export type ResolveOutcome =
-  | { kind: 'login'; userId: string }
+  | { kind: 'login'; userId: string; created?: boolean }
   | { kind: 'conflict'; code: 'OAUTH_EMAIL_UNVERIFIED_CONFLICT' };
 
 @Injectable()
@@ -26,7 +26,7 @@ export class AccountResolutionService {
   async resolve(profile: NormalizedProfile, ctx: ResolveContext): Promise<ResolveOutcome> {
     // §6.1 已绑定
     const linked = await this.repo.findUserAccount(profile.provider, profile.providerAccountId);
-    if (linked) return { kind: 'login', userId: linked.userId };
+    if (linked) return { kind: 'login', userId: linked.userId, created: false };
 
     // 邮箱撞库判定
     const existing = profile.email ? await this.repo.findUserByEmail(profile.email) : null;
@@ -34,7 +34,7 @@ export class AccountResolutionService {
       if (profile.emailVerified) {
         // §6.2 自动关联
         await this.repo.createUserAccount({ userId: existing.id, ...this.encTokens(profile) });
-        return { kind: 'login', userId: existing.id };
+        return { kind: 'login', userId: existing.id, created: false };
       }
       // §6.3 拒绝自动关联
       return { kind: 'conflict', code: 'OAUTH_EMAIL_UNVERIFIED_CONFLICT' };
@@ -54,7 +54,7 @@ export class AccountResolutionService {
       account: this.encTokens(profile),
       signupIp: ctx.signupIp, signupDeviceId: ctx.signupDeviceId, inviteCode: ctx.inviteCode,
     });
-    return { kind: 'login', userId: created.id };
+    return { kind: 'login', userId: created.id, created: true };
   }
 
   private async generateUsername(profile: NormalizedProfile): Promise<string> {

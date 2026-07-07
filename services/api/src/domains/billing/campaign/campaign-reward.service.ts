@@ -6,6 +6,7 @@ import {
   SUCCESSFUL_GENERATION_STREAK,
   activeCampaignWhere,
   addDays,
+  assertBuiltinCampaignUpdateAllowed,
   assertCampaignCanGrant,
   buildCampaignCreateData,
   buildCampaignPointGrantInput,
@@ -36,6 +37,8 @@ import {
 export type UpsertCampaignInput = CampaignUpsertInput;
 export type GrantCampaignRewardInput = CampaignRewardRequestInput;
 export type RecordFeedbackInput = CampaignFeedbackInput;
+
+const REGISTRATION_BONUS_CODE = 'REGISTRATION_BONUS';
 
 @Injectable()
 export class CampaignRewardService {
@@ -69,6 +72,10 @@ export class CampaignRewardService {
     return this.campaignRepository.listAdminCampaigns();
   }
 
+  async findCampaignByCode(code: string) {
+    return this.campaignRepository.findCampaignByCode(code);
+  }
+
   async listCampaignRewards(campaignId: string, take = 100) {
     return this.campaignRepository.listCampaignRewards(
       campaignId,
@@ -84,6 +91,9 @@ export class CampaignRewardService {
   }
 
   async updateCampaign(id: string, input: UpsertCampaignInput) {
+    const existing = await this.campaignRepository.findCampaign(id);
+    if (!existing) throw new BadRequestException('活动不存在');
+    assertBuiltinCampaignUpdateAllowed(existing, input);
     return this.campaignRepository.updateCampaign(id, buildCampaignUpdateData(input));
   }
 
@@ -92,6 +102,20 @@ export class CampaignRewardService {
       campaignId,
       buildManualCampaignRewardInput(campaignId, userId, actorId),
     );
+  }
+
+  async grantRegistrationBonus(userId: string, source: 'email_activation' | 'oauth_first_login') {
+    const campaign = await this.campaignRepository.findCampaignByCode(REGISTRATION_BONUS_CODE);
+    if (!campaign || !this.isCampaignEligibleNow(campaign)) return null;
+    if (resolveRewardPoints(campaign.rewardPointsExpression) <= 0) return null;
+
+    return this.grantCampaignReward(campaign.id, {
+      userId,
+      triggerKey: `registration:${userId}`,
+      triggerEventId: source,
+      pointGrantSourceId: `registration:${userId}`,
+      metadata: { source, registrationBonus: true },
+    });
   }
 
   async recordSuccessGeneration(
@@ -185,52 +209,7 @@ export class CampaignRewardService {
   async grantCampaignReward(campaignId: string, input: GrantCampaignRewardInput) {
     try {
       return await this.campaignRepository.runRewardTransaction(async (tx) => {
-        // FIX-12: 先锁活动行，串行化并发发奖，保证封顶判断原子化。
-        await this.campaignRepository.lockCampaignInTx(tx, campaignId);
-        const campaign = await this.campaignRepository.findCampaignInTx(tx, campaignId);
-        if (!campaign) throw new BadRequestException('活动不存在');
-        assertCampaignCanGrant(campaign);
-
-        const points = resolveRewardPoints(campaign.rewardPointsExpression);
-        if (points <= 0) throw new BadRequestException('活动奖励积分必须大于 0');
-
-        const existing = await this.campaignRepository.findRewardByTriggerInTx(
-          tx,
-          campaign.id,
-          input.triggerKey,
-        );
-        if (existing) return presentDuplicateCampaignReward(existing);
-
-        await this.assertRewardCaps(tx, campaign, input.userId, points);
-
-        const reward = await this.campaignRepository.createRewardInTx(
-          tx,
-          buildCampaignRewardCreateData(campaign.id, input, points),
-        );
-
-        const updated = await this.campaignRepository.guardedIncrementUsedBudgetInTx(
-          tx,
-          campaign.id,
-          resolveRemainingCampaignBudget(campaign, points),
-          points,
-        );
-        if (updated.count === 0) {
-          throw new BadRequestException('活动总预算不足');
-        }
-
-        const grant = await this.pointsService.grantPointsWithinTx(
-          tx,
-          input.userId,
-          buildCampaignPointGrantInput(campaign, input, points),
-        );
-
-        const completed = await this.campaignRepository.attachPointGrantInTx(
-          tx,
-          reward.id,
-          grant.grant.id,
-        );
-
-        return presentGrantedCampaignReward(completed, grant.grant);
+        return this.grantCampaignRewardWithinTx(tx, campaignId, input);
       });
     } catch (err) {
       if (isUniqueConstraintError(err)) {
@@ -242,6 +221,60 @@ export class CampaignRewardService {
       }
       throw err;
     }
+  }
+
+  async grantCampaignRewardWithinTx(
+    tx: Prisma.TransactionClient,
+    campaignId: string,
+    input: GrantCampaignRewardInput,
+    options: { pointsOverride?: number } = {},
+  ) {
+    // FIX-12: 先锁活动行，串行化并发发奖，保证封顶判断原子化。
+    await this.campaignRepository.lockCampaignInTx(tx, campaignId);
+    const campaign = await this.campaignRepository.findCampaignInTx(tx, campaignId);
+    if (!campaign) throw new BadRequestException('活动不存在');
+    assertCampaignCanGrant(campaign);
+
+    const points = options.pointsOverride ?? resolveRewardPoints(campaign.rewardPointsExpression);
+    if (points <= 0) throw new BadRequestException('活动奖励积分必须大于 0');
+
+    const existing = await this.campaignRepository.findRewardByTriggerInTx(
+      tx,
+      campaign.id,
+      input.triggerKey,
+    );
+    if (existing) return presentDuplicateCampaignReward(existing);
+
+    await this.assertRewardCaps(tx, campaign, input.userId, points);
+
+    const reward = await this.campaignRepository.createRewardInTx(
+      tx,
+      buildCampaignRewardCreateData(campaign.id, input, points),
+    );
+
+    const updated = await this.campaignRepository.guardedIncrementUsedBudgetInTx(
+      tx,
+      campaign.id,
+      resolveRemainingCampaignBudget(campaign, points),
+      points,
+    );
+    if (updated.count === 0) {
+      throw new BadRequestException('活动总预算不足');
+    }
+
+    const grant = await this.pointsService.grantPointsWithinTx(
+      tx,
+      input.userId,
+      buildCampaignPointGrantInput(campaign, input, points),
+    );
+
+    const completed = await this.campaignRepository.attachPointGrantInTx(
+      tx,
+      reward.id,
+      grant.grant.id,
+    );
+
+    return presentGrantedCampaignReward(completed, grant.grant);
   }
 
   private async updateSuccessfulGenerationStreak(userId: string) {
@@ -315,5 +348,18 @@ export class CampaignRewardService {
         throw new BadRequestException('用户活动总奖励上限已达');
       }
     }
+  }
+
+  private isCampaignEligibleNow(campaign: {
+    status: string;
+    startsAt: Date | null;
+    endsAt: Date | null;
+  }) {
+    if (campaign.status !== 'ACTIVE') return false;
+    const now = Date.now();
+    return (
+      (!campaign.startsAt || campaign.startsAt.getTime() <= now) &&
+      (!campaign.endsAt || campaign.endsAt.getTime() >= now)
+    );
   }
 }

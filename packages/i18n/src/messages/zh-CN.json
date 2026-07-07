@@ -1278,7 +1278,8 @@
     "navAdminRoles": "角色",
     "navAdminPermissions": "权限",
     "navSystemModels": "系统模型配置",
-    "navSystemSettings": "系统配置"
+    "navSystemSettings": "系统配置",
+    "navCampaignRewards": "活动奖励中心"
   },
   "dashboard": {
     "title": "仪表板",
@@ -1324,7 +1325,7 @@
     "systemSettingsDesc": "管理功能开关、支付、存储和邮件配置",
     "systemModels": "系统模型配置",
     "systemModelsDesc": "维护公开系统模型、默认模型和调用凭证",
-    "campaignRewards": "活动奖励",
+    "campaignRewards": "活动奖励中心",
     "campaignRewardsDesc": "配置奖励活动、预算和发放记录",
     "auditLogsAction": "审计日志",
     "auditLogsActionDesc": "查看管理员操作 / 积分调整流水"
@@ -4084,7 +4085,7 @@
     "duplicateFolderName": "已存在同名文件夹"
   },
   "adminCampaigns": {
-    "title": "活动奖励配置",
+    "title": "活动奖励中心",
     "summary": "{count} 个活动 · {active} 个启用 · 已发放 {used} 积分",
     "loadFailed": "加载活动失败",
     "saveFailed": "保存活动失败",
@@ -4092,6 +4093,10 @@
     "createCampaign": "新建活动",
     "editCampaign": "编辑活动",
     "empty": "暂无活动",
+    "fixedActivities": "固定活动 ({count})",
+    "dynamicActivities": "动态活动 ({count})",
+    "fixedActivity": "固定",
+    "dynamicActivity": "动态",
     "campaign": "活动",
     "typeLabel": "类型",
     "reward": "奖励",
@@ -4129,6 +4134,8 @@
       "CONTINUOUS_USE": "连续使用",
       "INVITATION": "邀请返利",
       "FEEDBACK": "评价反馈",
+      "REGISTRATION": "注册奖励",
+      "QUEST": "任务奖励",
       "CUSTOM": "运营赠送"
     },
     "status": {

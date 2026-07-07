@@ -1,4 +1,4 @@
-import { getDatabaseUrl, PrismaClient } from '@autix/database';
+import { getDatabaseUrl, PrismaClient, type Prisma } from '@autix/database';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 /**
@@ -17,6 +17,142 @@ const adapter = new PrismaPg({
   connectionString: getDatabaseUrl(),
 });
 const prisma = new PrismaClient({ adapter });
+
+const DEFAULT_REWARD_USAGE_SCOPE: Prisma.InputJsonValue = {
+  excludedTaskTypes: ['video_generation'],
+};
+
+type FixedCampaignSeed = {
+  code: string;
+  name: string;
+  description: string;
+  type: 'INVITATION' | 'REGISTRATION' | 'QUEST';
+  status: 'ACTIVE' | 'PAUSED';
+  rewardPoints: number;
+  rewardExpiresInDays: number;
+  metadata: Prisma.InputJsonValue;
+  rewardUsageScope?: Prisma.InputJsonValue | null;
+};
+
+const FIXED_CAMPAIGN_SEEDS: FixedCampaignSeed[] = [
+  {
+    code: 'INVITATION_REWARD',
+    name: '邀请奖励',
+    description: '邀请好友注册并完成激活后发放奖励。',
+    type: 'INVITATION',
+    status: 'ACTIVE',
+    rewardPoints: 100,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      maxRewardedInvitesPerInviter: 50,
+      velocityThreshold: 20,
+    },
+  },
+  {
+    code: 'REGISTRATION_BONUS',
+    name: '注册奖励',
+    description: '新用户完成注册后发放的欢迎奖励，默认关闭。',
+    type: 'REGISTRATION',
+    status: 'PAUSED',
+    rewardPoints: 0,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      grantOn: ['email_activation', 'oauth_first_login'],
+      onlyFirstRegistration: true,
+    },
+  },
+  {
+    code: 'HOME_QUEST_NANO_BANANA_PRO',
+    name: '首页任务：Nano Banana Pro',
+    description: '完成 Nano Banana Pro 图片生成后领取奖励。',
+    type: 'QUEST',
+    status: 'ACTIVE',
+    rewardPoints: 50,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      questCode: 'HOME_QUEST_NANO_BANANA_PRO',
+      completionKind: 'IMAGE_GENERATION_MODEL',
+      modelMatchers: ['nano-banana-pro'],
+      titleI18nKey: 'onboardTryModel',
+      subtitleI18nKey: 'onboardSubBestImage',
+      ctaI18nKey: 'onboardCtaTry',
+      modelLabel: 'Nano Banana Pro',
+      hrefPath: '/workbench/image',
+      sortOrder: 1,
+    },
+  },
+  {
+    code: 'HOME_QUEST_SEEDANCE',
+    name: '首页任务：Seedance',
+    description: '完成 Seedance 视频生成后领取奖励。',
+    type: 'QUEST',
+    status: 'ACTIVE',
+    rewardPoints: 80,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      questCode: 'HOME_QUEST_SEEDANCE',
+      completionKind: 'VIDEO_GENERATION_MODEL',
+      modelMatchers: ['seedance'],
+      titleI18nKey: 'onboardExploreModel',
+      subtitleI18nKey: 'onboardSubBestVideo',
+      ctaI18nKey: 'onboardCtaExplore',
+      modelLabel: 'Seedance 2.0',
+      hrefPath: '/workbench/video',
+      sortOrder: 2,
+    },
+  },
+  {
+    code: 'HOME_QUEST_MARKETING',
+    name: '首页任务：Marketing Studio',
+    description: '探索营销创作工作流后领取奖励。',
+    type: 'QUEST',
+    status: 'ACTIVE',
+    rewardPoints: 20,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      questCode: 'HOME_QUEST_MARKETING',
+      completionKind: 'MARKETING_WORKFLOW',
+      titleI18nKey: 'onboardExploreModel',
+      subtitleI18nKey: 'onboardSubPromptCampaign',
+      ctaI18nKey: 'onboardCtaExplore',
+      modelLabel: 'Marketing Studio',
+      hrefPath: '/growth/marketing',
+      sortOrder: 3,
+    },
+  },
+];
+
+async function seedFixedCampaigns() {
+  for (const def of FIXED_CAMPAIGN_SEEDS) {
+    await prisma.campaigns.upsert({
+      where: { code: def.code },
+      update: {},
+      create: {
+        code: def.code,
+        name: def.name,
+        description: def.description,
+        type: def.type,
+        status: def.status,
+        rewardGrantType: 'GIFT',
+        rewardSourceEvent: 'campaign_bonus',
+        rewardPointsExpression: { fixed: def.rewardPoints },
+        rewardExpiresInDays: def.rewardExpiresInDays,
+        rewardUsageScope: def.rewardUsageScope ?? DEFAULT_REWARD_USAGE_SCOPE,
+        metadata: def.metadata,
+      },
+    });
+  }
+}
 
 async function main() {
   console.log('🌱 [prod-seed] start');
@@ -236,12 +372,20 @@ async function main() {
       path: '/membership/points', icon: 'History', sort: 7,
     },
     {
+      code: 'campaign-rewards',
+      name: '活动奖励中心', nameEn: 'Campaign Rewards Center',
+      nameZhTW: '活動獎勵中心', nameFr: 'Centre des récompenses',
+      nameJa: 'キャンペーン報酬センター', nameRu: 'Центр наград кампаний',
+      nameVi: 'Trung tâm thưởng chiến dịch',
+      path: '/campaigns', icon: 'Gift', sort: 8,
+    },
+    {
       code: 'system-models',
       name: '系统模型配置', nameEn: 'System Models',
       nameZhTW: '系統模型配置', nameFr: 'Modèles système',
       nameJa: 'システムモデル設定', nameRu: 'Системные модели',
       nameVi: 'Cấu hình mô hình hệ thống',
-      path: '/models', icon: 'Globe', sort: 8,
+      path: '/models', icon: 'Globe', sort: 9,
     },
     {
       code: 'system-settings',
@@ -249,7 +393,7 @@ async function main() {
       nameZhTW: '系統配置', nameFr: 'Paramètres système',
       nameJa: 'システム設定', nameRu: 'Системные настройки',
       nameVi: 'Cấu hình hệ thống',
-      path: '/settings', icon: 'Settings', sort: 9,
+      path: '/settings', icon: 'Settings', sort: 10,
     },
     {
       code: 'system-prompts',
@@ -257,7 +401,7 @@ async function main() {
       nameZhTW: '系統 Prompt', nameFr: 'Prompts système',
       nameJa: 'システムプロンプト', nameRu: 'Системные промпты',
       nameVi: 'Prompt hệ thống',
-      path: '/prompts', icon: 'FileText', sort: 10,
+      path: '/prompts', icon: 'FileText', sort: 11,
     },
   ] as const;
 
@@ -315,6 +459,8 @@ async function main() {
       create: { roleId: chatAdminRole.id, menuId: menu.id },
     });
   }
+
+  await seedFixedCampaigns();
 
   console.log('✅ [prod-seed] done');
 }

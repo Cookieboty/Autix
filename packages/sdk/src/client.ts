@@ -1735,7 +1735,7 @@ export const pointsApi = {
 };
 
 // ── Campaign Rewards ────────────────────────────────────────────────────
-export type CampaignType = 'CONTINUOUS_USE' | 'INVITATION' | 'FEEDBACK' | 'CUSTOM';
+export type CampaignType = 'CONTINUOUS_USE' | 'INVITATION' | 'FEEDBACK' | 'REGISTRATION' | 'QUEST' | 'CUSTOM';
 export type CampaignStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
 
 export interface Campaign {

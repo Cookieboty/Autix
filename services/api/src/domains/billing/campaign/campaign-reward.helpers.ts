@@ -13,6 +13,13 @@ export const DEFAULT_REWARD_USAGE_SCOPE = {
 } as const;
 
 export const SUCCESSFUL_GENERATION_STREAK = 'successful_generation';
+export const BUILTIN_CAMPAIGN_CODES = [
+  'INVITATION_REWARD',
+  'REGISTRATION_BONUS',
+  'HOME_QUEST_NANO_BANANA_PRO',
+  'HOME_QUEST_SEEDANCE',
+  'HOME_QUEST_MARKETING',
+] as const;
 
 type FeedbackEffectivenessInput = {
   rating?: number | null;
@@ -46,6 +53,8 @@ export type CampaignRewardRequestInput = {
   userId: string;
   triggerKey: string;
   triggerEventId?: string | null;
+  pointGrantSourceId?: string | null;
+  pointGrantSource?: PointsSource;
   metadata?: Record<string, unknown>;
 };
 
@@ -209,6 +218,52 @@ export function buildCampaignUpdateData(
   return data;
 }
 
+export function isBuiltinCampaignCode(code?: string | null): boolean {
+  const normalized = String(code ?? '').trim();
+  return (
+    BUILTIN_CAMPAIGN_CODES.includes(normalized as (typeof BUILTIN_CAMPAIGN_CODES)[number]) ||
+    normalized.startsWith('HOME_QUEST_')
+  );
+}
+
+export function isBuiltinCampaign(campaign: {
+  code: string;
+  metadata?: Prisma.JsonValue | null;
+}): boolean {
+  const metadata = campaign.metadata;
+  const metadataRecord =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+      ? metadata as Record<string, unknown>
+      : null;
+  return (
+    isBuiltinCampaignCode(campaign.code) ||
+    metadataRecord?.fixed === true ||
+    metadataRecord?.builtin === true
+  );
+}
+
+export function assertBuiltinCampaignUpdateAllowed(
+  campaign: {
+    code: string;
+    type: CampaignType;
+    metadata?: Prisma.JsonValue | null;
+  },
+  input: CampaignUpsertInput,
+): void {
+  if (!isBuiltinCampaign(campaign)) return;
+
+  if (input.code !== undefined && input.code.trim() !== campaign.code) {
+    throw new BadRequestException('固定活动 code 不允许修改');
+  }
+
+  if (
+    input.type !== undefined &&
+    enumValue(CampaignType, input.type, campaign.type) !== campaign.type
+  ) {
+    throw new BadRequestException('固定活动类型不允许修改');
+  }
+}
+
 export function buildManualCampaignRewardInput(
   campaignId: string,
   userId: string,
@@ -248,10 +303,12 @@ export function buildContinuousUseCampaignRewardInput(input: {
   currentStreak: number;
   cycleKey: string;
 }): CampaignRewardRequestInput {
+  const triggerKey = `${input.cycleKey}:${input.campaignId}`;
   return {
     userId: input.userId,
-    triggerKey: `${input.cycleKey}:${input.campaignId}`,
+    triggerKey,
     triggerEventId: input.generationId,
+    pointGrantSourceId: triggerKey,
     metadata: {
       generationType: input.generationType,
       generationId: input.generationId,
@@ -270,10 +327,12 @@ export function buildFeedbackCampaignRewardInput(
   feedbackId: string,
   input: CampaignFeedbackInput,
 ): CampaignRewardRequestInput {
+  const triggerKey = `feedback:${userId}:${feedbackId}:${campaignId}`;
   return {
     userId,
-    triggerKey: `feedback:${userId}:${feedbackId}:${campaignId}`,
+    triggerKey,
     triggerEventId: feedbackId,
+    pointGrantSourceId: triggerKey,
     metadata: {
       ...(input.metadata ?? {}),
       feedbackId,
@@ -358,6 +417,9 @@ export function buildCampaignPointGrantInput(
   points: number,
   now = new Date(),
 ) {
+  const sourceId = String(input.pointGrantSourceId ?? campaign.id).trim();
+  if (!sourceId) throw new BadRequestException('活动积分来源 ID 必填');
+
   const expiresAt =
     campaign.rewardExpiresInDays > 0
       ? addDays(now, campaign.rewardExpiresInDays)
@@ -372,14 +434,15 @@ export function buildCampaignPointGrantInput(
     amount: points,
     grantType: campaign.rewardGrantType,
     sourceEvent: campaign.rewardSourceEvent,
-    source: PointsSource.CAMPAIGN,
-    sourceId: campaign.id,
+    source: input.pointGrantSource ?? PointsSource.CAMPAIGN,
+    sourceId,
     expiresAt,
     usageScope: usageScope as Prisma.InputJsonValue | undefined,
     metadata: toJson({
       campaignId: campaign.id,
       campaignCode: campaign.code,
       triggerKey: input.triggerKey,
+      pointGrantSourceId: sourceId,
       ...(input.metadata ?? {}),
     }),
     remark: `活动奖励：${campaign.name}`,

@@ -9,6 +9,7 @@ import {
   FileText,
   Flame,
   Folder,
+  Gift,
   Globe,
   History,
   Key,
@@ -74,6 +75,7 @@ const iconMap: Record<string, LucideIcon> = {
   FileText,
   Flame,
   Folder,
+  Gift,
   Globe,
   History,
   Key,
@@ -93,6 +95,11 @@ const iconMap: Record<string, LucideIcon> = {
 function isModelConfigMenuPath(path?: string | null) {
   const normalized = (path ?? '').replace(/\/+$/, '') || '/';
   return normalized === '/models' || normalized === '/admin/models';
+}
+
+function isCampaignsMenuPath(path?: string | null) {
+  const normalized = (path ?? '').replace(/\/+$/, '') || '/';
+  return normalized === '/campaigns' || normalized === '/admin/campaigns';
 }
 
 export interface AdminSidebarProps
@@ -127,6 +134,7 @@ export function Sidebar({
       const hasSystemPrompts = topMenus.some((menu) => menu.path === '/prompts');
       const hasSystemModels = topMenus.some((menu) => isModelConfigMenuPath(menu.path));
       const hasRisk = topMenus.some((menu) => menu.path === '/risk');
+      const hasCampaigns = topMenus.some((menu) => isCampaignsMenuPath(menu.path));
       return [
         ...topMenus,
         ...(!hasRisk
@@ -145,7 +153,7 @@ export function Sidebar({
               name: t('navSystemModels'),
               path: '/models',
               icon: 'Globe',
-              sort: 8,
+              sort: 9,
               visible: true,
             }]
           : []),
@@ -155,7 +163,7 @@ export function Sidebar({
               name: t('navSystemSettings'),
               path: '/settings',
               icon: 'Settings',
-              sort: 9,
+              sort: 10,
               visible: true,
             }]
           : []),
@@ -165,7 +173,17 @@ export function Sidebar({
               name: '系统 Prompt',
               path: '/prompts',
               icon: 'FileText',
-              sort: 10,
+              sort: 11,
+              visible: true,
+            }]
+          : []),
+        ...(!hasCampaigns
+          ? [{
+              id: 'fallback-campaigns',
+              name: t('navCampaignRewards'),
+              path: '/campaigns',
+              icon: 'Gift',
+              sort: 8,
               visible: true,
             }]
           : []),

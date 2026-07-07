@@ -4,20 +4,14 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { PointsService } from '../points/points.service';
-import { PointGrantType, PointLedgerEventType, PointsSource } from '../../platform/prisma/generated';
+import { PointsSource } from '../../platform/prisma/generated';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
+import { CampaignRewardService } from '../campaign/campaign-reward.service';
+import { resolveRewardPoints } from '../campaign/campaign-reward.helpers';
 import { InviteRepository } from './invite.repository';
 import { generateInviteCode } from './invite.helpers';
 
-const DEFAULT_INVITE_REWARD_POINTS = 100;
-/** FIX-2: 每个邀请人最多可结算的邀请奖励笔数上限（防刷）。 */
-const INVITE_REWARD_MAX_PER_INVITER = 50;
-/** FIX-2: 邀请人累计被邀请人数达到该阈值时记录风控告警（一期仅告警，不拦截）。 */
-const INVITE_VELOCITY_ALERT_THRESHOLD = 20;
-const INVITE_REWARD_USAGE_SCOPE = {
-  excludedTaskTypes: ['video_generation'],
-} as const;
+const INVITATION_REWARD_CODE = 'INVITATION_REWARD';
 
 @Injectable()
 export class InviteService {
@@ -25,8 +19,8 @@ export class InviteService {
 
   constructor(
     private readonly inviteRepository: InviteRepository,
-    private readonly pointsService: PointsService,
     private readonly systemSettingsService: SystemSettingsService,
+    private readonly campaignRewardService: CampaignRewardService,
   ) {}
 
   async getOrCreateCode(userId: string) {
@@ -50,7 +44,7 @@ export class InviteService {
   async recordInvitation(
     inviteCode: string,
     inviteeUserId: string,
-    rewardPoints: number = DEFAULT_INVITE_REWARD_POINTS,
+    rewardPoints?: number,
   ) {
     if (!(await this.isInviteSharingEnabled())) return null;
 
@@ -66,11 +60,12 @@ export class InviteService {
     // FIX-2: 注册阶段只记录、不发奖励（rewarded:false）。
     // 奖励改为在被邀请人通过邮箱激活 / 管理员审批后由 settlePendingInvitationReward 结算，
     // 以杜绝「注册即发奖励」被批量小号刷量。
+    const rewardPointsSnapshot = rewardPoints ?? await this.resolveInvitationRewardPointsSnapshot();
     const record = await this.inviteRepository.createRecord({
       inviteCodeId: code.id,
       inviterUserId: code.userId,
       inviteeUserId,
-      rewardPoints,
+      rewardPoints: rewardPointsSnapshot,
       rewarded: false,
     });
 
@@ -83,8 +78,12 @@ export class InviteService {
   /** FIX-2: 一期风控——邀请人累计被邀请人数达阈值时记录告警（不拦截）。 */
   private async logInviteVelocity(inviterUserId: string) {
     try {
+      const campaign = await this.campaignRewardService.findCampaignByCode(INVITATION_REWARD_CODE);
+      const threshold = this.readMetadataNumber(campaign?.metadata, 'velocityThreshold');
+      if (threshold == null || threshold <= 0) return;
+
       const total = await this.inviteRepository.countByInviter(inviterUserId);
-      if (total + 1 >= INVITE_VELOCITY_ALERT_THRESHOLD) {
+      if (total + 1 >= threshold) {
         this.logger.warn(
           `[invite-velocity] inviter=${inviterUserId} 已累计邀请 ${total + 1} 人，请关注是否存在刷量`,
         );
@@ -105,23 +104,43 @@ export class InviteService {
     const record = await this.inviteRepository.findRecordByInvitee(inviteeUserId);
     if (!record || record.rewarded || record.rewardPoints <= 0) return null;
 
+    const campaign = await this.campaignRewardService.findCampaignByCode(INVITATION_REWARD_CODE);
+    if (!campaign) {
+      this.logger.warn(`[invite-campaign-missing] code=${INVITATION_REWARD_CODE}，跳过 invitee=${inviteeUserId}`);
+      return null;
+    }
+    if (!this.isCampaignActive(campaign)) return null;
+
     // FIX-2: 每个邀请人结算笔数封顶，超过上限不再发奖励（记录告警）。
+    const maxRewarded = this.readMetadataNumber(campaign.metadata, 'maxRewardedInvitesPerInviter');
     const rewardedCount = await this.inviteRepository.countRewardedByInviter(record.inviterUserId);
-    if (rewardedCount >= INVITE_REWARD_MAX_PER_INVITER) {
+    if (maxRewarded != null && rewardedCount >= maxRewarded) {
       this.logger.warn(
-        `[invite-cap] inviter=${record.inviterUserId} 已达邀请奖励上限(${INVITE_REWARD_MAX_PER_INVITER})，跳过 invitee=${inviteeUserId}`,
+        `[invite-cap] inviter=${record.inviterUserId} 已达邀请奖励上限(${maxRewarded})，跳过 invitee=${inviteeUserId}`,
       );
       return null;
     }
 
     try {
       await this.inviteRepository.claimRewardAndRun(inviteeUserId, async (tx) => {
-        await this.grantInviteReward(tx, {
-          inviterUserId: record.inviterUserId,
-          sourceId: record.inviteeUserId,
-          rewardPoints: record.rewardPoints,
-          remark: '邀请奖励（历史待结算补发）',
-        });
+        await this.campaignRewardService.grantCampaignRewardWithinTx(
+          tx,
+          campaign.id,
+          {
+            userId: record.inviterUserId,
+            triggerKey: `invite:${record.inviteeUserId}`,
+            triggerEventId: record.inviteeUserId,
+            pointGrantSource: PointsSource.INVITATION,
+            pointGrantSourceId: record.inviteeUserId,
+            metadata: {
+              source: 'invitation',
+              inviteRecordId: record.id,
+              inviteeUserId: record.inviteeUserId,
+              rewardPointsSnapshot: record.rewardPoints,
+            },
+          },
+          { pointsOverride: record.rewardPoints },
+        );
       });
       return record;
     } catch (err) {
@@ -136,23 +155,30 @@ export class InviteService {
     return this.systemSettingsService.getBoolean('features.inviteSharingEnabled');
   }
 
-  private async grantInviteReward(
-    tx: Parameters<PointsService['grantPointsWithinTx']>[0],
-    input: {
-      inviterUserId: string;
-      sourceId: string;
-      rewardPoints: number;
-      remark: string;
-    },
-  ) {
-    await this.pointsService.grantPointsWithinTx(tx, input.inviterUserId, {
-      amount: input.rewardPoints,
-      grantType: PointGrantType.GIFT,
-      sourceEvent: PointLedgerEventType.campaign_bonus,
-      source: PointsSource.INVITATION,
-      sourceId: input.sourceId,
-      usageScope: INVITE_REWARD_USAGE_SCOPE,
-      remark: input.remark,
-    });
+  private async resolveInvitationRewardPointsSnapshot() {
+    const campaign = await this.campaignRewardService.findCampaignByCode(INVITATION_REWARD_CODE);
+    if (!campaign) {
+      this.logger.warn(`[invite-campaign-missing] code=${INVITATION_REWARD_CODE}，邀请记录积分快照写入 0`);
+      return 0;
+    }
+    return resolveRewardPoints(campaign.rewardPointsExpression);
+  }
+
+  private readMetadataNumber(metadata: unknown, key: string): number | null {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+    const value = (metadata as Record<string, unknown>)[key];
+    return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null;
+  }
+
+  private isCampaignActive(campaign: {
+    status: string;
+    startsAt: Date | string | null;
+    endsAt: Date | string | null;
+  }) {
+    if (campaign.status !== 'ACTIVE') return false;
+    const now = Date.now();
+    const startsAt = campaign.startsAt ? new Date(campaign.startsAt).getTime() : null;
+    const endsAt = campaign.endsAt ? new Date(campaign.endsAt).getTime() : null;
+    return (startsAt == null || startsAt <= now) && (endsAt == null || endsAt >= now);
   }
 }

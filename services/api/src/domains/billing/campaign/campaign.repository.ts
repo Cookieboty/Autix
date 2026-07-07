@@ -45,6 +45,10 @@ export class CampaignRepository {
     });
   }
 
+  findCampaignByCode(code: string) {
+    return this.prisma.campaigns.findUnique({ where: { code } });
+  }
+
   listCampaignRewards(campaignId: string, take: number) {
     return this.prisma.campaign_rewards.findMany({
       where: { campaignId },
@@ -56,6 +60,10 @@ export class CampaignRepository {
 
   createCampaign(data: Prisma.campaignsCreateInput) {
     return this.prisma.campaigns.create({ data });
+  }
+
+  findCampaign(id: string) {
+    return this.prisma.campaigns.findUnique({ where: { id } });
   }
 
   updateCampaign(id: string, data: Prisma.campaignsUpdateInput) {

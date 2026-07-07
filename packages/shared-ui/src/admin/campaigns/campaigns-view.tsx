@@ -20,6 +20,7 @@ import {
   campaignTotals,
   errorMessage,
   formFromCampaign,
+  isFixedCampaign,
   payloadFromForm,
   type CampaignModalState,
 } from './campaign-form';
@@ -39,6 +40,7 @@ export function AdminCampaignsView({ onBack }: AdminCampaignsViewProps) {
   const tCommon = useTranslations('common');
   const [modal, setModal] = useState<CampaignModalState | null>(null);
   const [selected, setSelected] = useState<Campaign | null>(null);
+  const [campaignScope, setCampaignScope] = useState<'fixed' | 'dynamic'>('fixed');
   const [manualUserId, setManualUserId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -57,14 +59,6 @@ export function AdminCampaignsView({ onBack }: AdminCampaignsViewProps) {
   const updateCampaignMutation = useUpdateAdminCampaignMutation();
   const grantCampaignOnceMutation = useGrantAdminCampaignOnceMutation();
 
-  useEffect(() => {
-    setSelected((cur) => {
-      if (!campaigns.length) return null;
-      if (!cur) return campaigns[0];
-      return campaigns.find((item) => item.id === cur.id) ?? campaigns[0];
-    });
-  }, [campaigns]);
-
   const saving =
     createCampaignMutation.isPending ||
     updateCampaignMutation.isPending ||
@@ -73,6 +67,31 @@ export function AdminCampaignsView({ onBack }: AdminCampaignsViewProps) {
     error ?? (campaignsError ? errorMessage(campaignsError, t('loadFailed')) : null);
 
   const totals = useMemo(() => campaignTotals(campaigns), [campaigns]);
+  const fixedCampaigns = useMemo(
+    () => campaigns.filter((campaign) => isFixedCampaign(campaign)),
+    [campaigns],
+  );
+  const dynamicCampaigns = useMemo(
+    () => campaigns.filter((campaign) => !isFixedCampaign(campaign)),
+    [campaigns],
+  );
+  const visibleCampaigns = campaignScope === 'fixed' ? fixedCampaigns : dynamicCampaigns;
+  const fixedCampaignIds = useMemo(
+    () => new Set(fixedCampaigns.map((campaign) => campaign.id)),
+    [fixedCampaigns],
+  );
+  const modalCampaign = modal?.form.id
+    ? campaigns.find((campaign) => campaign.id === modal.form.id) ?? null
+    : null;
+  const modalFixedCampaign = Boolean(modalCampaign && isFixedCampaign(modalCampaign));
+
+  useEffect(() => {
+    setSelected((cur) => {
+      if (!visibleCampaigns.length) return null;
+      if (!cur) return visibleCampaigns[0];
+      return visibleCampaigns.find((item) => item.id === cur.id) ?? visibleCampaigns[0];
+    });
+  }, [visibleCampaigns]);
 
   const campaignTypeLabel = (type: CampaignType) => t(`type.${type}`);
   const campaignStatusLabel = (status: CampaignStatus) => t(`status.${status}`);
@@ -82,6 +101,10 @@ export function AdminCampaignsView({ onBack }: AdminCampaignsViewProps) {
     setError(null);
     try {
       const payload = payloadFromForm(modal.form);
+      if (modalFixedCampaign) {
+        delete payload.code;
+        delete payload.type;
+      }
       if (modal.mode === 'create') {
         await createCampaignMutation.mutateAsync(payload);
       } else if (modal.form.id) {
@@ -142,12 +165,40 @@ export function AdminCampaignsView({ onBack }: AdminCampaignsViewProps) {
         </div>
       )}
 
+      <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+        <button
+          type="button"
+          className="rounded-md border px-3 py-1.5 text-sm"
+          style={{
+            borderColor: 'var(--border)',
+            backgroundColor: campaignScope === 'fixed' ? 'var(--surface)' : 'transparent',
+            color: campaignScope === 'fixed' ? 'var(--foreground)' : 'var(--muted)',
+          }}
+          onClick={() => setCampaignScope('fixed')}
+        >
+          {t('fixedActivities', { count: fixedCampaigns.length })}
+        </button>
+        <button
+          type="button"
+          className="rounded-md border px-3 py-1.5 text-sm"
+          style={{
+            borderColor: 'var(--border)',
+            backgroundColor: campaignScope === 'dynamic' ? 'var(--surface)' : 'transparent',
+            color: campaignScope === 'dynamic' ? 'var(--foreground)' : 'var(--muted)',
+          }}
+          onClick={() => setCampaignScope('dynamic')}
+        >
+          {t('dynamicActivities', { count: dynamicCampaigns.length })}
+        </button>
+      </div>
+
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_420px]">
         <div className="min-h-0 overflow-y-auto">
           <CampaignsTable
-            campaigns={campaigns}
+            campaigns={visibleCampaigns}
             campaignStatusLabel={campaignStatusLabel}
             campaignTypeLabel={campaignTypeLabel}
+            fixedCampaignIds={fixedCampaignIds}
             loading={loading}
             onEdit={(campaign) => setModal({ mode: 'edit', form: formFromCampaign(campaign) })}
             onSelect={setSelected}
@@ -176,6 +227,7 @@ export function AdminCampaignsView({ onBack }: AdminCampaignsViewProps) {
         <CampaignModal
           campaignStatusLabel={campaignStatusLabel}
           campaignTypeLabel={campaignTypeLabel}
+          fixedCampaign={modalFixedCampaign}
           modal={modal}
           onChange={(form) => setModal({ ...modal, form })}
           onClose={() => setModal(null)}

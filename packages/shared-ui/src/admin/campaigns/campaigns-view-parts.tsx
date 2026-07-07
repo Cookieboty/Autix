@@ -68,6 +68,7 @@ export function CampaignsTable({
   campaigns,
   campaignStatusLabel,
   campaignTypeLabel,
+  fixedCampaignIds,
   loading,
   onEdit,
   onSelect,
@@ -79,6 +80,7 @@ export function CampaignsTable({
   campaigns: Campaign[];
   campaignStatusLabel: LabelFor<CampaignStatus>;
   campaignTypeLabel: LabelFor<CampaignType>;
+  fixedCampaignIds: Set<string>;
   loading: boolean;
   onEdit: (campaign: Campaign) => void;
   onSelect: (campaign: Campaign) => void;
@@ -142,8 +144,19 @@ export function CampaignsTable({
               <div className="font-medium" style={{ color: 'var(--foreground)' }}>
                 {campaign.name}
               </div>
-              <div className="mt-0.5 font-mono text-xs" style={{ color: 'var(--muted)' }}>
-                {campaign.code}
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="font-mono text-xs" style={{ color: 'var(--muted)' }}>
+                  {campaign.code}
+                </span>
+                <span
+                  className="rounded border px-1.5 py-0.5 text-[11px]"
+                  style={{
+                    borderColor: 'var(--border)',
+                    color: fixedCampaignIds.has(campaign.id) ? 'var(--brand)' : 'var(--muted)',
+                  }}
+                >
+                  {fixedCampaignIds.has(campaign.id) ? t('fixedActivity') : t('dynamicActivity')}
+                </span>
               </div>
             </td>
             <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>
@@ -289,6 +302,7 @@ export function CampaignDetailPanel({
 export function CampaignModal({
   campaignStatusLabel,
   campaignTypeLabel,
+  fixedCampaign,
   modal,
   onChange,
   onClose,
@@ -299,6 +313,7 @@ export function CampaignModal({
 }: {
   campaignStatusLabel: LabelFor<CampaignStatus>;
   campaignTypeLabel: LabelFor<CampaignType>;
+  fixedCampaign: boolean;
   modal: CampaignModalState;
   onChange: (form: CampaignForm) => void;
   onClose: () => void;
@@ -330,7 +345,12 @@ export function CampaignModal({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="text-xs" style={{ color: 'var(--muted)' }}>
             {t('code')}
-            <Input className="mt-1" value={modal.form.code} onChange={(event) => updateForm('code', event.target.value)} />
+            <Input
+              className="mt-1"
+              disabled={fixedCampaign}
+              value={modal.form.code}
+              onChange={(event) => updateForm('code', event.target.value)}
+            />
           </label>
           <label className="text-xs" style={{ color: 'var(--muted)' }}>
             {t('name')}
@@ -345,12 +365,15 @@ export function CampaignModal({
                 backgroundColor: 'var(--surface)',
                 color: 'var(--foreground)',
               }}
+              disabled={fixedCampaign}
               value={modal.form.type}
               onChange={(event) => updateForm('type', event.target.value as CampaignType)}
             >
               <option value="CONTINUOUS_USE">{campaignTypeLabel('CONTINUOUS_USE')}</option>
               <option value="INVITATION">{campaignTypeLabel('INVITATION')}</option>
               <option value="FEEDBACK">{campaignTypeLabel('FEEDBACK')}</option>
+              <option value="REGISTRATION">{campaignTypeLabel('REGISTRATION')}</option>
+              <option value="QUEST">{campaignTypeLabel('QUEST')}</option>
               <option value="CUSTOM">{campaignTypeLabel('CUSTOM')}</option>
             </select>
           </label>

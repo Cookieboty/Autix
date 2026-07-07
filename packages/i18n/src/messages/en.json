@@ -1278,7 +1278,8 @@
     "navAdminRoles": "Roles",
     "navAdminPermissions": "Permissions",
     "navSystemModels": "System Model Config",
-    "navSystemSettings": "System Settings"
+    "navSystemSettings": "System Settings",
+    "navCampaignRewards": "Campaign Rewards Center"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1324,7 +1325,7 @@
     "systemSettingsDesc": "Manage feature flags, payment, storage, and email configuration",
     "systemModels": "System Model Config",
     "systemModelsDesc": "Maintain public system models, default models, and credentials",
-    "campaignRewards": "Campaign Rewards",
+    "campaignRewards": "Campaign Rewards Center",
     "campaignRewardsDesc": "Configure reward campaigns, budgets, and issuance records",
     "auditLogsAction": "Audit Logs",
     "auditLogsActionDesc": "View admin operations / points adjustment history"
@@ -4084,7 +4085,7 @@
     "duplicateFolderName": "A folder with this name already exists"
   },
   "adminCampaigns": {
-    "title": "Campaign rewards",
+    "title": "Campaign Rewards Center",
     "summary": "{count} campaigns · {active} active · {used} points issued",
     "loadFailed": "Failed to load campaigns",
     "saveFailed": "Failed to save campaign",
@@ -4092,6 +4093,10 @@
     "createCampaign": "New campaign",
     "editCampaign": "Edit campaign",
     "empty": "No campaigns",
+    "fixedActivities": "Fixed activities ({count})",
+    "dynamicActivities": "Dynamic activities ({count})",
+    "fixedActivity": "Fixed",
+    "dynamicActivity": "Dynamic",
     "campaign": "Campaign",
     "typeLabel": "Type",
     "reward": "Reward",
@@ -4129,6 +4134,8 @@
       "CONTINUOUS_USE": "Continuous use",
       "INVITATION": "Invitation rebate",
       "FEEDBACK": "Feedback",
+      "REGISTRATION": "Registration bonus",
+      "QUEST": "Quest reward",
       "CUSTOM": "Operations gift"
     },
     "status": {

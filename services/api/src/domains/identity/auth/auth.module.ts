@@ -15,6 +15,7 @@ import { PermissionsGuard } from './guards/permissions.guard';
 import { AdminGuard } from './admin.guard';
 import { MailModule } from '../../platform/mail/mail.module';
 import { InviteModule } from '../../billing/invite/invite.module';
+import { CampaignModule } from '../../billing/campaign/campaign.module';
 import { OAuthController } from './oauth/oauth.controller';
 import { OAuthService } from './oauth/oauth.service';
 import { OAuthProviderRegistry } from './oauth/oauth-provider.registry';
@@ -36,6 +37,7 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
       signOptions: { expiresIn: jwtAccessExpiresIn },
     }),
     MailModule,
+    CampaignModule,
     forwardRef(() => InviteModule),
   ],
   controllers: [AuthController, OAuthController],

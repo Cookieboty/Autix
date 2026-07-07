@@ -794,7 +794,8 @@
     "navAdminRoles": "角色",
     "navAdminPermissions": "權限",
     "navSystemModels": "系統模型配置",
-    "navSystemSettings": "系統配置"
+    "navSystemSettings": "系統配置",
+    "navCampaignRewards": "活動獎勵中心"
   },
   "dashboard": {
     "title": "儀表板",
@@ -840,7 +841,7 @@
     "systemSettingsDesc": "管理功能開關、支付、儲存和郵件配置",
     "systemModels": "系統模型配置",
     "systemModelsDesc": "維護公開系統模型、預設模型和呼叫憑證",
-    "campaignRewards": "活動獎勵",
+    "campaignRewards": "活動獎勵中心",
     "campaignRewardsDesc": "配置獎勵活動、預算和發放記錄",
     "auditLogsAction": "稽核日誌",
     "auditLogsActionDesc": "查看管理員操作 / 點數調整流水"
@@ -3892,7 +3893,7 @@
     "duplicateFolderName": "已存在相同名稱的資料夾"
   },
   "adminCampaigns": {
-    "title": "活動獎勵配置",
+    "title": "活動獎勵中心",
     "summary": "{count} 個活動 · {active} 個啟用 · 已發放 {used} 點數",
     "loadFailed": "載入活動失敗",
     "saveFailed": "儲存活動失敗",
@@ -3900,6 +3901,10 @@
     "createCampaign": "新建活動",
     "editCampaign": "編輯活動",
     "empty": "暫無活動",
+    "fixedActivities": "固定活動 ({count})",
+    "dynamicActivities": "動態活動 ({count})",
+    "fixedActivity": "固定",
+    "dynamicActivity": "動態",
     "campaign": "活動",
     "typeLabel": "類型",
     "reward": "獎勵",
@@ -3937,6 +3942,8 @@
       "CONTINUOUS_USE": "連續使用",
       "INVITATION": "邀請返利",
       "FEEDBACK": "評價回饋",
+      "REGISTRATION": "註冊獎勵",
+      "QUEST": "任務獎勵",
       "CUSTOM": "營運贈送"
     },
     "status": {

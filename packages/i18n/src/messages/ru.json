@@ -794,7 +794,8 @@
     "navAdminRoles": "Роли",
     "navAdminPermissions": "Права",
     "navSystemModels": "Настройка системных моделей",
-    "navSystemSettings": "Системные настройки"
+    "navSystemSettings": "Системные настройки",
+    "navCampaignRewards": "Центр наград кампаний"
   },
   "dashboard": {
     "title": "Панель управления",
@@ -840,7 +841,7 @@
     "systemSettingsDesc": "Управление функциями, платежами, хранилищем и почтой",
     "systemModels": "Настройка системных моделей",
     "systemModelsDesc": "Обслуживание публичных моделей, моделей по умолчанию и ключей",
-    "campaignRewards": "Награды кампаний",
+    "campaignRewards": "Центр наград кампаний",
     "campaignRewardsDesc": "Настройка кампаний, бюджетов и записей выдачи",
     "auditLogsAction": "Журнал аудита",
     "auditLogsActionDesc": "Просмотр действий администратора / истории корректировок баллов"
@@ -3892,7 +3893,7 @@
     "duplicateFolderName": "Папка с таким названием уже существует"
   },
   "adminCampaigns": {
-    "title": "Награды кампаний",
+    "title": "Центр наград кампаний",
     "summary": "Кампаний: {count} · активных: {active} · выдано баллов: {used}",
     "loadFailed": "Не удалось загрузить кампании",
     "saveFailed": "Не удалось сохранить кампанию",
@@ -3900,6 +3901,10 @@
     "createCampaign": "Новая кампания",
     "editCampaign": "Редактировать кампанию",
     "empty": "Кампаний нет",
+    "fixedActivities": "Фиксированные активности ({count})",
+    "dynamicActivities": "Динамические активности ({count})",
+    "fixedActivity": "Фикс.",
+    "dynamicActivity": "Динамич.",
     "campaign": "Кампания",
     "typeLabel": "Тип",
     "reward": "Награда",
@@ -3937,6 +3942,8 @@
       "CONTINUOUS_USE": "Постоянное использование",
       "INVITATION": "Бонус за приглашение",
       "FEEDBACK": "Отзыв",
+      "REGISTRATION": "Бонус за регистрацию",
+      "QUEST": "Награда за задание",
       "CUSTOM": "Операционный подарок"
     },
     "status": {

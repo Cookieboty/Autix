@@ -794,7 +794,8 @@
     "navAdminRoles": "ロール",
     "navAdminPermissions": "権限",
     "navSystemModels": "システムモデル設定",
-    "navSystemSettings": "システム設定"
+    "navSystemSettings": "システム設定",
+    "navCampaignRewards": "キャンペーン報酬センター"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -840,7 +841,7 @@
     "systemSettingsDesc": "機能フラグ、支払い、ストレージ、メール設定を管理",
     "systemModels": "システムモデル設定",
     "systemModelsDesc": "公開システムモデル、既定モデル、認証情報を管理",
-    "campaignRewards": "キャンペーン報酬",
+    "campaignRewards": "キャンペーン報酬センター",
     "campaignRewardsDesc": "報酬キャンペーン、予算、付与記録を設定",
     "auditLogsAction": "監査ログ",
     "auditLogsActionDesc": "管理者操作 / ポイント調整履歴を確認"
@@ -3892,7 +3893,7 @@
     "duplicateFolderName": "同じ名前のフォルダーが既に存在します"
   },
   "adminCampaigns": {
-    "title": "キャンペーン報酬",
+    "title": "キャンペーン報酬センター",
     "summary": "{count}件のキャンペーン · 有効 {active} 件 · {used}ポイント付与済み",
     "loadFailed": "キャンペーンの読み込みに失敗しました",
     "saveFailed": "キャンペーンの保存に失敗しました",
@@ -3900,6 +3901,10 @@
     "createCampaign": "新規キャンペーン",
     "editCampaign": "キャンペーンを編集",
     "empty": "キャンペーンはありません",
+    "fixedActivities": "固定アクティビティ ({count})",
+    "dynamicActivities": "動的アクティビティ ({count})",
+    "fixedActivity": "固定",
+    "dynamicActivity": "動的",
     "campaign": "キャンペーン",
     "typeLabel": "タイプ",
     "reward": "報酬",
@@ -3937,6 +3942,8 @@
       "CONTINUOUS_USE": "継続利用",
       "INVITATION": "招待リベート",
       "FEEDBACK": "フィードバック",
+      "REGISTRATION": "登録報酬",
+      "QUEST": "クエスト報酬",
       "CUSTOM": "運営付与"
     },
     "status": {
