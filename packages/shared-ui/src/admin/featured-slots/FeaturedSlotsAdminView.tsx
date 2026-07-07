@@ -43,6 +43,7 @@ import {
 } from '../../ui/table';
 import {
   Dialog,
+  DialogTitle,
   DialogContent,
   DialogHeader,
   DialogBody,
@@ -358,7 +359,7 @@ export function FeaturedSlotsAdminView({
 
       <Dialog open={!!modal} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>{modal?.mode === 'create' ? '新增运营位' : '编辑运营位'}</DialogHeader>
+          <DialogHeader><DialogTitle>{modal?.mode === 'create' ? '新增运营位' : '编辑运营位'}</DialogTitle></DialogHeader>
           {modal && (
             <DialogBody className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto">
               <div>

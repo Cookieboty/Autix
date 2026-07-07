@@ -29,6 +29,7 @@ import {
 } from '../../ui/table';
 import {
   Dialog,
+  DialogTitle,
   DialogContent,
   DialogHeader,
   DialogBody,
@@ -320,7 +321,7 @@ function PendingPanel() {
         }}
       >
         <DialogContent>
-          <DialogHeader>驳回作品</DialogHeader>
+          <DialogHeader><DialogTitle>驳回作品</DialogTitle></DialogHeader>
           <DialogBody>
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               驳回原因

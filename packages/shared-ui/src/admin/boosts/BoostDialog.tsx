@@ -19,6 +19,7 @@ import {
 } from '../../ui/select';
 import {
   Dialog,
+  DialogTitle,
   DialogContent,
   DialogHeader,
   DialogBody,
@@ -147,7 +148,7 @@ export function BoostDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>{title}</DialogHeader>
+        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {error && (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
