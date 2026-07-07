@@ -2177,6 +2177,126 @@ export const galleryAdminApi = {
     chatApi.post(`/api/admin/gallery/reports/${reportId}/resolve`, { status }),
 };
 
+// ── Featured Slots Admin (运营位编排) ────────────────────────────────────
+export type FeaturedSlotKind = 'RESOURCE' | 'CUSTOM';
+
+/** 候选资源检索仅支持这三类来源表（模板 / 广场作品）。 */
+export type FeaturedSlotCandidateResourceType =
+  | 'IMAGE_TEMPLATE'
+  | 'VIDEO_TEMPLATE'
+  | 'GALLERY_POST';
+
+export interface FeaturedSlot {
+  id: string;
+  placement: string;
+  kind: FeaturedSlotKind;
+  resourceType: MetricResourceType | null;
+  resourceId: string | null;
+  overrideTitle: string | null;
+  overrideDescription: string | null;
+  overrideCoverImage: string | null;
+  overrideCoverVideo: string | null;
+  overrideCtaText: string | null;
+  overrideCtaHref: string | null;
+  position: number;
+  isEnabled: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+}
+
+export interface FeaturedSlotCandidate {
+  id: string;
+  title: string;
+}
+
+export interface CreateFeaturedSlotInput {
+  placement: string;
+  kind: FeaturedSlotKind;
+  resourceType?: MetricResourceType | null;
+  resourceId?: string | null;
+  overrideTitle?: string | null;
+  overrideDescription?: string | null;
+  overrideCoverImage?: string | null;
+  overrideCoverVideo?: string | null;
+  overrideCtaText?: string | null;
+  overrideCtaHref?: string | null;
+  position?: number;
+  isEnabled?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+}
+
+export type UpdateFeaturedSlotInput = Partial<
+  Omit<CreateFeaturedSlotInput, 'placement' | 'position'>
+>;
+
+export const featuredSlotsAdminApi = {
+  list: (placement: string) =>
+    chatApi.get<FeaturedSlot[]>('/api/admin/featured-slots', { params: { placement } }),
+  candidates: (resourceType: FeaturedSlotCandidateResourceType, query?: string) =>
+    chatApi.get<FeaturedSlotCandidate[]>('/api/admin/featured-slots/candidates', {
+      params: { resourceType, query },
+    }),
+  create: (data: CreateFeaturedSlotInput) =>
+    chatApi.post<FeaturedSlot>('/api/admin/featured-slots', data),
+  update: (id: string, data: UpdateFeaturedSlotInput) =>
+    chatApi.patch<FeaturedSlot>(`/api/admin/featured-slots/${id}`, data),
+  remove: (id: string) => chatApi.delete(`/api/admin/featured-slots/${id}`),
+  reorder: (placement: string, orderedIds: string[]) =>
+    chatApi.patch<FeaturedSlot[]>('/api/admin/featured-slots/reorder', {
+      placement,
+      orderedIds,
+    }),
+};
+
+// ── Resource Boost Admin (内容加热) ──────────────────────────────────────
+export type BoostReason = 'MANUAL' | 'CAMPAIGN' | 'EDITORIAL_PICK' | 'CORRECTION';
+
+export interface ResourceBoostAdminItem {
+  id: string;
+  resourceType: MetricResourceType;
+  resourceId: string;
+  boostScore: number;
+  reason: BoostReason;
+  note: string | null;
+  startsAt: string;
+  endsAt: string;
+  isActive: boolean;
+  isCurrentlyActive: boolean;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBoostInput {
+  boostScore: number;
+  reason?: BoostReason;
+  note?: string | null;
+  startsAt?: string;
+  endsAt: string;
+}
+
+export interface UpdateBoostInput {
+  boostScore?: number;
+  reason?: BoostReason;
+  note?: string | null;
+  startsAt?: string;
+  endsAt?: string;
+}
+
+export const boostAdminApi = {
+  list: (params?: { type?: MetricResourceType; query?: string }) =>
+    chatApi.get<ResourceBoostAdminItem[]>('/api/admin/resources/boosts', { params }),
+  create: (resourceType: MetricResourceType, resourceId: string, data: CreateBoostInput) =>
+    chatApi.post<ResourceBoostAdminItem>(
+      `/api/admin/resources/${resourceType}/${resourceId}/boost`,
+      data,
+    ),
+  update: (id: string, data: UpdateBoostInput) =>
+    chatApi.patch<ResourceBoostAdminItem>(`/api/admin/resources/boosts/${id}`, data),
+  revoke: (id: string) => chatApi.delete(`/api/admin/resources/boosts/${id}`),
+};
+
 // P2-C-1: 与后端 AdminAuditStore 返回结构保持一致
 export interface AdminAuditEntry {
   id: number;

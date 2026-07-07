@@ -291,6 +291,22 @@ async function main() {
       nameVi: 'Duyệt thư viện',
       path: '/gallery', icon: 'ShieldAlert', sort: 7,
     },
+    {
+      code: 'featured-slots',
+      name: '运营位编排', nameEn: 'Featured Slots',
+      nameZhTW: '運營位編排', nameFr: 'Emplacements mis en avant',
+      nameJa: '注目枠', nameRu: 'Витрины',
+      nameVi: 'Vị trí nổi bật',
+      path: '/featured-slots', icon: 'LayoutGrid', sort: 8,
+    },
+    {
+      code: 'resource-boosts',
+      name: '内容加热', nameEn: 'Content Boost',
+      nameZhTW: '內容加熱', nameFr: 'Boost de contenu',
+      nameJa: 'コンテンツブースト', nameRu: 'Продвижение',
+      nameVi: 'Tăng nhiệt nội dung',
+      path: '/boosts', icon: 'Flame', sort: 9,
+    },
   ] as const;
 
   const chatMenus: { id: string }[] = [];
