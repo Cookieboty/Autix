@@ -970,8 +970,6 @@ export const templateApi = imageTemplateApi;
 export const imageGenerationApi = {
   getById: (id: string) =>
     chatApi.get<ImageGeneration>(`/api/generations/image/${id}`),
-  publish: (id: string, data: PublishPublicCreationInput) =>
-    chatApi.post<PublicGrowthMediaItem>(`/api/generations/image/${id}/publish`, data),
   addTurn: (
     id: string,
     data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
@@ -1161,8 +1159,6 @@ export const videoProjectApi = {
     chatApi.get('/api/video-projects/workbench/default'),
   createShare: (id: string) =>
     chatApi.post<VideoProjectShareLinkResult>(`/api/video-projects/${id}/share`, {}),
-  publish: (id: string, data: PublishPublicCreationInput) =>
-    chatApi.post<PublicGrowthMediaItem>(`/api/video-projects/${id}/publish`, data),
   getShared: (code: string) =>
     chatApi.get<VideoProjectShareDetail>(`/api/video-projects/share/${encodeURIComponent(code)}`),
   update: (id: string, data: { title?: string; coverImage?: string }) =>
@@ -1397,7 +1393,6 @@ export const shareResource = (type: ResourceType, id: string) =>
 
 // ── Public Growth Pages ─────────────────────────────────────────────────
 export type PublicCreationMediaType = 'image' | 'video';
-export type PublicPromptVisibility = 'hidden' | 'public';
 export type PublicCollectionKind = 'COMMUNITY' | 'PRESET' | 'VIRAL_PRESET' | 'FEATURE';
 
 export interface PublicGrowthAuthor {
@@ -1506,15 +1501,6 @@ export interface PublicCreatorProfile {
 
 export interface PublicCreatorDetail {
   profile: PublicCreatorProfile;
-  creations: PublicGrowthMediaItem[];
-}
-
-export interface PublishPublicCreationInput {
-  title?: string;
-  description?: string;
-  tags?: string[];
-  promptVisibility?: PublicPromptVisibility;
-  collectionSlug?: string;
 }
 
 export interface PublicGrowthEventInput {
@@ -1537,31 +1523,8 @@ export const publicGrowthApi = {
       `/api/public/collections/${encodeURIComponent(slug)}`,
       { params },
     ),
-  creations: (params?: {
-    page?: number;
-    pageSize?: number;
-    mediaType?: PublicCreationMediaType;
-    tag?: string;
-    collectionSlug?: string;
-  }) => chatApi.get<PaginatedResult<PublicGrowthMediaItem>>('/api/public/creations', { params }),
-  creation: (id: string) =>
-    chatApi.get<PublicGrowthMediaItem>(`/api/public/creations/${encodeURIComponent(id)}`),
-  viewCreation: (id: string) =>
-    chatApi.post<{ viewCount: number }>(`/api/public/creations/${encodeURIComponent(id)}/view`, {}),
-  likeCreation: (id: string) =>
-    chatApi.post<{ liked: boolean; likeCount: number }>(
-      `/api/public/creations/${encodeURIComponent(id)}/like`,
-      {},
-    ),
-  shareCreation: (id: string) =>
-    chatApi.post<{ shareCount: number }>(`/api/public/creations/${encodeURIComponent(id)}/share`, {}),
   creator: (handle: string) =>
     chatApi.get<PublicCreatorDetail>(`/api/public/creators/${encodeURIComponent(handle)}`),
-  creatorCreations: (handle: string, params?: { page?: number; pageSize?: number }) =>
-    chatApi.get<PaginatedResult<PublicGrowthMediaItem>>(
-      `/api/public/creators/${encodeURIComponent(handle)}/creations`,
-      { params },
-    ),
   followCreator: (handle: string) =>
     chatApi.post<{ followed: boolean; followerCount: number }>(
       `/api/public/creators/${encodeURIComponent(handle)}/follow`,

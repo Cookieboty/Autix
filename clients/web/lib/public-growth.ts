@@ -4,7 +4,6 @@ import type {
   PublicCollectionKind,
   PublicCreatorDetail,
   PublicGrowthCollection,
-  PublicGrowthMediaItem,
   PublicGrowthPage,
   MembershipLevel,
   PointsPackage,
@@ -56,26 +55,6 @@ export const getPublicCollections = (kind?: PublicCollectionKind) => {
 
 export const getPublicCollection = (slug: string) =>
   fetchPublicGrowth<PublicCollectionDetail>(`/api/public/collections/${encodeURIComponent(slug)}`);
-
-export const getPublicCreations = (params: {
-  pageSize?: number;
-  mediaType?: 'image' | 'video';
-  tag?: string;
-  collectionSlug?: string;
-} = {}) => {
-  const search = new URLSearchParams();
-  if (params.pageSize) search.set('pageSize', String(params.pageSize));
-  if (params.mediaType) search.set('mediaType', params.mediaType);
-  if (params.tag) search.set('tag', params.tag);
-  if (params.collectionSlug) search.set('collectionSlug', params.collectionSlug);
-  const query = search.toString();
-  return fetchPublicGrowth<{ items: PublicGrowthMediaItem[] }>(
-    `/api/public/creations${query ? `?${query}` : ''}`,
-  );
-};
-
-export const getPublicCreation = (id: string) =>
-  fetchPublicGrowth<PublicGrowthMediaItem>(`/api/public/creations/${encodeURIComponent(id)}`);
 
 export const getPublicCreator = (handle: string) =>
   fetchPublicGrowth<PublicCreatorDetail>(`/api/public/creators/${encodeURIComponent(handle)}`);

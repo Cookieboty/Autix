@@ -301,6 +301,5 @@ export function getFallbackCreator(t: GrowthTranslator): PublicCreatorDetail {
       followerCount: 0,
       followingCount: 0,
     },
-    creations: getFallbackItems(t),
   };
 }

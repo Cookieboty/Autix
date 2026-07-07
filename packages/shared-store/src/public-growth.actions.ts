@@ -1,17 +1,12 @@
 import {
-  imageGenerationApi,
   publicGrowthApi,
-  videoProjectApi,
   type PublicCollectionDetail,
   type PublicCollectionKind,
-  type PublicCreationMediaType,
   type PublicCreatorDetail,
   type PublicGrowthCollection,
   type PublicGrowthEventInput,
   type PublicGrowthHome,
-  type PublicGrowthMediaItem,
   type PublicGrowthPage,
-  type PublishPublicCreationInput,
 } from '@autix/sdk';
 
 export type {
@@ -28,8 +23,6 @@ export type {
   PublicGrowthHomeSection,
   PublicGrowthMediaItem,
   PublicGrowthPage,
-  PublicPromptVisibility,
-  PublishPublicCreationInput,
 } from '@autix/sdk';
 
 export const publicGrowthActions = {
@@ -55,38 +48,8 @@ export const publicGrowthActions = {
     const res = await publicGrowthApi.collection(slug, locale ? { locale } : undefined);
     return res.data;
   },
-  listCreations: async (params?: {
-    page?: number;
-    pageSize?: number;
-    mediaType?: PublicCreationMediaType;
-    tag?: string;
-    collectionSlug?: string;
-  }) => {
-    const res = await publicGrowthApi.creations(params);
-    return res.data;
-  },
-  getCreation: async (id: string): Promise<PublicGrowthMediaItem> => {
-    const res = await publicGrowthApi.creation(id);
-    return res.data;
-  },
-  recordView: async (id: string) => {
-    const res = await publicGrowthApi.viewCreation(id);
-    return res.data;
-  },
-  likeCreation: async (id: string) => {
-    const res = await publicGrowthApi.likeCreation(id);
-    return res.data;
-  },
-  recordShare: async (id: string) => {
-    const res = await publicGrowthApi.shareCreation(id);
-    return res.data;
-  },
   getCreator: async (handle: string): Promise<PublicCreatorDetail> => {
     const res = await publicGrowthApi.creator(handle);
-    return res.data;
-  },
-  getCreatorCreations: async (handle: string, params?: { page?: number; pageSize?: number }) => {
-    const res = await publicGrowthApi.creatorCreations(handle, params);
     return res.data;
   },
   followCreator: async (handle: string) => {
@@ -95,20 +58,6 @@ export const publicGrowthActions = {
   },
   recordEvent: async (input: PublicGrowthEventInput) => {
     const res = await publicGrowthApi.event(input);
-    return res.data;
-  },
-  publishImageGeneration: async (
-    generationId: string,
-    input: PublishPublicCreationInput,
-  ): Promise<PublicGrowthMediaItem> => {
-    const res = await imageGenerationApi.publish(generationId, input);
-    return res.data;
-  },
-  publishVideoProject: async (
-    projectId: string,
-    input: PublishPublicCreationInput,
-  ): Promise<PublicGrowthMediaItem> => {
-    const res = await videoProjectApi.publish(projectId, input);
     return res.data;
   },
 };

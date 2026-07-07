@@ -11,7 +11,6 @@ export * from './PublicGeneratorEntryView';
 export * from './PublicGeneratorStudioView';
 export * from './PublicPricingView';
 export * from './PublicCollectionViews';
-export * from './PublicCreationDetailView';
 export * from './CreatorProfileView';
 export * from './generator-image-presenters';
 export * from './generator-video-presenters';

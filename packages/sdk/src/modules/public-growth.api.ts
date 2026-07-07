@@ -14,6 +14,4 @@ export type {
   PublicGrowthHomeSection,
   PublicGrowthMediaItem,
   PublicGrowthPage,
-  PublicPromptVisibility,
-  PublishPublicCreationInput,
 } from '../client';

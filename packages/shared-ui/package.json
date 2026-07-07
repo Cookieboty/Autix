@@ -39,7 +39,6 @@
     "./growth": "./src/growth/index.ts",
     "./public-home": "./src/public-home/index.ts",
     "./community": "./src/community/index.ts",
-    "./public-creation": "./src/public-creation/index.ts",
     "./public-profile": "./src/public-profile/index.ts"
   },
   "scripts": {
