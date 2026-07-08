@@ -3,7 +3,6 @@
 import * as React from 'react';
 import {
   BookOpen,
-  Brush,
   Coins,
   Gift,
   Images,
@@ -11,8 +10,6 @@ import {
   Plus,
   ShieldCheck,
   ShoppingBag,
-  Store,
-  Swords,
   Trophy,
   Video,
   type LucideIcon,
@@ -147,10 +144,11 @@ export function AppSidebar({
   };
 
   const normalizedPathname = normalizePathname(pathname);
-  const isArena = normalizedPathname.startsWith('/arena');
-  const isMarketplace =
-    normalizedPathname.startsWith('/marketplace') ||
-    normalizedPathname.startsWith('/community');
+  // 练武场/资源市场/绘制 菜单暂时隐藏（/draw 页面已注释），保留 active 判定以便日后恢复
+  // const isArena = normalizedPathname.startsWith('/arena');
+  // const isMarketplace =
+  //   normalizedPathname.startsWith('/marketplace') ||
+  //   normalizedPathname.startsWith('/community');
   const isChatRoute =
     normalizedPathname.startsWith('/c/') || normalizedPathname.startsWith('/chat');
   const isAuthenticated = Boolean(user);
@@ -182,7 +180,7 @@ export function AppSidebar({
   const isResources = normalizedPathname.startsWith('/resources');
   const isMembership = normalizedPathname.startsWith('/membership');
   const isMaterials = normalizedPathname.startsWith('/materials');
-  const isDraw = normalizedPathname === '/draw';
+  // const isDraw = normalizedPathname === '/draw';
   const publicHrefs = React.useMemo(
     () => new Set(['/community', '/marketplace/image-templates', '/marketplace/video-templates', '/docs']),
     [],
@@ -201,27 +199,30 @@ export function AppSidebar({
             active: false,
             action: isAuthenticated ? handleNewChat : () => requestLogin(),
           },
-          { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
+          // 练武场菜单暂时隐藏
+          // { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
         ]
       : []),
-    {
-      label: t('marketplace'),
-      icon: Store,
-      href: '/community',
-      active: isMarketplace,
-    },
+    // 资源市场菜单暂时隐藏
+    // {
+    //   label: t('marketplace'),
+    //   icon: Store,
+    //   href: '/community',
+    //   active: isMarketplace,
+    // },
     {
       label: t('imageWorkbench'),
       icon: ImageIcon,
       href: '/workbench/image',
       active: normalizedPathname === '/workbench/image',
     },
-    {
-      label: t('drawWorkspace'),
-      icon: Brush,
-      href: '/draw',
-      active: isDraw,
-    },
+    // 绘制菜单暂时隐藏（/draw 页面已注释）
+    // {
+    //   label: t('drawWorkspace'),
+    //   icon: Brush,
+    //   href: '/draw',
+    //   active: isDraw,
+    // },
     {
       label: t('videoWorkbench'),
       icon: Video,

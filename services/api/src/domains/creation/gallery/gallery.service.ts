@@ -5,10 +5,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AuthUser } from '@autix/domain';
-import { GalleryStatus, Prisma, ResourceType } from '../../platform/prisma/generated';
+import { GalleryKind, GalleryStatus, Prisma, ResourceType } from '../../platform/prisma/generated';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
+import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { GalleryRepository } from './gallery.repository';
-import { assertSource, assertTransition, type GallerySourcePayload } from './gallery.helpers';
+import {
+  assertSource,
+  assertTransition,
+  buildAdminGalleryWhere,
+  normalizeAdminGalleryQuery,
+  type GallerySourcePayload,
+} from './gallery.helpers';
 import type { CreateGalleryDraftDto } from './dto/create-gallery-draft.dto';
 import type { CreateGalleryPostDto } from './dto/create-gallery-post.dto';
 import type { UpdateGalleryPostDto } from './dto/update-gallery-post.dto';
@@ -56,7 +63,28 @@ export class GalleryService {
   constructor(
     private readonly repo: GalleryRepository,
     private readonly metrics: ResourceMetricsService,
+    private readonly r2: CloudflareR2Service,
   ) {}
+
+  /** 管理端广场列表：页码分页 + 筛选（kind/category/sourceType/标题搜索/仅非我域名），返回 total。 */
+  async listAdminPage(rawQuery: Record<string, unknown>) {
+    const q = normalizeAdminGalleryQuery(rawQuery);
+    const r2Base = q.externalOnly ? (await this.r2.getPublicBaseUrl()) || null : null;
+    const where = buildAdminGalleryWhere(q, r2Base);
+    const { items, total } = await this.repo.findAdminPage(where, q.page, q.pageSize);
+    return {
+      items,
+      total,
+      page: q.page,
+      pageSize: q.pageSize,
+      totalPages: Math.max(1, Math.ceil(total / q.pageSize)),
+    };
+  }
+
+  /** 管理端分类下拉数据。 */
+  async listCategories(): Promise<string[]> {
+    return this.repo.listDistinctCategories();
+  }
 
   private async assertOwnership(dto: {
     sourceType: string;
@@ -204,6 +232,45 @@ export class GalleryService {
     const post = await this.getOwned(id, authorId);
     assertTransition(post.status, GalleryStatus.REMOVED, 'author');
     return this.repo.update(id, { status: GalleryStatus.REMOVED });
+  }
+
+  /**
+   * GET /gallery/feed：公开热度 Feed（首页图片/视频画廊消费）。
+   * 只返回 PUBLISHED 作品，按 kind 分流（IMAGE/VIDEO），并附带互动指标（无指标行则补零）。
+   */
+  async listFeed(kind: string | undefined, cursor: string | undefined, take: number) {
+    const normalizedKind =
+      String(kind).toUpperCase() === GalleryKind.VIDEO ? GalleryKind.VIDEO : GalleryKind.IMAGE;
+    const n = Math.trunc(Number(take));
+    const clampedTake = Number.isFinite(n) ? Math.min(Math.max(n, 1), 48) : 24;
+
+    const { items, nextCursor } = await this.repo.findPublishedFeed(
+      normalizedKind,
+      cursor,
+      clampedTake,
+    );
+    const metricsMap = await this.metrics.getMetricsMap(
+      ResourceType.GALLERY_POST,
+      items.map((post) => post.id),
+    );
+
+    return {
+      items: items.map((post) => {
+        const m = metricsMap.get(post.id);
+        return {
+          post,
+          metrics: {
+            pvCount: m?.pvCount ?? 0,
+            uvCount: m?.uvCount ?? 0,
+            likeCount: m?.likeCount ?? 0,
+            favoriteCount: m?.favoriteCount ?? 0,
+            viewCount: m?.viewCount ?? 0,
+            referenceCount: m?.referenceCount ?? 0,
+          },
+        };
+      }),
+      nextCursor,
+    };
   }
 
   /** GET /gallery/:id：非 PUBLISHED 仅作者本人或管理员可见。 */

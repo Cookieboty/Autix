@@ -2265,6 +2265,12 @@ model gallery_posts {
   aspectRatio String?  @db.VarChar(20)
   durationSec Int?
 
+  // 作品创作元数据（导入 / 生成来源填充）：提示词、生成模型、原始像素宽高。
+  prompt String?
+  model  String? @db.VarChar(100)
+  width  Int?
+  height Int?
+
   sourceType        GallerySource @default(USER_UPLOAD)
   imageTemplateId   String?
   videoTemplateId   String?
@@ -2285,6 +2291,11 @@ model gallery_posts {
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
 
+  // 媒体外链 → R2 迁移由独立后台 worker 异步完成（导入时先落原始外链，mediaMigrated=false 排队）。
+  // 默认 true：普通用户投稿/正常创建的作品媒体本就归属自己，不进迁移队列。
+  mediaMigrated          Boolean @default(true)
+  mediaMigrationAttempts Int     @default(0)
+
   @@index([status, publishedAt(sort: Desc), id(sort: Desc)])
   @@index([status, kind, publishedAt(sort: Desc), id(sort: Desc)])
   @@index([category])
@@ -2292,6 +2303,7 @@ model gallery_posts {
   @@index([authorId])
   @@index([imageTemplateId])
   @@index([videoTemplateId])
+  @@index([mediaMigrated, mediaMigrationAttempts])
 }
 
 model gallery_comments {

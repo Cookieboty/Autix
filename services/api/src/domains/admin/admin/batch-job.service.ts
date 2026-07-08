@@ -11,6 +11,7 @@ import {
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import { SseService, type TaskEventPayload } from '../../platform/sse/sse.service';
 import { ResourceMigrationService, type ResourcePayload } from './resource-migration.service';
+import { mapGalleryImportItem, type MappedGalleryImport } from './gallery-import.mapper';
 import { BatchJobRepository } from './batch-job.repository';
 
 export type BatchJobType = 'IMPORT' | 'APPROVE' | 'REJECT' | 'REVISE' | 'DELETE';
@@ -40,6 +41,8 @@ function errorDetails(error: unknown): UnknownError {
 @Injectable()
 export class BatchJobService {
   private readonly logger = new Logger(BatchJobService.name);
+  private static readonly RANDOM_PUBLISHED_AT_WINDOW_DAYS = 7;
+  private static readonly DAY_MS = 24 * 60 * 60 * 1000;
 
   constructor(
     private readonly repository: BatchJobRepository,
@@ -164,9 +167,6 @@ export class BatchJobService {
     'coverImage', 'mediaUrls', 'aspectRatio', 'durationSec',
   ]);
 
-  /** 广场作品导入时仅迁移这两个媒体字段（不同于模板的 exampleImages/exampleMedia）。 */
-  private static readonly GALLERY_MEDIA_FIELDS = ['coverImage', 'mediaUrls'] as const;
-
   private pickAllowedFields(
     data: ResourcePayload,
     resourceType: ResourceType,
@@ -187,25 +187,64 @@ export class BatchJobService {
   /**
    * 广场作品导入直接落 gallery_posts 表（不经过 marketplace 的 repository.delegateFor，
    * 后者只认识 image_templates/video_templates）。管理员导入的作品视为运营精选，直接发布。
+   * 发布人固定为当前上传的管理员（authorId + authorSnapshot），不从导入文件取作者。
    */
-  private async createGalleryPost(userId: string, data: ResourcePayload) {
+  private async createGalleryPost(
+    userId: string,
+    data: MappedGalleryImport,
+    authorSnapshot: Prisma.InputJsonValue | null,
+  ) {
     return this.prisma.gallery_posts.create({
       data: {
-        kind: (data.kind as GalleryKind) ?? GalleryKind.IMAGE,
-        title: (data.title as string) ?? null,
-        description: (data.description as string) ?? null,
-        category: (data.category as string) ?? '',
-        tags: (data.tags as string[]) ?? [],
-        coverImage: (data.coverImage as string) ?? null,
-        mediaUrls: (data.mediaUrls as string[]) ?? [],
-        aspectRatio: (data.aspectRatio as string) ?? null,
-        durationSec: (data.durationSec as number) ?? null,
+        kind: data.kind as GalleryKind,
+        // 广场不要标题
+        title: null,
+        description: null,
+        category: data.category,
+        tags: [],
+        coverImage: data.coverImage,
+        mediaUrls: data.mediaUrls,
+        aspectRatio: data.aspectRatio,
+        prompt: data.prompt,
+        model: data.model,
+        width: data.width,
+        height: data.height,
         sourceType: GallerySource.ADMIN_CURATED,
         status: GalleryStatus.PUBLISHED,
-        publishedAt: new Date(),
+        publishedAt: this.randomGalleryPublishedAtWithinLast7Days(),
         authorId: userId,
+        ...(authorSnapshot ? { authorSnapshot } : {}),
+        // 先落原始外链，等待后台 worker 迁移到 R2（见 GalleryMediaMigrationCron）。
+        mediaMigrated: false,
+        mediaMigrationAttempts: 0,
       },
     });
+  }
+
+  /**
+   * 用当前上传用户的信息构造广场作者快照（发布人 = 上传者，不取自导入文件）。
+   * 整批导入作者相同，故只查一次。
+   */
+  private async buildGalleryAuthorSnapshot(
+    userId: string,
+  ): Promise<Prisma.InputJsonValue | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true, realName: true, avatar: true },
+    });
+    if (!user) return null;
+    const snapshot: { displayName: string; avatarUrl?: string; at: string } = {
+      displayName: user.realName?.trim() || user.username,
+      at: new Date().toISOString(),
+    };
+    if (user.avatar) snapshot.avatarUrl = user.avatar;
+    return snapshot;
+  }
+
+  private randomGalleryPublishedAtWithinLast7Days(): Date {
+    const windowMs =
+      BatchJobService.RANDOM_PUBLISHED_AT_WINDOW_DAYS * BatchJobService.DAY_MS;
+    return new Date(Date.now() - Math.random() * windowMs);
   }
 
   private async processImport(
@@ -218,21 +257,34 @@ export class BatchJobService {
     let failed = 0;
     const errors: Array<{ index: number; error: string }> = [];
 
+    // 发布人固定为当前上传用户：整批作者相同，导入前查一次快照，不从导入文件取作者。
+    const galleryAuthorSnapshot =
+      resourceType === ResourceType.GALLERY_POST
+        ? await this.buildGalleryAuthorSnapshot(userId)
+        : null;
+
     for (let i = 0; i < items.length; i++) {
       try {
         const item = items[i];
+
+        // 广场作品：快速入库。按 data.json 形态只抽取需要的字段（image_url/prompt/model/width/height，
+        // 丢标题），先落原始外链（mediaMigrated=false），媒体迁移交给后台 worker 异步跑。
+        if (resourceType === ResourceType.GALLERY_POST) {
+          const mapped = mapGalleryImportItem(item);
+          await this.createGalleryPost(userId, mapped, galleryAuthorSnapshot);
+          processed++;
+          this.logger.log(`[Import ${jobId}] item[${i}] ✓ queued (gallery, media pending)`);
+          continue;
+        }
+
         const folder = `batch-import/${jobId}/${i}`;
 
         this.logger.log(
           `[Import ${jobId}] item[${i}] "${String(item.title ?? '')}" — starting migration`,
         );
 
-        const mediaFields =
-          resourceType === ResourceType.GALLERY_POST
-            ? BatchJobService.GALLERY_MEDIA_FIELDS
-            : undefined;
         const { data, errors: migrateErrors } =
-          await this.migration.migrateMediaFields(item, folder, mediaFields);
+          await this.migration.migrateMediaFields(item, folder);
 
         if (migrateErrors.length > 0) {
           this.logger.warn(
@@ -242,11 +294,7 @@ export class BatchJobService {
 
         const filtered = this.pickAllowedFields(data, resourceType);
 
-        if (resourceType === ResourceType.GALLERY_POST) {
-          // 广场作品导入没有 externalId/sourcePlatform 去重字段，管理员导入即视为新作品直接发布。
-          await this.createGalleryPost(userId, filtered);
-          this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully (gallery)`);
-        } else {
+        {
           const existing = filtered.externalId && filtered.sourcePlatform
             ? await this.repository.findImportedResource(
                 resourceType,

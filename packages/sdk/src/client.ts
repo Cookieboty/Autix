@@ -2197,22 +2197,53 @@ export interface GalleryPostAdminItem {
   sourceType: 'USER_UPLOAD' | 'FROM_GENERATION' | 'FROM_TEMPLATE' | 'ADMIN_CURATED';
 }
 
-export interface GalleryPendingPage {
-  items: GalleryPostAdminItem[];
-  nextCursor: string | null;
+export type GalleryAdminStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED';
+export type GalleryAdminKind = 'IMAGE' | 'VIDEO';
+export type GalleryAdminSourceType =
+  | 'USER_UPLOAD'
+  | 'FROM_GENERATION'
+  | 'FROM_TEMPLATE'
+  | 'ADMIN_CURATED';
+
+export interface GalleryAdminListParams {
+  status?: GalleryAdminStatus;
+  kind?: GalleryAdminKind;
+  category?: string;
+  sourceType?: GalleryAdminSourceType;
+  search?: string;
+  /** 仅显示非我域名（未托管到自有 R2）的作品 */
+  externalOnly?: boolean;
+  page?: number;
+  pageSize?: number;
 }
 
-export type GalleryAdminStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED';
+export interface GalleryAdminListResult {
+  items: GalleryPostAdminItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+function galleryAdminListQuery(params: GalleryAdminListParams): Record<string, string> {
+  const q: Record<string, string> = {};
+  if (params.status) q.status = params.status;
+  if (params.kind) q.kind = params.kind;
+  if (params.category) q.category = params.category;
+  if (params.sourceType) q.sourceType = params.sourceType;
+  if (params.search) q.search = params.search;
+  if (params.externalOnly) q.externalOnly = 'true';
+  if (params.page) q.page = String(params.page);
+  if (params.pageSize) q.pageSize = String(params.pageSize);
+  return q;
+}
 
 export const galleryAdminApi = {
-  listPending: (cursor?: string) =>
-    chatApi.get<GalleryPendingPage>('/api/admin/gallery/pending', {
-      params: cursor ? { cursor } : undefined,
+  list: (params: GalleryAdminListParams = {}) =>
+    chatApi.get<GalleryAdminListResult>('/api/admin/gallery', {
+      params: galleryAdminListQuery(params),
     }),
-  listByStatus: (status: GalleryAdminStatus, cursor?: string) =>
-    chatApi.get<GalleryPendingPage>('/api/admin/gallery', {
-      params: cursor ? { status, cursor } : { status },
-    }),
+  listCategories: () => chatApi.get<string[]>('/api/admin/gallery/categories'),
   approve: (id: string) =>
     chatApi.post<GalleryPostAdminItem>(`/api/admin/gallery/${id}/approve`, {}),
   reject: (id: string, reason: string) =>
@@ -2227,6 +2258,49 @@ export const galleryAdminApi = {
     chatApi.post<{ jobId: string }>('/api/admin/gallery/import', { items }),
   getGalleryImportTemplate: () =>
     chatApi.get<Record<string, any>[]>('/api/admin/gallery/import-template'),
+};
+
+// ── Gallery 公开热度 Feed (首页图片/视频画廊消费) ───────────────────────────
+export interface GalleryFeedPost {
+  id: string;
+  kind: 'IMAGE' | 'VIDEO';
+  title: string | null;
+  description: string | null;
+  category: string;
+  tags: string[];
+  coverImage: string | null;
+  mediaUrls: string[];
+  aspectRatio: string | null;
+  durationSec: number | null;
+  prompt: string | null;
+  model: string | null;
+  width: number | null;
+  height: number | null;
+  authorSnapshot: { displayName: string; avatarUrl?: string; at: string } | null;
+  publishedAt: string | null;
+}
+
+export interface GalleryFeedItem {
+  post: GalleryFeedPost;
+  metrics: {
+    pvCount: number;
+    uvCount: number;
+    likeCount: number;
+    favoriteCount: number;
+    viewCount: number;
+    referenceCount: number;
+  };
+}
+
+export interface GalleryFeedResult {
+  items: GalleryFeedItem[];
+  nextCursor: string | null;
+}
+
+export const galleryApi = {
+  /** GET /api/gallery/feed?kind=IMAGE|VIDEO —— 公开，只返回已发布(PUBLISHED)作品。 */
+  feed: (params?: { kind?: 'IMAGE' | 'VIDEO'; cursor?: string; limit?: number }) =>
+    chatApi.get<GalleryFeedResult>('/api/gallery/feed', { params }),
 };
 
 // ── Featured Slots Admin (运营位编排) ────────────────────────────────────

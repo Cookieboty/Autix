@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { galleryAdminActions } from './gallery-admin.actions';
-import type { GalleryAdminStatus } from './gallery-admin.actions';
+import type { GalleryAdminListParams } from './gallery-admin.actions';
 
 type MutationCallbacks = {
   onSuccess?: () => void | Promise<void>;
@@ -9,13 +9,9 @@ type MutationCallbacks = {
 
 export const galleryAdminQueryKeys = {
   root: () => ['galleryAdmin'] as const,
-  pendingRoot: () => ['galleryAdmin', 'pending'] as const,
-  pending: (cursor?: string) =>
-    ['galleryAdmin', 'pending', cursor ?? ''] as const,
-  byStatusRoot: (status: GalleryAdminStatus) =>
-    ['galleryAdmin', 'byStatus', status] as const,
-  byStatus: (status: GalleryAdminStatus, cursor?: string) =>
-    ['galleryAdmin', 'byStatus', status, cursor ?? ''] as const,
+  list: (params: GalleryAdminListParams) =>
+    ['galleryAdmin', 'list', params] as const,
+  categories: () => ['galleryAdmin', 'categories'] as const,
 };
 
 function callOnSuccess(callbacks?: MutationCallbacks) {
@@ -26,18 +22,21 @@ function callOnError(error: unknown, callbacks?: MutationCallbacks) {
   return callbacks?.onError?.(error);
 }
 
-export function useGalleryPendingQueue(cursor?: string) {
+/** 管理端广场列表：页码分页 + 筛选。切页/改筛选 → 传入不同 params，React Query 自动按 key 缓存。 */
+export function useGalleryAdminList(params: GalleryAdminListParams) {
   return useQuery({
-    queryKey: galleryAdminQueryKeys.pending(cursor),
-    queryFn: () => galleryAdminActions.listPending(cursor),
+    queryKey: galleryAdminQueryKeys.list(params),
+    queryFn: () => galleryAdminActions.list(params),
+    placeholderData: (prev) => prev,
   });
 }
 
-/** 按状态分页查询（已审核 tab 等），按 status 独立缓存。 */
-export function useGalleryByStatus(status: GalleryAdminStatus, cursor?: string) {
+/** 分类下拉数据（去重的现存 category）。 */
+export function useGalleryCategories() {
   return useQuery({
-    queryKey: galleryAdminQueryKeys.byStatus(status, cursor),
-    queryFn: () => galleryAdminActions.listByStatus(status, cursor),
+    queryKey: galleryAdminQueryKeys.categories(),
+    queryFn: () => galleryAdminActions.listCategories(),
+    staleTime: 5 * 60_000,
   });
 }
 
