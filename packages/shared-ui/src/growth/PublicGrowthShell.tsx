@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuthStore, useUiStore } from '@autix/shared-store';
+import { Link, useRouter } from '../navigation';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
 
@@ -92,12 +93,12 @@ export function PublicFooter() {
               <ul className="space-y-2.5">
                 {group.links.map(([label, href]) => (
                   <li key={label}>
-                    <a
+                    <Link
                       href={href}
                       className="text-sm text-background/80 transition hover:text-background"
                     >
                       {label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -135,6 +136,7 @@ export function PublicFooter() {
 
 export function MobilePublicTabs() {
   const t = useTranslations('publicGrowth.nav');
+  const router = useRouter();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
   const mobileTabs = [
@@ -159,7 +161,7 @@ export function MobilePublicTabs() {
                   openAuthModal({ mode: 'entry' });
                   return;
                 }
-                window.location.href = item.href;
+                router.push(item.href);
               }}
               className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium text-foreground/62 hover:bg-secondary hover:text-foreground"
               aria-label={item.label}
@@ -178,15 +180,18 @@ export function PublicGrowthShell({
   promo,
   children,
   navKind = 'home',
+  showNav = true,
 }: {
   promo?: { label?: string; href?: string };
   children: React.ReactNode;
   navKind?: 'home' | 'image' | 'video' | 'community';
+  /** false 时不渲染导航（由外层持久 (public) layout 提供），用于纳入持久导航的页面（首页/pricing） */
+  showNav?: boolean;
 }) {
   return (
     <div className="min-h-svh bg-background text-foreground">
       <PublicPromoBar label={promo?.label} href={promo?.href} />
-      <PublicGeneratorAppNav kind={navKind} />
+      {showNav ? <PublicGeneratorAppNav kind={navKind} /> : null}
       {children}
       <PublicFooter />
       <MobilePublicTabs />

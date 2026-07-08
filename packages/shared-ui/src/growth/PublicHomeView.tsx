@@ -14,7 +14,7 @@ export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
   const data = home ?? getFallbackHome(t);
 
   return (
-    <PublicGrowthShell promo={data.promo}>
+    <PublicGrowthShell promo={data.promo} showNav={false}>
       <main>
         <h1 className="sr-only">{t('home.title')}</h1>
         <FeaturedModelsShowcase />

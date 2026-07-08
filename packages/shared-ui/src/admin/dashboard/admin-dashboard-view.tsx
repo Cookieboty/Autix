@@ -28,6 +28,7 @@ import {
 } from '@autix/shared-store';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
+import { RouteLoader } from '../../ui/route-loader';
 
 const emptySubscribe = () => () => {};
 const getClientMounted = () => true;
@@ -172,11 +173,7 @@ export function AdminDashboardView({ onNavigate }: AdminDashboardViewProps) {
   ];
 
   if (!mounted) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-muted-foreground">{t('loading')}</div>
-      </div>
-    );
+    return <RouteLoader className="h-96 min-h-0" label={t('loading')} />;
   }
 
   return (

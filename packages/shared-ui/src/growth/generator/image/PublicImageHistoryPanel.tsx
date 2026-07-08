@@ -18,9 +18,11 @@ export type PendingImageGenerationCard = {
 };
 
 const HISTORY_DENSITY_GRID_CLASS: Record<TemplateDensity, string> = {
+  xrelaxed: 'gap-4 sm:grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3',
   relaxed: 'gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4',
   normal: 'gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5',
   dense: 'gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6',
+  xdense: 'gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8',
 };
 
 function formatTime(value: string, locale: string) {

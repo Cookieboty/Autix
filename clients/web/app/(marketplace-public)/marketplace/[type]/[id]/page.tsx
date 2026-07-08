@@ -72,6 +72,7 @@ export default function ResourceDetailPage() {
   const isElectron = useIsElectron();
   const chatEnabled = useChatEnabled(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authHydrated = useAuthStore((s) => s.hydrated);
   const openAuthModal = useUiStore((s) => s.openAuthModal);
   const { sessions, createSession } = useChatStore();
   const {
@@ -131,6 +132,16 @@ export default function ResourceDetailPage() {
   const requestLogin = () => {
     openAuthModal({ mode: 'entry' });
   };
+  // hydrate 完成前登录态未知，不能把已登录用户当作匿名而弹登录框；
+  // 未 hydrate 时先放行返回 false，让调用方 return，用户 hydrate 后重试即可。
+  const ensureAuthed = () => {
+    if (!authHydrated) return false;
+    if (!isAuthenticated) {
+      requestLogin();
+      return false;
+    }
+    return true;
+  };
 
   async function attachTemplateToConversation(conversationId: string) {
     try {
@@ -157,10 +168,7 @@ export default function ResourceDetailPage() {
   }
 
   async function activateTo(conversationId: string | 'new') {
-    if (!isAuthenticated) {
-      requestLogin();
-      return;
-    }
+    if (!ensureAuthed()) return;
     if (desktopBlocked) return;
 
     setApplying(true);
@@ -188,10 +196,7 @@ export default function ResourceDetailPage() {
   }
 
   async function handleToggleFavorite() {
-    if (!isAuthenticated) {
-      requestLogin();
-      return;
-    }
+    if (!ensureAuthed()) return;
     if (!isTemplateResource || favoriteSubmitting) return;
 
     setFavoriteSubmitting(true);
@@ -207,10 +212,7 @@ export default function ResourceDetailPage() {
   }
 
   function applyToWorkbench() {
-    if (!isAuthenticated) {
-      requestLogin();
-      return;
-    }
+    if (!ensureAuthed()) return;
     if (type === 'IMAGE_TEMPLATE') {
       router.push(`/workbench/image?templateId=${encodeURIComponent(id)}`);
       return;
@@ -236,10 +238,7 @@ export default function ResourceDetailPage() {
       disabled: desktopBlocked,
       variant: isTemplateResource ? 'outline' : 'default',
       onClick: () => {
-        if (!isAuthenticated) {
-          requestLogin();
-          return;
-        }
+        if (!ensureAuthed()) return;
         setError(null);
         setShowActivate(true);
       },

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore, authActions, useUiStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { AppSidebar } from '@autix/shared-ui/chat';
-import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
+import { RouteLoader, SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 import { NotificationDrawer } from '@autix/shared-ui/notifications';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
@@ -72,19 +72,11 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   }, [isWorkbenchRoute, pathname]);
 
   if (!hydrated || chatFeatureLoading || (!chatEnabled && isChatFeatureRoute)) {
-    return (
-      <div className="flex h-svh items-center justify-center bg-background">
-        <div className="text-muted-foreground">{t('loading')}</div>
-      </div>
-    );
+    return <RouteLoader className="h-svh min-h-0" label={t('loading')} />;
   }
 
   if (!isAuthenticated || (user as { status?: string } | null)?.status === 'PENDING') {
-    return (
-      <div className="flex h-svh items-center justify-center bg-background">
-        <div className="text-muted-foreground">{t('loading')}</div>
-      </div>
-    );
+    return <RouteLoader className="h-svh min-h-0" label={t('loading')} />;
   }
 
   return (

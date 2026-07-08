@@ -5,7 +5,8 @@ import { ArrowUpRight, History, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ImageStudioMode, TemplateDensity } from './generator-studio-helpers';
 
-const TEMPLATE_DENSITY_VALUES: TemplateDensity[] = ['relaxed', 'normal', 'dense'];
+// 滑块从左到右 = 小图→大图（列多→列少）：右滑图片越大、列越少
+const TEMPLATE_DENSITY_VALUES: TemplateDensity[] = ['xdense', 'dense', 'normal', 'relaxed', 'xrelaxed'];
 
 export function ModeTabs({
   active,
@@ -20,16 +21,28 @@ export function ModeTabs({
     { id: 'templates' as const, label: t('templates'), icon: WandSparkles },
   ];
 
+  const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.id === active));
+
   return (
-    <div className="inline-flex rounded-[11px] border border-border bg-secondary p-1">
+    <div className="relative inline-flex rounded-lg bg-background/70 p-1 backdrop-blur">
+      {/* 滑块指示器：随选中项平移，形成 segmented 切换动画 */}
+      <span
+        aria-hidden
+        className="absolute inset-y-1 left-1 rounded-md bg-secondary shadow-sm transition-transform duration-300 ease-out"
+        style={{
+          width: `calc((100% - 0.5rem) / ${tabs.length})`,
+          transform: `translateX(${activeIndex * 100}%)`,
+        }}
+      />
       {tabs.map((tab) => {
         const Icon = tab.icon;
+        const isActive = tab.id === active;
         return (
           <button
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${active === tab.id ? 'bg-secondary text-foreground' : 'text-foreground/42 hover:text-foreground/76'
+            className={`relative z-10 inline-flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-md px-4 text-xs font-bold transition-colors ${isActive ? 'text-foreground' : 'text-foreground/45 hover:text-foreground/75'
               }`}
           >
             <Icon className="size-3.5" />
@@ -95,29 +108,29 @@ export function StudioDensitySlider({
   value: TemplateDensity;
   onChange: (value: TemplateDensity) => void;
 }) {
+  const maxIndex = TEMPLATE_DENSITY_VALUES.length - 1;
+  const index = Math.max(0, TEMPLATE_DENSITY_VALUES.indexOf(value));
+
+  // 带步进的拖动滑块：深色 pill 容器 + 细轨道 + 白色圆形手柄，3 档（relaxed / normal / dense）
   return (
-    <div
-      className="flex items-center gap-1 rounded-full bg-background/28 px-2 py-1 shadow-lg backdrop-blur-md"
-      role="group"
-      aria-label={label}
-    >
-      {TEMPLATE_DENSITY_VALUES.map((option, index) => {
-        const active = option === value;
-        return (
-          <button
-            key={option}
-            type="button"
-            aria-label={`${label} ${index + 1}`}
-            aria-pressed={active}
-            className="grid h-5 w-8 cursor-pointer place-items-center rounded-full transition hover:bg-secondary"
-            onClick={() => onChange(option)}
-          >
-            <span
-              className={`h-1 rounded-full transition-all ${active ? 'w-6 bg-foreground' : 'w-4 bg-secondary'}`}
-            />
-          </button>
-        );
-      })}
+    <div className="flex h-7 w-36 items-center rounded-full bg-black/40 px-3">
+      <input
+        type="range"
+        min={0}
+        max={maxIndex}
+        step={1}
+        value={index}
+        aria-label={label}
+        onChange={(event) => {
+          const next = TEMPLATE_DENSITY_VALUES[Number(event.target.value)];
+          if (next) onChange(next);
+        }}
+        className="h-3.5 w-full cursor-pointer appearance-none bg-transparent outline-none
+          [&::-moz-range-thumb]:size-3.5 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white
+          [&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-white/25
+          [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-white/25
+          [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:transition"
+      />
     </div>
   );
 }
