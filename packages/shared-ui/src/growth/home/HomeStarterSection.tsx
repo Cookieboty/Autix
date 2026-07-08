@@ -2,7 +2,12 @@
 
 import { useId, type ComponentType, type SVGProps } from 'react';
 import { useTranslations } from 'next-intl';
-import { Clock, Image as ImageIcon, Video } from 'lucide-react';
+import { Check, Clock, Image as ImageIcon, LoaderCircle, Video } from 'lucide-react';
+import {
+  useClaimHomeStarterTaskMutation,
+  useHomeStarterTasksQuery,
+  type HomeStarterTask,
+} from '@autix/shared-store';
 
 /* ----------------------------- 厂商图标（官方品牌 SVG） ----------------------------- */
 
@@ -141,43 +146,151 @@ const QUALITY_MODELS: QualityModel[] = [
   },
 ];
 
-// 新手引导任务（样式占位，逻辑后续对接）
-// 文案走 i18n；模型/产品名（model）为品牌数据，作为参数注入不翻译
-const ONBOARDING_TASKS = [
+type StarterTask = Pick<
+  HomeStarterTask,
+  | 'code'
+  | 'titleI18nKey'
+  | 'subtitleI18nKey'
+  | 'ctaI18nKey'
+  | 'modelLabel'
+  | 'hrefPath'
+  | 'points'
+  | 'status'
+  | 'completed'
+>;
+
+const FALLBACK_ONBOARDING_TASKS = [
   {
-    id: 'nano-banana-pro',
-    model: 'Nano Banana Pro',
-    titleKey: 'onboardTryModel',
-    subtitleKey: 'onboardSubBestImage',
-    ctaKey: 'onboardCtaTry',
+    code: 'HOME_QUEST_NANO_BANANA_PRO',
+    modelLabel: 'Nano Banana Pro',
+    titleI18nKey: 'onboardTryModel',
+    subtitleI18nKey: 'onboardSubBestImage',
+    ctaI18nKey: 'onboardCtaTry',
+    hrefPath: '/workbench/image',
     points: 50,
+    status: 'LOCKED',
+    completed: false,
   },
   {
-    id: 'seedance',
-    model: 'Seedance 2.0',
-    titleKey: 'onboardExploreModel',
-    subtitleKey: 'onboardSubBestVideo',
-    ctaKey: 'onboardCtaExplore',
+    code: 'HOME_QUEST_SEEDANCE',
+    modelLabel: 'Seedance 2.0',
+    titleI18nKey: 'onboardExploreModel',
+    subtitleI18nKey: 'onboardSubBestVideo',
+    ctaI18nKey: 'onboardCtaExplore',
+    hrefPath: '/workbench/video',
     points: 80,
+    status: 'LOCKED',
+    completed: false,
   },
   {
-    id: 'marketing',
-    model: 'Marketing Studio',
-    titleKey: 'onboardExploreModel',
-    subtitleKey: 'onboardSubPromptCampaign',
-    ctaKey: 'onboardCtaExplore',
+    code: 'HOME_QUEST_MARKETING',
+    modelLabel: 'Marketing Studio',
+    titleI18nKey: 'onboardExploreModel',
+    subtitleI18nKey: 'onboardSubPromptCampaign',
+    ctaI18nKey: 'onboardCtaExplore',
+    hrefPath: '/marketing-studio',
     points: 20,
+    status: 'DISABLED',
+    completed: false,
   },
-] as const;
+] satisfies StarterTask[];
+
+function translateHome(
+  t: ReturnType<typeof useTranslations>,
+  key: string,
+  values?: Record<string, string | number>,
+) {
+  return (t as unknown as (key: string, values?: Record<string, string | number>) => string)(
+    key,
+    values,
+  );
+}
+
+function taskTitle(t: ReturnType<typeof useTranslations>, task: StarterTask) {
+  return translateHome(t, task.titleI18nKey, { model: task.modelLabel });
+}
+
+function TaskAction({
+  task,
+  isPending,
+  onClaim,
+}: {
+  task: StarterTask;
+  isPending: boolean;
+  onClaim: (task: StarterTask) => void;
+}) {
+  const t = useTranslations('publicGrowth.home');
+  const baseClass =
+    'inline-flex h-8 min-w-16 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-bold transition';
+
+  if (task.status === 'CLAIMED') {
+    return (
+      <button
+        type="button"
+        disabled
+        className={`${baseClass} bg-white/12 text-white/55`}
+        aria-label={translateHome(t, 'onboardCtaClaimed')}
+      >
+        <Check className="size-3.5" />
+        {translateHome(t, 'onboardCtaClaimed')}
+      </button>
+    );
+  }
+
+  if (task.status === 'CLAIMABLE') {
+    return (
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => onClaim(task)}
+        className={`${baseClass} bg-white text-neutral-900 hover:bg-white/90 disabled:cursor-wait disabled:bg-white/70`}
+      >
+        {isPending ? <LoaderCircle className="size-3.5 animate-spin" /> : null}
+        {translateHome(t, 'onboardCtaClaim')}
+      </button>
+    );
+  }
+
+  if (task.status === 'DISABLED') {
+    return (
+      <button
+        type="button"
+        disabled
+        className={`${baseClass} bg-white/10 text-white/40`}
+      >
+        {translateHome(t, task.ctaI18nKey)}
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={task.hrefPath}
+      className={`${baseClass} bg-white text-neutral-900 hover:bg-white/90`}
+    >
+      {translateHome(t, task.ctaI18nKey)}
+    </a>
+  );
+}
 
 /* ----------------------------- 组件 ----------------------------- */
 
 function OnboardingPanel() {
   const t = useTranslations('publicGrowth.home');
-  const total = ONBOARDING_TASKS.reduce((sum, task) => sum + task.points, 0);
-  const completed = 0;
-  const firstTask = ONBOARDING_TASKS[0];
-  const nextTaskTitle = t(firstTask.titleKey, { model: firstTask.model });
+  const tasksQuery = useHomeStarterTasksQuery();
+  const claimTask = useClaimHomeStarterTaskMutation();
+  const queryTasks = tasksQuery.data?.items ?? [];
+  const tasks: StarterTask[] = queryTasks.length > 0 ? queryTasks : FALLBACK_ONBOARDING_TASKS;
+  const total =
+    tasksQuery.data?.summary.availablePoints ??
+    tasks.reduce((sum, task) => sum + (task.status !== 'DISABLED' ? task.points : 0), 0);
+  const completed =
+    tasksQuery.data?.summary.completed ??
+    tasks.filter((task) => task.status === 'CLAIMED').length;
+  const nextTask =
+    tasks.find((task) => task.status !== 'CLAIMED' && task.status !== 'DISABLED') ??
+    tasks[0];
+  const nextTaskTitle = nextTask ? taskTitle(t, nextTask) : '';
 
   return (
     <div className="growth-sheen relative overflow-hidden rounded-2xl border border-growth-accent/25 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--growth-accent)_38%,#0a1206)_0%,color-mix(in_srgb,var(--growth-accent)_16%,#0a1206)_48%,#0a1206_100%)] p-2 lg:h-full lg:w-[544px] lg:shrink-0">
@@ -196,7 +309,7 @@ function OnboardingPanel() {
           </div>
           <div className="border-l-2 border-white/30 pl-2.5">
             <div className="text-[13px] font-bold text-white">
-              {t('tasksCompleted', { completed, total: ONBOARDING_TASKS.length })}
+              {t('tasksCompleted', { completed, total: tasks.length })}
             </div>
             <div className="mt-0.5 text-xs text-white/55">
               {t('nextTask', { task: nextTaskTitle })}
@@ -206,24 +319,34 @@ function OnboardingPanel() {
 
         {/* 任务列表列（半透明深色内嵌面板，叠在渐变上） */}
         <div className="flex min-w-0 flex-1 flex-col justify-center rounded-xl bg-[#0a1206]/60 px-4 py-2">
-          {ONBOARDING_TASKS.map((task, index) => (
-            <div key={task.id}>
+          {tasks.map((task, index) => (
+            <div key={task.code}>
               <div className="flex items-center gap-3 py-2.5">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full border-2 border-white/25" />
+                <span className={`grid size-5 shrink-0 place-items-center rounded-full border-2 ${
+                  task.status === 'CLAIMED'
+                    ? 'border-white bg-white text-[#0a1206]'
+                    : task.status === 'CLAIMABLE'
+                      ? 'border-white bg-white/15'
+                      : 'border-white/25'
+                }`}
+                >
+                  {task.status === 'CLAIMED' ? <Check className="size-3.5" /> : null}
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[13px] font-semibold text-white">
-                    {t(task.titleKey, { model: task.model })}
+                    {taskTitle(t, task)}
                   </div>
-                  <div className="truncate text-xs text-white/45">{t(task.subtitleKey)}</div>
+                  <div className="truncate text-xs text-white/45">
+                    {translateHome(t, task.subtitleI18nKey)}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-neutral-900 transition hover:bg-white/90"
-                >
-                  {t(task.ctaKey)}
-                </button>
+                <TaskAction
+                  task={task}
+                  isPending={claimTask.isPending && claimTask.variables === task.code}
+                  onClaim={(target) => claimTask.mutate(target.code)}
+                />
               </div>
-              {index < ONBOARDING_TASKS.length - 1 ? (
+              {index < tasks.length - 1 ? (
                 <div className="h-px bg-white/10" />
               ) : null}
             </div>

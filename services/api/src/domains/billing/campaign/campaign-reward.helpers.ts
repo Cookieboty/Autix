@@ -13,6 +13,10 @@ export const DEFAULT_REWARD_USAGE_SCOPE = {
 } as const;
 
 export const SUCCESSFUL_GENERATION_STREAK = 'successful_generation';
+
+/** 首页任务 code 前缀 —— 列表(repo)与领取(service)必须用同一判定，避免漂移。 */
+export const HOME_QUEST_CODE_PREFIX = 'HOME_QUEST_';
+
 export const BUILTIN_CAMPAIGN_CODES = [
   'INVITATION_REWARD',
   'REGISTRATION_BONUS',
@@ -20,6 +24,116 @@ export const BUILTIN_CAMPAIGN_CODES = [
   'HOME_QUEST_SEEDANCE',
   'HOME_QUEST_MARKETING',
 ] as const;
+
+export type FixedCampaignDefinition = {
+  code: string;
+  name: string;
+  description: string;
+  type: CampaignType;
+  status: CampaignStatus;
+  rewardPoints: number;
+  rewardExpiresInDays: number;
+  metadata: Prisma.InputJsonValue;
+  rewardUsageScope?: Prisma.InputJsonValue | null;
+};
+
+export const FIXED_CAMPAIGN_DEFINITIONS: readonly FixedCampaignDefinition[] = [
+  {
+    code: 'INVITATION_REWARD',
+    name: '邀请奖励',
+    description: '邀请好友注册并完成激活后发放奖励。',
+    type: CampaignType.INVITATION,
+    status: CampaignStatus.ACTIVE,
+    rewardPoints: 100,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      maxRewardedInvitesPerInviter: 50,
+      velocityThreshold: 20,
+    },
+  },
+  {
+    code: 'REGISTRATION_BONUS',
+    name: '注册奖励',
+    description: '新用户完成注册后发放的欢迎奖励，默认关闭。',
+    type: CampaignType.REGISTRATION,
+    status: CampaignStatus.PAUSED,
+    rewardPoints: 0,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      grantOn: ['email_activation', 'oauth_first_login'],
+      onlyFirstRegistration: true,
+    },
+  },
+  {
+    code: 'HOME_QUEST_NANO_BANANA_PRO',
+    name: '首页任务：Nano Banana Pro',
+    description: '完成 Nano Banana Pro 图片生成后领取奖励。',
+    type: CampaignType.QUEST,
+    status: CampaignStatus.ACTIVE,
+    rewardPoints: 50,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      questCode: 'HOME_QUEST_NANO_BANANA_PRO',
+      completionKind: 'IMAGE_GENERATION_MODEL',
+      modelMatchers: ['nano-banana-pro'],
+      titleI18nKey: 'onboardTryModel',
+      subtitleI18nKey: 'onboardSubBestImage',
+      ctaI18nKey: 'onboardCtaTry',
+      modelLabel: 'Nano Banana Pro',
+      hrefPath: '/workbench/image',
+      sortOrder: 1,
+    },
+  },
+  {
+    code: 'HOME_QUEST_SEEDANCE',
+    name: '首页任务：Seedance',
+    description: '完成 Seedance 视频生成后领取奖励。',
+    type: CampaignType.QUEST,
+    status: CampaignStatus.ACTIVE,
+    rewardPoints: 80,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      questCode: 'HOME_QUEST_SEEDANCE',
+      completionKind: 'VIDEO_GENERATION_MODEL',
+      modelMatchers: ['seedance'],
+      titleI18nKey: 'onboardExploreModel',
+      subtitleI18nKey: 'onboardSubBestVideo',
+      ctaI18nKey: 'onboardCtaExplore',
+      modelLabel: 'Seedance 2.0',
+      hrefPath: '/workbench/video',
+      sortOrder: 2,
+    },
+  },
+  {
+    code: 'HOME_QUEST_MARKETING',
+    name: '首页任务：Marketing Studio',
+    description: '营销创作工作流恢复后可启用此任务。',
+    type: CampaignType.QUEST,
+    status: CampaignStatus.PAUSED,
+    rewardPoints: 20,
+    rewardExpiresInDays: 7,
+    metadata: {
+      fixed: true,
+      builtin: true,
+      questCode: 'HOME_QUEST_MARKETING',
+      completionKind: 'MARKETING_WORKFLOW',
+      titleI18nKey: 'onboardExploreModel',
+      subtitleI18nKey: 'onboardSubPromptCampaign',
+      ctaI18nKey: 'onboardCtaExplore',
+      modelLabel: 'Marketing Studio',
+      hrefPath: '/marketing-studio',
+      sortOrder: 3,
+    },
+  },
+];
 
 type FeedbackEffectivenessInput = {
   rating?: number | null;

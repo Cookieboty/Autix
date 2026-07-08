@@ -2890,6 +2890,10 @@
     "streakHint": "成功生成が 7 日に達するごとに、キャンペーン設定に応じた短期ギフトポイントを受け取れます。",
     "roundProgress": "今回の進捗",
     "activeCampaigns": "開催中のキャンペーン",
+    "claimableCampaigns": "受け取れる報酬",
+    "claimReward": "受け取る",
+    "claimedReward": "受取済み",
+    "noClaimableCampaigns": "受け取れる報酬はありません。",
     "campaignDefaultDescription": "指定された行動を完了すると短期ギフトポイントが付与されます。",
     "pointsCount": "{count} ポイント",
     "validUntil": "{date} まで有効",
@@ -3254,7 +3258,9 @@
       "onboardSubBestVideo": "最高の AI 動画モデル",
       "onboardSubPromptCampaign": "プロンプトからキャンペーンまで",
       "onboardCtaTry": "試す",
-      "onboardCtaExplore": "体験する"
+      "onboardCtaExplore": "体験する",
+      "onboardCtaClaim": "受け取る",
+      "onboardCtaClaimed": "受取済み"
     },
     "promoBar": {
       "discountBadge": "{percent}% オフ"

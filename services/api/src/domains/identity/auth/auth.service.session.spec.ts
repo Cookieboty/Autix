@@ -23,7 +23,7 @@ function makeService() {
     createTokenPair: jest.fn().mockReturnValue({ accessToken: 'at1', refreshToken: 'rt1', expiresIn: 3600 }),
   };
   const svc = new AuthService(
-    {} as any, {} as any, {} as any,
+    {} as any, {} as any, {} as any, {} as any,
     identity as any, session as any, tokenFactory as any,
   );
   return { svc, identity, session, tokenFactory };
@@ -61,7 +61,15 @@ describe('AuthService.buildLoginResultFromSession 守卫', () => {
     const identity = { findLoginUserById: jest.fn().mockResolvedValue(user), findActiveSystems: jest.fn() };
     const sessionRepo = { findById: jest.fn().mockResolvedValue(session) };
     const tokenFactory = { createTokenPair: jest.fn().mockReturnValue({ accessToken: 'at', refreshToken: 'rt', expiresIn: 1 }) };
-    return new AuthService({} as any, {} as any, {} as any, identity as any, sessionRepo as any, tokenFactory as any);
+    return new AuthService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      identity as any,
+      sessionRepo as any,
+      tokenFactory as any,
+    );
   }
   it('会话失效（isActive=false）抛错', async () => {
     const svc = svcWith({ id: 's', userId: 'u', isActive: false, expiresAt: new Date('2099-01-01') }, { id: 'u', status: 'ACTIVE', roles: [] });

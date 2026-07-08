@@ -2890,6 +2890,10 @@
     "streakHint": "每滿 7 天成功生成可依活動設定領取短期贈送積分。",
     "roundProgress": "本輪進度",
     "activeCampaigns": "進行中的活動",
+    "claimableCampaigns": "可領取獎勵",
+    "claimReward": "領取",
+    "claimedReward": "已領取",
+    "noClaimableCampaigns": "暫無可領取獎勵。",
     "campaignDefaultDescription": "完成指定行為後發放短期贈送積分。",
     "pointsCount": "{count} 積分",
     "validUntil": "有效至 {date}",
@@ -3254,7 +3258,9 @@
       "onboardSubBestVideo": "最強 AI 影片模型",
       "onboardSubPromptCampaign": "從提示詞到行銷活動",
       "onboardCtaTry": "試用",
-      "onboardCtaExplore": "探索"
+      "onboardCtaExplore": "探索",
+      "onboardCtaClaim": "領取",
+      "onboardCtaClaimed": "已領取"
     },
     "promoBar": {
       "discountBadge": "立減 {percent}%"

@@ -1,10 +1,12 @@
 'use client';
 
-import { Gift, RefreshCw, Trophy } from 'lucide-react';
+import { Gift, LoaderCircle, RefreshCw, Trophy } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
+  useClaimHomeStarterTaskMutation,
   useMembershipRewardsController,
   type CampaignProgress,
+  type HomeStarterTask,
   type UserActivityStreak,
 } from '@autix/shared-store';
 import { Button, SidebarTrigger } from '../ui';
@@ -48,13 +50,25 @@ function getErrorMessage(error: unknown, fallback: string) {
   );
 }
 
+function translateTaskTitle(
+  t: ReturnType<typeof useTranslations>,
+  task: HomeStarterTask,
+) {
+  return (t as unknown as (key: string, values?: Record<string, string | number>) => string)(
+    task.titleI18nKey,
+    { model: task.modelLabel },
+  );
+}
+
 export function MembershipRewardsView({
   showSidebarTrigger = false,
   activeColorVar = '--brand',
 }: MembershipRewardsViewProps) {
   const t = useTranslations('membership');
+  const homeT = useTranslations('publicGrowth.home');
   const { progress, isLoading, isRefreshing, error, refresh } =
     useMembershipRewardsController();
+  const claimTask = useClaimHomeStarterTaskMutation();
 
   const streak = findSuccessfulStreak(progress?.streaks ?? []);
   const currentStreak = streak?.currentStreak ?? 0;
@@ -63,6 +77,12 @@ export function MembershipRewardsView({
   const activeBackground = `var(${activeColorVar})`;
   const iconColor = `var(${activeColorVar})`;
   const progressData: CampaignProgress | null = progress;
+  const claimableCampaigns = progressData?.claimableCampaigns ?? [];
+
+  const claimReward = async (code: string) => {
+    await claimTask.mutateAsync(code);
+    await refresh();
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -133,6 +153,63 @@ export function MembershipRewardsView({
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="mb-5">
+          <div className="mb-3 flex items-center gap-2">
+            <Gift className="h-4 w-4" style={{ color: iconColor }} />
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+              {t('claimableCampaigns')}
+            </h2>
+          </div>
+          {claimableCampaigns.length ? (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {claimableCampaigns.map((campaign) => {
+                const pending = claimTask.isPending && claimTask.variables === campaign.code;
+                return (
+                  <article
+                    key={campaign.code}
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                          {translateTaskTitle(homeT, campaign)}
+                        </h3>
+                        <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+                          {campaign.description || t('campaignDefaultDescription')}
+                        </p>
+                      </div>
+                      <span
+                        className="rounded-full px-2 py-0.5 text-xs"
+                        style={{ backgroundColor: 'var(--success-soft)', color: 'var(--success)' }}
+                      >
+                        {t('pointsCount', { count: campaign.points })}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => void claimReward(campaign.code)}
+                      >
+                        {pending ? <LoaderCircle className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+                        {t('claimReward')}
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p
+              className="rounded-lg px-4 py-6 text-sm"
+              style={{ color: 'var(--muted)', border: '1px solid var(--border)' }}
+            >
+              {t('noClaimableCampaigns')}
+            </p>
+          )}
         </section>
 
         <section className="mb-5">

@@ -291,7 +291,6 @@ export function FeaturedSlotsAdminView({
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {thumb ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={thumb}
                             alt={slot.overrideTitle ?? ''}

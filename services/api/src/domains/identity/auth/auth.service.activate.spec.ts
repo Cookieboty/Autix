@@ -12,6 +12,7 @@ function buildAuthService() {
   };
   const mailService: any = {};
   const inviteService: any = { settlePendingInvitationReward };
+  const campaignRewardService: any = { grantRegistrationBonus: jest.fn(async () => null) };
   const identityRepository: any = {
     findUserById: jest.fn(async () => ({ id: 'user-1', status: 'PENDING' })),
     findSystemById: jest.fn(async () => ({ id: 'sys-1', autoApprove: true })),
@@ -25,19 +26,24 @@ function buildAuthService() {
     jwtService,
     mailService,
     inviteService,
+    campaignRewardService,
     identityRepository,
     sessionRepository,
     tokenFactory,
   );
-  return { service, settlePendingInvitationReward };
+  return { service, settlePendingInvitationReward, campaignRewardService };
 }
 
 describe('AuthService.activateAccount invite settlement', () => {
   it('settles the pending invitation reward after a successful email activation', async () => {
-    const { service, settlePendingInvitationReward } = buildAuthService();
+    const { service, settlePendingInvitationReward, campaignRewardService } = buildAuthService();
 
     await service.activateAccount({ token: 'tok' } as any);
 
     expect(settlePendingInvitationReward).toHaveBeenCalledWith('user-1');
+    expect(campaignRewardService.grantRegistrationBonus).toHaveBeenCalledWith(
+      'user-1',
+      'email_activation',
+    );
   });
 });

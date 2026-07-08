@@ -1,6 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../platform/prisma/generated';
+import {
+  CampaignStatus,
+  CampaignType,
+  PointGrantType,
+  PointLedgerEventType,
+  Prisma,
+  VideoGenStatus,
+} from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+import {
+  DEFAULT_REWARD_USAGE_SCOPE,
+  HOME_QUEST_CODE_PREFIX,
+  type FixedCampaignDefinition,
+} from './campaign-reward.helpers';
 
 @Injectable()
 export class CampaignRepository {
@@ -15,6 +27,41 @@ export class CampaignRepository {
 
   listCampaigns(where: Prisma.campaignsWhereInput) {
     return this.prisma.campaigns.findMany({ where });
+  }
+
+  async ensureFixedCampaigns(definitions: readonly FixedCampaignDefinition[]) {
+    await Promise.all(
+      definitions.map((def) =>
+        this.prisma.campaigns.upsert({
+          where: { code: def.code },
+          update: {},
+          create: {
+            code: def.code,
+            name: def.name,
+            description: def.description,
+            type: def.type,
+            status: def.status,
+            rewardGrantType: PointGrantType.GIFT,
+            rewardSourceEvent: PointLedgerEventType.campaign_bonus,
+            rewardPointsExpression: { fixed: def.rewardPoints },
+            rewardExpiresInDays: def.rewardExpiresInDays,
+            rewardUsageScope: def.rewardUsageScope ?? DEFAULT_REWARD_USAGE_SCOPE,
+            metadata: def.metadata,
+          },
+        }),
+      ),
+    );
+  }
+
+  listHomeQuestCampaigns() {
+    return this.prisma.campaigns.findMany({
+      where: {
+        status: { not: CampaignStatus.ARCHIVED },
+        type: CampaignType.QUEST,
+        code: { startsWith: HOME_QUEST_CODE_PREFIX },
+      },
+      orderBy: [{ createdAt: 'asc' }],
+    });
   }
 
   findProgressRows(userId: string, activeCampaignWhere: Prisma.campaignsWhereInput) {
@@ -111,6 +158,55 @@ export class CampaignRepository {
     });
   }
 
+  findRewardsByTriggerKeys(userId: string, triggerKeys: string[]) {
+    if (triggerKeys.length === 0) return Promise.resolve([]);
+    return this.prisma.campaign_rewards.findMany({
+      where: { userId, triggerKey: { in: triggerKeys } },
+    });
+  }
+
+  async hasCompletedImageGenerationByModel(
+    userId: string,
+    modelMatchers: string[],
+  ): Promise<boolean> {
+    const where: Prisma.image_generationsWhereInput = {
+      userId,
+      status: 'completed',
+      generatedImages: { isEmpty: false },
+    };
+    const modelWhere = modelMatchersToImageModelWhere(modelMatchers);
+    if (modelWhere.length > 0) where.OR = modelWhere;
+    const count = await this.prisma.image_generations.count({ where });
+    return count > 0;
+  }
+
+  async hasCompletedVideoGenerationByModel(
+    userId: string,
+    modelMatchers: string[],
+  ): Promise<boolean> {
+    const modelUsedWhere = modelMatchersToVideoModelUsedWhere(modelMatchers);
+    const clipModelWhere = modelMatchersToClipModelWhere(modelMatchers);
+    const templateVideoWhere: Prisma.video_generationsWhereInput = {
+      userId,
+      status: 'completed',
+      generatedVideos: { isEmpty: false },
+    };
+    if (modelUsedWhere.length > 0) templateVideoWhere.OR = modelUsedWhere;
+
+    const clipVideoWhere: Prisma.video_clip_generationsWhereInput = {
+      userId,
+      status: VideoGenStatus.completed,
+      videoUrl: { not: null },
+    };
+    if (clipModelWhere.length > 0) clipVideoWhere.OR = clipModelWhere;
+
+    const [templateVideo, clipVideo] = await Promise.all([
+      this.prisma.video_generations.count({ where: templateVideoWhere }),
+      this.prisma.video_clip_generations.count({ where: clipVideoWhere }),
+    ]);
+    return templateVideo + clipVideo > 0;
+  }
+
   runRewardTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
     return this.prisma.$transaction(fn);
   }
@@ -178,4 +274,37 @@ export class CampaignRepository {
       data: { pointGrantId },
     });
   }
+}
+
+function modelMatchersToImageModelWhere(
+  modelMatchers: string[],
+): Prisma.image_generationsWhereInput[] {
+  return modelMatchers
+    .map((matcher) => matcher.trim())
+    .filter(Boolean)
+    .map((matcher) => ({
+      modelUsed: { contains: matcher, mode: 'insensitive' },
+    }));
+}
+
+function modelMatchersToVideoModelUsedWhere(
+  modelMatchers: string[],
+): Prisma.video_generationsWhereInput[] {
+  return modelMatchers
+    .map((matcher) => matcher.trim())
+    .filter(Boolean)
+    .map((matcher) => ({
+      modelUsed: { contains: matcher, mode: 'insensitive' },
+    }));
+}
+
+function modelMatchersToClipModelWhere(
+  modelMatchers: string[],
+): Prisma.video_clip_generationsWhereInput[] {
+  return modelMatchers
+    .map((matcher) => matcher.trim())
+    .filter(Boolean)
+    .map((matcher) => ({
+      model: { contains: matcher, mode: 'insensitive' },
+    }));
 }

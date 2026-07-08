@@ -2890,6 +2890,10 @@
     "streakHint": "Каждые 7 дней успешной генерации могут открыть временные подарочные баллы по правилам кампании.",
     "roundProgress": "Текущий прогресс",
     "activeCampaigns": "Активные кампании",
+    "claimableCampaigns": "Награды к получению",
+    "claimReward": "Получить",
+    "claimedReward": "Получено",
+    "noClaimableCampaigns": "Нет наград к получению.",
     "campaignDefaultDescription": "Временные подарочные баллы начисляются после выполнения указанного действия.",
     "pointsCount": "{count} баллов",
     "validUntil": "Действует до {date}",
@@ -3254,7 +3258,9 @@
       "onboardSubBestVideo": "Лучшая ИИ-модель для видео",
       "onboardSubPromptCampaign": "От промпта до кампании",
       "onboardCtaTry": "Попробовать",
-      "onboardCtaExplore": "Открыть"
+      "onboardCtaExplore": "Открыть",
+      "onboardCtaClaim": "Получить",
+      "onboardCtaClaimed": "Получено"
     },
     "promoBar": {
       "discountBadge": "-{percent}%"

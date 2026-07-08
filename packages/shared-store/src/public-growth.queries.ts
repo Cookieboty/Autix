@@ -17,6 +17,7 @@ export const publicGrowthQueryKeys = {
     [...publicGrowthQueryKeys.root(), 'collection', slug, locale ?? 'default'] as const,
   creator: (handle: string) =>
     [...publicGrowthQueryKeys.root(), 'creator', handle] as const,
+  homeStarter: () => [...publicGrowthQueryKeys.root(), 'home-starter'] as const,
 };
 
 export function usePublicGrowthHomeQuery(enabled = true, locale?: string) {
@@ -63,6 +64,14 @@ export function usePublicCreatorQuery(handle: string, enabled = true) {
   });
 }
 
+export function useHomeStarterTasksQuery(enabled = true) {
+  return useQuery({
+    queryKey: publicGrowthQueryKeys.homeStarter(),
+    queryFn: publicGrowthActions.getHomeStarterTasks,
+    enabled,
+  });
+}
+
 export function usePublicCreatorFollowMutation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -70,6 +79,18 @@ export function usePublicCreatorFollowMutation() {
     onSuccess: async (_data, handle) => {
       await queryClient.invalidateQueries({
         queryKey: publicGrowthQueryKeys.creator(handle),
+      });
+    },
+  });
+}
+
+export function useClaimHomeStarterTaskMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: publicGrowthActions.claimHomeStarterTask,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: publicGrowthQueryKeys.homeStarter(),
       });
     },
   });

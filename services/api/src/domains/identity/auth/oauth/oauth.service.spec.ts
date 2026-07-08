@@ -44,10 +44,11 @@ function deps() {
     consumeLoginCode: jest.fn().mockResolvedValue({ sessionId: 'sess1' }),
   };
   const invite = { recordInvitation: jest.fn() };
+  const campaignRewards = { grantRegistrationBonus: jest.fn() };
   const cipher = { encrypt: (s: string) => `enc(${s})`, decrypt: (s: string) => s };
   const config = { getWebRedirectAllowlist: jest.fn().mockResolvedValue(['http://web/oauth/callback']) };
-  const svc = new OAuthService(registry as any, resolution as any, authService as any, identity as any, sessionRepo as any, social as any, invite as any, cipher as any, config as any);
-  return { svc, provider, resolution, authService, social, sessionRepo, identity, registry, config };
+  const svc = new OAuthService(registry as any, resolution as any, authService as any, identity as any, sessionRepo as any, social as any, invite as any, campaignRewards as any, cipher as any, config as any);
+  return { svc, provider, resolution, authService, social, sessionRepo, identity, registry, config, campaignRewards };
 }
 
 describe('OAuthService', () => {
@@ -79,20 +80,43 @@ describe('OAuthService', () => {
   });
 
   it('handleCallback 成功 → 建会话 + 一次性码 + 回跳 redirectUri', async () => {
-    const { svc, social, sessionRepo } = deps();
+    const { svc, social, sessionRepo, campaignRewards } = deps();
     const r = await svc.handleCallback({ provider: 'google', code: 'c', state: 'st', ip: '1.1.1.1', userAgent: 'UA' });
     expect(sessionRepo.create).not.toHaveBeenCalled(); // session created via authService.issueSessionForUser
     expect(social.createLoginCode).toHaveBeenCalled();
+    expect(campaignRewards.grantRegistrationBonus).not.toHaveBeenCalled();
     expect(r.redirectUri).toBe('http://web/oauth/callback');
     expect(typeof r.loginCode).toBe('string');
   });
 
+  it('handleCallback OAuth 新用户 → best-effort 发注册奖励', async () => {
+    const { svc, resolution, campaignRewards } = deps();
+    resolution.resolve.mockResolvedValueOnce({ kind: 'login', userId: 'u1', created: true });
+
+    const r = await svc.handleCallback({ provider: 'google', code: 'c', state: 'st', ip: '', userAgent: '' });
+
+    expect(r.loginCode).toEqual(expect.any(String));
+    expect(campaignRewards.grantRegistrationBonus).toHaveBeenCalledWith('u1', 'oauth_first_login');
+  });
+
+  it('handleCallback 注册奖励失败不阻断 OAuth 登录', async () => {
+    const { svc, resolution, campaignRewards } = deps();
+    resolution.resolve.mockResolvedValueOnce({ kind: 'login', userId: 'u1', created: true });
+    campaignRewards.grantRegistrationBonus.mockRejectedValueOnce(new Error('boom'));
+
+    const r = await svc.handleCallback({ provider: 'google', code: 'c', state: 'st', ip: '', userAgent: '' });
+
+    expect(r.loginCode).toEqual(expect.any(String));
+    expect(campaignRewards.grantRegistrationBonus).toHaveBeenCalledTimes(1);
+  });
+
   it('handleCallback 邮箱冲突 → 回跳带 errorCode，不建码', async () => {
-    const { svc, resolution, social } = deps();
+    const { svc, resolution, social, campaignRewards } = deps();
     resolution.resolve.mockResolvedValueOnce({ kind: 'conflict', code: 'OAUTH_EMAIL_UNVERIFIED_CONFLICT' });
     const r = await svc.handleCallback({ provider: 'google', code: 'c', state: 'st', ip: '', userAgent: '' });
     expect(r.errorCode).toBe('OAUTH_EMAIL_UNVERIFIED_CONFLICT');
     expect(social.createLoginCode).not.toHaveBeenCalled();
+    expect(campaignRewards.grantRegistrationBonus).not.toHaveBeenCalled();
   });
 
   it('handleCallback 用户拒绝授权 → 返回 OAUTH_PROVIDER_DENIED，不调用 exchangeCode', async () => {

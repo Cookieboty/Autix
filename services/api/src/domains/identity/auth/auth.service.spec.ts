@@ -62,11 +62,18 @@ function createMockInviteService() {
   } as any;
 }
 
+function createMockCampaignRewardService() {
+  return {
+    grantRegistrationBonus: jest.fn().mockResolvedValue(null),
+  } as any;
+}
+
 function buildService(prismaOverrides: Record<string, any> = {}) {
   const prisma = createMockPrisma(prismaOverrides);
   const jwt = createMockJwtService();
   const mail = createMockMailService();
   const invite = createMockInviteService();
+  const campaignRewards = createMockCampaignRewardService();
   const identityRepository = new AuthIdentityRepository(prisma);
   const sessionRepository = new AuthSessionRepository(prisma);
   const tokenFactory = new AuthTokenFactory(jwt);
@@ -74,11 +81,12 @@ function buildService(prismaOverrides: Record<string, any> = {}) {
     jwt,
     mail,
     invite,
+    campaignRewards,
     identityRepository,
     sessionRepository,
     tokenFactory,
   );
-  return { service, prisma, jwt, mail, invite, identityRepository, sessionRepository, tokenFactory };
+  return { service, prisma, jwt, mail, invite, campaignRewards, identityRepository, sessionRepository, tokenFactory };
 }
 
 const VALID_USER = {

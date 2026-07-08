@@ -1153,6 +1153,10 @@
     "streakHint": "Every 7 successful generation days can unlock short-term gift points based on campaign rules.",
     "roundProgress": "Current round",
     "activeCampaigns": "Active campaigns",
+    "claimableCampaigns": "Claimable rewards",
+    "claimReward": "Claim",
+    "claimedReward": "Claimed",
+    "noClaimableCampaigns": "No rewards are ready to claim.",
     "campaignDefaultDescription": "Short-term gift points are granted after completing the specified behavior.",
     "pointsCount": "{count} points",
     "validUntil": "Valid until {date}",
@@ -3446,7 +3450,9 @@
       "onboardSubBestVideo": "The best AI video model",
       "onboardSubPromptCampaign": "From prompt to campaign",
       "onboardCtaTry": "Try it",
-      "onboardCtaExplore": "Explore"
+      "onboardCtaExplore": "Explore",
+      "onboardCtaClaim": "Claim",
+      "onboardCtaClaimed": "Claimed"
     },
     "promoBar": {
       "discountBadge": "{percent}% OFF"

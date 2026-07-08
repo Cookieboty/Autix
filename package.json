@@ -26,7 +26,11 @@
     "db:seed:prod": "dotenv -e .env -- bun run --cwd packages/database db:seed:prod",
     "db:studio": "dotenv -e .env -- bunx --cwd packages/database prisma studio --schema prisma/schema.prisma",
     "clean:next": "rm -rf clients/web/.next/dev/cache/turbopack",
-    "clean:all": "rm -rf clients/web/.next clients/desktop/.next"
+    "clean:next:dev": "rm -rf clients/web/.next/dev clients/desktop/.next/dev",
+    "clean:turbo": "rm -rf .turbo",
+    "clean:turbo:cache": "rm -rf .turbo/cache",
+    "clean:node_modules": "find . -name node_modules -type d -prune -exec rm -rf {} +",
+    "clean:all": "rm -rf clients/web/.next clients/desktop/.next .turbo"
   },
   "resolutions": {},
   "trustedDependencies": ["sharp"],

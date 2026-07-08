@@ -4,7 +4,27 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build", "db:generate"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": [
+        "dist/**",
+        ".next/standalone/**",
+        ".next/static/**",
+        ".next/*.json",
+        ".next/BUILD_ID",
+        ".next/routes-manifest.json",
+        ".next/prerender-manifest.json",
+        ".next/app-build-manifest.json",
+        ".next/build-manifest.json",
+        ".next/react-loadable-manifest.json",
+        ".next/server/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        "!.next/trace",
+        "!**/*.map",
+        "!**/node_modules/**",
+        "!**/.turbopack/**",
+        "!**/.turbo/**"
+      ],
+      "outputLogs": "new-only"
     },
     "dev": {
       "dependsOn": ["^build"],
@@ -12,16 +32,25 @@
       "persistent": true
     },
     "typecheck": {
-      "dependsOn": ["^build", "db:generate"]
+      "dependsOn": ["^build", "db:generate"],
+      "outputs": [],
+      "outputLogs": "new-only"
     },
     "test": {
       "dependsOn": ["db:generate"],
       "cache": false
+    },
+    "lint": {
+      "outputs": [],
+      "outputLogs": "new-only"
     },
     "db:generate": {
       "cache": false,
       "inputs": ["prisma/schema.prisma"],
       "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/client/**"]
     }
+  },
+  "remoteCache": {
+    "signature": false
   }
 }

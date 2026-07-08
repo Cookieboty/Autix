@@ -1,5 +1,8 @@
 import {
+  campaignApi,
   publicGrowthApi,
+  type HomeStarterClaimResult,
+  type HomeStarterTasksResult,
   type PublicCollectionDetail,
   type PublicCollectionKind,
   type PublicCreatorDetail,
@@ -23,6 +26,10 @@ export type {
   PublicGrowthHomeSection,
   PublicGrowthMediaItem,
   PublicGrowthPage,
+  HomeStarterClaimResult,
+  HomeStarterTask,
+  HomeStarterTaskStatus,
+  HomeStarterTasksResult,
 } from '@autix/sdk';
 
 export const publicGrowthActions = {
@@ -58,6 +65,14 @@ export const publicGrowthActions = {
   },
   recordEvent: async (input: PublicGrowthEventInput) => {
     const res = await publicGrowthApi.event(input);
+    return res.data;
+  },
+  getHomeStarterTasks: async (): Promise<HomeStarterTasksResult> => {
+    const res = await campaignApi.getHomeStarterTasks();
+    return res.data;
+  },
+  claimHomeStarterTask: async (code: string): Promise<HomeStarterClaimResult> => {
+    const res = await campaignApi.claimHomeStarterTask(code);
     return res.data;
   },
 };

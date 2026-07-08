@@ -31,11 +31,9 @@ import {
   CampaignsTable,
 } from './campaigns-view-parts';
 
-export interface AdminCampaignsViewProps {
-  onBack?: () => void;
-}
+export type AdminCampaignsViewProps = Record<string, never>;
 
-export function AdminCampaignsView({ onBack }: AdminCampaignsViewProps) {
+export function AdminCampaignsView() {
   const t = useTranslations('adminCampaigns');
   const tCommon = useTranslations('common');
   const [modal, setModal] = useState<CampaignModalState | null>(null);
@@ -148,7 +146,6 @@ export function AdminCampaignsView({ onBack }: AdminCampaignsViewProps) {
         active={totals.active}
         campaignsCount={campaigns.length}
         loading={loading}
-        onBack={onBack}
         onCreate={() => setModal({ mode: 'create', form: { ...EMPTY_FORM } })}
         onRefresh={() => {
           setError(null);

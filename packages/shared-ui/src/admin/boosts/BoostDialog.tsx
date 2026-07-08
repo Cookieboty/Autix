@@ -119,7 +119,6 @@ export function BoostDialog({
       setForm(emptyForm(lockedResourceType ?? 'IMAGE_TEMPLATE', lockedResourceId ?? ''));
       setError(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, lockedResourceType, lockedResourceId]);
 
   const { create } = useBoostAdmin({

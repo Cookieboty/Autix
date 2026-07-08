@@ -21,12 +21,12 @@ describe('AccountResolutionService', () => {
   it('§6.1 已绑定 → login 现有用户', async () => {
     const repo = makeRepo({ findUserAccount: jest.fn().mockResolvedValue({ userId: 'u9' }) });
     const svc = new AccountResolutionService(repo as any, cipher);
-    expect(await svc.resolve(profile(), ctx)).toEqual({ kind: 'login', userId: 'u9' });
+    expect(await svc.resolve(profile(), ctx)).toEqual({ kind: 'login', userId: 'u9', created: false });
   });
   it('§6.2 邮箱已验证撞库 → 自动关联', async () => {
     const repo = makeRepo({ findUserByEmail: jest.fn().mockResolvedValue({ id: 'u5' }) });
     const svc = new AccountResolutionService(repo as any, cipher);
-    expect(await svc.resolve(profile(), ctx)).toEqual({ kind: 'login', userId: 'u5' });
+    expect(await svc.resolve(profile(), ctx)).toEqual({ kind: 'login', userId: 'u5', created: false });
     expect(repo.createUserAccount).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u5', providerAccountId: 'sub1' }));
   });
   it('§6.3 邮箱未验证撞库 → 冲突', async () => {
@@ -38,7 +38,7 @@ describe('AccountResolutionService', () => {
   it('§6.4 全新用户 → createOAuthUser', async () => {
     const repo = makeRepo();
     const svc = new AccountResolutionService(repo as any, cipher);
-    expect(await svc.resolve(profile({ email: null, emailVerified: false }), ctx)).toEqual({ kind: 'login', userId: 'newU' });
+    expect(await svc.resolve(profile({ email: null, emailVerified: false }), ctx)).toEqual({ kind: 'login', userId: 'newU', created: true });
     expect(repo.createOAuthUser).toHaveBeenCalled();
   });
   it('§6.4 无邮箱 → 建号 emailVerified=false 且占位', async () => {

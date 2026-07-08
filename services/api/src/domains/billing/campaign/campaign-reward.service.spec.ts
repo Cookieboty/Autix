@@ -8,6 +8,7 @@ import {
 } from '../../platform/prisma/generated';
 import { CampaignRepository } from './campaign.repository';
 import { CampaignRewardService } from './campaign-reward.service';
+import { buildContinuousUseCycleKey } from './campaign-reward.helpers';
 
 function makeCampaign(overrides: Record<string, unknown> = {}) {
   return {
@@ -40,6 +41,7 @@ function makeCampaign(overrides: Record<string, unknown> = {}) {
 function makeService(overrides: {
   campaign?: Record<string, unknown> | null;
   existingReward?: Record<string, unknown> | null;
+  claimedRewards?: Record<string, unknown>[];
   budgetUpdateCount?: number;
   generationOwned?: boolean;
 } = {}) {
@@ -76,9 +78,12 @@ function makeService(overrides: {
     $transaction: jest.fn(async (cb: any) => cb(tx)),
     campaigns: {
       findMany: jest.fn(async () => (campaign ? [campaign] : [])),
+      findUnique: jest.fn(async () => campaign),
+      upsert: jest.fn(async (args: any) => ({ id: args.create.code, ...args.create })),
     },
     campaign_rewards: {
-      findFirst: jest.fn(),
+      findFirst: jest.fn(async () => overrides.existingReward ?? null),
+      findMany: jest.fn(async () => overrides.claimedRewards ?? []),
     },
     image_generations: { count: ownedCount },
     video_generations: { count: ownedCount },
@@ -235,5 +240,288 @@ describe('CampaignRewardService.recordFeedback', () => {
         usageScope: { excludedTaskTypes: ['video_generation'] },
       }),
     );
+  });
+
+  it('grants dynamic AUTO_EVENT feedback campaigns configured with triggerKind', async () => {
+    const { service, pointsService, tx } = makeService({
+      campaign: makeCampaign({
+        type: CampaignType.CUSTOM,
+        code: 'dynamic-feedback-bonus',
+        name: '动态反馈奖励',
+        rewardPointsExpression: { fixed: 6 },
+        metadata: {
+          claimMode: 'AUTO_EVENT',
+          triggerKind: 'FEEDBACK_SUBMITTED',
+        },
+      }),
+    });
+
+    const result = await service.recordFeedback('user-1', {
+      feedbackId: 'feedback-1',
+      generationId: 'generation-1',
+      generationType: 'image',
+      text: 'useful feedback',
+    });
+
+    expect(result.status).toBe('recorded');
+    expect(tx.campaign_rewards.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          triggerKey: 'feedback:user-1:feedback-1:campaign-1',
+          pointsGranted: 6,
+        }),
+      }),
+    );
+    expect(pointsService.grantPointsWithinTx).toHaveBeenCalledWith(
+      tx,
+      'user-1',
+      expect.objectContaining({
+        sourceId: 'feedback:user-1:feedback-1:campaign-1',
+      }),
+    );
+  });
+
+  it('uses per-feedback point grant source ids for repeatable dynamic rewards', async () => {
+    const { service, pointsService } = makeService({
+      campaign: makeCampaign({
+        type: CampaignType.CUSTOM,
+        code: 'repeatable-feedback-bonus',
+        rewardPointsExpression: { fixed: 6 },
+        metadata: {
+          claimMode: 'AUTO_EVENT',
+          triggerKind: 'FEEDBACK_SUBMITTED',
+        },
+      }),
+    });
+
+    await service.recordFeedback('user-1', {
+      feedbackId: 'feedback-1',
+      generationId: 'generation-1',
+      rating: 5,
+    });
+    await service.recordFeedback('user-1', {
+      feedbackId: 'feedback-2',
+      generationId: 'generation-2',
+      rating: 5,
+    });
+
+    expect(pointsService.grantPointsWithinTx).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      'user-1',
+      expect.objectContaining({ sourceId: 'feedback:user-1:feedback-1:campaign-1' }),
+    );
+    expect(pointsService.grantPointsWithinTx).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      'user-1',
+      expect.objectContaining({ sourceId: 'feedback:user-1:feedback-2:campaign-1' }),
+    );
+  });
+
+  it('rejects unsupported dynamic event trigger kinds', async () => {
+    const { service } = makeService();
+
+    await expect(
+      service.recordEvent('user-1', { triggerKind: 'FRONTEND_CLICK' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects dynamic streak events for generations not owned by the user', async () => {
+    const { service } = makeService({ generationOwned: false });
+
+    await expect(
+      service.recordEvent('user-1', {
+        triggerKind: 'SUCCESSFUL_GENERATION_STREAK',
+        triggerEventId: 'generation-1',
+        sourceRef: {
+          currentStreak: 7,
+          cycleKey: buildContinuousUseCycleKey('user-1', 7),
+        },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects dynamic streak events with forged cycle keys', async () => {
+    const { service } = makeService({ generationOwned: true });
+
+    await expect(
+      service.recordEvent('user-1', {
+        triggerKind: 'SUCCESSFUL_GENERATION_STREAK',
+        triggerEventId: 'generation-1',
+        sourceRef: {
+          currentStreak: 7,
+          cycleKey: 'continuous_use:user-1:forged:7',
+        },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('CampaignRewardService home starter quests', () => {
+  const questCampaign = makeCampaign({
+    type: CampaignType.QUEST,
+    code: 'HOME_QUEST_NANO_BANANA_PRO',
+    name: '首页任务：Nano Banana Pro',
+    rewardPointsExpression: { fixed: 50 },
+    metadata: {
+      fixed: true,
+      builtin: true,
+      completionKind: 'IMAGE_GENERATION_MODEL',
+      modelMatchers: ['nano-banana-pro'],
+      titleI18nKey: 'onboardTryModel',
+      subtitleI18nKey: 'onboardSubBestImage',
+      ctaI18nKey: 'onboardCtaTry',
+      modelLabel: 'Nano Banana Pro',
+      hrefPath: '/workbench/image',
+      sortOrder: 1,
+    },
+  });
+
+  it('lists anonymous home starter tasks as locked when enabled', async () => {
+    const { service } = makeService({ campaign: questCampaign });
+
+    const result = await service.listHomeStarterTasks();
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toEqual(
+      expect.objectContaining({
+        code: 'HOME_QUEST_NANO_BANANA_PRO',
+        points: 50,
+        status: 'LOCKED',
+        completed: false,
+      }),
+    );
+    expect(result.summary.availablePoints).toBe(50);
+  });
+
+  it('self-heals fixed campaigns before admin campaigns are listed', async () => {
+    const { service, prisma } = makeService({ campaign: questCampaign });
+
+    await service.listAdminCampaigns();
+
+    expect(prisma.campaigns.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { code: 'INVITATION_REWARD' },
+      }),
+    );
+  });
+
+  it('marks a completed unclaimed home starter task as claimable', async () => {
+    const { service } = makeService({ campaign: questCampaign, generationOwned: true });
+
+    const result = await service.listHomeStarterTasks('user-1');
+
+    expect(result.items[0]).toEqual(
+      expect.objectContaining({
+        status: 'CLAIMABLE',
+        completed: true,
+      }),
+    );
+  });
+
+  it('requires generated image output before marking image quests complete', async () => {
+    const { service, prisma } = makeService({
+      campaign: questCampaign,
+      generationOwned: true,
+    });
+
+    await service.listHomeStarterTasks('user-1');
+
+    expect(prisma.image_generations.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        generatedImages: { isEmpty: false },
+      }),
+    });
+  });
+
+  it('disables active home starter quests with unsupported completion kinds', async () => {
+    const { service } = makeService({
+      campaign: makeCampaign({
+        type: CampaignType.QUEST,
+        code: 'HOME_QUEST_MARKETING',
+        name: '首页任务：Marketing Studio',
+        rewardPointsExpression: { fixed: 20 },
+        metadata: {
+          fixed: true,
+          builtin: true,
+          completionKind: 'MARKETING_WORKFLOW',
+        },
+      }),
+      generationOwned: true,
+    });
+
+    const result = await service.listHomeStarterTasks('user-1');
+
+    expect(result.items[0]).toEqual(
+      expect.objectContaining({
+        status: 'DISABLED',
+        completed: false,
+      }),
+    );
+    expect(result.summary.availablePoints).toBe(0);
+  });
+
+  it('claims a completed quest with a quest-scoped point grant source id', async () => {
+    const { service, pointsService, tx } = makeService({
+      campaign: questCampaign,
+      generationOwned: true,
+    });
+
+    const result = await service.claimHomeStarterTask('HOME_QUEST_NANO_BANANA_PRO', 'user-1');
+
+    expect(result.status).toBe('granted');
+    expect(tx.campaign_rewards.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          campaignId: 'campaign-1',
+          userId: 'user-1',
+          triggerKey: 'quest:HOME_QUEST_NANO_BANANA_PRO:user-1',
+          triggerEventId: 'HOME_QUEST_NANO_BANANA_PRO',
+          pointsGranted: 50,
+        }),
+      }),
+    );
+    expect(pointsService.grantPointsWithinTx).toHaveBeenCalledWith(
+      tx,
+      'user-1',
+      expect.objectContaining({
+        sourceId: 'quest:HOME_QUEST_NANO_BANANA_PRO:user-1',
+      }),
+    );
+  });
+
+  it('rejects quest claim before the completion condition is met', async () => {
+    const { service, pointsService } = makeService({
+      campaign: questCampaign,
+      generationOwned: false,
+    });
+
+    await expect(
+      service.claimHomeStarterTask('HOME_QUEST_NANO_BANANA_PRO', 'user-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
+  });
+
+  it('returns claimed without granting again for an existing quest reward', async () => {
+    const existingReward = {
+      id: 'reward-existing',
+      campaignId: 'campaign-1',
+      userId: 'user-1',
+      triggerKey: 'quest:HOME_QUEST_NANO_BANANA_PRO:user-1',
+      pointsGranted: 50,
+    };
+    const { service, pointsService } = makeService({
+      campaign: questCampaign,
+      existingReward,
+      claimedRewards: [existingReward],
+      generationOwned: false,
+    });
+
+    const result = await service.claimHomeStarterTask('HOME_QUEST_NANO_BANANA_PRO', 'user-1');
+
+    expect(result.status).toBe('claimed');
+    expect(result.task).toEqual(expect.objectContaining({ status: 'CLAIMED' }));
+    expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 });

@@ -1791,6 +1791,8 @@ export interface UserActivityStreak {
 
 export interface CampaignProgress {
   activeCampaigns: Campaign[];
+  homeStarterTasks?: HomeStarterTask[];
+  claimableCampaigns?: HomeStarterTask[];
   streaks: UserActivityStreak[];
   rewards: CampaignReward[];
   pendingInvites: Array<{
@@ -1822,6 +1824,39 @@ export interface CampaignFeedbackResult {
   }>;
 }
 
+export type HomeStarterTaskStatus = 'LOCKED' | 'CLAIMABLE' | 'CLAIMED' | 'DISABLED';
+
+export interface HomeStarterTask {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  points: number;
+  status: HomeStarterTaskStatus;
+  completed: boolean;
+  titleI18nKey: string;
+  subtitleI18nKey: string;
+  ctaI18nKey: string;
+  modelLabel: string;
+  hrefPath: string;
+  sortOrder: number;
+}
+
+export interface HomeStarterTasksResult {
+  items: HomeStarterTask[];
+  summary: {
+    total: number;
+    completed: number;
+    availablePoints: number;
+  };
+}
+
+export interface HomeStarterClaimResult {
+  status: 'granted' | 'claimed';
+  reward?: CampaignReward;
+  task?: HomeStarterTask | null;
+}
+
 export interface UpsertCampaignInput {
   code?: string;
   name?: string;
@@ -1847,6 +1882,12 @@ export interface UpsertCampaignInput {
 export const campaignApi = {
   getActive: () => chatApi.get<Campaign[]>('/api/campaigns/active'),
   getMyProgress: () => chatApi.get<CampaignProgress>('/api/campaigns/me/progress'),
+  getHomeStarterTasks: () =>
+    chatApi.get<HomeStarterTasksResult>('/api/campaigns/home-starter'),
+  claimHomeStarterTask: (code: string) =>
+    chatApi.post<HomeStarterClaimResult>(
+      `/api/campaigns/home-starter/${encodeURIComponent(code)}/claim`,
+    ),
   submitFeedback: (data: CampaignFeedbackInput) =>
     chatApi.post<CampaignFeedbackResult>('/api/campaigns/feedback', data),
 };

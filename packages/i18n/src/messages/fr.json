@@ -3067,6 +3067,10 @@
     "streakHint": "Tous les 7 jours de génération réussie peuvent débloquer des points offerts temporaires selon les règles de campagne.",
     "roundProgress": "Progression actuelle",
     "activeCampaigns": "Campagnes actives",
+    "claimableCampaigns": "Récompenses à obtenir",
+    "claimReward": "Obtenir",
+    "claimedReward": "Obtenu",
+    "noClaimableCampaigns": "Aucune récompense à obtenir.",
     "campaignDefaultDescription": "Des points offerts temporaires sont accordés après l’action demandée.",
     "pointsCount": "{count} points",
     "validUntil": "Valable jusqu’au {date}",
@@ -3446,7 +3450,9 @@
       "onboardSubBestVideo": "Le meilleur modèle vidéo IA",
       "onboardSubPromptCampaign": "Du prompt à la campagne",
       "onboardCtaTry": "Essayer",
-      "onboardCtaExplore": "Explorer"
+      "onboardCtaExplore": "Explorer",
+      "onboardCtaClaim": "Obtenir",
+      "onboardCtaClaimed": "Obtenu"
     },
     "promoBar": {
       "discountBadge": "-{percent} %"

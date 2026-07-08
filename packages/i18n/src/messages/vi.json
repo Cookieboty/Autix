@@ -2890,6 +2890,10 @@
     "streakHint": "Mỗi 7 ngày tạo thành công có thể mở khóa điểm tặng ngắn hạn theo cấu hình chiến dịch.",
     "roundProgress": "Tiến độ vòng này",
     "activeCampaigns": "Chiến dịch đang diễn ra",
+    "claimableCampaigns": "Phần thưởng có thể nhận",
+    "claimReward": "Nhận",
+    "claimedReward": "Đã nhận",
+    "noClaimableCampaigns": "Chưa có phần thưởng có thể nhận.",
     "campaignDefaultDescription": "Điểm tặng ngắn hạn sẽ được phát sau khi hoàn thành hành vi chỉ định.",
     "pointsCount": "{count} điểm",
     "validUntil": "Có hiệu lực đến {date}",
@@ -3254,7 +3258,9 @@
       "onboardSubBestVideo": "Mô hình video AI tốt nhất",
       "onboardSubPromptCampaign": "Từ prompt đến chiến dịch",
       "onboardCtaTry": "Dùng thử",
-      "onboardCtaExplore": "Khám phá"
+      "onboardCtaExplore": "Khám phá",
+      "onboardCtaClaim": "Nhận",
+      "onboardCtaClaimed": "Đã nhận"
     },
     "promoBar": {
       "discountBadge": "Giảm {percent}%"

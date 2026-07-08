@@ -110,9 +110,9 @@ const FIXED_CAMPAIGN_SEEDS: FixedCampaignSeed[] = [
   {
     code: 'HOME_QUEST_MARKETING',
     name: '首页任务：Marketing Studio',
-    description: '探索营销创作工作流后领取奖励。',
+    description: '营销创作工作流恢复后可启用此任务。',
     type: 'QUEST',
-    status: 'ACTIVE',
+    status: 'PAUSED',
     rewardPoints: 20,
     rewardExpiresInDays: 7,
     metadata: {
@@ -124,7 +124,7 @@ const FIXED_CAMPAIGN_SEEDS: FixedCampaignSeed[] = [
       subtitleI18nKey: 'onboardSubPromptCampaign',
       ctaI18nKey: 'onboardCtaExplore',
       modelLabel: 'Marketing Studio',
-      hrefPath: '/growth/marketing',
+      hrefPath: '/marketing-studio',
       sortOrder: 3,
     },
   },

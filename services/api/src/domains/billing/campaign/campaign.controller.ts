@@ -10,8 +10,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
-import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  OptionalCurrentUser,
+  getCurrentUserId,
+} from '../../identity/auth/decorators/current-user.decorator';
 import { AdminGuard } from '../../identity/auth/admin.guard';
+import { Public } from '../../identity/auth/decorators/public.decorator';
 import {
   CampaignRewardService,
   type RecordFeedbackInput,
@@ -27,6 +32,21 @@ export class CampaignController {
   @Get('active')
   async activeCampaigns() {
     return this.campaignRewardService.listActiveCampaigns();
+  }
+
+  @Public()
+  @Get('home-starter')
+  async homeStarterTasks(@OptionalCurrentUser() user?: AuthUser) {
+    return this.campaignRewardService.listHomeStarterTasks(user?.id);
+  }
+
+  @Post('home-starter/:code/claim')
+  async claimHomeStarterTask(
+    @CurrentUser() user: AuthUser,
+    @Param('code') code: string,
+  ) {
+    const userId = getCurrentUserId(user);
+    return this.campaignRewardService.claimHomeStarterTask(code, userId);
   }
 
   @Get('me/progress')

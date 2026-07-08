@@ -247,7 +247,6 @@ function PendingPanel() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {thumb ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={thumb}
                             alt={item.title ?? ''}
@@ -494,7 +493,6 @@ function PublishedPanel() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {thumb ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={thumb}
                             alt={item.title ?? ''}

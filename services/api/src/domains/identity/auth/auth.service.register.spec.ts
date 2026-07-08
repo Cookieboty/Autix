@@ -5,6 +5,7 @@ function buildAuthService(autoApprove: boolean) {
   const jwtService: any = { sign: jest.fn(() => 'tok') };
   const mailService: any = { sendActivationEmail: jest.fn(() => ({ catch: () => {} })) };
   const inviteService: any = { recordInvitation: jest.fn(async () => null) };
+  const campaignRewardService: any = { grantRegistrationBonus: jest.fn(async () => null) };
   const identityRepository: any = {
     findUserByUsername: jest.fn(async () => null),
     findUserByEmail: jest.fn(async () => null),
@@ -15,6 +16,7 @@ function buildAuthService(autoApprove: boolean) {
     jwtService,
     mailService,
     inviteService,
+    campaignRewardService,
     identityRepository,
     {} as never,
     {} as never,

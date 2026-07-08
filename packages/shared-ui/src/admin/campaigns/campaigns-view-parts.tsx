@@ -1,4 +1,4 @@
-import { ChevronLeft, Gift, Pencil, Plus, RefreshCw, X } from 'lucide-react';
+import { Gift, Pencil, Plus, RefreshCw, X } from 'lucide-react';
 import type {
   Campaign,
   CampaignReward,
@@ -19,7 +19,6 @@ export function AdminCampaignsHeader({
   active,
   campaignsCount,
   loading,
-  onBack,
   onCreate,
   onRefresh,
   t,
@@ -29,7 +28,6 @@ export function AdminCampaignsHeader({
   active: number;
   campaignsCount: number;
   loading: boolean;
-  onBack?: () => void;
   onCreate: () => void;
   onRefresh: () => void;
   t: Translate;
@@ -38,10 +36,6 @@ export function AdminCampaignsHeader({
 }) {
   return (
     <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
-      <Button size="sm" variant="ghost" className="cursor-pointer" onClick={onBack}>
-        <ChevronLeft className="mr-1 h-4 w-4" />
-        {tCommon('back')}
-      </Button>
       <div>
         <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
           {t('title')}

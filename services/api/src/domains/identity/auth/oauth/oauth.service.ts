@@ -7,6 +7,7 @@ import { AuthIdentityRepository } from '../auth-identity.repository';
 import { AuthSessionRepository } from '../auth-session.repository';
 import { SocialLoginRepository } from './social-login.repository';
 import { InviteService } from '../../../billing/invite/invite.service';
+import { CampaignRewardService } from '../../../billing/campaign/campaign-reward.service';
 import { TokenCipher } from './token-cipher';
 import { NormalizedProfile } from './provider.types';
 import { encryptProviderTokens } from './encrypt-tokens';
@@ -35,6 +36,7 @@ export class OAuthService {
     private readonly sessionRepo: AuthSessionRepository,
     private readonly social: SocialLoginRepository,
     private readonly invite: InviteService,
+    private readonly campaignRewardService: CampaignRewardService,
     private readonly cipher: TokenCipher,
     private readonly config: OAuthConfigService,
   ) {}
@@ -127,6 +129,14 @@ export class OAuthService {
     if (st.inviteCode) {
       try { await this.invite.recordInvitation?.(st.inviteCode, outcome.userId); }
       catch (e) { this.logger.warn(`invite record failed: ${String(e)}`); }
+    }
+
+    if (outcome.created === true) {
+      try {
+        await this.campaignRewardService.grantRegistrationBonus(outcome.userId, 'oauth_first_login');
+      } catch (e) {
+        this.logger.warn(`registration bonus grant failed: ${String(e)}`);
+      }
     }
 
     const user = await this.identity.findLoginUserById(outcome.userId);

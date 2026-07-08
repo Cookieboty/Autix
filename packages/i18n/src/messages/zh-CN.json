@@ -1153,6 +1153,10 @@
     "streakHint": "每满 7 天成功生成可按活动配置领取短期赠送积分。",
     "roundProgress": "本轮进度",
     "activeCampaigns": "进行中的活动",
+    "claimableCampaigns": "可领取奖励",
+    "claimReward": "领取",
+    "claimedReward": "已领取",
+    "noClaimableCampaigns": "暂无可领取奖励。",
     "campaignDefaultDescription": "完成指定行为后发放短期赠送积分。",
     "pointsCount": "{count} 积分",
     "validUntil": "有效至 {date}",
@@ -3446,7 +3450,9 @@
       "onboardSubBestVideo": "最强 AI 视频模型",
       "onboardSubPromptCampaign": "从提示词到营销活动",
       "onboardCtaTry": "试用",
-      "onboardCtaExplore": "探索"
+      "onboardCtaExplore": "探索",
+      "onboardCtaClaim": "领取",
+      "onboardCtaClaimed": "已领取"
     },
     "promoBar": {
       "discountBadge": "立减 {percent}%"
