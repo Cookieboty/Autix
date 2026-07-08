@@ -50,6 +50,10 @@ export interface GalleryPost {
   mediaUrls: string[];
   aspectRatio: string | null;
   durationSec: number | null;
+  prompt: string | null;
+  model: string | null;
+  width: number | null;
+  height: number | null;
   sourceType: GallerySource;
   imageTemplateId: string | null;
   videoTemplateId: string | null;
@@ -85,7 +89,7 @@ export interface GalleryFeedItem {
   post: GalleryPost;
   metrics: Pick<
     ResourceMetrics,
-    'likeCount' | 'favoriteCount' | 'viewCount' | 'referenceCount'
+    'pvCount' | 'uvCount' | 'likeCount' | 'favoriteCount' | 'viewCount' | 'referenceCount'
   >;
 }
 

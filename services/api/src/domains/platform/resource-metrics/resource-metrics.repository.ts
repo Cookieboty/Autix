@@ -36,6 +36,14 @@ export class ResourceMetricsRepository {
     });
   }
 
+  /** 批量读取指标（同一 resourceType 下多个 id），供 Feed 列表一次性附带指标。 */
+  findMetricsByIds(resourceType: ResourceType, resourceIds: string[]) {
+    if (resourceIds.length === 0) return Promise.resolve([]);
+    return this.prisma.resource_metrics.findMany({
+      where: { resourceType, resourceId: { in: resourceIds } },
+    });
+  }
+
   /** 近期活跃资源（lastActivityAt >= since），供热度重算 cron 使用。 */
   findActiveSince(since: Date) {
     return this.prisma.resource_metrics.findMany({

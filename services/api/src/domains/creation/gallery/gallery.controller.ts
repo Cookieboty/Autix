@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import type { AuthUser } from '@autix/domain';
@@ -26,13 +27,27 @@ import { CreateGalleryDraftDto } from './dto/create-gallery-draft.dto';
 import { UpdateGalleryPostDto } from './dto/update-gallery-post.dto';
 import { CreateGalleryReportDto } from './dto/create-report.dto';
 
-/** 用户侧广场投稿接口（先审后发）。热度 Feed 列表见后续任务，本控制器不含 GET /gallery/feed。 */
+/** 用户侧广场投稿接口（先审后发）+ 公开热度 Feed（GET /gallery/feed，供首页图片/视频画廊消费）。 */
 @Controller('gallery')
 export class GalleryController {
   constructor(
     private readonly service: GalleryService,
     private readonly metrics: ResourceMetricsService,
   ) {}
+
+  /**
+   * 公开热度 Feed：kind=IMAGE|VIDEO 分流，只返回 PUBLISHED 作品。
+   * 注意：必须声明在 GET :id 之前，否则 /gallery/feed 会被 :id 路由吞掉。
+   */
+  @Public()
+  @Get('feed')
+  feed(
+    @Query('kind') kind?: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.service.listFeed(kind, cursor, limit ? Number(limit) : 24);
+  }
 
   @UseGuards(JwtAuthGuard)
   @Post()

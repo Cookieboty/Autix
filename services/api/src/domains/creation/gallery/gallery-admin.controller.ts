@@ -30,14 +30,34 @@ export class GalleryAdminController {
     private readonly batchJobService: BatchJobService,
   ) {}
 
-  @Get('pending')
-  listPending(@Query('cursor') cursor?: string) {
-    return this.service.listPending(cursor, 20);
+  /** 分类下拉数据（须声明在 @Get() 之前，避免被通配吞掉）。 */
+  @Get('categories')
+  listCategories() {
+    return this.service.listCategories();
   }
 
+  /** 页码分页 + 筛选列表（total/page/pageSize/totalPages）。 */
   @Get()
-  listByStatus(@Query('status') status?: string, @Query('cursor') cursor?: string) {
-    return this.service.listByStatus(status, cursor, 20);
+  list(
+    @Query('status') status?: string,
+    @Query('kind') kind?: string,
+    @Query('category') category?: string,
+    @Query('sourceType') sourceType?: string,
+    @Query('search') search?: string,
+    @Query('externalOnly') externalOnly?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.service.listAdminPage({
+      status,
+      kind,
+      category,
+      sourceType,
+      search,
+      externalOnly,
+      page,
+      pageSize,
+    });
   }
 
   @Post('import')

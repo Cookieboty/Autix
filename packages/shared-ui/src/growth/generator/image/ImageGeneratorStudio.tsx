@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ImageModelCapability } from '@autix/domain/image';
 import {
+  publicGalleryActions,
   publicGeneratorActions,
   useAuthStore,
   useUiStore,
+  type GalleryFeedItem,
   type ImageTemplate,
   type ModelConfigItem,
 } from '@autix/shared-store';
@@ -23,6 +25,30 @@ import {
   type PublicImageGenerationPayload,
   type PublicImageHistoryItem,
 } from './public-image-generation';
+
+/**
+ * 广场作品 → 模板卡片形状映射：只填模板墙/详情弹窗实际读取的字段，
+ * description 充当 prompt（"使用"即把描述填入生成器）。其余模板专有字段留空。
+ */
+function galleryItemToTemplateCard(item: GalleryFeedItem): ImageTemplate {
+  const { post, metrics } = item;
+  const cover = post.coverImage ?? post.mediaUrls[0] ?? '';
+  return {
+    id: post.id,
+    // 广场无标题
+    title: '',
+    prompt: post.prompt ?? post.description ?? '',
+    coverImage: cover,
+    exampleImages: post.mediaUrls,
+    authorName: post.authorSnapshot?.displayName ?? '',
+    authorUrl: post.authorSnapshot?.avatarUrl ?? '',
+    category: post.category,
+    likeCount: metrics.likeCount,
+    viewCount: metrics.viewCount,
+    useCount: 0,
+    modelHint: post.model ?? '',
+  } as unknown as ImageTemplate;
+}
 
 export function ImageGeneratorStudio({
   items,
@@ -67,10 +93,12 @@ export function ImageGeneratorStudio({
   useEffect(() => {
     let cancelled = false;
     setTemplatesLoading(true);
-    publicGeneratorActions
-      .listImageTemplates({ sort: 'popular', pageSize: 60 })
-      .then((items) => {
-        if (!cancelled) setTemplates(items);
+    // 数据源改为广场（gallery_posts）已发布作品；沿用模板墙/详情弹窗的交互，
+    // 把广场作品映射成模板卡片形状（description 充当 prompt）。
+    publicGalleryActions
+      .listFeed({ kind: 'IMAGE', limit: 60 })
+      .then((feed) => {
+        if (!cancelled) setTemplates(feed.map(galleryItemToTemplateCard));
       })
       .catch(() => {
         if (!cancelled) setTemplates([]);

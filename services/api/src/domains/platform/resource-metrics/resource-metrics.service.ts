@@ -30,6 +30,18 @@ export class ResourceMetricsService {
     return row ?? buildDefaultMetrics(type, resourceId);
   }
 
+  /** 批量读取指标，返回 resourceId → 指标 的 Map；无行的 id 不入 Map，由调用方补默认值。 */
+  async getMetricsMap(
+    type: ResourceType,
+    resourceIds: string[],
+  ): Promise<Map<string, ResourceMetricsSnapshot>> {
+    this.assertMetricType(type);
+    const rows = await this.repo.findMetricsByIds(type, resourceIds);
+    return new Map<string, ResourceMetricsSnapshot>(
+      rows.map((row) => [row.resourceId, row] as const),
+    );
+  }
+
   async like(userId: string, type: ResourceType, resourceId: string) {
     this.assertMetricType(type);
     const row = await this.repo.like(userId, type, resourceId);

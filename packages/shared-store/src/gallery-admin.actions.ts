@@ -1,23 +1,30 @@
 import {
   batchJobApi,
   galleryAdminApi,
+  type GalleryAdminKind,
+  type GalleryAdminListParams,
+  type GalleryAdminListResult,
+  type GalleryAdminSourceType,
   type GalleryAdminStatus,
-  type GalleryPendingPage,
   type GalleryPostAdminItem,
 } from '@autix/sdk';
 
-export type { GalleryAdminStatus, GalleryPendingPage, GalleryPostAdminItem };
+export type {
+  GalleryAdminKind,
+  GalleryAdminListParams,
+  GalleryAdminListResult,
+  GalleryAdminSourceType,
+  GalleryAdminStatus,
+  GalleryPostAdminItem,
+};
 
 export const galleryAdminActions = {
-  listPending: async (cursor?: string): Promise<GalleryPendingPage> => {
-    const { data } = await galleryAdminApi.listPending(cursor);
+  list: async (params: GalleryAdminListParams = {}): Promise<GalleryAdminListResult> => {
+    const { data } = await galleryAdminApi.list(params);
     return data;
   },
-  listByStatus: async (
-    status: GalleryAdminStatus,
-    cursor?: string,
-  ): Promise<GalleryPendingPage> => {
-    const { data } = await galleryAdminApi.listByStatus(status, cursor);
+  listCategories: async (): Promise<string[]> => {
+    const { data } = await galleryAdminApi.listCategories();
     return data;
   },
   approve: (id: string) => galleryAdminApi.approve(id),

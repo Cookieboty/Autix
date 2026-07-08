@@ -156,6 +156,11 @@ export class CloudflareR2Service {
     return `${publicUrl}/${key.replace(/^\/+/, '')}`;
   }
 
+  /** R2 公网访问域名前缀（无尾斜杠）。空串表示未配置。供"非我域名"过滤判断媒体是否已托管在自有 R2。 */
+  async getPublicBaseUrl(): Promise<string> {
+    return (await this.setting('storage.r2PublicUrl')).replace(/\/+$/, '');
+  }
+
   private async getRuntimeConfig(): Promise<R2RuntimeConfig> {
     const bucket = await this.setting('storage.r2BucketName');
     const publicUrl = (await this.setting('storage.r2PublicUrl')).replace(/\/+$/, '');
