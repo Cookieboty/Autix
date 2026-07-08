@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ClipboardEvent } from 'react';
 import {
   Coins,
-  Crop,
   Diamond,
+  Gauge,
   Globe2,
   ImagePlus,
   Loader2,
@@ -34,7 +34,7 @@ import { readFilesAsDataUrls } from '../../../image/studio/constants';
 import { OfferStrip } from '../parts';
 import type { PublicUploadedReference } from '../generator-studio-helpers';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../ui/tooltip';
-import { ImageModelParamMenu, ImageOptionParamMenu } from './ImageParamMenus';
+import { AspectRatioIcon, ImageModelParamMenu, ImageOptionParamMenu } from './ImageParamMenus';
 import {
   buildPublicImageEstimateInput,
   buildPublicImageGenerationSettings,
@@ -92,7 +92,7 @@ export function ImageComposer({
   const selectedSize = resolveImageSizeSelection(size, sizeGroups);
   const selectedGroup = selectedSize.group;
   const aspectOptions = useMemo(() => getUniqueImageAspectOptions(sizeGroups), [sizeGroups]);
-  const modelLabel = selectedModel?.name ?? imageCapability.displayName;
+  const modelLabel = selectedModel?.name ?? '';
   const countControl = getImageCountControl(imageCapability);
   const uploadLimit = getImageReferenceUploadLimit(imageCapability);
   const canUploadReference = uploadLimit > 0;
@@ -266,10 +266,10 @@ export function ImageComposer({
       <OfferStrip
         label={t('imageOffer')}
         premium={t('premiumPlans')}
-        className="mx-auto max-w-6xl"
+        className="mx-auto mb-2 max-w-6xl"
       />
-      <SpotlightPanel className="growth-panel-shadow mx-auto rounded-md border border-border bg-card/95 p-4 backdrop-blur-xl md:p-5">
-        <div className="grid items-start gap-4 md:grid-cols-[1fr_174px]">
+      <SpotlightPanel className="growth-panel-shadow mx-auto rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(32,34,37,0.88),rgba(24,26,29,0.92))] p-[22px] backdrop-blur-[32px]">
+        <div className="grid items-stretch gap-3 md:grid-cols-[1fr_174px]">
           <div className="min-w-0">
             <input
               ref={fileInputRef}
@@ -320,7 +320,7 @@ export function ImageComposer({
                   type="button"
                   title={t('uploadImage')}
                   aria-label={t('uploadImage')}
-                  className={`grid size-9 shrink-0 place-items-center rounded-md border border-growth-accent/35 bg-growth-accent/5 text-growth-accent transition hover:bg-growth-accent/12 ${canUploadReference ? 'cursor-pointer' : 'cursor-not-allowed opacity-45'}`}
+                  className={`grid size-9 shrink-0 place-items-center rounded-xl border border-border bg-background/22 text-foreground/78 transition hover:bg-secondary hover:text-foreground ${canUploadReference ? 'cursor-pointer' : 'cursor-not-allowed opacity-45'}`}
                   disabled={!canUploadReference || uploading}
                   onClick={openUploadDialog}
                 >
@@ -337,18 +337,15 @@ export function ImageComposer({
                 onPaste={handlePaste}
               />
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
               <ImageModelParamMenu
-                icon={<Sparkles className="size-4" />}
                 label={modelLabel}
                 models={imageModels}
                 selectedModelId={selectedModelId}
-                loading={modelsLoading}
                 onChange={onModelChange}
-                fallbackLabel={imageCapability.displayName}
               />
               <ImageOptionParamMenu
-                icon={<Crop className="size-4" />}
+                icon={<AspectRatioIcon value={selectedSize.option?.aspectValue ?? size} className="size-4" />}
                 label={selectedSize.option?.label ?? selectedSize.option?.aspectValue ?? t('auto')}
                 title={t('aspectRatio')}
                 options={aspectOptions.map((option) => ({
@@ -359,6 +356,9 @@ export function ImageComposer({
                 onChange={(nextAspect) =>
                   setSize((current) => selectImageSizeAspect(current, nextAspect, sizeGroups))
                 }
+                renderOptionIcon={(optionValue) => (
+                  <AspectRatioIcon value={optionValue} className="size-4" />
+                )}
               />
               {sizeGroups.length > 1 ? (
                 <ImageOptionParamMenu
@@ -379,7 +379,7 @@ export function ImageComposer({
               ) : null}
               {imageCapability.qualities.length > 0 ? (
                 <ImageOptionParamMenu
-                  icon={<Diamond className="size-4" />}
+                  icon={<Gauge className="size-4" />}
                   label={
                     imageCapability.qualities.find((option) => option.value === quality)?.label ??
                     quality
@@ -391,11 +391,11 @@ export function ImageComposer({
                 />
               ) : null}
               {countControl.visible ? (
-                <div className="inline-flex min-h-10 items-center rounded-md border border-border bg-background/22 text-sm font-semibold text-foreground/78">
+                <div className="inline-flex min-h-9 items-center rounded-xl border border-border bg-background/22 text-sm font-semibold text-foreground/78">
                   <button
                     type="button"
                     aria-label={t('decreaseCount')}
-                    className="grid size-10 place-items-center rounded-l-md text-foreground/45 hover:bg-secondary hover:text-foreground"
+                    className="grid size-9 place-items-center rounded-l-xl text-foreground/45 hover:bg-secondary hover:text-foreground"
                     onClick={() => setCount((current) => Math.max(1, current - 1))}
                   >
                     -
@@ -404,7 +404,7 @@ export function ImageComposer({
                   <button
                     type="button"
                     aria-label={t('increaseCount')}
-                    className="grid size-10 place-items-center rounded-r-md text-foreground/45 hover:bg-secondary hover:text-foreground"
+                    className="grid size-9 place-items-center rounded-r-xl text-foreground/45 hover:bg-secondary hover:text-foreground"
                     onClick={() => setCount((current) => Math.min(imageCapability.maxCount, current + 1))}
                   >
                     +
@@ -419,7 +419,7 @@ export function ImageComposer({
                     onClick={() =>
                       setVisibility((current) => (current === 'private' ? 'public' : 'private'))
                     }
-                    className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
+                    className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
                   >
                     {visibility === 'private' ? (
                       <Lock className="size-4" />
@@ -440,6 +440,7 @@ export function ImageComposer({
                   </p>
                 </TooltipContent>
               </Tooltip>
+              {/* 「绘制」只是跳转 /draw 的导航链接，无生成相关后端逻辑，暂隐藏（需要时取消注释即可）
               <a
                 href="/draw"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
@@ -447,6 +448,7 @@ export function ImageComposer({
                 <Pencil className="size-4" />
                 {t('draw')}
               </a>
+              */}
             </div>
           </div>
 
@@ -454,7 +456,7 @@ export function ImageComposer({
             type="button"
             disabled={generating}
             onClick={() => void handleGenerate()}
-            className="growth-generator-generate inline-flex h-[70px] min-h-[70px] flex-col items-center justify-center gap-0.5 self-end rounded-md bg-growth-accent px-5 text-base font-black text-background hover:bg-foreground disabled:cursor-wait disabled:opacity-75"
+            className="growth-generator-generate inline-flex h-full max-h-[94px] flex-col items-center justify-center gap-0.5 self-end rounded-2xl bg-growth-accent px-5 text-base font-black text-background hover:bg-foreground disabled:cursor-wait disabled:opacity-75"
           >
             <span className="inline-flex items-center gap-2">
               {generating ? t('generating') : t('generate')}
