@@ -10,7 +10,7 @@ import {
   ImagePlus,
   Loader2,
   Lock,
-  Pencil,
+  // Pencil,
   Plus,
   Sparkles,
   X,
@@ -440,13 +440,13 @@ export function ImageComposer({
                   </p>
                 </TooltipContent>
               </Tooltip>
-              <a
+              {/* <a
                 href="/draw"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
               >
                 <Pencil className="size-4" />
                 {t('draw')}
-              </a>
+              </a> */}
             </div>
           </div>
 
