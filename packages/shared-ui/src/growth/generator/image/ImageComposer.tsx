@@ -10,7 +10,7 @@ import {
   ImagePlus,
   Loader2,
   Lock,
-  Pencil,
+  // Pencil,
   Plus,
   Sparkles,
   X,
