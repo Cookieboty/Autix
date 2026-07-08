@@ -133,7 +133,6 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
     kind: 'gpt-image',
     displayName: 'GPT Image',
     sizes: [
-      { label: '自动', value: 'auto' },            // OpenAI Images API · size
       { label: '1:1', value: '1024x1024' },        // OpenAI Images API · size
       { label: '3:2', value: '1536x1024' },        // OpenAI Images API · size
       { label: '2:3', value: '1024x1536' },        // OpenAI Images API · size
@@ -143,13 +142,13 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
       { label: '9:16 4K', value: '2160x3840' },    // OpenAI Images API · size
     ],
     qualities: [
-      { label: '自动', value: 'auto' },
       { label: '低', value: 'low' },
       { label: '中', value: 'medium' },
       { label: '高', value: 'high' },
     ],
     maxCount: 1,
-    defaults: { size: 'auto', quality: 'medium', count: 1 },
+    // 默认选中具体尺寸（1:1），不再默认「自动」；用户仍可手动切到 auto
+    defaults: { size: '1024x1024', quality: 'medium', count: 1 },
     supportsReferenceImage: true,
     supportsSourceImage: true,
     supportsNegativePrompt: 'prompt-injected',
