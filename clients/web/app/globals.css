@@ -860,7 +860,11 @@ body {
 
 /* Image composer SpotlightPanel deep shadow */
 .growth-panel-shadow {
-  box-shadow: 0 22px 80px rgb(0 0 0 / 0.45);
+  /* 外部深阴影 + 内部泛光内阴影（顶部高光 + 柔和内发光），配合半透明磨砂背景 */
+  box-shadow:
+    0 22px 80px rgb(0 0 0 / 0.45),
+    inset 0 1px 1px rgb(255 255 255 / 0.12),
+    inset 0 0 48px rgb(255 255 255 / 0.05);
 }
 
 /* History cards (image/video) — drop shadow, empty-state glow bg, icon glow */

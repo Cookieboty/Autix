@@ -181,16 +181,19 @@ export function PublicGrowthShell({
   children,
   navKind = 'home',
   showNav = true,
+  showPromo = true,
 }: {
   promo?: { label?: string; href?: string };
   children: React.ReactNode;
   navKind?: 'home' | 'image' | 'video' | 'community';
   /** false 时不渲染导航（由外层持久 (public) layout 提供），用于纳入持久导航的页面（首页/pricing） */
   showNav?: boolean;
+  /** false 时不渲染顶部横幅（由外层持久 (public) layout 在导航上方提供） */
+  showPromo?: boolean;
 }) {
   return (
     <div className="min-h-svh bg-background text-foreground">
-      <PublicPromoBar label={promo?.label} href={promo?.href} />
+      {showPromo ? <PublicPromoBar label={promo?.label} href={promo?.href} /> : null}
       {showNav ? <PublicGeneratorAppNav kind={navKind} /> : null}
       {children}
       <PublicFooter />

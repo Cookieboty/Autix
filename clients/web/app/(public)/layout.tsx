@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { PublicGeneratorAppNav } from '@autix/shared-ui/growth';
+import { PublicGeneratorAppNav, PublicTopPromo } from '@autix/shared-ui/growth';
 
 /**
  * 公开页共享布局：把导航栏提升为跨路由持久的同一实例。
@@ -16,8 +16,20 @@ import { PublicGeneratorAppNav } from '@autix/shared-ui/growth';
  */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isFunctionPage =
-    pathname.startsWith('/ai/image') || pathname.startsWith('/ai/video');
+  const isImage = pathname.startsWith('/ai/image');
+  const isVideo = pathname.startsWith('/ai/video');
+  const isFunctionPage = isImage || isVideo;
+
+  // 直接由 next/navigation 的 pathname 推导并传给导航（SSR/首帧即正确），
+  // 避免导航内部依赖自定义适配器 usePathname 时首帧误判成首页背景、产生一瞬闪烁。
+  const navKind = isImage
+    ? 'image'
+    : isVideo
+      ? 'video'
+      : pathname.startsWith('/community')
+        ? 'community'
+        : 'home';
+  const navVariant = isFunctionPage ? 'fluid' : 'contained';
 
   return (
     <div
@@ -27,7 +39,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           : 'min-h-svh bg-background text-foreground'
       }
     >
-      <PublicGeneratorAppNav />
+      {/* 横幅在导航条上方（持久、可关闭）；功能页 shrink-0 固定，营销页随文档滚动。
+          z-40 抬到功能页 studio 的全屏固定主题背景(fixed inset-0)之上，否则会被其盖住看不见 */}
+      <div className={`relative z-40 ${isFunctionPage ? 'shrink-0' : ''}`}>
+        <PublicTopPromo />
+      </div>
+      <PublicGeneratorAppNav kind={navKind} variant={navVariant} />
       <div className={isFunctionPage ? 'min-h-0 flex-1 overflow-y-auto overscroll-none' : 'contents'}>
         {children}
       </div>
