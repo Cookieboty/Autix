@@ -3299,7 +3299,7 @@
         "category": "分類",
         "usageCount": "使用次數",
         "usePrompt": "引用 Prompt",
-        "goUnlimited": "不限量",
+        "recreate": "重新生成",        "goUnlimited": "不限量",
         "getUnlimited": "取得不限量",
         "imageOffer": "Nano Banana Pro 與 Nano Banana 2 不限量",
         "videoOffer": "Seedance 2.0 系列不限量",

@@ -1,7 +1,7 @@
 'use client';
 
 import type { MouseEvent } from 'react';
-import { Eye, Heart, Image as ImageIcon, UserRound } from 'lucide-react';
+import { Eye, Image as ImageIcon, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ImageTemplate } from '@autix/shared-store';
 import { MediaThumb } from '../../MediaBlocks';
@@ -108,7 +108,6 @@ export function ImageTemplateGrid({
     <div className={`opacity-95 ${wallClass}`}>
       {previewTemplates.map((template, index) => {
         const cover = imageTemplateCover(template);
-        const author = template.authorName || template.authorUrl || t('unknownAuthor');
         const handleUseTemplate = (event: MouseEvent<HTMLButtonElement>) => {
           event.stopPropagation();
           onUseTemplate(template);
@@ -141,38 +140,33 @@ export function ImageTemplateGrid({
             </button>
             <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
             <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex translate-y-[-6px] items-start justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-              <span className="growth-inset-ring inline-flex min-w-0 items-center gap-2 rounded-full bg-background/36 px-2.5 py-1.5 text-xs font-bold text-foreground backdrop-blur-md">
-                <UserRound className="size-3.5 shrink-0" />
-                <span className="truncate">{author}</span>
+              {/* 左上：头像 + 用户名 */}
+              <span className="growth-inset-ring inline-flex min-w-0 items-center gap-2 rounded-full bg-background/36 py-1 pl-1 pr-2.5 text-xs font-bold text-foreground backdrop-blur-md">
+                {template.authorUrl ? (
+                  <img src={template.authorUrl} alt="" className="size-5 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-secondary">
+                    <UserRound className="size-3" />
+                  </span>
+                )}
+                <span className="truncate">{template.authorName || t('unknownAuthor')}</span>
               </span>
+              {/* 右上：访问量 */}
               <span className="growth-inset-ring-bright inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-sm font-black text-foreground backdrop-blur-md">
-                <Heart className="size-4" />
-                {formatTemplateMetric(template.likeCount)}
+                <Eye className="size-4" />
+                {formatTemplateMetric(template.viewCount)}
               </span>
             </div>
-            {compact ? null : (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-3 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-                <div className="min-w-0">
-                  <span className="mb-1 inline-flex rounded-md bg-growth-accent px-2 py-1 text-[10px] font-black uppercase text-background">
-                    {template.category || t('templates')}
-                  </span>
-                  <p className="line-clamp-2 text-sm font-black text-foreground">{template.title}</p>
-                </div>
-                <div className="pointer-events-none flex shrink-0 flex-col items-end gap-2 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
-                  <span className="growth-inset-ring inline-flex items-center gap-1 rounded-full bg-background/36 px-2.5 py-1.5 text-xs font-bold text-foreground/86 backdrop-blur-md">
-                    <Eye className="size-3.5" />
-                    {formatTemplateMetric(template.viewCount)}
-                  </span>
-                  <button
-                    type="button"
-                    className="growth-btn-drop-shadow inline-flex min-h-10 cursor-pointer items-center justify-center rounded-md bg-growth-accent px-4 text-sm font-black text-background transition duration-200 hover:bg-foreground"
-                    onClick={handleUseTemplate}
-                  >
-                    {t('usePrompt')}
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* 底部居中：Recreate 按钮（主题色，圆角与参数按钮一致） */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-center p-4 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+              <button
+                type="button"
+                className="growth-btn-drop-shadow pointer-events-auto inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl bg-growth-accent px-6 text-sm font-black text-background transition duration-200 hover:bg-foreground"
+                onClick={handleUseTemplate}
+              >
+                {t('recreate')}
+              </button>
+            </div>
           </article>
         );
       })}
