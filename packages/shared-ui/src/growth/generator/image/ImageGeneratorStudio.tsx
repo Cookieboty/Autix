@@ -222,16 +222,6 @@ export function ImageGeneratorStudio({
                 <p className="mt-4 max-w-xl text-base font-medium text-foreground/42">
                   {t('imageBlankDescription')}
                 </p>
-                {mode === 'history' ? (
-                  <div className="mt-8 w-full max-w-2xl">
-                    <PublicImageHistoryPanel
-                      items={historyItems}
-                      loading={historyLoading}
-                      density={templateDensity}
-                      pending={pendingGeneration}
-                    />
-                  </div>
-                ) : null}
               </section>
             )}
           </div>

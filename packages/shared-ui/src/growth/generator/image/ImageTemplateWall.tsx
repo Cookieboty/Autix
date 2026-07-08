@@ -116,7 +116,7 @@ export function ImageTemplateGrid({
         return (
           <article
             key={template.id}
-            className={`growth-generator-masonry group relative block w-full break-inside-avoid overflow-hidden bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110 ${tight ? 'mb-px rounded-none' : 'mb-2 rounded-md'}`}
+            className={`growth-generator-masonry group relative block w-full break-inside-avoid overflow-hidden bg-secondary text-left transition duration-300 hover:brightness-110 ${tight ? 'mb-px rounded-none' : 'mb-2 rounded-md hover:scale-[1.01]'}`}
             style={{ animationDelay: `${(index % 9) * 80}ms` }}
           >
             {cover ? (
