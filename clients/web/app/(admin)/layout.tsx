@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AdminSidebar } from '@autix/shared-ui/admin';
-import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
+import { RouteLoader, SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 import { useAuthStore, useUiStore } from '@autix/shared-store';
 
 export default function DashboardLayout({
@@ -24,11 +24,7 @@ export default function DashboardLayout({
   }, [hydrated, isAuthenticated, isAdmin, router, openAuthModal]);
 
   if (!hydrated || !isAuthenticated || !isAdmin) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-background">
-        <div className="text-muted-foreground">{t('loading')}</div>
-      </div>
-    );
+    return <RouteLoader label={t('loading')} />;
   }
 
   return (

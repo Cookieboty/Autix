@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   detectImageModelKind,
@@ -19,7 +19,6 @@ import {
   resolveImageCapabilityFromModelParam,
 } from './generator-image-presenters';
 import { findVideoModelByHint } from './generator-video-presenters';
-import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
 import { buildDiscountTranslationValues } from './discount';
 import type { ImageStudioMode } from './generator/generator-studio-helpers';
@@ -60,8 +59,6 @@ export function PublicGeneratorStudioView({
   const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
   const [selectedVideoModelId, setSelectedVideoModelId] = useState<string | null>(null);
   const [videoModelsLoading, setVideoModelsLoading] = useState(kind === 'video');
-  const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(64);
   const selectedImageModel = imageModels.find((model) => model.id === selectedImageModelId) ?? null;
   const selectedVideoModel = videoModels.find((model) => model.id === selectedVideoModelId) ?? null;
   const imageCapability = useMemo(
@@ -149,27 +146,22 @@ export function PublicGeneratorStudioView({
     };
   }, [initialModel, kind]);
 
-  useEffect(() => {
-    const header = headerRef.current;
-    if (!header) return;
-
-    const syncHeaderHeight = () => {
-      setHeaderHeight(Math.ceil(header.getBoundingClientRect().height));
-    };
-
-    syncHeaderHeight();
-    const resizeObserver = new ResizeObserver(syncHeaderHeight);
-    resizeObserver.observe(header);
-    return () => resizeObserver.disconnect();
-  }, []);
-
   return (
-    <div className="min-h-svh bg-card text-foreground" style={{ paddingTop: headerHeight }}>
-      <div ref={headerRef} className="fixed inset-x-0 top-0 z-50">
+    <div className="relative flex h-full flex-col bg-background text-foreground">
+      {/* 功能页主题背景：唯一的全屏固定底层（渐变 + 噪点），滑动时不动，内容与导航都透出它 */}
+      <div
+        className={`pointer-events-none fixed inset-0 ${kind === 'video' ? 'growth-video-studio-bg' : 'growth-image-studio-bg'}`}
+      />
+      <div
+        className={`growth-generator-noise pointer-events-none fixed inset-0 ${kind === 'video' ? 'opacity-[0.1]' : 'opacity-[0.13]'}`}
+      />
+      {/* 导航由 (public) layout 持久提供；此处仅保留功能页自己的促销条（在导航下方，固定不滚） */}
+      <div className="relative shrink-0">
         <PublicPromoBar label={t('generator.studio.topPromo', buildDiscountTranslationValues())} href="/pricing" />
-        <PublicGeneratorAppNav kind={kind} />
       </div>
-      {kind === 'video' ? (
+      {/* studio 区占满剩余高度（定高）：image 内部自管滚动；video 在此容器内滚动 */}
+      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-none">
+        {kind === 'video' ? (
         <VideoGeneratorStudio
           items={items}
           initialModel={initialModel}
@@ -193,6 +185,7 @@ export function PublicGeneratorStudioView({
           initialMode={initialMode}
         />
       )}
+      </div>
     </div>
   );
 }

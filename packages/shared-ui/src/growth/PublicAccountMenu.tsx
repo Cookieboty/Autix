@@ -167,12 +167,13 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hydrated = useAuthStore((state) => state.hydrated);
   const logout = useAuthStore((state) => state.logout);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
   const membershipQuery = useMyMembershipQuery(isAuthenticated);
   const pointsQuery = usePointsBalanceQuery(isAuthenticated);
   const pointsSummaryQuery = usePointsSummaryQuery(isAuthenticated);
-  // 悬浮关闭延时器：hook 必须在任何条件 return 之前声明，否则未登录/已登录切换时 hook 数量不一致
+  // 悬浮延时关闭用的定时器 ref —— 必须在任何条件 return 之前声明，保证 hooks 顺序稳定
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 头像外环进度 = 已消耗积分 / 已发放积分总额
@@ -186,6 +187,19 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
     }
     return total > 0 ? Math.min(1, consumed / total) : 0;
   })();
+
+  // hydrate 完成前无法确定登录态：渲染与头像等尺寸的中性占位，
+  // 避免已登录用户在公开页 SSR/首帧闪现「登录/注册」按钮甚至误触打开登录弹窗。
+  if (!hydrated) {
+    const ringSize = compact ? 32 : 40;
+    return (
+      <div
+        className="shrink-0 animate-pulse rounded-full bg-secondary"
+        style={{ width: ringSize, height: ringSize }}
+        aria-hidden
+      />
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return (

@@ -9,14 +9,33 @@ import type { PublicGrowthMediaItem } from '../../types';
 import { imageTemplateCover, type TemplateDensity } from '../generator-studio-helpers';
 
 const TEMPLATE_DENSITY_WALL_CLASS: Record<TemplateDensity, string> = {
+  xrelaxed: 'columns-1 gap-3 lg:columns-2 2xl:columns-3',
   relaxed: 'columns-1 gap-3 sm:columns-2 lg:columns-3 2xl:columns-4',
   normal: 'columns-2 gap-2 md:columns-4 xl:columns-5',
   dense: 'columns-2 gap-1.5 md:columns-5 xl:columns-6',
+  xdense: 'columns-3 gap-1.5 md:columns-6 xl:columns-8',
 };
 const TEMPLATE_DENSITY_SKELETON_CLASS: Record<TemplateDensity, string> = {
+  xrelaxed: 'grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3',
   relaxed: 'grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4',
   normal: 'grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5',
   dense: 'grid-cols-2 gap-1.5 md:grid-cols-5 xl:grid-cols-6',
+  xdense: 'grid-cols-3 gap-1.5 md:grid-cols-6 xl:grid-cols-8',
+};
+// 紧凑版：列数与上面一致，但列间距压到 1px（配合卡片 mb-px、无圆角），用于 /ai/image 模板墙
+const TEMPLATE_DENSITY_WALL_CLASS_TIGHT: Record<TemplateDensity, string> = {
+  xrelaxed: 'columns-1 gap-px lg:columns-2 2xl:columns-3',
+  relaxed: 'columns-1 gap-px sm:columns-2 lg:columns-3 2xl:columns-4',
+  normal: 'columns-2 gap-px md:columns-4 xl:columns-5',
+  dense: 'columns-2 gap-px md:columns-5 xl:columns-6',
+  xdense: 'columns-3 gap-px md:columns-6 xl:columns-8',
+};
+const TEMPLATE_DENSITY_SKELETON_CLASS_TIGHT: Record<TemplateDensity, string> = {
+  xrelaxed: 'grid-cols-1 gap-px lg:grid-cols-2 2xl:grid-cols-3',
+  relaxed: 'grid-cols-1 gap-px sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4',
+  normal: 'grid-cols-2 gap-px md:grid-cols-4 xl:grid-cols-5',
+  dense: 'grid-cols-2 gap-px md:grid-cols-5 xl:grid-cols-6',
+  xdense: 'grid-cols-3 gap-px md:grid-cols-6 xl:grid-cols-8',
 };
 
 function repeatedItems(items: PublicGrowthMediaItem[], count: number) {
@@ -69,6 +88,7 @@ export function ImageTemplateGrid({
   onUseTemplate,
   limit = 24,
   compact = false,
+  tight = false,
 }: {
   templates: ImageTemplate[];
   density: TemplateDensity;
@@ -77,12 +97,15 @@ export function ImageTemplateGrid({
   limit?: number;
   /** 精简悬浮：只显示左上作者 + 右上点赞，隐藏底部分类/标题/浏览量/Use */
   compact?: boolean;
+  /** 紧凑铺排：1px 间距 + 无圆角（用于 /ai/image 模板墙） */
+  tight?: boolean;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const previewTemplates = templates.slice(0, limit);
+  const wallClass = (tight ? TEMPLATE_DENSITY_WALL_CLASS_TIGHT : TEMPLATE_DENSITY_WALL_CLASS)[density];
 
   return (
-    <div className={`opacity-95 ${TEMPLATE_DENSITY_WALL_CLASS[density]}`}>
+    <div className={`opacity-95 ${wallClass}`}>
       {previewTemplates.map((template, index) => {
         const cover = imageTemplateCover(template);
         const author = template.authorName || template.authorUrl || t('unknownAuthor');
@@ -93,7 +116,7 @@ export function ImageTemplateGrid({
         return (
           <article
             key={template.id}
-            className="growth-generator-masonry group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-md bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
+            className={`growth-generator-masonry group relative block w-full break-inside-avoid overflow-hidden bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110 ${tight ? 'mb-px rounded-none' : 'mb-2 rounded-md'}`}
             style={{ animationDelay: `${(index % 9) * 80}ms` }}
           >
             {cover ? (
@@ -173,16 +196,16 @@ export function PublicImageTemplateWall({
   const t = useTranslations('publicGrowth.generator.studio');
   const previewTemplates = templates.slice(0, 24);
   const scrollFrameClass =
-    'pointer-events-auto absolute inset-x-0 bottom-0 top-0 overflow-y-auto overscroll-contain pb-[370px] pt-16 [scrollbar-gutter:stable]';
+    'pointer-events-auto absolute inset-x-0 bottom-0 top-0 overflow-y-auto overscroll-contain pb-[370px] pt-14 [scrollbar-gutter:stable]';
 
   if (loading) {
     return (
       <div className={scrollFrameClass}>
-        <div className={`pointer-events-none grid opacity-75 ${TEMPLATE_DENSITY_SKELETON_CLASS[density]}`}>
+        <div className={`pointer-events-none grid opacity-75 ${TEMPLATE_DENSITY_SKELETON_CLASS_TIGHT[density]}`}>
           {Array.from({ length: 12 }, (_, index) => (
             <div
               key={index}
-              className="h-56 animate-pulse rounded-md bg-secondary"
+              className="h-56 animate-pulse rounded-none bg-secondary"
               style={{ animationDelay: `${(index % 6) * 90}ms` }}
             />
           ))}
@@ -210,6 +233,7 @@ export function PublicImageTemplateWall({
         density={density}
         onSelectTemplate={onSelectTemplate}
         onUseTemplate={onUseTemplate}
+        tight
       />
     </div>
   );

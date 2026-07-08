@@ -71,7 +71,7 @@ export function PublicPricingView({
   };
 
   return (
-    <PublicGrowthShell promo={{ label: t('promo'), href: '/membership/upgrade' }}>
+    <PublicGrowthShell promo={{ label: t('promo'), href: '/membership/upgrade' }} showNav={false}>
       <main className="overflow-hidden bg-background">
         <section className="relative border-b border-foreground/10 bg-background">
           <div className="growth-pricing-grid-overlay" />

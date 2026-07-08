@@ -1,7 +1,8 @@
 import type { ImageTemplate } from '@autix/shared-store';
 
 export type ImageStudioMode = 'history' | 'templates';
-export type TemplateDensity = 'relaxed' | 'normal' | 'dense';
+// 5 档密度：xrelaxed = 图最大/列最少 … xdense = 图最小/列最多
+export type TemplateDensity = 'xrelaxed' | 'relaxed' | 'normal' | 'dense' | 'xdense';
 export type PublicUploadedReference = {
   id: string;
   url: string;

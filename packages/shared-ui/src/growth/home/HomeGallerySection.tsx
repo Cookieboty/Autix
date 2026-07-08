@@ -6,6 +6,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { publicGeneratorActions, type ImageTemplate } from '@autix/shared-store';
 import { ImageTemplateGrid } from '../generator/image/ImageTemplateWall';
 import { PublicImageTemplateDialog } from '../generator/image/ImageTemplateDialog';
+import { HomeGallerySkeleton } from './HomeGallerySkeleton';
 
 export type HomeGallerySource = 'image' | 'video';
 
@@ -68,10 +69,12 @@ export function HomeGallerySection({
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="h-64 animate-pulse rounded-md bg-secondary" />
-            ))}
+          <div className="relative">
+            {/* 与已加载态相同的固定高度裁剪，保证 loading → 内容 不跳动 */}
+            <div className="h-[1000px] overflow-hidden md:h-[1140px]">
+              <HomeGallerySkeleton />
+            </div>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-background via-background/85 to-transparent" />
           </div>
         ) : (
           <div className="relative">
