@@ -1,9 +1,12 @@
 -- 1. model_configs：只加 schema 字段。
 --    pointCostWeight 保留 —— 它服务于 llm-call-tracker.ts 那条独立计费路径，
 --    删除推迟到第四期，前置条件是该路径先迁到 task_model_bindings.multiplier。
+-- paramsSchema / pricingSchema 可空：NULL = 尚未配置。
+-- 不能用 NOT NULL DEFAULT '{"terms":[]}' —— evaluatePricing 对空 terms 返回 0，
+-- 占位值的语义是「免费生成」，且没有列级信号能区分「已配置」与「从未配置」。
 ALTER TABLE "model_configs"
-  ADD COLUMN "paramsSchema" JSONB NOT NULL DEFAULT '{}',
-  ADD COLUMN "pricingSchema" JSONB NOT NULL DEFAULT '{"terms":[]}',
+  ADD COLUMN "paramsSchema" JSONB,
+  ADD COLUMN "pricingSchema" JSONB,
   ADD COLUMN "schemaVersion" INTEGER NOT NULL DEFAULT 1,
   ADD COLUMN "description" JSONB NOT NULL DEFAULT '{}';
 
