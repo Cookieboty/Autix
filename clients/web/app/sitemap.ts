@@ -56,7 +56,14 @@ function emit(
   // neutral: bare path only, already pushed above.
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+/**
+ * Builds the sitemap entries. `maxEntries` defaults to the real production
+ * limit (`MAX_ENTRIES`, Next's hard cap) and is only overridable so a test
+ * can exercise the throw without actually materializing 50,000 route
+ * entries — the production call site (`sitemap()` below) never passes an
+ * override, so the shipped behavior is unchanged.
+ */
+export function buildSitemapEntries(maxEntries: number = MAX_ENTRIES): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = [];
   // Read at call time, not import time: `resolveSiteUrl()` re-reads
   // `NEXT_PUBLIC_SITE_URL` on every call rather than freezing it at module
@@ -83,12 +90,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // correct via generateMetadata; omission here only means we don't
   // proactively submit them — Google still finds them via internal links.
 
-  if (entries.length >= MAX_ENTRIES) {
+  if (entries.length >= maxEntries) {
     throw new Error(
-      `sitemap entry count ${entries.length} is approaching Next's ${MAX_ENTRIES} limit; ` +
+      `sitemap entry count ${entries.length} is approaching Next's ${maxEntries} limit; ` +
         `switch to generateSitemaps() sharding instead of silently truncating.`,
     );
   }
 
   return entries;
+}
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  return buildSitemapEntries();
 }

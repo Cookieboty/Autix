@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const { default: sitemap } = await import('@/app/sitemap');
+const { default: sitemap, buildSitemapEntries } = await import('@/app/sitemap');
 
 let entries: ReturnType<typeof sitemap>;
 let urls: string[];
@@ -48,6 +48,16 @@ describe('sitemap', () => {
 
   it('条目数远低于 Next 的 50000 上限', () => {
     expect(entries.length).toBeLessThan(50_000);
+  });
+
+  it('条目数达到（注入的）上限时抛出，而非静默截断', () => {
+    // 生产环境下 50000 条目遥不可及，无法在测试里真的撑出这么多条目来触发
+    // throw；因此把上限作为参数注入 `buildSitemapEntries`，让当前 ~30 条的
+    // entries 数量轻松越过一个人为调低的阈值，从而真正执行到 throw 分支
+    // ——而不是仅仅断言"数量 < 50000"这类恒真命题。生产默认值（50_000）
+    // 未被弱化：`buildSitemapEntries()`（无参数）与默认导出的 `sitemap()`
+    // 仍然使用真实的 MAX_ENTRIES。
+    expect(() => buildSitemapEntries(1)).toThrow(/sitemap entry count \d+ is approaching/);
   });
 
   // --- Finding 2: 除 origin 根外，任何 sitemap URL 都不得以 "/" 结尾（否则提交重定向 URL） ---

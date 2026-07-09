@@ -28,17 +28,22 @@ function createNavigator() {
  */
 function createNavigatorThunk() {
   const { navigator, calls } = createNavigator();
-  let getNavigatorCalls = 0;
+  let resolveCount = 0;
   const getNavigator = () => {
-    getNavigatorCalls += 1;
+    resolveCount += 1;
     return navigator;
   };
+  // Exposed as a function, not a getter: destructuring a getter invokes it
+  // once and binds the resulting primitive to a plain (now-frozen) constant,
+  // so every later `expect(getNavigatorCalls).toBe(0)` would compare a stale
+  // captured 0 forever, no matter how many times the thunk actually runs.
+  // A function reference survives destructuring — each call reads the live
+  // `resolveCount` through the closure.
+  const getNavigatorCalls = () => resolveCount;
   return {
     getNavigator,
     calls,
-    get getNavigatorCalls() {
-      return getNavigatorCalls;
-    },
+    getNavigatorCalls,
   };
 }
 
@@ -95,7 +100,7 @@ test.each([
   // 回归钉子：修饰键 / 非左键点击必须完全不触碰 navigator 解析。
   // getNavigation() 的真实实现在 registerPlatform() 未调用时会 throw，
   // 提前求值会让新标签页打开等原生行为在未初始化平台适配器时直接崩溃。
-  expect(getNavigatorCalls).toBe(0);
+  expect(getNavigatorCalls()).toBe(0);
 });
 
 test('修饰键点击时不调用调用方的 onClick（与原生新标签页打开行为一致）', () => {
@@ -132,7 +137,7 @@ test('调用方 onClick 内 preventDefault() 会抑制 navigator 导航，且不
 
   expect(calls).toEqual([]);
   // 回归钉子：调用方 preventDefault() 后必须不解析 navigator。
-  expect(getNavigatorCalls).toBe(0);
+  expect(getNavigatorCalls()).toBe(0);
 });
 
 test('未 preventDefault 的 onClick 不影响正常导航', () => {
