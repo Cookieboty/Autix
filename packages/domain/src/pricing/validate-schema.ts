@@ -8,7 +8,8 @@ export interface SchemaViolation {
     | 'FIRST_TERM_MUST_BE_CONST'
     | 'DUPLICATE_TERM_ID'
     | 'TERM_NEEDS_EXACTLY_ONE_SOURCE'
-    | 'ZERO_DIVISOR';
+    | 'ZERO_DIVISOR'
+    | 'MALFORMED_TERM';
   message: string;
   termId?: string;
 }
@@ -34,32 +35,41 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
 
   const [first] = schema.terms;
 
-  if (first.op !== 'add') {
-    violations.push({
-      code: 'FIRST_TERM_MUST_BE_ADD',
-      message: '首项必须是 add —— 累加器从 0 起步，mul 会把整单算成 0',
-      termId: first.id,
-    });
-  }
+  if (first === null || first === undefined || typeof first !== 'object') {
+    violations.push({ code: 'MALFORMED_TERM', message: '首项不是有效的对象', termId: undefined });
+  } else {
+    if (first.op !== 'add') {
+      violations.push({
+        code: 'FIRST_TERM_MUST_BE_ADD',
+        message: '首项必须是 add —— 累加器从 0 起步，mul 会把整单算成 0',
+        termId: first.id,
+      });
+    }
 
-  if (first.when) {
-    violations.push({
-      code: 'FIRST_TERM_MUST_BE_UNCONDITIONAL',
-      message: '首项不能带 when —— 断言不成立时累加器会停在 0',
-      termId: first.id,
-    });
-  }
+    if (first.when) {
+      violations.push({
+        code: 'FIRST_TERM_MUST_BE_UNCONDITIONAL',
+        message: '首项不能带 when —— 断言不成立时累加器会停在 0',
+        termId: first.id,
+      });
+    }
 
-  if (!('const' in first)) {
-    violations.push({
-      code: 'FIRST_TERM_MUST_BE_CONST',
-      message: '首项取值源必须是 const —— table 查表未命中、perUnit 参数缺失时该项会被跳过',
-      termId: first.id,
-    });
+    if (!('const' in first)) {
+      violations.push({
+        code: 'FIRST_TERM_MUST_BE_CONST',
+        message: '首项取值源必须是 const —— table 查表未命中、perUnit 参数缺失时该项会被跳过',
+        termId: first.id,
+      });
+    }
   }
 
   const seen = new Set<string>();
   for (const term of schema.terms) {
+    if (term === null || term === undefined || typeof term !== 'object') {
+      violations.push({ code: 'MALFORMED_TERM', message: 'term 不是有效的对象', termId: undefined });
+      continue;
+    }
+
     if (seen.has(term.id)) {
       violations.push({ code: 'DUPLICATE_TERM_ID', message: `term id 重复：${term.id}`, termId: term.id });
     }

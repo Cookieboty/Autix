@@ -72,4 +72,35 @@ describe('validatePricingSchema', () => {
     };
     expect(codes(schema)).toContain('ZERO_DIVISOR');
   });
+
+  it('reports all three first-term violations independently when first term violates all three rules', () => {
+    const schema: PricingSchema = {
+      terms: [
+        {
+          id: 'broken',
+          op: 'mul',
+          when: { all: [{ param: 'p', op: 'eq', value: true }] },
+          table: { param: 'q', values: { a: 1 } },
+        },
+      ],
+    } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    expect(violations.map((v) => v.code)).toContain('FIRST_TERM_MUST_BE_ADD');
+    expect(violations.map((v) => v.code)).toContain('FIRST_TERM_MUST_BE_UNCONDITIONAL');
+    expect(violations.map((v) => v.code)).toContain('FIRST_TERM_MUST_BE_CONST');
+  });
+
+  it('returns MALFORMED_TERM for null term and does not throw', () => {
+    const schema = { terms: [null] } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    expect(violations.map((v) => v.code)).toContain('MALFORMED_TERM');
+  });
+
+  it('returns MALFORMED_TERM for malformed second term after valid first term', () => {
+    const schema = {
+      terms: [{ id: 'base', op: 'add', const: 1 }, undefined],
+    } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    expect(violations.map((v) => v.code)).toContain('MALFORMED_TERM');
+  });
 });
