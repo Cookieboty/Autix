@@ -17,20 +17,35 @@ export interface LinkProps
   children?: React.ReactNode;
 }
 
+/**
+ * 渲染期本地化 context。`getNavigation()` 是模块级单例，SSR 时跨请求共享，
+ * 因此 `<a href>` 的取值不能读单例（会在并发请求间串语言），必须走 React context。
+ * 命令期（push/replace）只在浏览器事件回调中执行，读单例是安全的。
+ */
+const LocalizeCtx = React.createContext<(path: string) => string>((p) => p);
+export const LocaleRoutingProvider = LocalizeCtx.Provider;
+export function useLocalizePath(): (path: string) => string {
+  return React.useContext(LocalizeCtx);
+}
+
 export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
   ({ href, replace, onClick, children, ...rest }, ref) => {
+    const localize = useLocalizePath();
+    const localizedHref = localize(href);
+
     const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
       onClick?.(e);
       if (e.defaultPrevented) return;
       e.preventDefault();
       const nav = getNavigation();
+      // 传原始（未加前缀）href：适配器内部负责补 locale 前缀，避免双重前缀。
       if (replace) nav.replace(href);
       else nav.push(href);
     };
 
     return (
-      <a ref={ref} href={href} onClick={handleClick} {...rest}>
+      <a ref={ref} href={localizedHref} onClick={handleClick} {...rest}>
         {children}
       </a>
     );
