@@ -68,6 +68,29 @@ describe('buildAlternates', () => {
     expect(alternates!.canonical).toBe('https://example.com/zh-CN/docs');
   });
 
+  // --- Finding 1: partial 只能自指向策略声明过的 locale，未声明的 locale 必须收敛 ---
+
+  it('partial + ja：ja 未在 /docs 策略中声明，canonical 收敛到默认语言裸路径', () => {
+    const { alternates } = buildAlternates('/docs', undefined, 'ja');
+    expect(alternates!.canonical).toBe('https://example.com/docs');
+    const langs = alternates!.languages as Record<string, string>;
+    expect(Object.keys(langs).sort()).toEqual(['en', 'x-default', 'zh-CN']);
+  });
+
+  it('partial + zh-CN（声明过）：canonical 保持自指向，不受收敛逻辑影响', () => {
+    const { alternates } = buildAlternates('/docs', undefined, 'zh-CN');
+    expect(alternates!.canonical).toBe('https://example.com/zh-CN/docs');
+    const langs = alternates!.languages as Record<string, string>;
+    expect(Object.keys(langs).sort()).toEqual(['en', 'x-default', 'zh-CN']);
+  });
+
+  it('partial + en（默认语言，已声明）：canonical 落回裸路径', () => {
+    const { alternates } = buildAlternates('/docs', undefined, 'en');
+    expect(alternates!.canonical).toBe('https://example.com/docs');
+    const langs = alternates!.languages as Record<string, string>;
+    expect(Object.keys(langs).sort()).toEqual(['en', 'x-default', 'zh-CN']);
+  });
+
   it('neutral + ja：canonical 仍收敛到裸路径，不随 locale 变化', () => {
     const { alternates } = buildAlternates(
       '/marketplace/[type]/[id]',
@@ -108,5 +131,22 @@ describe('buildAlternates', () => {
     expect(langs['zh-CN']).toBe(
       'https://example.com/zh-CN/docs/guides/getting-started',
     );
+  });
+
+  // --- Finding 2: catch-all 拆段重拼时必须丢弃空段，避免双斜杠 / 悬挂斜杠 ---
+
+  it('catch-all 前导 "/" 不产生双斜杠', () => {
+    const { alternates } = buildAlternates('/docs/[...slug]', { slug: '/leading' });
+    expect(alternates!.canonical).toBe('https://example.com/docs/leading');
+  });
+
+  it('catch-all 尾随 "/" 不产生悬挂斜杠', () => {
+    const { alternates } = buildAlternates('/docs/[...slug]', { slug: 'trailing/' });
+    expect(alternates!.canonical).toBe('https://example.com/docs/trailing');
+  });
+
+  it('catch-all 连续 "//" 折叠为单段边界', () => {
+    const { alternates } = buildAlternates('/docs/[...slug]', { slug: 'a//b' });
+    expect(alternates!.canonical).toBe('https://example.com/docs/a/b');
   });
 });
