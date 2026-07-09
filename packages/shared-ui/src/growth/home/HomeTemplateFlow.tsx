@@ -4,6 +4,7 @@ import {
   Video,
 } from 'lucide-react';
 import { MediaThumb } from '../MediaBlocks';
+import { Link } from '../../navigation';
 import type { PublicGrowthMediaItem } from '../types';
 import { demoVideoItem, HomeSectionIntro, releaseDetail } from './home-parts';
 
@@ -170,27 +171,27 @@ export function HomeTemplateFlow({
           subtitle={subtitle}
           actions={
             <>
-              <a
+              <Link
                 href="/marketplace/image-templates"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
               >
                 <Images className="size-4" />
                 {imageLabel}
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/marketplace/video-templates"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-info/24 bg-info/10 px-3 py-2 text-sm font-semibold text-info transition hover:bg-primary hover:text-primary-foreground"
               >
                 <Video className="size-4" />
                 {videoLabel}
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/community"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-black text-primary-foreground transition hover:bg-info"
               >
                 <Layers3 className="size-4" />
                 {actionLabel}
-              </a>
+              </Link>
             </>
           }
         />

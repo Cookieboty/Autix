@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { ThemeLogo } from '../brand';
 import { Button } from '../ui';
 import { cn } from '../ui/utils';
+import { Link } from '../navigation';
 import { AuthErrorAlert, AuthInputField, AuthPasswordField } from './auth-fields';
 import { AuthExperienceShell } from './auth-shell';
 import { getLoginErrorMessage } from './error-utils';
@@ -218,14 +219,14 @@ export function LoginFormPanel({
       <p className="text-center text-xs leading-5 text-white/28">
         {t.rich('modalTerms', {
           privacy: (chunks) => (
-            <a href="/docs/privacy" className="underline underline-offset-4 hover:text-white">
+            <Link href="/docs/privacy" className="underline underline-offset-4 hover:text-white">
               {chunks}
-            </a>
+            </Link>
           ),
           terms: (chunks) => (
-            <a href="/docs/terms" className="underline underline-offset-4 hover:text-white">
+            <Link href="/docs/terms" className="underline underline-offset-4 hover:text-white">
               {chunks}
-            </a>
+            </Link>
           ),
         })}
       </p>

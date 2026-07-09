@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowUpRight, History, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Link } from '../../navigation';
 import { buildDiscountTranslationValues } from '../discount';
 import type { ImageStudioMode, TemplateDensity } from './generator-studio-helpers';
 
@@ -81,13 +82,13 @@ export function OfferStrip({
       </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="hidden text-foreground/40 md:inline">{premium}</span>
-      <a
+      <Link
         href="/pricing"
         className="inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-[8px] bg-foreground px-2.5 text-xs font-bold text-background hover:bg-growth-accent"
       >
         {t('getUnlimited')}
         <ArrowUpRight className="size-3.5" />
-      </a>
+      </Link>
       <button
         type="button"
         className="grid size-7 shrink-0 place-items-center rounded-[8px] text-foreground/45 hover:bg-secondary hover:text-foreground"

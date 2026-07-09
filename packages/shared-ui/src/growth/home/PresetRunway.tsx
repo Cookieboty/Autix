@@ -1,4 +1,5 @@
 import { Layers3, Sparkles } from 'lucide-react';
+import { Link } from '../../navigation';
 import { HomeSectionIntro } from './home-parts';
 
 function LoopingTagRow({
@@ -60,13 +61,13 @@ export function PresetRunway({
           subtitle={subtitle}
           center
           actions={
-            <a
+            <Link
               href="/presets"
               className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-primary px-4 py-2 text-sm font-black text-primary-foreground transition hover:bg-info"
             >
               <Layers3 className="size-4" />
               {actionLabel}
-            </a>
+            </Link>
           }
         />
       </div>
