@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { evaluatePricing } from './evaluate';
 import { affectedParams, priceOptions } from './introspect';
 import { quoteTask } from './quote';
 import type { ParamsSchema, PricingSchema } from './types';
