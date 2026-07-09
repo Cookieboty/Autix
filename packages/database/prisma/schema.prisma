@@ -524,7 +524,12 @@ model model_configs {
   updatedAt               DateTime                         @updatedAt
   capabilities            String[]                         @default(["text"])
   pointCostWeight         Decimal                          @default(1.0) @db.Decimal(6, 2)
+  paramsSchema            Json                             @default("{}")
+  pricingSchema           Json                             @default("{\"terms\":[]}")
+  schemaVersion           Int                              @default(1)
+  description             Json                             @default("{}")
   allowedMembershipLevels model_config_membership_levels[]
+  taskBindings            task_model_bindings[]
 
   @@index([createdBy])
   @@index([isActive])
@@ -542,6 +547,58 @@ model model_config_membership_levels {
 
   @@id([modelConfigId, levelId])
   @@index([levelId])
+}
+
+model task_definitions {
+  id              String                @id @default(cuid())
+  taskType        String                @unique @db.VarChar(64)
+  name            String                @db.VarChar(100)
+  category        String                @db.VarChar(20)
+  fixedCostSchema Json?
+  isActive        Boolean               @default(true)
+  sort            Int                   @default(0)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  bindings        task_model_bindings[]
+
+  @@index([isActive])
+  @@map("task_definitions")
+}
+
+model task_model_bindings {
+  taskType      String           @db.VarChar(64)
+  modelConfigId String
+  multiplier    Decimal          @default(1.0) @db.Decimal(6, 3)
+  isDefault     Boolean          @default(false)
+  isActive      Boolean          @default(true)
+  sort          Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  task          task_definitions @relation(fields: [taskType], references: [taskType], onDelete: Cascade)
+  modelConfig   model_configs    @relation(fields: [modelConfigId], references: [id], onDelete: Cascade)
+
+  @@id([taskType, modelConfigId])
+  @@index([modelConfigId])
+  @@index([taskType, isActive])
+  @@map("task_model_bindings")
+}
+
+model pricing_discounts {
+  id            String    @id @default(cuid())
+  code          String    @unique @db.VarChar(64)
+  name          String    @db.VarChar(100)
+  factor        Decimal   @db.Decimal(6, 3)
+  scope         Json      @default("{}")
+  stackable     Boolean   @default(false)
+  priority      Int       @default(0)
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([isActive, effectiveFrom, effectiveTo])
+  @@map("pricing_discounts")
 }
 
 model system_settings {
