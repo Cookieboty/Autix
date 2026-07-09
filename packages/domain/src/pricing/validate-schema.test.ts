@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { validatePricingSchema } from './validate-schema';
-import type { PricingSchema } from './types';
+import { validateParamsSchema, validatePricingSchema } from './validate-schema';
+import type { ParamsSchema, PricingSchema } from './types';
 
 const codes = (schema: PricingSchema) => validatePricingSchema(schema).map((v) => v.code);
+
+const paramsCodes = (p: ParamsSchema, pr?: PricingSchema) =>
+  validateParamsSchema(p, pr).map((v) => v.code);
 
 describe('validatePricingSchema', () => {
   it('accepts a schema whose first term is an unconditional const add', () => {
@@ -152,5 +155,78 @@ describe('validatePricingSchema', () => {
     expect(violations).toHaveLength(1);
     expect(violations[0].code).toBe('MALFORMED_TERM');
     expect(violations[0].message).toContain('terms[1]');
+  });
+});
+
+describe('validateParamsSchema', () => {
+  const valid: ParamsSchema = {
+    type: 'object',
+    properties: {
+      resolution: { type: 'string', enum: ['1K', '4K'], default: '1K', 'x-ui': { control: 'chips' } },
+      seconds: { type: 'integer', minimum: 4, maximum: 15, default: 5, 'x-ui': { control: 'stepper' } },
+      audio: { type: 'boolean', default: false, 'x-ui': { control: 'switch' } },
+      inputTokens: { type: 'integer', minimum: 0, default: 0, 'x-ui': { control: 'hidden' } },
+    },
+  };
+
+  it('accepts a well-formed schema', () => {
+    expect(validateParamsSchema(valid)).toEqual([]);
+  });
+
+  it('requires x-ui on every property', () => {
+    const schema = {
+      type: 'object',
+      properties: { r: { type: 'string', enum: ['a'] } },
+    } as unknown as ParamsSchema;
+    expect(paramsCodes(schema)).toContain('MISSING_X_UI');
+  });
+
+  it('requires enum for chips and select', () => {
+    const schema: ParamsSchema = {
+      type: 'object',
+      properties: { r: { type: 'string', 'x-ui': { control: 'chips' } } },
+    };
+    expect(paramsCodes(schema)).toContain('CHOICE_CONTROL_NEEDS_ENUM');
+  });
+
+  it('requires minimum and maximum for slider and stepper', () => {
+    const schema: ParamsSchema = {
+      type: 'object',
+      properties: { n: { type: 'integer', minimum: 1, 'x-ui': { control: 'stepper' } } },
+    };
+    expect(paramsCodes(schema)).toContain('RANGE_CONTROL_NEEDS_BOUNDS');
+  });
+
+  it('requires boolean type for switch', () => {
+    const schema: ParamsSchema = {
+      type: 'object',
+      properties: { a: { type: 'string', 'x-ui': { control: 'switch' } } },
+    };
+    expect(paramsCodes(schema)).toContain('SWITCH_NEEDS_BOOLEAN');
+  });
+
+  it('allows hidden control on any type without enum or bounds', () => {
+    expect(validateParamsSchema(valid)).toEqual([]);
+  });
+
+  it('rejects a pricingSchema referencing a param that does not exist', () => {
+    const pricing: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 1 },
+        { id: 'style', op: 'mul', table: { param: 'style', values: { anime: 2 } } },
+      ],
+    };
+    expect(paramsCodes(valid, pricing)).toContain('PRICING_REFERENCES_UNKNOWN_PARAM');
+  });
+
+  it('accepts a pricingSchema whose params all exist', () => {
+    const pricing: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 1 },
+        { id: 'res', op: 'mul', table: { param: 'resolution', values: { '1K': 1, '4K': 4 } } },
+        { id: 'dur', op: 'mul', perUnit: { param: 'seconds', unitCost: 1 } },
+      ],
+    };
+    expect(validateParamsSchema(valid, pricing)).toEqual([]);
   });
 });

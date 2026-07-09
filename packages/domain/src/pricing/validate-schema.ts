@@ -1,4 +1,5 @@
-import type { PricingSchema, Term } from './types';
+import { affectedParams } from './introspect';
+import type { ParamsSchema, PricingSchema, Term, XUiControl } from './types';
 
 export interface SchemaViolation {
   code:
@@ -9,10 +10,18 @@ export interface SchemaViolation {
     | 'DUPLICATE_TERM_ID'
     | 'TERM_NEEDS_EXACTLY_ONE_SOURCE'
     | 'ZERO_DIVISOR'
-    | 'MALFORMED_TERM';
+    | 'MALFORMED_TERM'
+    | 'MISSING_X_UI'
+    | 'CHOICE_CONTROL_NEEDS_ENUM'
+    | 'RANGE_CONTROL_NEEDS_BOUNDS'
+    | 'SWITCH_NEEDS_BOOLEAN'
+    | 'PRICING_REFERENCES_UNKNOWN_PARAM';
   message: string;
   termId?: string;
 }
+
+const CHOICE_CONTROLS: XUiControl[] = ['chips', 'select'];
+const RANGE_CONTROLS: XUiControl[] = ['slider', 'stepper'];
 
 function sourceCount(term: Term): number {
   return (['const', 'table', 'perUnit'] as const).filter((key) => key in term).length;
@@ -90,6 +99,68 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
 
     if ('perUnit' in term && term.perUnit.divisor === 0) {
       violations.push({ code: 'ZERO_DIVISOR', message: 'perUnit.divisor 不能为 0', termId: term.id });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * 校验 paramsSchema 的控件契约。传入 pricingSchema 时额外校验跨 schema 引用完整性。
+ *
+ * 跨 schema 校验是必需的：pricingSchema 引用一个不存在的参数时，
+ * 该 term 会因查表/取参失败而被静默跳过——价格不变，没有报错，
+ * 管理员以为改价生效了。
+ */
+export function validateParamsSchema(
+  paramsSchema: ParamsSchema,
+  pricingSchema?: PricingSchema,
+): SchemaViolation[] {
+  const violations: SchemaViolation[] = [];
+
+  for (const [name, property] of Object.entries(paramsSchema.properties ?? {})) {
+    const ui = property['x-ui'];
+    if (!ui) {
+      violations.push({ code: 'MISSING_X_UI', message: `参数 ${name} 缺少 x-ui`, termId: name });
+      continue;
+    }
+    if (ui.control === 'hidden') continue;
+
+    if (CHOICE_CONTROLS.includes(ui.control) && !property.enum) {
+      violations.push({
+        code: 'CHOICE_CONTROL_NEEDS_ENUM',
+        message: `参数 ${name} 的 ${ui.control} 控件需要 enum`,
+        termId: name,
+      });
+    }
+    if (
+      RANGE_CONTROLS.includes(ui.control) &&
+      (property.minimum === undefined || property.maximum === undefined)
+    ) {
+      violations.push({
+        code: 'RANGE_CONTROL_NEEDS_BOUNDS',
+        message: `参数 ${name} 的 ${ui.control} 控件需要 minimum 与 maximum`,
+        termId: name,
+      });
+    }
+    if (ui.control === 'switch' && property.type !== 'boolean') {
+      violations.push({
+        code: 'SWITCH_NEEDS_BOOLEAN',
+        message: `参数 ${name} 的 switch 控件要求 type 为 boolean`,
+        termId: name,
+      });
+    }
+  }
+
+  if (pricingSchema) {
+    for (const name of affectedParams(pricingSchema)) {
+      if (!(name in (paramsSchema.properties ?? {}))) {
+        violations.push({
+          code: 'PRICING_REFERENCES_UNKNOWN_PARAM',
+          message: `pricingSchema 引用了 paramsSchema 中不存在的参数：${name}`,
+          termId: name,
+        });
+      }
     }
   }
 
