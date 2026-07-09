@@ -1,3 +1,4 @@
+export * from './constraints';
 export * from './evaluate';
 export * from './introspect';
 export * from './predicate';
