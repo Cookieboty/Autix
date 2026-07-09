@@ -12,12 +12,18 @@ function absolute(path: string): string {
 
 function fillParams(template: string, params?: Record<string, string>): string {
   if (!params) return template;
-  return template.replace(/\[(?:\.\.\.)?([^\]]+)\]/g, (_, key: string) => {
+  return template.replace(/\[(\.\.\.)?([^\]]+)\]/g, (_, catchAll: string | undefined, key: string) => {
     const value = params[key];
     if (value === undefined) {
       throw new Error(`buildAlternates: 模板 "${template}" 缺少参数 "${key}"`);
     }
-    return value;
+    // catch-all（如 `[...slug]`）的值本身合法地包含 `/`：按 `/` 拆段、逐段转义、
+    // 再拼回去，保留段结构。单段参数（`[id]`、`[token]` 等）整体转义，防止值里的
+    // `/`、`?`、`#` 被解析成额外路径段 / 查询串 / fragment。
+    if (catchAll) {
+      return value.split('/').map(encodeURIComponent).join('/');
+    }
+    return encodeURIComponent(value);
   });
 }
 
@@ -33,20 +39,33 @@ function languageMap(path: string, locales: readonly SupportedLanguage[]) {
 export function buildAlternates(
   template: string,
   params?: Record<string, string>,
+  locale?: SupportedLanguage,
 ): Pick<Metadata, 'alternates' | 'robots'> {
   const policy = getPolicy(template);
   const path = fillParams(template, params);
-  const canonical = absolute(path);
+  const bareCanonical = absolute(path);
+  // `full`/`partial` 自指向当前 locale：把裸路径恒指向默认语言会告诉 Google
+  // 「非英文变体是英文页的重复内容」，Google 会把它们并入英文 canonical 并从
+  // 索引中丢弃——恰好抵消这次迁移想建立的 hreflang 簇。`neutral`/`noindex`
+  // 维持恒定裸路径：正文未翻译的变体本来就是近重复内容，理应收敛。
+  const selfCanonical = absolute(localizedPath(path, locale ?? routing.defaultLocale));
 
   switch (policy.kind) {
     case 'full':
-      return { alternates: { canonical, languages: languageMap(path, routing.locales) } };
+      return {
+        alternates: { canonical: selfCanonical, languages: languageMap(path, routing.locales) },
+      };
     case 'partial':
-      return { alternates: { canonical, languages: languageMap(path, policy.locales) } };
+      return {
+        alternates: { canonical: selfCanonical, languages: languageMap(path, policy.locales) },
+      };
     case 'neutral':
       // 正文未翻译：所有 locale 变体收敛到裸路径，避免近重复内容判定
-      return { alternates: { canonical } };
+      return { alternates: { canonical: bareCanonical } };
     case 'noindex':
-      return { alternates: { canonical }, robots: { index: false, follow: false } };
+      return {
+        alternates: { canonical: bareCanonical },
+        robots: { index: false, follow: false },
+      };
   }
 }
