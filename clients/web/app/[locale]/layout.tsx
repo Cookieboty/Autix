@@ -58,10 +58,10 @@ export default async function RootLayout({
             <Providers>
               <LocaleHint />
               {/*
-                页面槽位的 Suspense 边界。存在原因：若干 noindex 客户端页
+                页面槽位的 Suspense 边界。存在原因：若干 **noindex** 客户端页
                 （pending / login / register / reset-password / activate / oauth/* /
-                marketplace/[type] / email/confirm 等）直接调用 useSearchParams 而未自带
-                Suspense；静态生成时这会触发 CSR bailout。此边界统一收口它们。
+                email/confirm 等）直接调用 useSearchParams 而未自带 Suspense；静态生成时
+                这会触发 CSR bailout。此边界统一收口这些 noindex 页。
 
                 对不 suspend 的页面（含 SEO 页）此边界完全透明——照常静态渲染出内容，
                 original-series 等仍为 SSG。
@@ -69,8 +69,13 @@ export default async function RootLayout({
                 ⚠️ 代价（安全网丢失）：在此边界之前，缺 Suspense 的 useSearchParams 会让
                 build **大声失败**在正确的位置；加了此边界后，一个内容会 suspend 的页面会
                 **静默地预渲染成空壳**（路由仍标记为 Static，HTML 却是空的），而不是报错。
-                对 noindex 页无害；但**任何新增、且本地化策略为 `full` 的页面，必须检查其
-                是否存在客户端 useSearchParams bailout**——否则会造成隐形的 SEO 回归。
+                对 noindex 页无害，但对可索引页是隐形 SEO 回归。
+
+                因此：`marketplace/[type]` 的策略是 **`neutral`（可索引）**，它【不能】依赖
+                这个根边界——那样静态壳会是空的。它在自己的 page.tsx 里自带 Suspense，
+                fallback 渲染有意义的标记。**任何未来新增、且本地化策略为 `full` 或 `neutral`
+                （即可索引）的路由，只要用了客户端 useSearchParams，都必须自带 Suspense 边界**，
+                不能落到此根边界上。
               */}
               <PlatformBinder>
                 <Suspense fallback={null}>{children}</Suspense>

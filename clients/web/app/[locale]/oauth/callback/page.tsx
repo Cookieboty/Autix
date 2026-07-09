@@ -33,6 +33,10 @@ function consumeOAuthReturnTo() {
   // 路由器不会补回前缀，用户就此丢失 locale、被导去默认语言页面。带前缀和不带前缀
   // 的值在这里同样正确，交给 router 即可。
   //
+  // 与 login/page.tsx 的 stripLocalePrefix 【故意相反】：那里当前 locale 是激活态、
+  // router 会加前缀，所以必须剥离；这里是默认 locale passthrough，必须保留。成因就是
+  // 「默认 locale passthrough vs. 非默认 locale 主动前缀」这一不对称，别把两处统一。
+  //
   // 若未来 redirect URI 加上了 locale 段（本页因此不再总在默认 locale 渲染），这个
   // 结论需要重新评估。
   const value = sanitizeReturnTo(window.sessionStorage.getItem(OAUTH_RETURN_TO_KEY));

@@ -49,4 +49,20 @@ describe('sitemap', () => {
   it('条目数远低于 Next 的 50000 上限', () => {
     expect(entries.length).toBeLessThan(50_000);
   });
+
+  // --- Finding 2: 除 origin 根外，任何 sitemap URL 都不得以 "/" 结尾（否则提交重定向 URL） ---
+
+  it('除 origin 根 https://example.com/ 外，无 URL 以 "/" 结尾', () => {
+    const offenders = urls.filter(
+      (u) => u.endsWith('/') && u !== 'https://example.com/',
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it('六个本地化首页 URL 为 /zh-CN /zh-TW /fr /ja /ru /vi（无尾斜杠）', () => {
+    for (const locale of ['zh-CN', 'zh-TW', 'fr', 'ja', 'ru', 'vi']) {
+      expect(urls).toContain(`https://example.com/${locale}`);
+      expect(urls).not.toContain(`https://example.com/${locale}/`);
+    }
+  });
 });

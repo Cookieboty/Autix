@@ -149,4 +149,39 @@ describe('buildAlternates', () => {
     const { alternates } = buildAlternates('/docs/[...slug]', { slug: 'a//b' });
     expect(alternates!.canonical).toBe('https://example.com/docs/a/b');
   });
+
+  // --- Finding 2: 首页 localizedPath 不得产生尾斜杠（否则 hreflang / canonical 指向重定向 URL） ---
+
+  it('首页 en（默认语言）：canonical 为裸 origin，无尾斜杠', () => {
+    const { alternates } = buildAlternates('/', undefined, 'en');
+    expect(alternates!.canonical).toBe('https://example.com/');
+  });
+
+  it('首页 zh-CN：canonical 自指向 /zh-CN，【无尾斜杠】', () => {
+    const { alternates } = buildAlternates('/', undefined, 'zh-CN');
+    expect(alternates!.canonical).toBe('https://example.com/zh-CN');
+  });
+
+  it('首页 hreflang 簇的 6 个 locale 变体均无尾斜杠', () => {
+    const { alternates } = buildAlternates('/', undefined, 'zh-CN');
+    const langs = alternates!.languages as Record<string, string>;
+    expect(langs['zh-CN']).toBe('https://example.com/zh-CN');
+    expect(langs['zh-TW']).toBe('https://example.com/zh-TW');
+    expect(langs.fr).toBe('https://example.com/fr');
+    expect(langs.ja).toBe('https://example.com/ja');
+    expect(langs.ru).toBe('https://example.com/ru');
+    expect(langs.vi).toBe('https://example.com/vi');
+    expect(langs.en).toBe('https://example.com/');
+    expect(langs['x-default']).toBe('https://example.com/');
+    // 除 en / x-default 的 origin 根外，不得有任何 URL 以 "/" 结尾
+    for (const [key, url] of Object.entries(langs)) {
+      if (key === 'en' || key === 'x-default') continue;
+      expect(url.endsWith('/')).toBe(false);
+    }
+  });
+
+  it('非根 full 路由仍带前缀（回归：确保根特判没影响普通路径）', () => {
+    const { alternates } = buildAlternates('/pricing', undefined, 'ja');
+    expect(alternates!.canonical).toBe('https://example.com/ja/pricing');
+  });
 });

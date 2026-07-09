@@ -80,6 +80,31 @@ describe('resolveProxyAction', () => {
       status: 301,
     });
   });
+
+  // Finding 7: `.` / `..` handle 会被 new URL() 规范化成首页（/en/u/.. → /en/），一律拒绝，交给 intl
+  it('handle 为 ".." 不 rewrite，交给 intl（否则被规范化为首页）', () => {
+    expect(resolveProxyAction('/@..', '', API)).toEqual({ type: 'intl' });
+  });
+
+  it('handle 为 "." 不 rewrite，交给 intl', () => {
+    expect(resolveProxyAction('/@.', '', API)).toEqual({ type: 'intl' });
+  });
+
+  it('带前缀的 ".." handle 也交给 intl', () => {
+    expect(resolveProxyAction('/ja/@..', '', API)).toEqual({ type: 'intl' });
+  });
+
+  it('默认 locale 前缀的 ".." handle 不 301，交给 intl', () => {
+    expect(resolveProxyAction('/en/@..', '', API)).toEqual({ type: 'intl' });
+  });
+
+  // Finding 7: matcher 放行裸 /api，handler 也须反代它（决定：反代，使二者一致）
+  it('裸 /api 也反代（matcher 放行，handler 对齐）', () => {
+    expect(resolveProxyAction('/api', '?a=1', API)).toEqual({
+      type: 'rewrite',
+      url: 'http://api.internal:4000/api?a=1',
+    });
+  });
 });
 
 describe('proxy.ts matcher / routing 同步', () => {

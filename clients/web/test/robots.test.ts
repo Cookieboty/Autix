@@ -19,8 +19,6 @@ const AUTHED_SEGMENTS = [
   'admin',
 ] as const;
 
-const PRIVATE_SHARE_SEGMENTS = ['share', 's'] as const;
-
 let result: ReturnType<typeof robots>;
 let disallow: string[];
 
@@ -48,11 +46,15 @@ describe('robots', () => {
     }
   });
 
-  it('私密分享前缀 share / s 及其 locale 变体也被 disallow', () => {
-    for (const segment of PRIVATE_SHARE_SEGMENTS) {
-      expect(disallow).toContain(`/${segment}/`);
+  // 私密分享页 /share/ 与 /s/ 【故意】不被 disallow。它们带 noindex meta，而 noindex
+  // 只有在 Googlebot 被允许【抓取】页面读到该 meta 时才生效。若 disallow，Google 停抓 →
+  // 永远看不到 noindex → 已入索引的 URL 冻结在索引里（"Indexed, though blocked by
+  // robots.txt"），正是本次迁移要消除的状态。别把它们加回 disallow。见 app/robots.ts 注释。
+  it('私密分享前缀 share / s 及其 locale 变体【绝不能】被 disallow（否则 noindex 失效）', () => {
+    for (const segment of ['share', 's'] as const) {
+      expect(disallow).not.toContain(`/${segment}/`);
       for (const locale of PREFIXED_LOCALES) {
-        expect(disallow).toContain(`/${locale}/${segment}/`);
+        expect(disallow).not.toContain(`/${locale}/${segment}/`);
       }
     }
   });

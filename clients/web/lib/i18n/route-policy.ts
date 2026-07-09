@@ -10,7 +10,15 @@ export type Policy =
 const FULL: Policy = { kind: 'full' };
 const NEUTRAL: Policy = { kind: 'neutral' };
 const NOINDEX: Policy = { kind: 'noindex' };
-const DOCS: Policy = { kind: 'partial', locales: ['en', 'zh-CN'] };
+
+/**
+ * `/docs` 支持的 locale 的唯一真源（`as const` 保留字面量元组类型）。
+ * `lib/docs.ts` 的 `UI_STRINGS` 以 `(typeof DOC_LOCALES)[number]` 为键类型，
+ * 从而在此列表新增 locale 时，若未补齐对应 UI 文案会直接触发编译错误——
+ * 恢复了「声明的 doc locale」与「已有 UI 文案的 locale」之间的编译期耦合。
+ */
+export const DOC_LOCALES = ['en', 'zh-CN'] as const;
+const DOCS: Policy = { kind: 'partial', locales: [...DOC_LOCALES] };
 
 // 注意：此表针对 `clients/web/app/[locale]` 下的真实路由树逐条核对
 // （`find clients/web/app/\[locale\] -name page.tsx`）。原始任务简报中的
@@ -126,7 +134,12 @@ export function getPolicy(template: string): Policy {
  * 且它描述的是路由形状，不是 metadata 关注点。
  */
 export function localizedPath(path: string, locale: SupportedLanguage): string {
-  return locale === routing.defaultLocale ? path : `/${locale}${path}`;
+  if (locale === routing.defaultLocale) return path;
+  // 根路径特判：朴素拼接会得到 `/zh-CN/`（尾斜杠）。没有 `trailingSlash` 配置时
+  // Next 会把 `/zh-CN/` 308 重定向到 `/zh-CN`，导致 sitemap 提交重定向 URL、
+  // 首页 hreflang 簇指向会被 Google 丢弃的重定向 URL、canonical 自指向一个又跳回
+  // 自己的 URL。因此根路径直接返回 `/${locale}`，不带尾斜杠。
+  return path === '/' ? `/${locale}` : `/${locale}${path}`;
 }
 
 /** 可进 sitemap 的静态路由（路径在构建期完整可枚举）。 */

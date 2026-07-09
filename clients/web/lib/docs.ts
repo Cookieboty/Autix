@@ -1,4 +1,7 @@
-import { getPolicy } from './i18n/route-policy';
+import { getPolicy, DOC_LOCALES } from './i18n/route-policy';
+
+/** doc locale 的字面量联合类型，直接来自 route-policy 的唯一真源。 */
+type DocLocale = (typeof DOC_LOCALES)[number];
 
 export const DOC_SLUGS = [
   'workflow',
@@ -71,7 +74,10 @@ function buildNav(locale: string): NavItem[] {
   ];
 }
 
-const UI_STRINGS: Record<string, DocsUIStrings> = {
+// 键类型为 `DocLocale`：ROUTE_POLICY['/docs'].locales 若新增 locale（经 DOC_LOCALES），
+// 这里缺对应文案会编译报错，而不再是 `isValidDocLocale` 放行、`UI_STRINGS[locale]` 却
+// undefined 的静默兜底。
+const UI_STRINGS: Record<DocLocale, DocsUIStrings> = {
   'zh-CN': {
     siteTitle: 'Amux Studio Docs',
     backToHome: '返回首页',
@@ -86,10 +92,15 @@ const UI_STRINGS: Record<string, DocsUIStrings> = {
   },
 };
 
+/** 每个声明的 doc locale 都有 UI 文案（编译期由 `Record<DocLocale>` 保证）。测试用。 */
+export function docLocalesWithUIStrings(): string[] {
+  return Object.keys(UI_STRINGS);
+}
+
 export function getDocsConfig(locale: string): DocsLocaleConfig {
-  const safeLocale = isValidDocLocale(locale) ? locale : 'zh-CN';
+  const safeLocale: DocLocale = isValidDocLocale(locale) ? (locale as DocLocale) : 'zh-CN';
   return {
     nav: buildNav(safeLocale),
-    ui: UI_STRINGS[safeLocale] ?? UI_STRINGS['zh-CN'],
+    ui: UI_STRINGS[safeLocale],
   };
 }
