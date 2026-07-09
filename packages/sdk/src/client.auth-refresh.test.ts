@@ -34,6 +34,7 @@ function createAuthHarness(initialTokens = { access: 'old-access', refresh: 'ref
         pushed.push(path);
       },
       getPathname: () => '/',
+      switchLocale: () => {},
     },
     env: {
       apiUrl: 'https://api.example.test',

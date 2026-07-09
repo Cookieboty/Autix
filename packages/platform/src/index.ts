@@ -28,7 +28,17 @@ export interface NavigationAdapter {
   push(path: string): void;
   replace(path: string): void;
   assign?(url: string): void;
+
+  /**
+   * 应用内逻辑路径，**不含 locale 前缀**。
+   * web 实现须剥离 `/ja` 等前缀（next-intl 的 usePathname 已如此）；
+   * desktop 无 URL locale，原样返回。
+   */
   getPathname(): string;
+
+  /** 切换语言。web: router.replace(pathname, {locale})；desktop: no-op 路由，仅重载 IntlProvider。 */
+  switchLocale(locale: string): void;
+
   getSearch?(): string;
   getOrigin?(): string;
   subscribe?(listener: () => void): () => void;

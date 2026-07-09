@@ -63,6 +63,10 @@ const navigation: NavigationAdapter = {
     window.location.assign(url);
   },
   getPathname: () => _pathname,
+  switchLocale: (locale: string) => {
+    // Task 12 落实真实实现: no-op 路由，仅重载 IntlProvider
+    throw new Error(`switchLocale not implemented: ${locale}`);
+  },
   getSearch: () => '',
   getOrigin: () => window.location.origin,
   subscribe: (listener) => {

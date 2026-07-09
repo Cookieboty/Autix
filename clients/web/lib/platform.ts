@@ -124,6 +124,10 @@ function initPlatform(): void {
       window.location.assign(url);
     },
     getPathname: () => _pathname || window.location.pathname,
+    switchLocale: (locale: string) => {
+      // Task 7 落实真实实现: router.replace(pathname, { locale })
+      throw new Error(`switchLocale not implemented: ${locale}`);
+    },
     getSearch: () => _search,
     getOrigin: () => window.location.origin,
     subscribe: (listener) => {
