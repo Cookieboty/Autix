@@ -1,16 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-const replace = vi.fn();
+// Two distinct spies so assertions can prove *which* router fired: mixing a
+// prefixed pathname into the wrong router (or vice versa) must fail a test.
+const replace = vi.fn(); // raw next/navigation router: takes fully-prefixed URLs
+const localeReplace = vi.fn(); // next-intl @/i18n/navigation router: takes bare logical paths
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace, push: vi.fn() }),
   usePathname: () => '/community',
   useSearchParams: () => new URLSearchParams(''),
 }));
-// AuthModalHost uses the next-intl router for bare logical paths (e.g. /pending);
-// reuse the same `replace` spy so the assertions cover both routers.
 vi.mock('@/i18n/navigation', () => ({
-  useRouter: () => ({ replace, push: vi.fn() }),
+  useRouter: () => ({ replace: localeReplace, push: vi.fn() }),
 }));
 vi.mock('next-intl', () => ({ useTranslations: () => (k: string) => k }));
 
@@ -63,11 +64,13 @@ describe('AuthModalHost OAuth wiring (popup, no full-page redirect)', () => {
     expect(replace).toHaveBeenCalledWith('/community');
   });
 
-  it('logged-in PENDING → replace /pending', async () => {
+  it('logged-in PENDING → localeRouter.replace /pending（裸路径，走 intl 路由）', async () => {
     loginWithPopup.mockResolvedValue({ kind: 'logged-in', result: { user: { status: 'PENDING' } } });
     await renderHost();
     fireEvent.click(await screen.findByText('go-google'));
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/pending'));
+    await waitFor(() => expect(localeReplace).toHaveBeenCalledWith('/pending'));
+    // 关键防回归断言：raw router 绝不能收到这次跳转,否则 locale 会丢失。
+    expect(replace).not.toHaveBeenCalledWith('/pending');
   });
 
   it('error → 显示 mapOAuthErrorKey 翻译串,不跳转', async () => {

@@ -1,8 +1,7 @@
 // 'use client';
 //
 // import { useEffect, useState } from 'react';
-// import { useSearchParams } from 'next/navigation';
-// import { useRouter } from '@/i18n/navigation';
+// import { useRouter, useSearchParams } from 'next/navigation';
 // import { drawBoardActions } from '@autix/shared-store';
 // import { DrawWorkspace } from '@autix/shared-ui/draw';
 //

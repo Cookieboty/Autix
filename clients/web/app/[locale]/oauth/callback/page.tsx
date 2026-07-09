@@ -6,6 +6,7 @@ import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { authActions } from '@autix/shared-store';
 import { mapOAuthErrorKey } from '@autix/shared-ui/auth';
+import { stripLocalePrefix } from '@/lib/locale-path';
 
 const OAUTH_RETURN_TO_KEY = 'autix.oauth.returnTo';
 
@@ -22,9 +23,13 @@ function sanitizeReturnTo(value: string | null | undefined) {
 }
 
 function consumeOAuthReturnTo() {
+  // returnTo 有两个互不知情的生产者：AuthModalHost 用原始的、可能带 locale 前缀的
+  // pathname，login 页面用裸逻辑路径。两者都经这个 key 落到 sessionStorage，读出来的
+  // 值因此可能带前缀也可能不带。下面交给 intl router（要求裸路径）之前必须在这里统一
+  // 剥离掉可能存在的前缀。
   const value = sanitizeReturnTo(window.sessionStorage.getItem(OAUTH_RETURN_TO_KEY));
   window.sessionStorage.removeItem(OAUTH_RETURN_TO_KEY);
-  return value;
+  return value ? stripLocalePrefix(value) : value;
 }
 
 export default function OAuthCallbackPage() {
