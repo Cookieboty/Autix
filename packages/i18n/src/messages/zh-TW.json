@@ -4333,6 +4333,10 @@
     "localeZhCN": "簡體中文",
     "localeEn": "英文"
   },
+  "localeHint": {
+    "viewIn": "切換到{language}",
+    "dismiss": "關閉"
+  },
   "myTemplates": {
     "title": "我的模板",
     "createTemplate": "创建模板",

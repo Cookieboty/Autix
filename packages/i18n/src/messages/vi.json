@@ -4333,6 +4333,10 @@
     "localeZhCN": "Tiếng Trung giản thể",
     "localeEn": "Tiếng Anh"
   },
+  "localeHint": {
+    "viewIn": "Xem bằng {language}",
+    "dismiss": "Đóng"
+  },
   "myTemplates": {
     "title": "我的模板",
     "createTemplate": "创建模板",

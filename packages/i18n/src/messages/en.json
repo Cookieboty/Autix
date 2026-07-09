@@ -4524,5 +4524,9 @@
   "docsLayout": {
     "localeZhCN": "Simplified Chinese",
     "localeEn": "English"
+  },
+  "localeHint": {
+    "viewIn": "View in {language}",
+    "dismiss": "Dismiss"
   }
 }

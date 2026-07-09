@@ -1,6 +1,4 @@
-export const DOC_LOCALES = ['zh-CN', 'en'] as const;
-export type DocLocale = (typeof DOC_LOCALES)[number];
-export const DEFAULT_DOC_LOCALE: DocLocale = 'zh-CN';
+import { getPolicy } from './i18n/route-policy';
 
 export const DOC_SLUGS = [
   'workflow',
@@ -11,8 +9,10 @@ export const DOC_SLUGS = [
   'changelog',
 ] as const;
 
-export function isValidDocLocale(locale: string): locale is DocLocale {
-  return (DOC_LOCALES as readonly string[]).includes(locale);
+/** `/docs` 的可用 locale 唯一由 `ROUTE_POLICY` 定义，不再维护并行列表。 */
+export function isValidDocLocale(locale: string): boolean {
+  const policy = getPolicy('/docs');
+  return policy.kind === 'partial' && (policy.locales as string[]).includes(locale);
 }
 
 // --- Navigation config per locale ---
@@ -36,7 +36,9 @@ interface DocsLocaleConfig {
 }
 
 function buildNav(locale: string): NavItem[] {
-  const base = `/${locale}/docs`;
+  // 不带 locale 前缀的逻辑路径——`as-needed` 下默认 locale（en）不加前缀，
+  // 由 `@/i18n/navigation` 的 `Link`/`getPathname` 负责按需补前缀。
+  const base = '/docs';
   if (locale === 'zh-CN') {
     return [
       { label: '快速开始', href: base },
@@ -69,7 +71,7 @@ function buildNav(locale: string): NavItem[] {
   ];
 }
 
-const UI_STRINGS: Record<DocLocale, DocsUIStrings> = {
+const UI_STRINGS: Record<string, DocsUIStrings> = {
   'zh-CN': {
     siteTitle: 'Amux Studio Docs',
     backToHome: '返回首页',
@@ -85,9 +87,9 @@ const UI_STRINGS: Record<DocLocale, DocsUIStrings> = {
 };
 
 export function getDocsConfig(locale: string): DocsLocaleConfig {
-  const safeLocale: DocLocale = isValidDocLocale(locale) ? locale : DEFAULT_DOC_LOCALE;
+  const safeLocale = isValidDocLocale(locale) ? locale : 'zh-CN';
   return {
     nav: buildNav(safeLocale),
-    ui: UI_STRINGS[safeLocale],
+    ui: UI_STRINGS[safeLocale] ?? UI_STRINGS['zh-CN'],
   };
 }

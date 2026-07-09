@@ -6,13 +6,11 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 import { Providers } from '@/components/providers';
 import { PlatformBinder } from '@/components/PlatformBinder';
 import { WebLocaleRouting } from '@/components/WebLocaleRouting';
+import { LocaleHint } from '@/components/LocaleHint';
 import { routing } from '@/i18n/routing';
 import { SITE_URL } from '@/lib/i18n/site-url';
 import '@/lib/platform';
 import '../globals.css';
-
-// 注意：`<LocaleHint />` 由 Task 12 加入（它创建 components/LocaleHint.tsx）。
-// 本任务【不要】import 该模块——它尚不存在，会直接编译失败。
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -58,7 +56,7 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <WebLocaleRouting>
             <Providers>
-              {/* <LocaleHint /> —— Task 12 加入 */}
+              <LocaleHint />
               {/*
                 页面槽位的 Suspense 边界。存在原因：若干 noindex 客户端页
                 （pending / login / register / reset-password / activate / oauth/* /
