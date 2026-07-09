@@ -34,5 +34,19 @@ export default function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|.*\\..*).*)'],
+  // 三条规则叠加覆盖旧 middleware.ts 的 ['/api/:path*', '/@:handle']：
+  // 1) 常规 intl 路由，排除 _next 与带点号的静态资源；
+  // 2) /api/* 反代必须放行带点号路径（如 /api/download/report.pdf、a@b.com 邮箱型 handle）；
+  // 3) @handle 虚荣链接同理必须放行带点号 handle（裸路径 + 各 locale 前缀，含默认
+  //    locale 前缀本身，因为 /en/@handle 需要在 proxy() 里被 301 去前缀）。
+  //
+  // locale 字面量在此手写（Next 要求 config.matcher 编译期静态可分析，不能从
+  // routing 里 import/map），与 routing.locales 的同步由
+  // test/proxy-handler.test.ts 的 matcher-sync 用例兜底。
+  matcher: [
+    '/((?!_next|.*\\..*).*)',
+    '/api/:path*',
+    '/@:handle',
+    '/:locale(zh-CN|zh-TW|en|fr|ja|ru|vi)/@:handle',
+  ],
 };
