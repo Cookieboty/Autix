@@ -2,6 +2,7 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nes
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ApiResponse } from '@autix/domain';
+import { DEFAULT_LANGUAGE } from '@autix/i18n';
 import { I18nService } from '../i18n/i18n.service';
 
 @Injectable()
@@ -10,7 +11,7 @@ export class ResponseInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    const lang = request?.lang ?? 'zh-CN';
+    const lang = request?.lang ?? DEFAULT_LANGUAGE;
 
     return next.handle().pipe(
       map((data) => {

@@ -18,6 +18,7 @@ import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthUser } from '@autix/domain';
 import { Request } from 'express';
+import { DEFAULT_LANGUAGE } from '@autix/i18n';
 
 @Controller('auth')
 export class AuthController {
@@ -95,7 +96,7 @@ export class AuthController {
 
   @Get('profile')
   async getProfile(@CurrentUser() user: AuthUser, @Req() req: Request & { lang?: string }) {
-    const lang = req.lang ?? 'zh-CN';
+    const lang = req.lang ?? DEFAULT_LANGUAGE;
     return this.authService.getProfile(user, lang);
   }
 

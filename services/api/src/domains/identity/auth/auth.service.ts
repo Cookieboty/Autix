@@ -349,7 +349,7 @@ export class AuthService {
     }));
   }
 
-  async getProfile(user: AuthUser, lang = 'zh-CN') {
+  async getProfile(user: AuthUser, lang: string = DEFAULT_LANGUAGE) {
     const session = await this.sessionRepository.findById(user.sessionId);
 
     const userWithSystems = await this.identityRepository.findProfileUser(user.id);
