@@ -28,20 +28,57 @@ export function useLocalizePath(): (path: string) => string {
   return React.useContext(LocalizeCtx);
 }
 
+/**
+ * `handleClick` 的最小事件形状——足以覆盖修饰键 / 按钮判定和
+ * `preventDefault()` 读取，无需依赖真实 DOM MouseEvent。
+ */
+export interface LinkClickEvent {
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  button: number;
+  readonly defaultPrevented: boolean;
+  preventDefault(): void;
+}
+
+/** `getNavigation()` 的最小子集，供 `handleLinkNavigation` 依赖注入以便单测。 */
+export interface LinkNavigator {
+  push(path: string): void;
+  replace(path: string): void;
+}
+
+/**
+ * `Link` 点击的命令期决策逻辑，从组件中抽出以便无 DOM 单测覆盖：
+ * - 修饰键（meta/ctrl/shift/alt）或非左键点击：不调用 `onClick`，交还原生导航
+ *   （如新标签页打开），不触碰 navigator。
+ * - 调用方 `onClick` 若 `preventDefault()`，跳过 navigator 导航。
+ * - 传给 `navigator.push`/`navigator.replace` 的必须是原始（未加 locale 前缀）
+ *   `href`，不是渲染用的 `localizedHref`——适配器内部负责补前缀，传本地化后的
+ *   href 会导致双重前缀（如 `/ja/ja/pricing`）。
+ */
+export function handleLinkNavigation<E extends LinkClickEvent>(
+  e: E,
+  href: string,
+  replace: boolean | undefined,
+  onClick: ((e: E) => void) | undefined,
+  navigator: LinkNavigator,
+): void {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+  onClick?.(e);
+  if (e.defaultPrevented) return;
+  e.preventDefault();
+  if (replace) navigator.replace(href);
+  else navigator.push(href);
+}
+
 export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
   ({ href, replace, onClick, children, ...rest }, ref) => {
     const localize = useLocalizePath();
     const localizedHref = localize(href);
 
     const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-      onClick?.(e);
-      if (e.defaultPrevented) return;
-      e.preventDefault();
-      const nav = getNavigation();
-      // 传原始（未加前缀）href：适配器内部负责补 locale 前缀，避免双重前缀。
-      if (replace) nav.replace(href);
-      else nav.push(href);
+      handleLinkNavigation(e, href, replace, onClick, getNavigation());
     };
 
     return (
