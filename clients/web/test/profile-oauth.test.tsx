@@ -30,7 +30,7 @@ vi.mock('@autix/shared-ui/profile', () => ({
 }));
 
 async function renderPage() {
-  const Page = (await import('../app/(app)/profile/page')).default;
+  const Page = (await import('../app/[locale]/(app)/profile/page')).default;
   return render(<Page />);
 }
 

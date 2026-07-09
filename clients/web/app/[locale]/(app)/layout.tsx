@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '@/i18n/navigation';
 import { useAuthStore, authActions, useUiStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { AppSidebar } from '@autix/shared-ui/chat';

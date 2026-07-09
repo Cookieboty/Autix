@@ -7,7 +7,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 async function renderPage() {
-  const Page = (await import('../app/oauth/popup-callback/page')).default;
+  const Page = (await import('../app/[locale]/oauth/popup-callback/page')).default;
   return render(<Page />);
 }
 

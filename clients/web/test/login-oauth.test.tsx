@@ -28,7 +28,7 @@ vi.mock('@autix/shared-ui/auth', () => ({
 }));
 
 async function renderPage() {
-  const Page = (await import('../app/login/page')).default;
+  const Page = (await import('../app/[locale]/login/page')).default;
   return render(<Page />);
 }
 
