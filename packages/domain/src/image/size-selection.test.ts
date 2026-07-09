@@ -14,7 +14,7 @@ describe('image size selection helpers', () => {
   it('groups gpt-image sizes by inferred resolution before aspect ratio', () => {
     const groups = buildImageSizeResolutionGroups(IMAGE_MODEL_CAPABILITIES['gpt-image']);
 
-    expect(groups.map((group) => group.value)).toEqual(['auto', '1K', '2K', '4K']);
+    expect(groups.map((group) => group.value)).toEqual(['1K', '2K', '4K']);
     expect(groups.find((group) => group.value === '1K')?.options.map((option) => option.label)).toEqual([
       '1:1',
       '3:2',

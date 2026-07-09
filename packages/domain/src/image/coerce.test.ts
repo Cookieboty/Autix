@@ -30,12 +30,20 @@ const gemini3Pro = IMAGE_MODEL_CAPABILITIES['gemini-3-pro-image'];
 const compat = IMAGE_MODEL_CAPABILITIES['compatible'];
 
 describe('mapEquivalentSize', () => {
-  it('returns auto when both input and capability support auto', () => {
-    expect(mapEquivalentSize('auto', gptImage)).toBe('auto');
+  it('falls back to defaults.size when input is auto but capability has no auto', () => {
+    // 没有任何 capability 再提供 'auto' 选项，因此所有模型都走这条回退。
+    expect(mapEquivalentSize('auto', gptImage)).toBe(gptImage.defaults.size);
+    expect(mapEquivalentSize('auto', geminiFlash)).toBe(geminiFlash.defaults.size);
   });
 
-  it('falls back to defaults.size when input is auto but capability has no auto', () => {
-    expect(mapEquivalentSize('auto', geminiFlash)).toBe(geminiFlash.defaults.size);
+  it('returns auto when the capability does offer auto', () => {
+    // mapEquivalentSize 仍保留「双方都支持 auto 时透传」的分支，但当前
+    // IMAGE_MODEL_CAPABILITIES 里已无一个模型提供 auto，故用构造的 capability 覆盖它。
+    const withAuto: ImageModelCapability = {
+      ...gptImage,
+      sizes: [{ label: '自动', value: 'auto' }, ...gptImage.sizes],
+    };
+    expect(mapEquivalentSize('auto', withAuto)).toBe('auto');
   });
 
   it('falls back to defaults.size when input is unparseable', () => {
@@ -66,9 +74,12 @@ describe('mapEquivalentSize', () => {
 
 describe('coerceClientSettings', () => {
   it('passes through legal settings without changes for gpt-image', () => {
-    const result = coerceClientSettings(baseSettings({ size: 'auto', quality: 'medium', count: 1 }), gptImage);
+    const result = coerceClientSettings(
+      baseSettings({ size: gptImage.defaults.size, quality: 'medium', count: 1 }),
+      gptImage,
+    );
     expect(result.changed).toEqual([]);
-    expect(result.settings.size).toBe('auto');
+    expect(result.settings.size).toBe(gptImage.defaults.size);
     expect(result.settings.quality).toBe('medium');
     expect(result.settings.count).toBe(1);
   });
@@ -93,7 +104,7 @@ describe('coerceClientSettings', () => {
 
   it('clamps count to maxCount without exposing it as a client setting change', () => {
     const result = coerceClientSettings(
-      baseSettings({ size: 'auto', quality: 'medium', count: 999 }),
+      baseSettings({ size: gptImage.defaults.size, quality: 'medium', count: 999 }),
       gptImage,
     );
     expect(result.changed).toEqual([]);
@@ -102,7 +113,7 @@ describe('coerceClientSettings', () => {
 
   it('clamps count to 1 when negative without exposing it as a client setting change', () => {
     const result = coerceClientSettings(
-      baseSettings({ size: 'auto', quality: 'medium', count: -3 }),
+      baseSettings({ size: gptImage.defaults.size, quality: 'medium', count: -3 }),
       gptImage,
     );
     expect(result.changed).toEqual([]);
@@ -160,9 +171,14 @@ describe('coerceClientSettings', () => {
 
 describe('coerceImageParams', () => {
   it('keeps legal gpt-image input untouched', () => {
-    const out = coerceImageParams({ kind: 'gpt-image', size: 'auto', quality: 'medium', count: 1 });
+    const out = coerceImageParams({
+      kind: 'gpt-image',
+      size: gptImage.defaults.size,
+      quality: 'medium',
+      count: 1,
+    });
     expect(out.notes).toEqual([]);
-    expect(out.size).toBe('auto');
+    expect(out.size).toBe(gptImage.defaults.size);
     expect(out.quality).toBe('medium');
     expect(out.count).toBe(1);
   });

@@ -147,7 +147,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
       { label: '高', value: 'high' },
     ],
     maxCount: 1,
-    // 默认选中具体尺寸（1:1），不再默认「自动」；用户仍可手动切到 auto
+    // 不再提供「自动」：sizes / qualities 里都已移除 auto，默认选中 1:1。
     defaults: { size: '1024x1024', quality: 'medium', count: 1 },
     supportsReferenceImage: true,
     supportsSourceImage: true,
