@@ -11,9 +11,25 @@ const schema: ParamsSchema = {
     seconds: { type: 'integer', minimum: 4, maximum: 15, default: 5, 'x-ui': { control: 'stepper' } },
   },
   allOf: [
-    { if: { properties: { resolution: { const: '4K' } } }, then: { properties: { seconds: { maximum: 8 } } } },
+    {
+      if: { properties: { resolution: { const: '4K' } } },
+      then: { properties: { seconds: { type: 'integer', maximum: 8 } } },
+    },
   ],
 };
+
+const schemaWithUndeclaredThenType = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['resolution'],
+  properties: {
+    resolution: { type: 'string', enum: ['512px', '1K', '2K', '4K'], default: '1K', 'x-ui': { control: 'chips' } },
+    seconds: { type: 'integer', minimum: 4, maximum: 15, default: 5, 'x-ui': { control: 'stepper' } },
+  },
+  allOf: [
+    { if: { properties: { resolution: { const: '4K' } } }, then: { properties: { seconds: { maximum: 8 } } } },
+  ],
+} as unknown as ParamsSchema;
 
 describe('validateParams', () => {
   it('accepts valid params', () => {
@@ -42,5 +58,11 @@ describe('validateParams', () => {
 
   it('ignores the x-ui annotation rather than treating it as an unknown keyword', () => {
     expect(() => validateParams(schema, { resolution: '1K' })).not.toThrow();
+  });
+
+  it('rejects a then-branch constraint whose type is not declared', () => {
+    expect(() =>
+      validateParams(schemaWithUndeclaredThenType, { resolution: '4K', seconds: 8 }),
+    ).toThrow();
   });
 });
