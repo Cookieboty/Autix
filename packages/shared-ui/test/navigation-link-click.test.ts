@@ -19,6 +19,29 @@ function createNavigator() {
   return { navigator, calls };
 }
 
+/**
+ * `getNavigator` 是惰性求值的 thunk：真实的 `getNavigation()` 在
+ * `registerPlatform()` 未调用时会 throw，所以只应在所有守卫（修饰键 /
+ * 按钮判定、调用方 onClick、defaultPrevented）都通过、确定要导航时才调用一次。
+ * 这里额外记录调用次数，用于断言修饰键点击 / preventDefault 场景下
+ * thunk 完全不被调用——这正是本次要修复并钉住的回归。
+ */
+function createNavigatorThunk() {
+  const { navigator, calls } = createNavigator();
+  let getNavigatorCalls = 0;
+  const getNavigator = () => {
+    getNavigatorCalls += 1;
+    return navigator;
+  };
+  return {
+    getNavigator,
+    calls,
+    get getNavigatorCalls() {
+      return getNavigatorCalls;
+    },
+  };
+}
+
 function baseEvent(overrides: Partial<Record<string, unknown>> = {}) {
   let defaultPrevented = false;
   return {
@@ -38,20 +61,20 @@ function baseEvent(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 test('plain left-click 调用 navigator.push，传的是原始未加前缀的 href（不是 localizedHref）', () => {
-  const { navigator, calls } = createNavigator();
+  const { getNavigator, calls } = createNavigatorThunk();
   const e = baseEvent();
 
   // localizedHref（"/ja/pricing"）只用于渲染 <a href>，命令期必须传原始 href。
-  handleLinkNavigation(e, '/pricing', undefined, undefined, navigator);
+  handleLinkNavigation(e, '/pricing', undefined, undefined, getNavigator);
 
   expect(calls).toEqual([{ method: 'push', path: '/pricing' }]);
 });
 
 test('replace 属性路由到 navigator.replace 而非 navigator.push', () => {
-  const { navigator, calls } = createNavigator();
+  const { getNavigator, calls } = createNavigatorThunk();
   const e = baseEvent();
 
-  handleLinkNavigation(e, '/pricing', true, undefined, navigator);
+  handleLinkNavigation(e, '/pricing', true, undefined, getNavigator);
 
   expect(calls).toEqual([{ method: 'replace', path: '/pricing' }]);
 });
@@ -62,17 +85,21 @@ test.each([
   ['shiftKey', { shiftKey: true }],
   ['altKey', { altKey: true }],
   ['non-left button (middle click)', { button: 1 }],
-])('%s 时不调用 navigator（交还原生导航）', (_label, overrides) => {
-  const { navigator, calls } = createNavigator();
+])('%s 时不调用 navigator（交还原生导航），也不调用 getNavigator thunk', (_label, overrides) => {
+  const { getNavigator, calls, getNavigatorCalls } = createNavigatorThunk();
   const e = baseEvent(overrides);
 
-  handleLinkNavigation(e, '/pricing', undefined, undefined, navigator);
+  handleLinkNavigation(e, '/pricing', undefined, undefined, getNavigator);
 
   expect(calls).toEqual([]);
+  // 回归钉子：修饰键 / 非左键点击必须完全不触碰 navigator 解析。
+  // getNavigation() 的真实实现在 registerPlatform() 未调用时会 throw，
+  // 提前求值会让新标签页打开等原生行为在未初始化平台适配器时直接崩溃。
+  expect(getNavigatorCalls).toBe(0);
 });
 
 test('修饰键点击时不调用调用方的 onClick（与原生新标签页打开行为一致）', () => {
-  const { navigator } = createNavigator();
+  const { getNavigator } = createNavigatorThunk();
   const e = baseEvent({ metaKey: true });
   let onClickCalled = false;
 
@@ -83,14 +110,14 @@ test('修饰键点击时不调用调用方的 onClick（与原生新标签页打
     () => {
       onClickCalled = true;
     },
-    navigator,
+    getNavigator,
   );
 
   expect(onClickCalled).toBe(false);
 });
 
-test('调用方 onClick 内 preventDefault() 会抑制 navigator 导航', () => {
-  const { navigator, calls } = createNavigator();
+test('调用方 onClick 内 preventDefault() 会抑制 navigator 导航，且不调用 getNavigator thunk', () => {
+  const { getNavigator, calls, getNavigatorCalls } = createNavigatorThunk();
   const e = baseEvent();
 
   handleLinkNavigation(
@@ -100,14 +127,16 @@ test('调用方 onClick 内 preventDefault() 会抑制 navigator 导航', () => 
     (ev) => {
       ev.preventDefault();
     },
-    navigator,
+    getNavigator,
   );
 
   expect(calls).toEqual([]);
+  // 回归钉子：调用方 preventDefault() 后必须不解析 navigator。
+  expect(getNavigatorCalls).toBe(0);
 });
 
 test('未 preventDefault 的 onClick 不影响正常导航', () => {
-  const { navigator, calls } = createNavigator();
+  const { getNavigator, calls } = createNavigatorThunk();
   const e = baseEvent();
   let onClickCalled = false;
 
@@ -118,7 +147,7 @@ test('未 preventDefault 的 onClick 不影响正常导航', () => {
     () => {
       onClickCalled = true;
     },
-    navigator,
+    getNavigator,
   );
 
   expect(onClickCalled).toBe(true);
