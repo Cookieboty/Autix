@@ -17,7 +17,7 @@ import type { PublicGrowthMediaItem } from '../../types';
 import { ModeTabs, StudioDensitySlider } from '../parts';
 import type { ImageStudioMode, TemplateDensity } from '../generator-studio-helpers';
 import { ImageComposer } from './ImageComposer';
-import { ImageHeroCollage, PublicImageTemplateWall } from './ImageTemplateWall';
+import { PublicImageTemplateWall } from './ImageTemplateWall';
 import { PublicImageHistoryPanel, type PendingImageGenerationCard } from './PublicImageHistoryPanel';
 import { PublicImageTemplateDialog } from './ImageTemplateDialog';
 import {
@@ -82,6 +82,7 @@ export function ImageGeneratorStudio({
   const [generating, setGenerating] = useState(false);
   const [pendingGeneration, setPendingGeneration] = useState<PendingImageGenerationCard | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ImageTemplate | null>(null);
+  const [historySelectionActive, setHistorySelectionActive] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
   const [appliedTemplate, setAppliedTemplate] = useState<{
@@ -180,6 +181,16 @@ export function ImageGeneratorStudio({
     setSelectedTemplate(null);
   };
 
+  // 历史图片 Recreate：把该次生成的 prompt 应用到输入框
+  const handleRecreate = (item: PublicImageHistoryItem) => {
+    if (!item.prompt) return;
+    setAppliedTemplate({
+      id: `history-${item.id}:${Date.now()}`,
+      title: item.prompt.slice(0, 40),
+      prompt: item.prompt,
+    });
+  };
+
   const handleGenerate = async (payload: PublicImageGenerationPayload) => {
     if (!isAuthenticated) {
       openAuthModal({ mode: 'entry', returnTo: '/ai/image' });
@@ -190,6 +201,7 @@ export function ImageGeneratorStudio({
       prompt: payload.prompt,
       model: selectedModel?.name ?? payload.model,
       count: payload.settings.count,
+      size: payload.settings.size,
     });
     setMode('history');
     setGenerating(true);
@@ -229,20 +241,23 @@ export function ImageGeneratorStudio({
       {templateMode ? <div className="growth-template-scroll-overlay pointer-events-none absolute inset-0" /> : null}
 
       {!templateMode ? (
-        <div className="relative z-10 h-full overflow-y-auto overscroll-contain">
-          <div className="mx-auto flex w-full max-w-[1720px] flex-col gap-3 px-4 pb-36 pt-14 md:px-6">
-            {mode === 'history' && (historyItems.length > 0 || pendingGeneration) ? (
-              <section className="text-left">
-                <PublicImageHistoryPanel
-                  items={historyItems}
-                  loading={historyLoading}
-                  density={templateDensity}
-                  pending={pendingGeneration}
-                />
-              </section>
-            ) : (
+        mode === 'history' && (historyItems.length > 0 || pendingGeneration) ? (
+          // 历史画廊：全屏铺满、横向 justified 行布局（固定行高，滑块调行高）
+          <div className="relative z-10 h-full overflow-y-auto overscroll-contain px-[3px] pb-36 pt-14">
+            <PublicImageHistoryPanel
+              items={historyItems}
+              loading={historyLoading}
+              density={templateDensity}
+              pending={pendingGeneration}
+              onRecreate={handleRecreate}
+              onSelectionActiveChange={setHistorySelectionActive}
+            />
+          </div>
+        ) : (
+          // 空态：居中引导
+          <div className="relative z-10 h-full overflow-y-auto overscroll-contain">
+            <div className="mx-auto flex w-full max-w-[1720px] flex-col gap-3 px-4 pb-36 pt-14 md:px-6">
               <section className="flex min-h-[calc(100svh-374px)] flex-col items-center justify-center pb-12 pt-2 text-center">
-                <ImageHeroCollage items={items} />
                 <h1 className="text-4xl font-black uppercase leading-[0.96] tracking-normal text-foreground md:text-5xl">
                   {t('imageBlankTitle')}
                   <span className="block text-growth-accent">{t('imageBlankAccent', { model: selectedModel?.name ?? imageCapability.displayName })}</span>
@@ -250,23 +265,15 @@ export function ImageGeneratorStudio({
                 <p className="mt-4 max-w-xl text-base font-medium text-foreground/42">
                   {t('imageBlankDescription')}
                 </p>
-                {mode === 'history' ? (
-                  <div className="mt-8 w-full max-w-2xl">
-                    <PublicImageHistoryPanel
-                      items={historyItems}
-                      loading={historyLoading}
-                      density={templateDensity}
-                      pending={pendingGeneration}
-                    />
-                  </div>
-                ) : null}
               </section>
-            )}
+            </div>
           </div>
-        </div>
+        )
       ) : null}
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-[30px] z-40">
+      <div
+        className={`pointer-events-none fixed inset-x-0 bottom-[30px] z-40 transition-all duration-300 ${historySelectionActive ? 'translate-y-8 opacity-0 [&_*]:!pointer-events-none' : 'translate-y-0 opacity-100'}`}
+      >
         <ImageComposer
           communityMode={templateMode}
           imageCapability={imageCapability}

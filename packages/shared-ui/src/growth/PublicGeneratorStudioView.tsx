@@ -19,8 +19,8 @@ import {
   resolveImageCapabilityFromModelParam,
 } from './generator-image-presenters';
 import { findVideoModelByHint } from './generator-video-presenters';
-import { PublicPromoBar } from './PublicPromoBar';
 import { buildDiscountTranslationValues } from './discount';
+import { SetPublicTopPromo } from './PublicTopPromo';
 import type { ImageStudioMode } from './generator/generator-studio-helpers';
 import type { PublicGrowthMediaItem } from './types';
 import { ImageGeneratorStudio } from './generator/image/ImageGeneratorStudio';
@@ -75,35 +75,44 @@ export function PublicGeneratorStudioView({
     }
 
     let cancelled = false;
-    setImageModelsLoading(true);
-    listPublicAvailableModels()
-      .then((models) => {
-        if (cancelled) return;
-        const candidates = models.filter((model) => hasImageCapability(model.capabilities ?? []));
-        setImageModels(candidates);
-        const preferred =
-          findImageModelByHint(candidates, initialModel) ??
-          candidates.find((model) => model.isDefault) ??
-          candidates[0] ??
-          null;
-        setSelectedImageModelId((current) =>
-          current && candidates.some((model) => model.id === current)
-            ? current
-            : preferred?.id ?? null,
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setImageModels([]);
-          setSelectedImageModelId(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setImageModelsLoading(false);
-      });
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // 拉取公开可用图片模型；接口偶发失败时重试一次，避免进入页面时模型列表加载不出来
+    const load = (attempt: number) => {
+      setImageModelsLoading(true);
+      listPublicAvailableModels()
+        .then((models) => {
+          if (cancelled) return;
+          const candidates = models.filter((model) => hasImageCapability(model.capabilities ?? []));
+          setImageModels(candidates);
+          const preferred =
+            findImageModelByHint(candidates, initialModel) ??
+            candidates.find((model) => model.isDefault) ??
+            candidates[0] ??
+            null;
+          setSelectedImageModelId((current) =>
+            current && candidates.some((model) => model.id === current)
+              ? current
+              : preferred?.id ?? null,
+          );
+          setImageModelsLoading(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attempt < 1) {
+            retryTimer = setTimeout(() => load(attempt + 1), 600);
+          } else {
+            setImageModels([]);
+            setSelectedImageModelId(null);
+            setImageModelsLoading(false);
+          }
+        });
+    };
+    load(0);
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [initialModel, kind]);
 
@@ -148,6 +157,11 @@ export function PublicGeneratorStudioView({
 
   return (
     <div className="relative flex h-full flex-col bg-background text-foreground">
+      {/* 功能页横幅内容（由 (public) layout 在导航上方渲染） */}
+      <SetPublicTopPromo
+        label={t('generator.studio.topPromo', buildDiscountTranslationValues())}
+        href="/pricing"
+      />
       {/* 功能页主题背景：唯一的全屏固定底层（渐变 + 噪点），滑动时不动，内容与导航都透出它 */}
       <div
         className={`pointer-events-none fixed inset-0 ${kind === 'video' ? 'growth-video-studio-bg' : 'growth-image-studio-bg'}`}
@@ -155,10 +169,7 @@ export function PublicGeneratorStudioView({
       <div
         className={`growth-generator-noise pointer-events-none fixed inset-0 ${kind === 'video' ? 'opacity-[0.1]' : 'opacity-[0.13]'}`}
       />
-      {/* 导航由 (public) layout 持久提供；此处仅保留功能页自己的促销条（在导航下方，固定不滚） */}
-      <div className="relative shrink-0">
-        <PublicPromoBar label={t('generator.studio.topPromo', buildDiscountTranslationValues())} href="/pricing" />
-      </div>
+      {/* 导航与顶部横幅均由 (public) layout 持久提供 */}
       {/* studio 区占满剩余高度（定高）：image 内部自管滚动；video 在此容器内滚动 */}
       <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-none">
         {kind === 'video' ? (

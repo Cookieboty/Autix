@@ -68,7 +68,6 @@ describe('IMAGE_MODEL_CAPABILITIES', () => {
   it('gpt-image lists only officially supported sizes', () => {
     const sizes = IMAGE_MODEL_CAPABILITIES['gpt-image'].sizes.map((s) => s.value);
     expect(sizes).toEqual([
-      'auto',
       '1024x1024',
       '1536x1024',
       '1024x1536',
@@ -81,7 +80,7 @@ describe('IMAGE_MODEL_CAPABILITIES', () => {
 
   it('gpt-image lists only officially supported qualities', () => {
     const q = IMAGE_MODEL_CAPABILITIES['gpt-image'].qualities.map((s) => s.value);
-    expect(q).toEqual(['auto', 'low', 'medium', 'high']);
+    expect(q).toEqual(['low', 'medium', 'high']);
   });
 
   it('gemini 2.5 flash exposes the 10 common aspect ratios with no quality dimension', () => {

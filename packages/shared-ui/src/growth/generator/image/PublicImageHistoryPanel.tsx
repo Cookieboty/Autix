@@ -1,8 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Copy, ImageIcon, Info, Sparkles, WandSparkles, X } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  Download,
+  Heart,
+  ImageIcon,
+  Info,
+  RefreshCw,
+  Share2,
+  Sparkles,
+  Trash2,
+  WandSparkles,
+  X,
+} from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
   PublicImageHistoryImage,
@@ -15,15 +28,99 @@ export type PendingImageGenerationCard = {
   prompt: string;
   model: string;
   count: number;
+  /** 生成时选择的尺寸/比例（如 "1024x1536" / "3:4"），占位块据此按比例渲染 */
+  size?: string;
 };
 
-const HISTORY_DENSITY_GRID_CLASS: Record<TemplateDensity, string> = {
-  xrelaxed: 'gap-4 sm:grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3',
-  relaxed: 'gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4',
-  normal: 'gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5',
-  dense: 'gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6',
-  xdense: 'gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8',
+// 历史 Tab：横向 justified 行布局；行高由密度档位决定（档位越密行越矮），滑块调整行高
+const HISTORY_ROW_HEIGHT: Record<TemplateDensity, number> = {
+  xrelaxed: 700,
+  relaxed: 560,
+  normal: 440,
+  dense: 340,
+  xdense: 260,
 };
+
+/** 从尺寸串解析宽高比（w/h）：支持 "1024x1024" / "3:4" / "1024×1024@1K"，无法解析回退 1 */
+function parseAspectRatio(size?: string): number {
+  if (!size) return 1;
+  const match = size.match(/(\d+)\s*[x:×]\s*(\d+)/i);
+  if (match) {
+    const w = Number(match[1]);
+    const h = Number(match[2]);
+    if (w > 0 && h > 0) return w / h;
+  }
+  return 1;
+}
+
+const HISTORY_GAP = 3;
+
+/**
+ * justified 行打包：按目标行高贪心分行；每满一行再按容器宽度反算实际行高，
+ * 使整行正好铺满宽度 —— 每张图始终按真实比例展示（不裁切），窗口缩小时整体等比缩小。
+ */
+function buildJustifiedRows<T extends { ratio: number }>(
+  cells: T[],
+  containerWidth: number,
+  targetHeight: number,
+): Array<{ cells: T[]; height: number }> {
+  if (containerWidth <= 0 || cells.length === 0) return [];
+  const rows: Array<{ cells: T[]; height: number }> = [];
+  let row: T[] = [];
+  let ratioSum = 0;
+  for (const cell of cells) {
+    row.push(cell);
+    ratioSum += cell.ratio;
+    const naturalWidth = ratioSum * targetHeight + (row.length - 1) * HISTORY_GAP;
+    if (naturalWidth >= containerWidth) {
+      const available = containerWidth - (row.length - 1) * HISTORY_GAP;
+      rows.push({ cells: row, height: available / ratioSum });
+      row = [];
+      ratioSum = 0;
+    }
+  }
+  // 末行不拉伸，保持目标行高（左对齐、右侧留白）
+  if (row.length) rows.push({ cells: row, height: targetHeight });
+  return rows;
+}
+
+/** 订阅元素宽度（ResizeObserver，callback ref 以适配元素延迟挂载），用于 justified 行高计算 */
+function useElementWidth<T extends HTMLElement>() {
+  const [width, setWidth] = useState(0);
+  const observerRef = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((el: T | null) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    if (!el) return;
+    setWidth(el.clientWidth);
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    observer.observe(el);
+    observerRef.current = observer;
+  }, []);
+  return { ref, width };
+}
+
+function imageKey(itemId: string, image: PublicImageHistoryImage): string {
+  return `${itemId}::${image.generationId ?? ''}::${image.index}`;
+}
+
+/** 客户端下载图片：优先 fetch→blob（可跨域时回退新窗口打开） */
+async function downloadImageFile(url: string, filename: string) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener');
+  }
+}
 
 function formatTime(value: string, locale: string) {
   const date = new Date(value);
@@ -41,15 +138,39 @@ export function PublicImageHistoryPanel({
   loading,
   density,
   pending,
+  onRecreate,
+  onSelectionActiveChange,
 }: {
   items: PublicImageHistoryItem[];
   loading: boolean;
   density: TemplateDensity;
   pending?: PendingImageGenerationCard | null;
+  /** 点击某张图的 Recreate：把该次生成的 prompt 应用到输入框 */
+  onRecreate?: (item: PublicImageHistoryItem) => void;
+  /** 是否处于多选态：父级据此切换「输入框 ↔ 操作栏」 */
+  onSelectionActiveChange?: (active: boolean) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const locale = useLocale();
   const [selectedItem, setSelectedItem] = useState<PublicImageHistoryItem | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [likedKeys, setLikedKeys] = useState<Set<string>>(new Set());
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+  const { ref: containerRef, width: containerWidth } = useElementWidth<HTMLDivElement>();
+
+  const selectionActive = selectedKeys.size > 0;
+  useEffect(() => {
+    onSelectionActiveChange?.(selectionActive);
+  }, [selectionActive, onSelectionActiveChange]);
+  useEffect(() => () => onSelectionActiveChange?.(false), [onSelectionActiveChange]);
+
+  const toggleKey = (setter: typeof setSelectedKeys, key: string) =>
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   if (loading && items.length === 0 && !pending) {
     return (
@@ -76,47 +197,236 @@ export function PublicImageHistoryPanel({
     );
   }
 
+  const targetHeight = HISTORY_ROW_HEIGHT[density];
+  const pendingRatio = parseAspectRatio(pending?.size);
+
+  type HistoryCell =
+    | { kind: 'pending'; ratio: number; showLabel: boolean; key: string }
+    | {
+        kind: 'image';
+        ratio: number;
+        item: PublicImageHistoryItem;
+        image: PublicImageHistoryImage;
+        key: string;
+      };
+
+  // 生成中占位块 push 到最上方（count 个），随后展开所有历史图片；每格带真实比例
+  const cells: HistoryCell[] = [
+    ...(pending
+      ? Array.from({ length: Math.max(1, pending.count) }).map((_, index) => ({
+          kind: 'pending' as const,
+          ratio: pendingRatio,
+          showLabel: index === 0,
+          key: `pending-${index}`,
+        }))
+      : []),
+    ...items.flatMap((item) =>
+      item.images
+        .filter((image) => !hiddenKeys.has(imageKey(item.id, image)))
+        .map((image) => ({
+          kind: 'image' as const,
+          ratio: parseAspectRatio(item.settings.size),
+          item,
+          image,
+          key: imageKey(item.id, image),
+        })),
+    ),
+  ];
+
+  const rows = buildJustifiedRows(cells, containerWidth, targetHeight);
+  const selectedImageList = items.flatMap((item) =>
+    item.images
+      .filter((image) => selectedKeys.has(imageKey(item.id, image)))
+      .map((image) => ({ item, image })),
+  );
+
+  const downloadSelected = () =>
+    selectedImageList.forEach(({ image }, index) =>
+      void downloadImageFile(image.url, `image-${index + 1}.png`),
+    );
+  const likeSelected = () => setLikedKeys((prev) => new Set([...prev, ...selectedKeys]));
+  const deleteSelected = () => {
+    setHiddenKeys((prev) => new Set([...prev, ...selectedKeys]));
+    setSelectedKeys(new Set());
+  };
+  const clearSelection = () => setSelectedKeys(new Set());
+  const publishSelected = () => {
+    // TODO: 后端「发布到广场」接口就绪后接入
+  };
+
   return (
     <>
-      <div className={`grid ${HISTORY_DENSITY_GRID_CLASS[density]}`}>
-        {pending ? <PendingImageCard pending={pending} /> : null}
-        {items.map((item, itemIndex) => {
-          const images = item.images;
-          const cover = images[0];
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setSelectedItem(item)}
-              className="growth-generator-masonry group relative overflow-hidden rounded-[14px] border border-border bg-card text-left growth-history-card-shadow transition duration-300 hover:-translate-y-1 hover:border-growth-accent/45"
-              style={{ animationDelay: `${Math.min(itemIndex, 8) * 45}ms` }}
-            >
-              <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
-                {cover ? (
-                  <img
-                    src={cover.url}
-                    alt={cover.prompt ?? item.prompt}
-                    className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+      <div ref={containerRef} className="flex flex-col gap-[3px]">
+        {rows.map((row, rowIndex) => (
+          <div key={rowIndex} className="flex gap-[3px]">
+            {row.cells.map((cell) => {
+              const width = row.height * cell.ratio;
+              if (cell.kind === 'pending') {
+                return (
+                  <GeneratingCell
+                    key={cell.key}
+                    width={width}
+                    height={row.height}
+                    showLabel={cell.showLabel}
                   />
-                ) : null}
-                <div className="absolute inset-0 bg-gradient-to-b from-background/6 via-transparent to-background/86" />
-                <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-0 transition group-hover:opacity-25" />
-                <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-[9px] bg-background/58 px-2 py-1 text-[11px] font-black text-foreground backdrop-blur">
-                  <Sparkles className="size-3.5 text-growth-accent" />
-                  {images.length}
+                );
+              }
+              const { item, image, key } = cell;
+              const selected = selectedKeys.has(key);
+              const liked = likedKeys.has(key);
+              return (
+                <div
+                  key={key}
+                  className={`group relative min-w-0 overflow-hidden border-solid border-white bg-secondary transition-all duration-75 ${selected ? 'border-[3px]' : 'border-0'}`}
+                  style={{ width, height: row.height }}
+                >
+                  <img
+                    src={image.url}
+                    alt={image.prompt ?? item.prompt}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                  {/* 点击：多选态下切换选中，否则打开详情 */}
+                  <button
+                    type="button"
+                    aria-label={image.prompt ?? item.prompt}
+                    className="absolute inset-0 z-10 cursor-pointer"
+                    onClick={() => (selectionActive ? toggleKey(setSelectedKeys, key) : setSelectedItem(item))}
+                  />
+                  {/* 悬浮效果：仅非多选态展示大内阴影 + 右侧功能图标 */}
+                  {!selectionActive ? (
+                    <>
+                      <div className="pointer-events-none absolute inset-0 z-10 opacity-0 shadow-[inset_0_0_130px_44px_rgba(0,0,0,0.8)] transition duration-200 group-hover:opacity-100" />
+                      <div className="absolute right-2 top-2 z-30 flex flex-col gap-1 opacity-0 transition duration-200 group-hover:opacity-100">
+                        <button
+                          type="button"
+                          aria-label="like"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleKey(setLikedKeys, key);
+                          }}
+                          className="grid size-8 place-items-center rounded-full bg-background/55 text-foreground backdrop-blur-md transition hover:bg-background/85"
+                        >
+                          <Heart className={`size-4 ${liked ? 'fill-growth-accent text-growth-accent' : ''}`} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="download"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void downloadImageFile(image.url, `image-${image.index + 1}.png`);
+                          }}
+                          className="grid size-8 place-items-center rounded-full bg-background/55 text-foreground backdrop-blur-md transition hover:bg-background/85"
+                        >
+                          <Download className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="recreate"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onRecreate?.(item);
+                          }}
+                          className="grid size-8 place-items-center rounded-full bg-background/55 text-foreground backdrop-blur-md transition hover:bg-background/85"
+                        >
+                          <RefreshCw className="size-4" />
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+                  {/* 左上复选框：多选态下全部常显（未选为淡色）；否则悬浮出现。较小、小圆角 */}
+                  <button
+                    type="button"
+                    aria-label="select"
+                    aria-pressed={selected}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleKey(setSelectedKeys, key);
+                    }}
+                    className={`absolute left-2 top-2 z-30 grid size-[18px] place-items-center rounded-[7px] border transition ${
+                      selected
+                        ? 'border-white bg-white text-background opacity-100'
+                        : selectionActive
+                          ? 'border-white/55 bg-background/35 text-transparent opacity-100 backdrop-blur'
+                          : 'border-white/70 bg-background/45 text-transparent opacity-0 backdrop-blur group-hover:opacity-100'
+                    }`}
+                  >
+                    <Check className="size-3" strokeWidth={3} />
+                  </button>
                 </div>
-                <div className="absolute inset-x-0 bottom-0 p-3">
-                  <div className="mb-2 text-[11px] font-bold text-foreground/48">
-                    {formatTime(item.createdAt, locale)}
-                  </div>
-                  <h2 className="line-clamp-2 text-sm font-black leading-5 text-foreground">
-                    {item.prompt || t('prompt')}
-                  </h2>
-                </div>
-              </div>
-            </button>
-          );
-        })}
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* 多选操作栏：向上渐隐展示（替代输入框；输入框由父级向下淡出） */}
+      <div
+        className={`fixed inset-x-0 bottom-[30px] z-50 flex justify-center px-4 transition-all duration-300 ${selectionActive ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-6 opacity-0'}`}
+      >
+        <div className="growth-panel-shadow pointer-events-auto flex items-center gap-1 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(32,34,37,0.88),rgba(24,26,29,0.92))] p-2 backdrop-blur-[32px]">
+          <span className="mr-1 flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-1.5 text-sm font-bold text-foreground">
+            {selectedImageList.length > 0 ? (
+              <span className="flex items-center">
+                {selectedImageList.slice(0, 3).map(({ image }, index, arr) => (
+                  <img
+                    key={index}
+                    src={image.url}
+                    alt=""
+                    className="size-6 shrink-0 rounded-md border border-white/15 object-cover shadow-md"
+                    style={{
+                      marginLeft: index === 0 ? 0 : -10,
+                      transform:
+                        arr.length > 1
+                          ? `rotate(${(index - (arr.length - 1) / 2) * 9}deg)`
+                          : undefined,
+                      zIndex: arr.length - index,
+                    }}
+                  />
+                ))}
+              </span>
+            ) : null}
+            {selectedKeys.size} selected
+          </span>
+          <button
+            type="button"
+            onClick={downloadSelected}
+            className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-foreground/85 transition hover:bg-white/5"
+          >
+            <Download className="size-4" /> Download
+          </button>
+          <button
+            type="button"
+            onClick={publishSelected}
+            className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-foreground/85 transition hover:bg-white/5"
+          >
+            <Share2 className="size-4" /> Publish all
+          </button>
+          <button
+            type="button"
+            onClick={likeSelected}
+            aria-label="like"
+            className="grid size-9 place-items-center rounded-xl text-foreground/85 transition hover:bg-white/5"
+          >
+            <Heart className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={deleteSelected}
+            aria-label="delete"
+            className="grid size-9 place-items-center rounded-xl text-foreground/85 transition hover:bg-white/5"
+          >
+            <Trash2 className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={clearSelection}
+            aria-label="close"
+            className="grid size-9 place-items-center rounded-xl text-foreground/85 transition hover:bg-white/5"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
       </div>
       <PublicImageHistoryDialog
         item={selectedItem}
@@ -127,51 +437,33 @@ export function PublicImageHistoryPanel({
   );
 }
 
-function PendingImageCard({ pending }: { pending: PendingImageGenerationCard }) {
+/** 生成中占位块：按 justified 计算出的 width/height 渲染；深色 + 泛绿光，仅首块显示 Generating 标签 */
+function GeneratingCell({
+  width,
+  height,
+  showLabel,
+}: {
+  width: number;
+  height: number;
+  showLabel: boolean;
+}) {
   const t = useTranslations('publicGrowth.generator.studio');
-
   return (
-    <article
-      className="growth-flow-border growth-generator-masonry group relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-card text-left growth-history-card-shadow"
+    <div
+      className="growth-flow-border relative min-w-0 overflow-hidden bg-secondary"
+      style={{ width, height }}
       aria-live="polite"
       aria-label={t('generating')}
     >
-      <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
-        <div className="absolute inset-0 growth-history-empty-bg" />
-        <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-24 opacity-30" />
-        <div className="absolute inset-3 rounded-[12px] border border-border/60 bg-background/16 backdrop-blur-sm" />
-        <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-[9px] bg-background/58 px-2 py-1 text-[11px] font-black text-foreground backdrop-blur">
-          <Sparkles className="size-3.5 text-growth-accent" />
-          {pending.count}
+      <div className="absolute inset-0 growth-history-empty-bg" />
+      <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-24 opacity-30" />
+      {showLabel ? (
+        <div className="absolute left-3 top-3 inline-flex items-center gap-2 text-sm font-bold text-growth-accent">
+          <span className="size-4 rounded-full border-2 border-growth-accent border-t-transparent animate-spin" />
+          {t('generating')}
         </div>
-        <div className="absolute inset-x-0 top-[34%] flex flex-col items-center px-5 text-center">
-          <span className="relative grid size-14 place-items-center rounded-full border border-growth-accent/40 bg-growth-accent/10 text-growth-accent growth-history-icon-glow">
-            <span className="absolute inset-2 rounded-full border border-growth-accent/35 border-t-transparent animate-spin" />
-            <Sparkles className="size-5 fill-growth-accent" />
-          </span>
-          <h2 className="mt-4 text-base font-black uppercase leading-none text-foreground">
-            {t('generating')}
-          </h2>
-          <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-foreground/50">
-            {pending.prompt}
-          </p>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 p-3">
-          <div className="mb-3 grid grid-cols-4 gap-1.5">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <span
-                key={index}
-                className="growth-clip-pulse h-1.5 rounded-full bg-growth-accent/70"
-                style={{ animationDelay: `${index * 120}ms` }}
-              />
-            ))}
-          </div>
-          <div className="truncate text-[11px] font-bold text-foreground/48">
-            {pending.model}
-          </div>
-        </div>
-      </div>
-    </article>
+      ) : null}
+    </div>
   );
 }
 

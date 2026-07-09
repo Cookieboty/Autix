@@ -3,6 +3,7 @@ export * from './discount';
 export * from './fallback';
 export * from './PublicGrowthShell';
 export * from './PublicGeneratorAppNav';
+export * from './PublicTopPromo';
 export * from './MediaBlocks';
 export * from './GrowthInteractions';
 export * from './PublicHomeView';

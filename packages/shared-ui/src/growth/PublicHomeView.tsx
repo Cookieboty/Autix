@@ -8,6 +8,7 @@ import {
   HomeStarterSection,
 } from './PublicHomeSections';
 import { PublicGrowthShell } from './PublicGrowthShell';
+import { SetPublicTopPromo } from './PublicTopPromo';
 import type { PublicGrowthHome } from './types';
 
 export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
@@ -16,7 +17,9 @@ export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
   const heroSlots = home?.heroSlots;
 
   return (
-    <PublicGrowthShell promo={data.promo} showNav={false}>
+    <PublicGrowthShell promo={data.promo} showNav={false} showPromo={false}>
+      {/* 首页横幅内容（由 (public) layout 在导航上方渲染） */}
+      <SetPublicTopPromo label={data.promo?.label} href={data.promo?.href} />
       <main>
         <h1 className="sr-only">{t('home.title')}</h1>
         {heroSlots && heroSlots.length > 0 ? (

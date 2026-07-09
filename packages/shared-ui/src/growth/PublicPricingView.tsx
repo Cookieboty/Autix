@@ -10,6 +10,7 @@ import {
 } from '@autix/shared-store';
 import { toast } from '../ui';
 import { PublicGrowthShell } from './PublicGrowthShell';
+import { SetPublicTopPromo } from './PublicTopPromo';
 import {
   buildPricingPlans,
   normalizePointsPackages,
@@ -71,7 +72,8 @@ export function PublicPricingView({
   };
 
   return (
-    <PublicGrowthShell promo={{ label: t('promo'), href: '/membership/upgrade' }} showNav={false}>
+    <PublicGrowthShell promo={{ label: t('promo'), href: '/membership/upgrade' }} showNav={false} showPromo={false}>
+      <SetPublicTopPromo label={t('promo')} href="/membership/upgrade" />
       <main className="overflow-hidden bg-background">
         <section className="relative border-b border-foreground/10 bg-background">
           <div className="growth-pricing-grid-overlay" />
