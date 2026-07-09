@@ -24,9 +24,13 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   '/ai/video': FULL,
   '/ai/image': FULL,
   '/video': FULL,
-  '/marketing-studio': FULL,
-  '/original-series': FULL,
   '/viral-presets': FULL,
+
+  // 目前是 notFound() 占位 stub（实现被注释掉），不能声明 FULL——
+  // sitemap 会把 7 语言 × 该路由的 hreflang 簇提交给 Google，等于主动提交 404。
+  // 若页面重新上线，须把这两条改回 FULL 并加回 SITEMAP_STATIC_ROUTES。
+  '/marketing-studio': NOINDEX,
+  '/original-series': NOINDEX,
 
   // 部分语言
   '/docs': DOCS,
@@ -128,7 +132,7 @@ export function localizedPath(path: string, locale: SupportedLanguage): string {
 /** 可进 sitemap 的静态路由（路径在构建期完整可枚举）。 */
 export const SITEMAP_STATIC_ROUTES = [
   '/', '/pricing', '/ai/video', '/ai/image',
-  '/video', '/marketing-studio', '/original-series', '/viral-presets',
+  '/video', '/viral-presets',
   '/docs',
   '/community', '/presets',
 ] as const;
