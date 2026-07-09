@@ -6,7 +6,6 @@ import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { authActions } from '@autix/shared-store';
 import { mapOAuthErrorKey } from '@autix/shared-ui/auth';
-import { stripLocalePrefix } from '@/lib/locale-path';
 
 const OAUTH_RETURN_TO_KEY = 'autix.oauth.returnTo';
 
@@ -23,13 +22,22 @@ function sanitizeReturnTo(value: string | null | undefined) {
 }
 
 function consumeOAuthReturnTo() {
-  // returnTo 有两个互不知情的生产者：AuthModalHost 用原始的、可能带 locale 前缀的
-  // pathname，login 页面用裸逻辑路径。两者都经这个 key 落到 sessionStorage，读出来的
-  // 值因此可能带前缀也可能不带。下面交给 intl router（要求裸路径）之前必须在这里统一
-  // 剥离掉可能存在的前缀。
+  // 这个页面的 redirect URI（见 lib/oauth-popup-flow.ts）不带 locale 段，永远是
+  // `${origin}/oauth/callback`，所以本页始终在默认 locale 下渲染。intl router 的
+  // 前缀逻辑只看"当前激活的 locale"，从不看 href 本身；在默认 locale 下它对任何
+  // 字符串都是纯 passthrough，不会加前缀，因此也不可能造成双重前缀。
+  //
+  // 据此：returnTo 有两个互不知情的生产者——AuthModalHost 用原始的、带 locale 前缀
+  // 的 pathname，login 页面用裸逻辑路径——两者落到这里都必须原样传给 router，不能
+  // 剥离前缀。剥离会把已带前缀的值（如 /ja/community）变成裸路径，而 passthrough
+  // 路由器不会补回前缀，用户就此丢失 locale、被导去默认语言页面。带前缀和不带前缀
+  // 的值在这里同样正确，交给 router 即可。
+  //
+  // 若未来 redirect URI 加上了 locale 段（本页因此不再总在默认 locale 渲染），这个
+  // 结论需要重新评估。
   const value = sanitizeReturnTo(window.sessionStorage.getItem(OAUTH_RETURN_TO_KEY));
   window.sessionStorage.removeItem(OAUTH_RETURN_TO_KEY);
-  return value ? stripLocalePrefix(value) : value;
+  return value;
 }
 
 export default function OAuthCallbackPage() {
