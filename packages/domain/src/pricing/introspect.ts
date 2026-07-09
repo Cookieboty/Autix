@@ -1,4 +1,5 @@
-import type { PricingSchema } from './types';
+import { quoteTask } from './quote';
+import type { ParamsSchema, PricingSchema } from './types';
 
 /**
  * 静态分析出哪些参数会影响价格。前端只给这些控件挂价格标签。
@@ -17,4 +18,45 @@ export function affectedParams(schema: PricingSchema): string[] {
   }
 
   return params;
+}
+
+export interface PriceOptionsContext {
+  multiplier: number;
+  discountFactor: number;
+}
+
+/**
+ * 为每个「影响价格的 enum 参数」的每个候选值算出总价，供前端在控件上标价。
+ *
+ * 不计入 taskFixedCost：usage 在任务完成前不可知，且 taskFixedCost 是
+ * 加性常量，不随 params 变化，对选项之间的相对价格没有影响。
+ * 因此控件标价是模型侧价格，而非最终账单。
+ *
+ * 非 enum 参数（连续区间）不在此列——它们的价格由 UI 实时调 evaluatePricing 显示。
+ */
+export function priceOptions(
+  paramsSchema: ParamsSchema,
+  pricingSchema: PricingSchema,
+  currentParams: Record<string, unknown>,
+  ctx: PriceOptionsContext,
+): Record<string, Record<string, number>> {
+  const result: Record<string, Record<string, number>> = {};
+
+  for (const name of affectedParams(pricingSchema)) {
+    const property = paramsSchema.properties[name];
+    if (!property?.enum) continue;
+
+    const prices: Record<string, number> = {};
+    for (const candidate of property.enum) {
+      prices[String(candidate)] = quoteTask({
+        modelSchema: pricingSchema,
+        multiplier: ctx.multiplier,
+        discountFactor: ctx.discountFactor,
+        params: { ...currentParams, [name]: candidate },
+      }).total;
+    }
+    result[name] = prices;
+  }
+
+  return result;
 }
