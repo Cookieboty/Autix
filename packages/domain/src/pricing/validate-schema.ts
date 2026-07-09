@@ -11,6 +11,7 @@ export interface SchemaViolation {
     | 'TERM_NEEDS_EXACTLY_ONE_SOURCE'
     | 'ZERO_DIVISOR'
     | 'MALFORMED_TERM'
+    | 'MALFORMED_PROPERTY'
     | 'MISSING_X_UI'
     | 'CHOICE_CONTROL_NEEDS_ENUM'
     | 'RANGE_CONTROL_NEEDS_BOUNDS'
@@ -29,6 +30,10 @@ function sourceCount(term: Term): number {
 
 function isMalformedTerm(term: unknown): boolean {
   return term === null || term === undefined || typeof term !== 'object';
+}
+
+function isMalformedValue(value: unknown): boolean {
+  return value === null || value === undefined || typeof value !== 'object';
 }
 
 /**
@@ -119,6 +124,16 @@ export function validateParamsSchema(
   const violations: SchemaViolation[] = [];
 
   for (const [name, property] of Object.entries(paramsSchema.properties ?? {})) {
+    // Malformed property detection - single point of emission
+    if (isMalformedValue(property)) {
+      violations.push({
+        code: 'MALFORMED_PROPERTY',
+        message: `properties[${name}] 不是有效的对象`,
+        termId: name,
+      });
+      continue;
+    }
+
     const ui = property['x-ui'];
     if (!ui) {
       violations.push({ code: 'MISSING_X_UI', message: `参数 ${name} 缺少 x-ui`, termId: name });

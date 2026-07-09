@@ -189,10 +189,18 @@ describe('validateParamsSchema', () => {
     expect(paramsCodes(schema)).toContain('CHOICE_CONTROL_NEEDS_ENUM');
   });
 
-  it('requires minimum and maximum for slider and stepper', () => {
+  it('requires minimum and maximum for slider and stepper (missing maximum)', () => {
     const schema: ParamsSchema = {
       type: 'object',
       properties: { n: { type: 'integer', minimum: 1, 'x-ui': { control: 'stepper' } } },
+    };
+    expect(paramsCodes(schema)).toContain('RANGE_CONTROL_NEEDS_BOUNDS');
+  });
+
+  it('requires minimum and maximum for slider and stepper (missing minimum)', () => {
+    const schema: ParamsSchema = {
+      type: 'object',
+      properties: { n: { type: 'integer', maximum: 10, 'x-ui': { control: 'stepper' } } },
     };
     expect(paramsCodes(schema)).toContain('RANGE_CONTROL_NEEDS_BOUNDS');
   });
@@ -206,7 +214,11 @@ describe('validateParamsSchema', () => {
   });
 
   it('allows hidden control on any type without enum or bounds', () => {
-    expect(validateParamsSchema(valid)).toEqual([]);
+    const schema: ParamsSchema = {
+      type: 'object',
+      properties: { anything: { type: 'string', 'x-ui': { control: 'hidden' } } },
+    };
+    expect(validateParamsSchema(schema)).toEqual([]);
   });
 
   it('rejects a pricingSchema referencing a param that does not exist', () => {
@@ -228,5 +240,42 @@ describe('validateParamsSchema', () => {
       ],
     };
     expect(validateParamsSchema(valid, pricing)).toEqual([]);
+  });
+
+  it('returns exactly one MALFORMED_PROPERTY for a null property value (not a throw)', () => {
+    const schema = { type: 'object', properties: { a: null } } as unknown as ParamsSchema;
+    const violations = validateParamsSchema(schema);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_PROPERTY');
+    expect(violations[0].message).toContain('a');
+  });
+
+  it('returns exactly one MALFORMED_PROPERTY for a string property value', () => {
+    const schema = { type: 'object', properties: { s: 'not an object' } } as unknown as ParamsSchema;
+    const violations = validateParamsSchema(schema);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_PROPERTY');
+  });
+
+  it('returns exactly one MALFORMED_PROPERTY for a number property value', () => {
+    const schema = { type: 'object', properties: { n: 42 } } as unknown as ParamsSchema;
+    const violations = validateParamsSchema(schema);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_PROPERTY');
+  });
+
+  it('reports MALFORMED_PROPERTY for a malformed property while still checking a well-formed sibling', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        bad: null,
+        good: { type: 'string', enum: ['a'] },
+      },
+    } as unknown as ParamsSchema;
+    const violations = validateParamsSchema(schema);
+    expect(violations).toEqual([
+      { code: 'MALFORMED_PROPERTY', message: 'properties[bad] 不是有效的对象', termId: 'bad' },
+      { code: 'MISSING_X_UI', message: '参数 good 缺少 x-ui', termId: 'good' },
+    ]);
   });
 });
