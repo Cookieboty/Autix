@@ -37,52 +37,44 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
     return violations;
   }
 
-  const [first] = schema.terms;
-
-  if (isMalformedTerm(first)) {
-    violations.push({ code: 'MALFORMED_TERM', message: '首项不是有效的对象', termId: undefined });
-  } else {
-    if (first.op !== 'add') {
-      violations.push({
-        code: 'FIRST_TERM_MUST_BE_ADD',
-        message: '首项必须是 add —— 累加器从 0 起步，mul 会把整单算成 0',
-        termId: first.id,
-      });
-    }
-
-    if (first.when) {
-      violations.push({
-        code: 'FIRST_TERM_MUST_BE_UNCONDITIONAL',
-        message: '首项不能带 when —— 断言不成立时累加器会停在 0',
-        termId: first.id,
-      });
-    }
-
-    if (!('const' in first)) {
-      violations.push({
-        code: 'FIRST_TERM_MUST_BE_CONST',
-        message: '首项取值源必须是 const —— table 查表未命中、perUnit 参数缺失时该项会被跳过',
-        termId: first.id,
-      });
-    }
-  }
-
   const seen = new Set<string>();
   for (let i = 0; i < schema.terms.length; i++) {
     const term = schema.terms[i];
-    const isFirstTerm = i === 0;
 
-    // Skip malformation check for first term (already handled above)
-    if (!isFirstTerm && isMalformedTerm(term)) {
-      violations.push({ code: 'MALFORMED_TERM', message: 'term 不是有效的对象', termId: undefined });
-      continue;
-    }
-
-    // Skip further checks if term is malformed
+    // Malformed term detection - single point of emission
     if (isMalformedTerm(term)) {
+      violations.push({ code: 'MALFORMED_TERM', message: 'term 不是有效的对象' });
       continue;
     }
 
+    // First-term specific checks - only if first term and not malformed
+    if (i === 0) {
+      if (term.op !== 'add') {
+        violations.push({
+          code: 'FIRST_TERM_MUST_BE_ADD',
+          message: '首项必须是 add —— 累加器从 0 起步，mul 会把整单算成 0',
+          termId: term.id,
+        });
+      }
+
+      if (term.when) {
+        violations.push({
+          code: 'FIRST_TERM_MUST_BE_UNCONDITIONAL',
+          message: '首项不能带 when —— 断言不成立时累加器会停在 0',
+          termId: term.id,
+        });
+      }
+
+      if (!('const' in term)) {
+        violations.push({
+          code: 'FIRST_TERM_MUST_BE_CONST',
+          message: '首项取值源必须是 const —— table 查表未命中、perUnit 参数缺失时该项会被跳过',
+          termId: term.id,
+        });
+      }
+    }
+
+    // Common checks for all terms
     if (seen.has(term.id)) {
       violations.push({ code: 'DUPLICATE_TERM_ID', message: `term id 重复：${term.id}`, termId: term.id });
     }
