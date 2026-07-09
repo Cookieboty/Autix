@@ -7,12 +7,12 @@ import { Providers } from '@/components/providers';
 import { PlatformBinder } from '@/components/PlatformBinder';
 import { WebLocaleRouting } from '@/components/WebLocaleRouting';
 import { routing } from '@/i18n/routing';
+import { SITE_URL } from '@/lib/i18n/site-url';
 import '@/lib/platform';
 import '../globals.css';
 
-// 注意：`metadataBase: SITE_URL` 由 Task 8 加入（它创建 lib/i18n/site-url.ts），
-// `<LocaleHint />` 由 Task 12 加入（它创建 components/LocaleHint.tsx）。
-// 本任务【不要】import 这两个模块——它们尚不存在，会直接编译失败。
+// 注意：`<LocaleHint />` 由 Task 12 加入（它创建 components/LocaleHint.tsx）。
+// 本任务【不要】import 该模块——它尚不存在，会直接编译失败。
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -25,7 +25,7 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: 'metadata.root' });
 
   return {
-    // metadataBase: SITE_URL —— Task 8 加入
+    metadataBase: SITE_URL,
     title: t('title'),
     description: t('description'),
     icons: {
