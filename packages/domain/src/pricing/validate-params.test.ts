@@ -63,6 +63,6 @@ describe('validateParams', () => {
   it('rejects a then-branch constraint whose type is not declared', () => {
     expect(() =>
       validateParams(schemaWithUndeclaredThenType, { resolution: '4K', seconds: 8 }),
-    ).toThrow();
+    ).toThrow(/strict mode/i);
   });
 });
