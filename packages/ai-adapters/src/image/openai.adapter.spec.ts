@@ -315,7 +315,9 @@ describe('OpenAIImageAdapter', () => {
       expect(body.size).toBe('2048x1152');
     });
 
-    it('drops `auto` size from the request body (gpt-image accepts auto upstream by omission)', async () => {
+    it('coerces a legacy `auto` size to the capability default instead of omitting it', async () => {
+      // gpt-image 不再提供 'auto' 选项，但历史持久化的设置里仍可能存着它。
+      // clampAgainstCapability 会把它映射到 defaults.size，请求体因此带上具体尺寸。
       (globalThis.fetch as any).mockResolvedValue({
         ok: true,
         json: async () => ({ data: [] }),
@@ -332,7 +334,7 @@ describe('OpenAIImageAdapter', () => {
       await adapter.generate(ctx);
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
-      expect(body.size).toBeUndefined();
+      expect(body.size).toBe('1024x1024');
     });
   });
 });

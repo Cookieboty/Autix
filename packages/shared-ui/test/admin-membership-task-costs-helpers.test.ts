@@ -145,7 +145,6 @@ describe('admin membership task cost helpers', () => {
       'pro_reasoning',
     ]);
     expect(scopeOptionsForTask(imageTask, 'quality', [gptImage]).map((option) => option.value)).toEqual([
-      'auto',
       'low',
       'medium',
       'high',

@@ -71,8 +71,10 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
     };
     if (!isGptImage) body.n = count;
     if (!isGptImage) body.response_format = 'b64_json';
-    if (size && size !== 'auto') body.size = size;
-    if (quality && quality !== 'auto') body.quality = quality;
+    // clampAgainstCapability 已把任何非白名单值（含历史的 'auto'）映射到该模型的
+    // 合法尺寸/质量，且没有任何 capability 再提供 'auto'，故此处无需再排除它。
+    if (size) body.size = size;
+    if (quality) body.quality = quality;
 
     const baseUrl = ctx.baseUrl || 'https://api.openai.com';
     console.info(
