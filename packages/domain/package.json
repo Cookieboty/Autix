@@ -80,5 +80,8 @@
   "devDependencies": {
     "typescript": "^5.7.0",
     "vitest": "^4.1.7"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
   }
 }
