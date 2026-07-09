@@ -43,7 +43,7 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
 
     // Malformed term detection - single point of emission
     if (isMalformedTerm(term)) {
-      violations.push({ code: 'MALFORMED_TERM', message: 'term 不是有效的对象' });
+      violations.push({ code: 'MALFORMED_TERM', message: `terms[${i}] 不是有效的对象` });
       continue;
     }
 

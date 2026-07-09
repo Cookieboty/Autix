@@ -135,4 +135,22 @@ describe('validatePricingSchema', () => {
     const malformedViolations = violations.filter((v) => v.code === 'MALFORMED_TERM');
     expect(malformedViolations).toHaveLength(2);
   });
+
+  it('names the offending index for a malformed term at index 0', () => {
+    const schema = { terms: [null] } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_TERM');
+    expect(violations[0].message).toContain('terms[0]');
+  });
+
+  it('names the offending index for a malformed term at index 1', () => {
+    const schema = {
+      terms: [{ id: 'base', op: 'add', const: 1 }, undefined],
+    } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_TERM');
+    expect(violations[0].message).toContain('terms[1]');
+  });
 });
