@@ -95,3 +95,70 @@ describe('evaluatePricing — table source', () => {
     expect(evaluatePricing(schema, { tier: 2 }).total).toBe(30);
   });
 });
+
+describe('evaluatePricing — perUnit source', () => {
+  it('multiplies unitCost by the param value', () => {
+    const schema: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 0 },
+        { id: 'refImages', op: 'add', perUnit: { param: 'referenceImages', unitCost: 5 } },
+      ],
+    };
+    expect(evaluatePricing(schema, { referenceImages: 3 }).total).toBe(15);
+  });
+
+  it('divides by divisor', () => {
+    const schema: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 0 },
+        { id: 'inputTokens', op: 'add', perUnit: { param: 'inputTokens', unitCost: 0.5, divisor: 1000 } },
+      ],
+    };
+    expect(evaluatePricing(schema, { inputTokens: 3000 }).total).toBe(1.5);
+  });
+
+  it('works as a mul term', () => {
+    const schema: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 320 },
+        { id: 'seconds', op: 'mul', perUnit: { param: 'seconds', unitCost: 1 } },
+      ],
+    };
+    expect(evaluatePricing(schema, { seconds: 5 }).total).toBe(1600);
+  });
+
+  it('skips the term when the param is absent', () => {
+    const schema: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 90 },
+        { id: 'refImages', op: 'add', perUnit: { param: 'referenceImages', unitCost: 5 } },
+      ],
+    };
+    const result = evaluatePricing(schema, {});
+    expect(result.total).toBe(90);
+    expect(result.breakdown.map((b) => b.id)).toEqual(['base']);
+  });
+
+  it('skips the term when the param is not a finite number', () => {
+    const schema: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 90 },
+        { id: 'refImages', op: 'add', perUnit: { param: 'referenceImages', unitCost: 5 } },
+      ],
+    };
+    expect(evaluatePricing(schema, { referenceImages: 'many' }).total).toBe(90);
+    expect(evaluatePricing(schema, { referenceImages: NaN }).total).toBe(90);
+  });
+
+  it('yields zero for a zero param value rather than skipping', () => {
+    const schema: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 90 },
+        { id: 'refImages', op: 'add', perUnit: { param: 'referenceImages', unitCost: 5 } },
+      ],
+    };
+    const result = evaluatePricing(schema, { referenceImages: 0 });
+    expect(result.total).toBe(90);
+    expect(result.breakdown.map((b) => b.id)).toEqual(['base', 'refImages']);
+  });
+});

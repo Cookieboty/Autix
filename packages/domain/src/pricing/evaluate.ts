@@ -14,6 +14,12 @@ function resolveTermValue(term: Term, params: Record<string, unknown>): number |
     return hit === undefined ? term.table.fallback : hit;
   }
 
+  if ('perUnit' in term) {
+    const raw = params[term.perUnit.param];
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) return undefined;
+    return (term.perUnit.unitCost * raw) / (term.perUnit.divisor ?? 1);
+  }
+
   return undefined;
 }
 
