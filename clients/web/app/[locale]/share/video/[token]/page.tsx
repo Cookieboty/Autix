@@ -1,14 +1,16 @@
 import type { Metadata } from 'next';
+import type { SupportedLanguage } from '@autix/i18n';
 import { getTranslations } from 'next-intl/server';
 import { VideoSharePageView } from '@autix/shared-ui/video';
 import { getSharedVideoProject } from '@/lib/video-share';
+import { buildAlternates } from '@/lib/i18n/build-alternates';
 
 interface Props {
-  params: Promise<{ token: string }>;
+  params: Promise<{ locale: string; token: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { token } = await params;
+  const { locale, token } = await params;
   const t = await getTranslations('publicGrowth.metadata');
   const detail = await getSharedVideoProject(token);
   const image = detail?.thumbnailUrl || detail?.coverImage || undefined;
@@ -25,6 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       videos: detail.videoUrl ? [detail.videoUrl] : undefined,
       type: 'video.other',
     } : undefined,
+    ...buildAlternates('/share/video/[token]', { token }, locale as SupportedLanguage),
   };
 }
 

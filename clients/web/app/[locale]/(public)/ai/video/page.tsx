@@ -1,19 +1,30 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import type { SupportedLanguage } from '@autix/i18n';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { PublicGeneratorStudioView } from '@autix/shared-ui/growth';
+import { buildAlternates } from '@/lib/i18n/build-alternates';
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
   const t = await getTranslations('publicGrowth.metadata.video');
   return {
     title: t('title'),
     description: t('description'),
+    ...buildAlternates('/ai/video', undefined, locale as SupportedLanguage),
   };
 }
 
-type Props = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
+type Props = {
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export default async function PublicVideoPage({ searchParams }: Props) {
-  const params = await searchParams;
-  const model = Array.isArray(params?.model) ? params?.model[0] : params?.model;
+export default async function PublicVideoPage({ params, searchParams }: Props) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const sp = await searchParams;
+  const model = Array.isArray(sp?.model) ? sp?.model[0] : sp?.model;
   return <PublicGeneratorStudioView kind="video" initialModel={model} />;
 }
