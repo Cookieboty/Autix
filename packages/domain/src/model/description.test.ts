@@ -1,11 +1,29 @@
 import { describe, expect, it } from 'vitest';
+import { resolve, dirname } from 'path';
+import { readdirSync } from 'fs';
+import { fileURLToPath } from 'url';
 import { resolveDescription, validateDescription, SUPPORTED_LOCALES } from './description';
 
 describe('SUPPORTED_LOCALES', () => {
   it('matches the locale files shipped by @autix/i18n', () => {
-    expect([...SUPPORTED_LOCALES].sort()).toEqual(
-      ['en', 'fr', 'ja', 'ru', 'vi', 'zh-CN', 'zh-TW'].sort(),
-    );
+    // Resolve the path relative to this test file's location
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const messagesDir = resolve(__dirname, '../../../i18n/src/messages');
+
+    // Read actual locale files from disk
+    const localeFiles = readdirSync(messagesDir)
+      .filter(file => file.endsWith('.json'))
+      .map(file => file.replace(/\.json$/, ''))
+      .sort();
+
+    // Guard against silently empty directory listings
+    expect(localeFiles.length).toBeGreaterThan(0);
+
+    // Compare in both directions: tuple must match files exactly
+    const supportedLocales = [...SUPPORTED_LOCALES].sort();
+    expect(supportedLocales).toEqual(localeFiles);
+    expect(localeFiles).toEqual(supportedLocales);
   });
 });
 
@@ -54,5 +72,13 @@ describe('validateDescription', () => {
   it('rejects a non-object', () => {
     expect(validateDescription('hello')).toEqual(['<root>']);
     expect(validateDescription(null)).toEqual(['<root>']);
+  });
+
+  it('rejects an array', () => {
+    expect(validateDescription([])).toEqual(['<root>']);
+  });
+
+  it('rejects a number primitive', () => {
+    expect(validateDescription(42)).toEqual(['<root>']);
   });
 });
