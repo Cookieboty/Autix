@@ -8,5 +8,6 @@ export * from './gallery';
 export * from './image';
 export * from './marketplace';
 export * from './model';
+export * from './pricing';
 export * from './rbac';
 export * from './video';

@@ -56,6 +56,11 @@
       "import": "./src/model/index.ts",
       "require": "./dist/model/index.js"
     },
+    "./pricing": {
+      "types": "./src/pricing/index.ts",
+      "import": "./src/pricing/index.ts",
+      "require": "./dist/pricing/index.js"
+    },
     "./rbac": {
       "types": "./src/rbac/index.ts",
       "import": "./src/rbac/index.ts",
