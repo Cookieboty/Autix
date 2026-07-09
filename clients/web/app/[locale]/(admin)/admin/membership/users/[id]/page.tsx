@@ -1,6 +1,7 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { AdminMembershipUserDetailView } from '@autix/shared-ui/admin';
 
 export default function AdminUserDetailPage() {

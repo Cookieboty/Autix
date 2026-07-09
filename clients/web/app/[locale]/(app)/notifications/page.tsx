@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { FileText, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { SidebarTrigger } from '@autix/shared-ui/ui';

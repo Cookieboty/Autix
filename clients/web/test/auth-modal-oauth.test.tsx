@@ -7,6 +7,11 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/community',
   useSearchParams: () => new URLSearchParams(''),
 }));
+// AuthModalHost uses the next-intl router for bare logical paths (e.g. /pending);
+// reuse the same `replace` spy so the assertions cover both routers.
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: () => ({ replace, push: vi.fn() }),
+}));
 vi.mock('next-intl', () => ({ useTranslations: () => (k: string) => k }));
 
 const loginWithPopup = vi.fn();

@@ -1,6 +1,7 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { PendingPageView } from '@autix/shared-ui/auth';
 import { authActions } from '@autix/shared-store';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { AdminSidebar } from '@autix/shared-ui/admin';
 import { RouteLoader, SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';

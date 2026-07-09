@@ -3,8 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 const push = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
   useSearchParams: () => new URLSearchParams(''),
+}));
+// login page navigates via the next-intl router (@/i18n/navigation).
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: () => ({ push }),
 }));
 vi.mock('next-intl', () => ({ useTranslations: () => (k: string) => k }));
 

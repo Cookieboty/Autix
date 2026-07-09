@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { ForgotPasswordPageView } from '@autix/shared-ui/auth';
 import { authActions } from '@autix/shared-store';
 
