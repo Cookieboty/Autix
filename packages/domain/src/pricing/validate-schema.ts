@@ -18,6 +18,10 @@ function sourceCount(term: Term): number {
   return (['const', 'table', 'perUnit'] as const).filter((key) => key in term).length;
 }
 
+function isMalformedTerm(term: unknown): boolean {
+  return term === null || term === undefined || typeof term !== 'object';
+}
+
 /**
  * 保存 pricingSchema 前的结构校验。返回空数组表示合法。
  *
@@ -35,7 +39,7 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
 
   const [first] = schema.terms;
 
-  if (first === null || first === undefined || typeof first !== 'object') {
+  if (isMalformedTerm(first)) {
     violations.push({ code: 'MALFORMED_TERM', message: '首项不是有效的对象', termId: undefined });
   } else {
     if (first.op !== 'add') {
@@ -64,9 +68,18 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
   }
 
   const seen = new Set<string>();
-  for (const term of schema.terms) {
-    if (term === null || term === undefined || typeof term !== 'object') {
+  for (let i = 0; i < schema.terms.length; i++) {
+    const term = schema.terms[i];
+    const isFirstTerm = i === 0;
+
+    // Skip malformation check for first term (already handled above)
+    if (!isFirstTerm && isMalformedTerm(term)) {
       violations.push({ code: 'MALFORMED_TERM', message: 'term 不是有效的对象', termId: undefined });
+      continue;
+    }
+
+    // Skip further checks if term is malformed
+    if (isMalformedTerm(term)) {
       continue;
     }
 

@@ -90,17 +90,49 @@ describe('validatePricingSchema', () => {
     expect(violations.map((v) => v.code)).toContain('FIRST_TERM_MUST_BE_CONST');
   });
 
-  it('returns MALFORMED_TERM for null term and does not throw', () => {
+  it('returns exactly one MALFORMED_TERM for a null first term (not two)', () => {
     const schema = { terms: [null] } as unknown as PricingSchema;
     const violations = validatePricingSchema(schema);
-    expect(violations.map((v) => v.code)).toContain('MALFORMED_TERM');
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_TERM');
   });
 
-  it('returns MALFORMED_TERM for malformed second term after valid first term', () => {
+  it('returns exactly one MALFORMED_TERM for an undefined first term', () => {
+    const schema = { terms: [undefined] } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_TERM');
+  });
+
+  it('returns exactly one MALFORMED_TERM when first term is a string', () => {
+    const schema = { terms: ['invalid'] } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_TERM');
+  });
+
+  it('returns exactly one MALFORMED_TERM when first term is a number', () => {
+    const schema = { terms: [42] } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].code).toBe('MALFORMED_TERM');
+  });
+
+  it('returns exactly one MALFORMED_TERM for a malformed second term after a valid first term', () => {
     const schema = {
       terms: [{ id: 'base', op: 'add', const: 1 }, undefined],
     } as unknown as PricingSchema;
     const violations = validatePricingSchema(schema);
-    expect(violations.map((v) => v.code)).toContain('MALFORMED_TERM');
+    const malformedViolations = violations.filter((v) => v.code === 'MALFORMED_TERM');
+    expect(malformedViolations).toHaveLength(1);
+  });
+
+  it('returns exactly one MALFORMED_TERM for each malformed term in a multi-term schema', () => {
+    const schema = {
+      terms: [{ id: 'base', op: 'add', const: 1 }, null, undefined],
+    } as unknown as PricingSchema;
+    const violations = validatePricingSchema(schema);
+    const malformedViolations = violations.filter((v) => v.code === 'MALFORMED_TERM');
+    expect(malformedViolations).toHaveLength(2);
   });
 });
