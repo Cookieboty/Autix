@@ -79,10 +79,20 @@ describe('priceOptions', () => {
   });
 
   it('applies multiplier and discount', () => {
-    const result = priceOptions(paramsSchema, pricingSchema, { quality: 'medium', resolution: '1K' }, {
-      multiplier: 2, discountFactor: 0.5,
-    });
-    expect(result.quality).toEqual({ low: 15, medium: 90, high: 350 });
+    // multiplier(3) * discountFactor(0.5) = 1.5 — deliberately not 1, so this
+    // test actually detects an implementation that ignores ctx.
+    const scaledCtx = { multiplier: 3, discountFactor: 0.5 };
+    const result = priceOptions(paramsSchema, pricingSchema, { quality: 'medium', resolution: '1K' }, scaledCtx);
+
+    // Model-side total (base=1, resolution=1K=1x) per candidate, then × 1.5, then ceil:
+    //   low:    1 * 15  * 1 = 15  → 15  * 1.5 = 22.5 → ceil 23
+    //   medium: 1 * 90  * 1 = 90  → 90  * 1.5 = 135  → ceil 135
+    //   high:   1 * 350 * 1 = 350 → 350 * 1.5 = 525  → ceil 525
+    expect(result.quality).toEqual({ low: 23, medium: 135, high: 525 });
+
+    // Must differ from the 1/1 baseline, or a regression to "ignore ctx" would pass silently.
+    const baseline = priceOptions(paramsSchema, pricingSchema, { quality: 'medium', resolution: '1K' }, ctx);
+    expect(result.quality).not.toEqual(baseline.quality);
   });
 
   it('agrees with quoteTask for each option', () => {
@@ -98,15 +108,31 @@ describe('priceOptions', () => {
 
   it('excludes taskFixedCost from every option price', () => {
     // 防止后来者「顺手」把 taskFixedSchema 加进 priceOptions。
-    // 直接算出模型侧应有的价格，逐个比对——若实现里混入了任务侧开销，这里必红。
-    const result = priceOptions(paramsSchema, pricingSchema, { quality: 'medium', resolution: '1K' }, ctx);
+    // 用一个真正会产生非零 taskFixedCost 的 schema，证明 priceOptions 的结果
+    // 等于「不带 taskFixedSchema」的 quoteTask 总价，而不是「带 taskFixedSchema」的总价。
+    const taskFixedSchema: PricingSchema = {
+      terms: [
+        { id: 'taskBase', op: 'add', const: 0 },
+        { id: 'toolCalls', op: 'add', perUnit: { param: 'toolCalls', unitCost: 2 } },
+      ],
+    };
 
-    for (const [value, price] of Object.entries(result.quality)) {
-      const modelOnly = evaluatePricing(pricingSchema, {
-        quality: value,
-        resolution: '1K',
-      }).total * ctx.multiplier * ctx.discountFactor;
-      expect(price, `quality=${value}`).toBe(Math.ceil(modelOnly));
-    }
+    const params = { quality: 'medium', resolution: '1K' };
+
+    const withoutFixed = quoteTask({
+      modelSchema: pricingSchema, multiplier: 1, discountFactor: 1, params,
+    });
+    const withFixed = quoteTask({
+      modelSchema: pricingSchema, multiplier: 1, discountFactor: 1,
+      taskFixedSchema, params, usage: { toolCalls: 5 },
+    });
+
+    // 先证明这个 fixture 真的会产生 taskFixedCost（否则下面的比对没有意义）。
+    expect(withFixed.total).not.toBe(withoutFixed.total);
+    expect(withFixed.total).toBe(withoutFixed.total + 10); // 0 + 5 * 2 = 10
+
+    const result = priceOptions(paramsSchema, pricingSchema, params, ctx);
+    expect(result.quality.medium).toBe(withoutFixed.total);
+    expect(result.quality.medium).not.toBe(withFixed.total);
   });
 });
