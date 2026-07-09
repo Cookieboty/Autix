@@ -4333,10 +4333,6 @@
     "localeZhCN": "簡体字中国語",
     "localeEn": "英語"
   },
-  "localeHint": {
-    "viewIn": "{language}で表示",
-    "dismiss": "閉じる"
-  },
   "myTemplates": {
     "title": "我的模板",
     "createTemplate": "创建模板",

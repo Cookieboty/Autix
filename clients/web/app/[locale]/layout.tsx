@@ -6,7 +6,6 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 import { Providers } from '@/components/providers';
 import { PlatformBinder } from '@/components/PlatformBinder';
 import { WebLocaleRouting } from '@/components/WebLocaleRouting';
-import { LocaleHint } from '@/components/LocaleHint';
 import { routing } from '@/i18n/routing';
 import { SITE_URL } from '@/lib/i18n/site-url';
 import '@/lib/platform';
@@ -56,7 +55,6 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <WebLocaleRouting>
             <Providers>
-              <LocaleHint />
               {/*
                 页面槽位的 Suspense 边界。存在原因：若干 **noindex** 客户端页
                 （pending / login / register / reset-password / activate / oauth/* /

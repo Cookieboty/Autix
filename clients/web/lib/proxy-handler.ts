@@ -2,7 +2,7 @@ import { routing, PREFIXED_LOCALES } from '@/i18n/routing';
 
 export type ProxyAction =
   | { type: 'rewrite'; url: string }
-  | { type: 'redirect'; url: string; status: 301 }
+  | { type: 'redirect'; url: string; status: 301 | 302 }
   | { type: 'intl' };
 
 const PREFIX_GROUP = PREFIXED_LOCALES.join('|');
@@ -17,6 +17,7 @@ export function resolveProxyAction(
   pathname: string,
   search: string,
   apiOrigin: string,
+  localeCookie?: string,
 ): ProxyAction {
   // 反代整个 /api：matcher 里的 `/api/:path*` 会同时放行裸 `/api`（`:path*` 匹配零段），
   // 若只测 `startsWith('/api/')`，裸 `/api` 会漏到 intl 并 404。此处让 handler 与 matcher
@@ -41,6 +42,23 @@ export function resolveProxyAction(
   if (handle && !isDotHandle(handle[2])) {
     const locale = handle[1] ?? routing.defaultLocale;
     return { type: 'rewrite', url: `/${locale}/u/${handle[2]}${search}` };
+  }
+
+  // 根路径按 NEXT_LOCALE cookie 跳转到用户已知语言的首页。仅对裸根路径生效——
+  // `/pricing` 等裸深链接必须保持可分享，`/zh-CN` 等已带 locale 的 URL 必须优先于
+  // cookie（否则 `/zh-CN` + cookie=ja 会跳走，形成循环或劫持显式选择）。
+  // cookie 必须校验落在 routing.locales 内（不可信输入），且不能是默认 locale
+  // （否则裸路径会被无意义地跳到自身）。302（非 301！）——决策依赖请求 cookie，
+  // 不能被浏览器/CDN 永久缓存，否则下一个访客（如 Googlebot，无 cookie）会被错误地
+  // 301 命中缓存的旧跳转。是否附加 `Cache-Control: private, no-store` 由 proxy.ts
+  // 在包装 NextResponse 时处理（此处是纯字符串运算，无 Response 对象）。
+  if (
+    pathname === '/' &&
+    localeCookie &&
+    localeCookie !== routing.defaultLocale &&
+    (routing.locales as readonly string[]).includes(localeCookie)
+  ) {
+    return { type: 'redirect', url: `/${localeCookie}${search}`, status: 302 };
   }
 
   return { type: 'intl' };

@@ -107,6 +107,56 @@ describe('resolveProxyAction', () => {
   });
 });
 
+describe('resolveProxyAction — 根路径按 NEXT_LOCALE cookie 自动跳转', () => {
+  it('/ + cookie zh-CN → 302 跳转 /zh-CN', () => {
+    expect(resolveProxyAction('/', '', API, 'zh-CN')).toEqual({
+      type: 'redirect',
+      url: '/zh-CN',
+      status: 302,
+    });
+  });
+
+  it('/ + cookie ja → 302 跳转 /ja', () => {
+    expect(resolveProxyAction('/', '', API, 'ja')).toEqual({
+      type: 'redirect',
+      url: '/ja',
+      status: 302,
+    });
+  });
+
+  it('/ + cookie en（默认 locale）→ 不跳转，交给 intl', () => {
+    expect(resolveProxyAction('/', '', API, 'en')).toEqual({ type: 'intl' });
+  });
+
+  it('/ + 无 cookie → 不跳转，交给 intl（Googlebot / 首次访问）', () => {
+    expect(resolveProxyAction('/', '', API)).toEqual({ type: 'intl' });
+  });
+
+  it('/ + 非法/不支持的 cookie 值 → 不跳转，交给 intl', () => {
+    expect(resolveProxyAction('/', '', API, 'xx-garbage')).toEqual({ type: 'intl' });
+  });
+
+  it('/pricing + cookie zh-CN → 不跳转（裸深链接需保持可分享）', () => {
+    expect(resolveProxyAction('/pricing', '', API, 'zh-CN')).toEqual({ type: 'intl' });
+  });
+
+  it('/zh-CN + cookie zh-CN → 不跳转（不形成循环）', () => {
+    expect(resolveProxyAction('/zh-CN', '', API, 'zh-CN')).toEqual({ type: 'intl' });
+  });
+
+  it('/zh-CN + cookie ja → 不跳转（URL 优先于 cookie）', () => {
+    expect(resolveProxyAction('/zh-CN', '', API, 'ja')).toEqual({ type: 'intl' });
+  });
+
+  it('/?utm=x + cookie ja → 302 跳转 /ja?utm=x（保留查询串）', () => {
+    expect(resolveProxyAction('/', '?utm=x', API, 'ja')).toEqual({
+      type: 'redirect',
+      url: '/ja?utm=x',
+      status: 302,
+    });
+  });
+});
+
 describe('proxy.ts matcher / routing 同步', () => {
   // next 要求 config.matcher 在 build 期静态可分析，不能从 proxy.ts 里 `import { config }`
   // 做运行期比对：next-intl/middleware 在 vitest 下解析 next/server 会直接报模块找不到

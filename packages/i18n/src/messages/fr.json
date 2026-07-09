@@ -4524,9 +4524,5 @@
   "docsLayout": {
     "localeZhCN": "Chinois simplifié",
     "localeEn": "Anglais"
-  },
-  "localeHint": {
-    "viewIn": "Voir en {language}",
-    "dismiss": "Ignorer"
   }
 }

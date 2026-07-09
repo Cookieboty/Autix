@@ -4333,10 +4333,6 @@
     "localeZhCN": "Упрощенный китайский",
     "localeEn": "Английский"
   },
-  "localeHint": {
-    "viewIn": "Просмотреть на {language}",
-    "dismiss": "Закрыть"
-  },
   "myTemplates": {
     "title": "我的模板",
     "createTemplate": "创建模板",
