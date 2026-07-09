@@ -1,4 +1,5 @@
 import type { Breakdown, EvalResult, PricingSchema, Term } from './types';
+import { matchesPredicate } from './predicate';
 
 /**
  * 解析一个 term 的取值。返回 undefined 表示该 term 不适用，应整个跳过
@@ -31,6 +32,8 @@ export function evaluatePricing(
   const breakdown: Breakdown[] = [];
 
   for (const term of schema.terms) {
+    if (!matchesPredicate(term.when, params)) continue;
+
     const contribution = resolveTermValue(term, params);
     if (contribution === undefined) continue;
 

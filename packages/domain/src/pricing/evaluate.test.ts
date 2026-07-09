@@ -162,3 +162,22 @@ describe('evaluatePricing — perUnit source', () => {
     expect(result.breakdown.map((b) => b.id)).toEqual(['base', 'refImages']);
   });
 });
+
+describe('evaluatePricing — when predicate', () => {
+  const schema: PricingSchema = {
+    terms: [
+      { id: 'base', op: 'add', const: 100 },
+      { id: 'priority', op: 'mul', const: 1.5, when: { all: [{ param: 'priority', op: 'eq', value: true }] } },
+    ],
+  };
+
+  it('applies the term when the predicate holds', () => {
+    expect(evaluatePricing(schema, { priority: true }).total).toBe(150);
+  });
+
+  it('skips the term when the predicate fails', () => {
+    const result = evaluatePricing(schema, { priority: false });
+    expect(result.total).toBe(100);
+    expect(result.breakdown.map((b) => b.id)).toEqual(['base']);
+  });
+});
