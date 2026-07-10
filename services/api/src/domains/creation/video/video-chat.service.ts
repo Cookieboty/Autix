@@ -260,17 +260,18 @@ export class VideoChatService {
     estimatedCost: number;
     inputTokens: number;
     taskType: VideoDirectorBillingPurpose;
-    membershipLevel: number;
   } | null> {
     if (!input.billingPurpose) return null;
     const taskId = `video-director:${input.billingPurpose}:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(input.userId);
+    // estimateCost throws (BadRequestException) on any missing/invalid pricing
+    // config — no catch here. The old engine used to swallow that and charge by
+    // a different formula; that fallback is deleted, not ported.
     const estimate = await this.pointsService.estimateCost({
       taskType: input.billingPurpose,
-      modelProvider: config.provider ?? undefined,
-      modelName: config.model,
-      inputTokens: tokens.inputTokens,
-      outputTokens: tokens.outputTokens,
+      modelConfigId: config.id,
+      params: {},
+      usage: { inputTokens: tokens.inputTokens, outputTokens: tokens.outputTokens },
       membershipLevel,
     });
     const { hold } = await this.pointsService.createHold(input.userId, {
@@ -278,9 +279,6 @@ export class VideoChatService {
       taskId,
       amount: estimate.estimatedCost,
       pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-      refundPolicySnapshot: estimate.refundPolicy
-        ? this.toJson(estimate.refundPolicy)
-        : undefined,
       metadata: this.toJson({
         projectId: input.projectId,
         conversationId: input.conversationId ?? null,
@@ -298,7 +296,6 @@ export class VideoChatService {
       estimatedCost: estimate.estimatedCost,
       inputTokens: tokens.inputTokens,
       taskType: input.billingPurpose,
-      membershipLevel,
     };
   }
 
@@ -308,31 +305,23 @@ export class VideoChatService {
       estimatedCost: number;
       inputTokens: number;
       taskType: VideoDirectorBillingPurpose;
-      membershipLevel?: number;
     } | null,
-    config: VideoDirectorModelConfig,
+    _config: VideoDirectorModelConfig,
     result: unknown,
     content: string,
   ) {
     if (!hold) return;
     const usage = extractTokenUsage(result);
-    try {
-      const actualEstimate = await this.pointsService.estimateCost({
-        taskType: hold.taskType,
-        modelProvider: config.provider ?? undefined,
-        modelName: config.model,
-        inputTokens: usage.inputTokens ?? hold.inputTokens,
-        outputTokens: usage.outputTokens ?? estimateTextTokens(content),
-        contextTokens: usage.contextTokens,
-        membershipLevel: hold.membershipLevel,
-      });
-      await this.pointsService.confirmHold(
-        hold.holdId,
-        Math.min(actualEstimate.estimatedCost, hold.estimatedCost),
-      );
-    } catch {
-      await this.pointsService.confirmHold(hold.holdId);
-    }
+    // Settlement prices off the hold's frozen pricingSnapshot, never a live
+    // re-estimate — an admin editing model pricing after the hold was created
+    // must not re-price a task that is already in flight. quoteHoldFromSnapshot
+    // itself caps at the frozen estimatedAmount and warns on cap.
+    const actualAmount = await this.pointsService.quoteHoldFromSnapshot(hold.holdId, {
+      inputTokens: usage.inputTokens ?? hold.inputTokens,
+      outputTokens: usage.outputTokens ?? estimateTextTokens(content),
+      contextTokens: usage.contextTokens,
+    });
+    await this.pointsService.confirmHold(hold.holdId, actualAmount);
   }
 
   private async safeRefundBillingHold(holdId: string, reason: string) {

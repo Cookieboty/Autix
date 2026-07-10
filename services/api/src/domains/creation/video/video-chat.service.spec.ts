@@ -26,13 +26,16 @@ function createService() {
   const pointsService = {
     estimateCost: jest.fn().mockResolvedValue({
       estimatedCost: 10,
+      taskType: 'video_template_optimize',
+      modelConfigId: 'model-1',
+      breakdown: [],
       pricingSnapshot: { ruleId: 'rule-video-director' },
-      refundPolicy: { systemFailed: 'full_refund' },
     }),
     createHold: jest.fn().mockResolvedValue({
       hold: { id: 'hold-1' },
       balance: 990,
     }),
+    quoteHoldFromSnapshot: jest.fn().mockResolvedValue(8),
     confirmHold: jest.fn().mockResolvedValue({ confirmed: true }),
     refundHold: jest.fn().mockResolvedValue({ refunded: true }),
   };
@@ -223,19 +226,16 @@ describe('VideoChatService', () => {
     expect(events).toHaveLength(1);
   });
 
-  it('charges video template optimization and confirms the hold with actual tokens', async () => {
+  it('charges video template optimization with the new estimate shape and settles from the snapshot', async () => {
     const { service, pointsService } = createService();
-    pointsService.estimateCost
-      .mockResolvedValueOnce({
-        estimatedCost: 12,
-        pricingSnapshot: { ruleId: 'rule-video-template' },
-        refundPolicy: { systemFailed: 'full_refund' },
-      })
-      .mockResolvedValueOnce({
-        estimatedCost: 7,
-        pricingSnapshot: { ruleId: 'rule-video-template' },
-        refundPolicy: { systemFailed: 'full_refund' },
-      });
+    pointsService.estimateCost.mockResolvedValueOnce({
+      estimatedCost: 12,
+      taskType: 'video_template_optimize',
+      modelConfigId: 'model-1',
+      breakdown: [],
+      pricingSnapshot: { ruleId: 'rule-video-template' },
+    });
+    pointsService.quoteHoldFromSnapshot.mockResolvedValueOnce(7);
     mockAssistant(service, '优化后的视频提示词', {
       usage: {
         input_tokens: 130,
@@ -255,37 +255,85 @@ describe('VideoChatService', () => {
       events.push(event);
     }
 
-    expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        taskType: 'video_template_optimize',
-        modelProvider: 'openai',
-        modelName: 'gpt-4o-mini',
-        inputTokens: 120,
-        membershipLevel: 2,
-      }),
+    // Estimate uses the new engine's shape: taskType/modelConfigId/params/usage,
+    // tokens live under usage (not params).
+    expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
+    expect(pointsService.estimateCost).toHaveBeenCalledWith({
+      taskType: 'video_template_optimize',
+      modelConfigId: 'model-1',
+      params: {},
+      usage: { inputTokens: 120, outputTokens: 128 },
+      membershipLevel: 2,
+    });
+
+    const createHoldArgs = pointsService.createHold.mock.calls[0][1];
+    expect(createHoldArgs).toMatchObject({
+      taskType: 'video_template_optimize',
+      amount: 12,
+      pricingSnapshot: { ruleId: 'rule-video-template' },
+      remark: '视频模板 AI 优化 · openai/gpt-4o-mini',
+    });
+    expect(createHoldArgs).not.toHaveProperty('refundPolicySnapshot');
+
+    // Settlement prices off the frozen snapshot via quoteHoldFromSnapshot, and
+    // never calls estimateCost a second time (no live re-estimate at settlement).
+    expect(pointsService.quoteHoldFromSnapshot).toHaveBeenCalledWith(
+      'hold-1',
+      expect.objectContaining({ inputTokens: 130, outputTokens: 40, contextTokens: 170 }),
     );
-    expect(pointsService.createHold).toHaveBeenCalledWith(
-      'user-1',
-      expect.objectContaining({
-        taskType: 'video_template_optimize',
-        amount: 12,
-        remark: '视频模板 AI 优化 · openai/gpt-4o-mini',
-      }),
-    );
-    expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        taskType: 'video_template_optimize',
-        inputTokens: 130,
-        outputTokens: 40,
-        contextTokens: 170,
-        membershipLevel: 2,
-      }),
-    );
+    expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
     expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1', 7);
     expect(pointsService.refundHold).not.toHaveBeenCalled();
     expect(events).toHaveLength(1);
+  });
+
+  it('propagates when the estimate throws instead of falling back to a metered charge', async () => {
+    const { service, pointsService } = createService();
+    pointsService.estimateCost.mockRejectedValueOnce(new Error('任务未配置: video_template_optimize'));
+    mockAssistant(service, '优化后的视频提示词');
+
+    await expect(
+      (async () => {
+        for await (const _event of service.chat({
+          userId: 'user-1',
+          conversationId: 'conv-1',
+          projectId: 'project-1',
+          message: '优化当前视频提示词',
+          billingPurpose: 'video_template_optimize',
+        })) {
+          // consume generator
+        }
+      })(),
+    ).rejects.toThrow('任务未配置: video_template_optimize');
+
+    expect(pointsService.createHold).not.toHaveBeenCalled();
+    expect(pointsService.refundHold).not.toHaveBeenCalled();
+    expect(pointsService.confirmHold).not.toHaveBeenCalled();
+  });
+
+  it('propagates when settlement fails instead of confirming at a substituted price', async () => {
+    const { service, pointsService } = createService();
+    pointsService.quoteHoldFromSnapshot.mockRejectedValueOnce(new Error('积分冻结不存在'));
+    mockAssistant(service, '优化后的视频提示词', {
+      usage: { input_tokens: 130, output_tokens: 40, total_tokens: 170 },
+    });
+
+    await expect(
+      (async () => {
+        for await (const _event of service.chat({
+          userId: 'user-1',
+          conversationId: 'conv-1',
+          projectId: 'project-1',
+          message: '优化当前视频提示词',
+          billingPurpose: 'video_template_optimize',
+        })) {
+          // consume generator
+        }
+      })(),
+    ).rejects.toThrow('积分冻结不存在');
+
+    expect(pointsService.confirmHold).not.toHaveBeenCalled();
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '视频导演任务失败');
   });
 
   it('refunds video storyboard optimization hold when assistant invocation fails', async () => {
