@@ -41,3 +41,25 @@ describe('PointsRepository expiry guard (FIX-11)', () => {
     });
   });
 });
+
+describe('PointsRepository.findHoldByIdWithinTx', () => {
+  it('reads a hold by id from the given client', async () => {
+    const findUnique = jest.fn().mockResolvedValue({ id: 'hold-1' });
+    const repo = new PointsRepository({} as never);
+
+    const result = await repo.findHoldByIdWithinTx({ point_holds: { findUnique } } as never, 'hold-1');
+
+    expect(findUnique).toHaveBeenCalledWith({ where: { id: 'hold-1' } });
+    expect(result).toEqual({ id: 'hold-1' });
+  });
+
+  it('findHoldById reads through the default prisma client', async () => {
+    const findUnique = jest.fn().mockResolvedValue({ id: 'hold-2' });
+    const repo = new PointsRepository({ point_holds: { findUnique } } as never);
+
+    const result = await repo.findHoldById('hold-2');
+
+    expect(findUnique).toHaveBeenCalledWith({ where: { id: 'hold-2' } });
+    expect(result).toEqual({ id: 'hold-2' });
+  });
+});

@@ -15,6 +15,7 @@ import {
   buildRefundRecordUpdateData,
   isConfirmTerminalStatus,
   isRefundTerminalStatus,
+  parsePricingSnapshot,
   presentConfirmedHoldStatus,
   sumHoldItemAmount,
   type CreateHoldInput,
@@ -168,5 +169,77 @@ describe('points hold helpers', () => {
       balance: 100,
       remark: 'refund: provider failed',
     });
+  });
+});
+
+describe('parsePricingSnapshot', () => {
+  const validSnapshot = {
+    schemaVersion: 1,
+    modelConfigId: 'model-1',
+    modelSchema: { terms: [{ id: 'base', op: 'add', const: 90 }] },
+    taskFixedSchema: null,
+    multiplier: 1,
+    discountFactor: 1,
+    discountCode: null,
+    params: { quality: 'medium' },
+  };
+
+  it('returns the snapshot when well-formed', () => {
+    expect(parsePricingSnapshot(validSnapshot as never)).toEqual(validSnapshot);
+  });
+
+  it('returns a well-formed snapshot that also carries a non-null taskFixedSchema and discountCode', () => {
+    const snapshot = {
+      ...validSnapshot,
+      taskFixedSchema: { terms: [{ id: 'taskBase', op: 'add', const: 0 }] },
+      discountCode: 'PROMO10',
+    };
+    expect(parsePricingSnapshot(snapshot as never)).toEqual(snapshot);
+  });
+
+  it('throws BadRequestException when the snapshot is null', () => {
+    expect(() => parsePricingSnapshot(null)).toThrow(BadRequestException);
+  });
+
+  it('throws BadRequestException when the snapshot is missing required keys', () => {
+    expect(() => parsePricingSnapshot({ modelConfigId: 'model-1' } as never)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('throws a distinct, field-naming message for an old-engine-shaped snapshot', () => {
+    // 旧引擎（pricing-estimator.ts）写的历史快照形状完全不同：{ ruleId, taskType, ... }，
+    // 没有 modelSchema/multiplier 等字段。缺字段这条路径必须先于"字段都在但值非法"
+    // 触发，报错要点名具体缺的字段，运营/排障才能一眼看出这是旧数据而不是新数据损坏。
+    const oldEngineSnapshot = { ruleId: 'rule-1', taskType: 'image_generation', basePerCall: 10 };
+    expect(() => parsePricingSnapshot(oldEngineSnapshot as never)).toThrow(BadRequestException);
+    try {
+      parsePricingSnapshot(oldEngineSnapshot as never);
+      throw new Error('expected parsePricingSnapshot to throw');
+    } catch (err) {
+      expect((err as BadRequestException).message).toContain('schemaVersion');
+    }
+  });
+
+  it('throws a distinct message when modelSchema has all required keys but an empty terms array', () => {
+    // 字段齐全，但 modelSchema 本身结构非法（EMPTY_TERMS）——和"缺字段"是两条不同的
+    // 校验路径，不能被 in 检查蒙混过关，否则 quoteTaskFromSnapshot 会拿着垃圾 schema 去算价。
+    const corrupted = { ...validSnapshot, modelSchema: { terms: [] } };
+    expect(() => parsePricingSnapshot(corrupted as never)).toThrow(BadRequestException);
+    try {
+      parsePricingSnapshot(corrupted as never);
+      throw new Error('expected parsePricingSnapshot to throw');
+    } catch (err) {
+      const message = (err as BadRequestException).message;
+      expect(message).not.toContain('schemaVersion');
+      expect(JSON.stringify((err as BadRequestException).getResponse())).toContain(
+        'EMPTY_TERMS',
+      );
+    }
+  });
+
+  it('throws a distinct message when a non-null taskFixedSchema is structurally invalid', () => {
+    const corrupted = { ...validSnapshot, taskFixedSchema: { terms: [] } };
+    expect(() => parsePricingSnapshot(corrupted as never)).toThrow(BadRequestException);
   });
 });

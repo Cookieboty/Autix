@@ -204,6 +204,17 @@ export class PointsRepository {
     });
   }
 
+  async findHoldById(holdId: string): Promise<point_holds | null> {
+    return this.findHoldByIdWithinTx(this.prisma, holdId);
+  }
+
+  async findHoldByIdWithinTx(
+    client: Prisma.TransactionClient | PrismaService,
+    holdId: string,
+  ): Promise<point_holds | null> {
+    return client.point_holds.findUnique({ where: { id: holdId } });
+  }
+
   async createHoldWithinTx(
     tx: Prisma.TransactionClient,
     data: Prisma.point_holdsUncheckedCreateInput,

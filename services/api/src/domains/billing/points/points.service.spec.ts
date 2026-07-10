@@ -97,6 +97,11 @@ function createPrisma(tx: ReturnType<typeof createTx>) {
       findMany: jest.fn(),
       findUnique: jest.fn(),
     },
+    // findHoldById() reads through `this.prisma` directly (not a $transaction
+    // callback), so the non-tx mock needs its own point_holds.findUnique. Sharing
+    // the tx's mock keeps `tx.point_holds.findUnique.mockResolvedValue(...)` working
+    // for both the transactional and non-transactional call paths.
+    point_holds: tx.point_holds,
   };
 }
 
@@ -668,6 +673,42 @@ describe('PointsService grant and hold ledger', () => {
     expect(result.refunded).toBe(false);
     expect(tx.point_grants.updateMany).not.toHaveBeenCalled();
     expect(tx.user_points.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('PointsService.quoteHoldFromSnapshot', () => {
+  it('delegates to PointsHoldService.quoteHoldFromSnapshot, reading the hold via the repository', async () => {
+    const tx = createTx();
+    tx.point_holds.findUnique.mockResolvedValue({
+      id: 'hold-1',
+      estimatedAmount: 100,
+      pricingSnapshot: {
+        schemaVersion: 1,
+        modelConfigId: 'model-1',
+        modelSchema: { terms: [{ id: 'base', op: 'add', const: 60 }] },
+        taskFixedSchema: null,
+        multiplier: 1,
+        discountFactor: 1,
+        discountCode: null,
+        params: {},
+      },
+    });
+    const service = buildPointsService(createPrisma(tx));
+
+    const result = await service.quoteHoldFromSnapshot('hold-1', {});
+
+    expect(tx.point_holds.findUnique).toHaveBeenCalledWith({ where: { id: 'hold-1' } });
+    expect(result).toBe(60);
+  });
+
+  it('propagates the BadRequestException for a missing hold instead of returning a fallback price', async () => {
+    const tx = createTx();
+    tx.point_holds.findUnique.mockResolvedValue(null);
+    const service = buildPointsService(createPrisma(tx));
+
+    await expect(service.quoteHoldFromSnapshot('missing', {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });
 

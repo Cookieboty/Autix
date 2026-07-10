@@ -104,6 +104,14 @@ export class PointsService {
     return this.holdService.confirmHold(holdId, actualAmount);
   }
 
+  async quoteHoldFromSnapshot(
+    holdId: string,
+    usage: Record<string, unknown>,
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.holdService.quoteHoldFromSnapshot(holdId, usage, tx);
+  }
+
   async confirmHoldWithinTx(
     tx: Prisma.TransactionClient,
     holdId: string,

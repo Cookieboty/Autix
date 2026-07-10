@@ -1,5 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import {
+  validatePricingSchema,
+  type PricingSchema,
+  type PricingSnapshot,
+} from '@autix/domain/pricing';
+import {
   PointGrantType,
   PointHoldStatus,
   PointLedgerEventType,
@@ -201,4 +206,110 @@ export function buildRefundRecordUpdateData(input: {
     balance: input.balance,
     remark: `refund: ${input.reason}`,
   };
+}
+
+/** Top-level keys every well-formed snapshot must carry. taskFixedSchema and
+ * discountCode are legitimately nullable, so their *presence* isn't checked here —
+ * only their value, once we know the snapshot is otherwise well-shaped. */
+const REQUIRED_SNAPSHOT_KEYS = [
+  'schemaVersion',
+  'modelConfigId',
+  'modelSchema',
+  'multiplier',
+  'discountFactor',
+  'params',
+] as const;
+
+/**
+ * 结算读快照的唯一入口。point_holds.pricingSnapshot 是 Json? 列——缺失、被旧引擎
+ * 写入的不兼容形状、或字段齐全但结构非法（比如 modelSchema: { terms: [] }），
+ * 一律抛 BadRequestException，绝不 fallback 到重新估价。fallback 正是旧引擎
+ * pointCostWeight 路径的病根：call-billing.service.ts 曾经吞掉一个
+ * BadRequestException 再悄悄换一套公式算价。
+ *
+ * "缺字段"和"字段都在但值非法"是两条不同的校验路径，报错文案也不同：
+ * 旧引擎（pricing-estimator.ts）写的历史 hold 快照形状是
+ * { ruleId, taskType, ... }，完全没有 modelSchema/multiplier 等字段，会在下面的
+ * 必需字段检查这一步被拒绝，报错里点名具体缺的字段；而"字段都在但 modelSchema
+ * 本身校验不过"（比如 terms 为空）是同一条快照结构正确、内容损坏的情况，
+ * 会走到 narrowSnapshotSchema 里被 validatePricingSchema 挡下，报错里带
+ * violations。这两种失败在运营上是不同的问题（迁移历史数据 vs. 数据损坏排查），
+ * 值得用不同的报错区分，即使当前处理方式（都是硬失败）相同。
+ */
+export function parsePricingSnapshot(raw: Prisma.JsonValue | null): PricingSnapshot {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new BadRequestException('冻结记录缺少计价快照');
+  }
+  const snapshot = raw as Record<string, unknown>;
+
+  for (const key of REQUIRED_SNAPSHOT_KEYS) {
+    if (!(key in snapshot)) {
+      throw new BadRequestException(
+        `计价快照缺少字段: ${key}（可能是旧计价引擎写入的快照，形状不兼容）`,
+      );
+    }
+  }
+
+  if (typeof snapshot.schemaVersion !== 'number') {
+    throw new BadRequestException('计价快照的 schemaVersion 不是数字');
+  }
+  if (typeof snapshot.modelConfigId !== 'string') {
+    throw new BadRequestException('计价快照的 modelConfigId 不是字符串');
+  }
+  if (typeof snapshot.multiplier !== 'number') {
+    throw new BadRequestException('计价快照的 multiplier 不是数字');
+  }
+  if (typeof snapshot.discountFactor !== 'number') {
+    throw new BadRequestException('计价快照的 discountFactor 不是数字');
+  }
+  if (
+    snapshot.params === null ||
+    typeof snapshot.params !== 'object' ||
+    Array.isArray(snapshot.params)
+  ) {
+    throw new BadRequestException('计价快照的 params 不是有效的对象');
+  }
+  const discountCode = snapshot.discountCode;
+  if (discountCode !== null && discountCode !== undefined && typeof discountCode !== 'string') {
+    throw new BadRequestException('计价快照的 discountCode 既不是字符串也不是 null');
+  }
+
+  const modelSchema = narrowSnapshotSchema(snapshot.modelSchema, 'modelSchema');
+  const taskFixedSchemaRaw = snapshot.taskFixedSchema;
+  const taskFixedSchema =
+    taskFixedSchemaRaw === null || taskFixedSchemaRaw === undefined
+      ? null
+      : narrowSnapshotSchema(taskFixedSchemaRaw, 'taskFixedSchema');
+
+  return {
+    schemaVersion: snapshot.schemaVersion,
+    modelConfigId: snapshot.modelConfigId,
+    modelSchema,
+    taskFixedSchema,
+    multiplier: snapshot.multiplier,
+    discountFactor: snapshot.discountFactor,
+    discountCode: discountCode ?? null,
+    params: snapshot.params as Record<string, unknown>,
+  };
+}
+
+/**
+ * `value` came out of a Json column, so it is structurally unrelated to
+ * PricingSchema as far as TypeScript is concerned — bridging the two requires a
+ * cast. That cast is safe here only because it is never used on its own:
+ * validatePricingSchema re-checks the *runtime* shape and this function throws
+ * before the candidate is used for anything. Nothing downstream ever sees the
+ * pre-validation value. Same reasoning as
+ * TaskPricingEstimatorService.narrowPricingSchema.
+ */
+function narrowSnapshotSchema(value: unknown, field: 'modelSchema' | 'taskFixedSchema'): PricingSchema {
+  const candidate = value as unknown as PricingSchema;
+  const violations = validatePricingSchema(candidate);
+  if (violations.length > 0) {
+    throw new BadRequestException({
+      message: `计价快照的 ${field} 结构无效`,
+      violations,
+    });
+  }
+  return candidate;
 }

@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { quoteTaskFromSnapshot } from '@autix/domain/pricing';
 import { PointsRepository } from '../repositories/points.repository';
 import { PointsLedgerService } from './points-ledger.service';
 import {
@@ -17,6 +18,7 @@ import {
   buildRefundRecordUpdateData,
   isConfirmTerminalStatus,
   isRefundTerminalStatus,
+  parsePricingSnapshot,
   presentConfirmedHoldStatus,
   sumHoldItemAmount,
   type CreateHoldInput,
@@ -291,5 +293,52 @@ export class PointsHoldService {
     }
 
     return { refunded: true, amount, hold: updatedHold, balance: points.balance };
+  }
+
+  /**
+   * Settlement-time pricing entry point. Prices strictly from the hold's frozen
+   * pricingSnapshot (never the live DB — an admin editing model_configs after a hold
+   * is created must never re-price a task already in flight) and caps the result at
+   * the frozen estimatedAmount.
+   *
+   * The cap is mandatory, not defensive: buildHoldConfirmationPlan() throws
+   * BadRequestException('确认扣费不能超过冻结金额') when confirmedAmount >
+   * estimatedAmount, and phase 2 does not change that chain. An over-estimate (e.g.
+   * chat outputTokens running longer than token-estimation.ts predicted) must be
+   * clamped here, before it ever reaches confirmHold(). The warn on clamp is the
+   * point — the old code capped silently, so nobody ever learned how badly
+   * token-estimation.ts was off.
+   *
+   * Deliberately not a top-up flow: freezing more of a user's balance *after*
+   * their content has already been generated is a product decision (refuse to
+   * deliver finished work vs. allow a negative balance) nobody has made. Capping
+   * loses a little revenue instead.
+   */
+  async quoteHoldFromSnapshot(
+    holdId: string,
+    usage: Record<string, unknown>,
+    tx?: Prisma.TransactionClient,
+  ): Promise<number> {
+    const hold = tx
+      ? await this.pointsRepo.findHoldByIdWithinTx(tx, holdId)
+      : await this.pointsRepo.findHoldById(holdId);
+    if (!hold) throw new BadRequestException('积分冻结不存在');
+
+    // Missing or unparseable snapshot must throw here, never fall back to
+    // re-estimating from the live DB — that fallback is exactly the disease this
+    // refactor exists to cure (call-billing.service.ts used to swallow a
+    // BadRequestException from the estimator and silently charge by a different
+    // formula).
+    const snapshot = parsePricingSnapshot(hold.pricingSnapshot);
+    const { total: raw } = quoteTaskFromSnapshot(snapshot, usage);
+    const capped = Math.min(raw, hold.estimatedAmount);
+
+    if (raw > hold.estimatedAmount) {
+      this.logger.warn(
+        `quoteHoldFromSnapshot: hold=${holdId} raw=${raw} exceeds frozen estimatedAmount=${hold.estimatedAmount}; capping to ${hold.estimatedAmount}. usage=${JSON.stringify(usage)}`,
+      );
+    }
+
+    return capped;
   }
 }
