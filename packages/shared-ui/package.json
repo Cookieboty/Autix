@@ -19,6 +19,7 @@
     "./materials": "./src/materials/index.ts",
     "./notifications": "./src/notifications/index.ts",
     "./providers": "./src/providers/index.ts",
+    "./pricing": "./src/pricing/index.ts",
     "./ai-ui": "./src/ai-ui/index.ts",
     "./ai-elements": "./src/ai-elements/index.ts",
     "./docs": "./src/docs/index.ts",

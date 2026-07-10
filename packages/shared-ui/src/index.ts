@@ -10,3 +10,4 @@ export * from './growth';
 export * from './auth';
 export * from './profile';
 export * from './resources';
+export * from './pricing';
