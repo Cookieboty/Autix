@@ -11,14 +11,29 @@ describe('SUPPORTED_LOCALES', () => {
     const __dirname = dirname(__filename);
     const messagesDir = resolve(__dirname, '../../../i18n/src/messages');
 
-    // Read actual locale files from disk
+    // Only top-level locale bundles count. The directory also holds
+    // namespaced bundles like `docs-layout.en.json`, whose basename is
+    // `docs-layout.en` — not a locale. Match `en` / `zh-CN` shapes only.
+    const LOCALE_FILE = /^[a-z]{2}(-[A-Z]{2})?\.json$/;
+
     const localeFiles = readdirSync(messagesDir)
-      .filter(file => file.endsWith('.json'))
-      .map(file => file.replace(/\.json$/, ''))
+      .filter((file) => LOCALE_FILE.test(file))
+      .map((file) => file.replace(/\.json$/, ''))
       .sort();
 
-    // Guard against silently empty directory listings
+    // Guard against silently empty directory listings — an empty list would
+    // make the comparison below vacuously interesting rather than protective.
     expect(localeFiles.length).toBeGreaterThan(0);
+
+    // And guard against the regex quietly swallowing everything: any file that
+    // looks like a locale bundle but is not matched would be invisible here.
+    const namespaced = readdirSync(messagesDir).filter(
+      (file) => file.endsWith('.json') && !LOCALE_FILE.test(file),
+    );
+    for (const file of namespaced) {
+      expect(file, `${file} must be a namespaced bundle, not a bare locale`).toContain('.');
+      expect(file.split('.').length).toBeGreaterThan(2);
+    }
 
     // Compare in both directions: tuple must match files exactly
     const supportedLocales = [...SUPPORTED_LOCALES].sort();
