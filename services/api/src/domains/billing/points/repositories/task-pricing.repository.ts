@@ -30,8 +30,16 @@ export class TaskPricingRepository {
   }
 
   async findDefaultBinding(taskType: string): Promise<task_model_bindings | null> {
+    // Deliberately no `isActive` filter here. The partial unique index
+    // `task_model_bindings_one_default_per_task` is `ON ("taskType") WHERE
+    // "isDefault" = true` — it constrains nothing about `isActive`, so a row can
+    // legally be isDefault: true, isActive: false. Filtering isActive would
+    // collapse two distinct operator failures into the same `null`: "nobody ever
+    // configured a default" vs. "a default exists but was deactivated". The
+    // returned row still carries `isActive`; let the caller inspect it and choose
+    // the right error message. Do not add `isActive: true` back to this query.
     return this.prisma.task_model_bindings.findFirst({
-      where: { taskType, isDefault: true, isActive: true },
+      where: { taskType, isDefault: true },
     });
   }
 
