@@ -114,7 +114,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const res = await getConversations(kind);
       const sessions: ChatSession[] = (res.data as Conversation[]).map((c) => ({
         id: c.id,
-        title: c.title || '新对话',
+        title: c.title || 'New conversation',
         messages: [],
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
@@ -144,7 +144,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const c = res.data as Conversation;
     const newSession: ChatSession = {
       id: c.id,
-      title: c.title || '新对话',
+      title: c.title || 'New conversation',
       messages: [],
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,

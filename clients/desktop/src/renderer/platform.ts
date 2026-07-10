@@ -63,6 +63,10 @@ const navigation: NavigationAdapter = {
     window.location.assign(url);
   },
   getPathname: () => _pathname,
+  switchLocale: () => {
+    // desktop 没有 URL locale：语言切换由 IntlProvider 依 language store 重新
+    // 加载 messages 完成，这里无需任何路由动作。
+  },
   getSearch: () => '',
   getOrigin: () => window.location.origin,
   subscribe: (listener) => {

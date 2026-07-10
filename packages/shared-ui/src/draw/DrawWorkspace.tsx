@@ -45,7 +45,7 @@ import {
   uniqueStrings,
   type VideoNodeData,
 } from './draw-video-graph';
-import { VideoNodeOverlay, type VideoNodeOverlayView } from './VideoNodeOverlay';
+import { VideoNodeOverlay, videoIssueMessage, type VideoNodeOverlayView } from './VideoNodeOverlay';
 import { DrawChatPanel } from './DrawChatPanel';
 import {
   BottomDock,
@@ -436,7 +436,7 @@ export function DrawWorkspace({
     videoNodeViewsRef.current = nodeViews;
     setCanvasImageViews(imageViews);
     setVideoNodeViews(nodeViews);
-    setVideoLinkLabels(buildVideoLinkLabels(elements, appState, canvasRect));
+    setVideoLinkLabels(buildVideoLinkLabels(elements, appState, canvasRect, t));
   }, [t]);
 
   // Size the (invisible, fixed) Excalidraw node element to match the real
@@ -1377,7 +1377,7 @@ export function DrawWorkspace({
   const optimizeVideoLinkPrompt = useCallback(async (arrowId: string, prompt: string): Promise<string | null> => {
     const trimmed = prompt.trim();
     if (!trimmed) {
-      toast.error('请输入镜头描述');
+      toast.error(t('video.errors.enterShotDescription'));
       return null;
     }
     setOptimizingVideoLinkId(arrowId);
@@ -1399,7 +1399,7 @@ export function DrawWorkspace({
   const optimizeVideoNodePrompt = useCallback(async (nodeId: string, prompt: string, modelId?: string) => {
     const trimmed = prompt.trim();
     if (!trimmed) {
-      toast.error('请输入视频提示词');
+      toast.error(t('video.errors.enterVideoPrompt'));
       return;
     }
     setOptimizingVideoNodeId(nodeId);
@@ -1490,7 +1490,7 @@ export function DrawWorkspace({
 
     const key = `${source.id}->${target.id}`;
     if (collectBoundEdgeKeys(elements).has(key)) {
-      toast.info(targetIsVideo ? '已经连接到视频节点' : '这两张图片已经连接');
+      toast.info(targetIsVideo ? t('video.alreadyConnectedToVideoNode') : t('video.imagesAlreadyConnected'));
       return;
     }
 
@@ -1672,7 +1672,7 @@ export function DrawWorkspace({
     const byId = new Map(elements.map((element) => [element.id, element] as const));
     const targetVideoIds = targetVideoNodeIdsForLayout(elements, selectedElementIdsRef.current);
     if (targetVideoIds.length === 0) {
-      toast.info('画布上还没有视频节点');
+      toast.info(t('video.noVideoNodesOnCanvas'));
       return;
     }
 
@@ -1889,7 +1889,7 @@ export function DrawWorkspace({
     }
 
     const pendingId = newId('m');
-    const promptLabel = view.prompt.trim() || videoModeLabel(view.composition.mode);
+    const promptLabel = view.prompt.trim() || videoModeLabel(view.composition.mode, t);
     setGeneratingVideoNodeIds((current) => new Set(current).add(view.id));
     setMessages((messages) => [
       ...messages,
@@ -1901,7 +1901,7 @@ export function DrawWorkspace({
       const elements = api.getSceneElements() as unknown as DrawElement[];
       const composition = readVideoComposition(elements, view.id);
       const blocking = composition.issues.find((issue) => issue.level === 'blocking');
-      if (blocking) throw new Error(blocking.message);
+      if (blocking) throw new Error(videoIssueMessage(blocking, t));
 
       await updateVideoNodeData(view.id, {
         generation: { status: 'generating' },
@@ -2452,6 +2452,7 @@ export function DrawWorkspace({
           })}
 
           <VideoCanvasEdges
+            t={t}
             edges={videoLinkLabels}
             onSelectEdge={(edge) => {
               setVideoLinkEditor(edge);
@@ -2460,6 +2461,7 @@ export function DrawWorkspace({
           />
 
           <CanvasConnectionHandles
+            t={t}
             images={canvasImageViews}
             videos={videoNodeViews}
             drag={connectionDrag}
@@ -2469,6 +2471,7 @@ export function DrawWorkspace({
           {videoLinkEditor && (
             videoLinkEditor.hasPromptField ? (
               <LinePromptEditor
+                t={t}
                 edgeId={videoLinkEditor.id}
                 value={videoLinkEditor.prompt}
                 left={videoLinkEditor.screenX + 12}
@@ -2492,6 +2495,7 @@ export function DrawWorkspace({
               />
             ) : (
               <LineActionPopover
+                t={t}
                 edge={videoLinkEditor}
                 left={videoLinkEditor.screenX + 12}
                 top={videoLinkEditor.screenY + 16}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter as useLocaleRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import {
   AuthModalView,
@@ -28,7 +29,10 @@ function sanitizeReturnTo(value: string | null | undefined) {
 }
 
 export function AuthModalHost() {
+  // raw router: navigates to the fully-prefixed returnTo string (a real URL, not a logical path)
   const router = useRouter();
+  // intl router: takes bare logical paths (e.g. /pending) and adds the active locale prefix
+  const localeRouter = useLocaleRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations('auth');
@@ -67,7 +71,11 @@ export function AuthModalHost() {
       .then((outcome) => {
         if (outcome.kind === 'logged-in') {
           closeAuthModal();
-          router.replace(outcome.result.user?.status === 'PENDING' ? '/pending' : returnTo);
+          if (outcome.result.user?.status === 'PENDING') {
+            localeRouter.replace('/pending'); // bare logical path -> locale-prefixed
+          } else {
+            router.replace(returnTo); // returnTo is already a fully-prefixed URL
+          }
         } else if (outcome.kind === 'error') {
           setOAuthError(t(mapOAuthErrorKey(outcome.code)));
         }
@@ -94,7 +102,7 @@ export function AuthModalHost() {
       onLoginSuccess={handleSuccess}
       onPending={() => {
         closeAuthModal();
-        router.push('/pending');
+        localeRouter.push('/pending');
       }}
       onRegister={(values: AuthRegisterFormValues) =>
         authActions.register({
@@ -107,7 +115,7 @@ export function AuthModalHost() {
       }
       onRequiresActivation={(email, message) => {
         closeAuthModal();
-        router.push(
+        localeRouter.push(
           `/pending?activation=1&email=${encodeURIComponent(email)}&message=${encodeURIComponent(message)}`,
         );
       }}

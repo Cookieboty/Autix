@@ -28,7 +28,17 @@ export interface NavigationAdapter {
   push(path: string): void;
   replace(path: string): void;
   assign?(url: string): void;
+
+  /**
+   * 应用内逻辑路径，**不含 locale 前缀**。
+   * web 实现须剥离 `/ja` 等前缀（next-intl 的 usePathname 已如此）；
+   * desktop 无 URL locale，原样返回。
+   */
   getPathname(): string;
+
+  /** 切换语言。web: router.replace(pathname, {locale})；desktop: no-op 路由，仅重载 IntlProvider。 */
+  switchLocale(locale: string): void;
+
   getSearch?(): string;
   getOrigin?(): string;
   subscribe?(listener: () => void): () => void;
@@ -99,7 +109,7 @@ export function registerPlatform(opts: {
 export function getAuth(): AuthAdapter {
   if (!auth) {
     throw new Error(
-      '[@autix/platform] AuthAdapter 未注册。请在应用入口调用 registerPlatform()',
+      '[@autix/platform] AuthAdapter is not registered. Call registerPlatform() at the app entry point.',
     );
   }
   return auth;
@@ -108,7 +118,7 @@ export function getAuth(): AuthAdapter {
 export function getNavigation(): NavigationAdapter {
   if (!navigation) {
     throw new Error(
-      '[@autix/platform] NavigationAdapter 未注册。请在应用入口调用 registerPlatform()',
+      '[@autix/platform] NavigationAdapter is not registered. Call registerPlatform() at the app entry point.',
     );
   }
   return navigation;
@@ -116,7 +126,7 @@ export function getNavigation(): NavigationAdapter {
 
 export function getEnv(): EnvConfig {
   if (!env) {
-    throw new Error('[@autix/platform] Env 未注册。请在应用入口调用 registerPlatform()');
+    throw new Error('[@autix/platform] Env is not registered. Call registerPlatform() at the app entry point.');
   }
   return env;
 }
@@ -132,7 +142,7 @@ export function getSessionStorage(): StorageAdapter {
 export function getClipboard(): ClipboardAdapter {
   if (!clipboard) {
     throw new Error(
-      '[@autix/platform] ClipboardAdapter 未注册。请在应用入口调用 registerPlatform()',
+      '[@autix/platform] ClipboardAdapter is not registered. Call registerPlatform() at the app entry point.',
     );
   }
   return clipboard;

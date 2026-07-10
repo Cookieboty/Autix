@@ -39,7 +39,7 @@ export function InteractionActions({ type, id }: InteractionActionsProps) {
           className="w-4 h-4 mr-1"
           style={liked ? { fill: '#ef4444', color: '#ef4444' } : undefined}
         />
-        点赞
+        Like
       </Button>
       <Button
         variant="ghost"
@@ -52,11 +52,11 @@ export function InteractionActions({ type, id }: InteractionActionsProps) {
           className="w-4 h-4 mr-1"
           style={favorited ? { fill: '#f59e0b', color: '#f59e0b' } : undefined}
         />
-        收藏
+        Favorite
       </Button>
       <Button variant="ghost" className="cursor-pointer" disabled={isSharing} onClick={share}>
         <Share2 className="w-4 h-4 mr-1" />
-        分享
+        Share
       </Button>
     </div>
   );

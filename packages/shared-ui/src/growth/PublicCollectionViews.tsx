@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { getFallbackCollection, getFallbackHome, getFallbackItems } from './fallback';
 import { InteractiveCollectionBands, MagneticLink, SpotlightPanel } from './GrowthInteractions';
+import { Link } from '../navigation';
 import {
   MediaMasonryGrid,
   MediaRail,
@@ -161,10 +162,10 @@ export function CommunityIndexView({
               </div>
               <h2 className="text-3xl font-semibold md:text-4xl">{t('community.feedTitle')}</h2>
             </div>
-            <a href="/ai/image" className="hidden items-center gap-2 text-sm font-semibold text-foreground/70 hover:text-foreground md:inline-flex">
+            <Link href="/ai/image" className="hidden items-center gap-2 text-sm font-semibold text-foreground/70 hover:text-foreground md:inline-flex">
               {t('community.create')}
               <ArrowRight className="size-4" />
-            </a>
+            </Link>
           </div>
           <MediaMasonryGrid items={nextItems} variant="showcase" />
         </section>
@@ -252,10 +253,10 @@ export function PresetsIndexView({
               </div>
               <h2 className="text-3xl font-semibold md:text-4xl">{t('presets.picksTitle')}</h2>
             </div>
-            <a href="/ai/image" className="hidden items-center gap-2 text-sm font-semibold text-foreground/70 hover:text-foreground md:inline-flex">
+            <Link href="/ai/image" className="hidden items-center gap-2 text-sm font-semibold text-foreground/70 hover:text-foreground md:inline-flex">
               {t('presets.usePreset')}
               <Sparkles className="size-4" />
-            </a>
+            </Link>
           </div>
           <MediaMasonryGrid items={nextItems} variant={viral ? 'showcase' : 'rhythm'} />
         </section>

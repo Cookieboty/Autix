@@ -3,8 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 const push = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
   useSearchParams: () => new URLSearchParams(''),
+}));
+// login page navigates via the next-intl router (@/i18n/navigation).
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: () => ({ push }),
 }));
 vi.mock('next-intl', () => ({ useTranslations: () => (k: string) => k }));
 
@@ -28,7 +31,7 @@ vi.mock('@autix/shared-ui/auth', () => ({
 }));
 
 async function renderPage() {
-  const Page = (await import('../app/login/page')).default;
+  const Page = (await import('../app/[locale]/login/page')).default;
   return render(<Page />);
 }
 

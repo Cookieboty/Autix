@@ -1,7 +1,7 @@
 import type { VideoNodeOverlayView } from './VideoNodeOverlay';
 import { VIDEO_NODE_WIDTH } from './draw-constants';
 import type { DrawElement } from './draw-scene-mapper';
-import type { AppStateLike, CanvasImageNodeView, VideoLinkLabelInfo } from './draw-types';
+import type { AppStateLike, CanvasImageNodeView, Tr, VideoLinkLabelInfo } from './draw-types';
 import { VIDEO_NODE_KIND, bindingId as bindingElementId } from './draw-video-graph';
 
 export function imageInputHandlePoint(image: CanvasImageNodeView): { x: number; y: number } {
@@ -221,8 +221,8 @@ function coord(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
-export function videoLinkLabelText(label: VideoLinkLabelInfo): string {
+export function videoLinkLabelText(label: VideoLinkLabelInfo, t?: Tr): string {
   const prefix = label.hasPromptField && label.order ? `${label.order} · ` : '';
   if (label.prompt.trim()) return `${prefix}${label.prompt.trim()}`;
-  return label.hasPromptField ? `${prefix}添加描述` : label.plainLabel ?? '序列';
+  return label.hasPromptField ? `${prefix}${t?.('video.addShotDescription') ?? 'Add description'}` : label.plainLabel ?? t?.('video.sequence') ?? 'Sequence';
 }

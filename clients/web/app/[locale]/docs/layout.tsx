@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { useTranslations } from 'next-intl';
-import { usePathname, useParams } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+import { Link, usePathname, getPathname } from '@/i18n/navigation';
 import { BookOpen, ChevronDown, ChevronRight, ArrowLeft, Sun, Moon, Menu, X, Languages } from 'lucide-react';
-import { useTheme } from 'next-themes';
-import { DOC_LOCALES, type DocLocale, getDocsConfig } from '@/lib/docs';
+import { useTheme } from '@autix/shared-ui/theme';
+import { getDocsConfig } from '@/lib/docs';
+import { getPolicy } from '@/lib/i18n/route-policy';
 
 interface NavItem {
   label: string;
@@ -14,10 +14,15 @@ interface NavItem {
   children?: { label: string; href: string }[];
 }
 
-const LOCALE_LABEL_KEYS: Record<DocLocale, string> = {
+const LOCALE_LABEL_KEYS: Record<string, string> = {
   'zh-CN': 'localeZhCN',
   en: 'localeEn',
 };
+
+function docLocales(): string[] {
+  const policy = getPolicy('/docs');
+  return policy.kind === 'partial' ? policy.locales : [];
+}
 
 function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
   const hasChildren = !!item.children;
@@ -77,19 +82,17 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
 
 export default function DocsLocaleLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations('docsLayout');
-  const pathname = usePathname();
-  const params = useParams();
-  const locale = (params.locale as string) || 'zh-CN';
+  const pathname = usePathname(); // 已剥离 locale 前缀，与 lib/docs.ts 中的逻辑路径（base='/docs'）同域比较
+  const locale = useLocale();
   const { theme, setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
 
   const config = getDocsConfig(locale);
-  const getLocaleLabel = (value: DocLocale) => t(LOCALE_LABEL_KEYS[value]);
+  const locales = docLocales();
+  const getLocaleLabel = (value: string) => t(LOCALE_LABEL_KEYS[value] ?? 'localeEn');
 
-  const switchLocalePath = (target: string) => {
-    return pathname.replace(`/${locale}/`, `/${target}/`);
-  };
+  const switchLocalePath = (target: string) => getPathname({ href: pathname, locale: target });
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
@@ -127,7 +130,7 @@ export default function DocsLocaleLayout({ children }: { children: React.ReactNo
               style={{ color: 'var(--muted)' }}
             >
               <Languages className="w-3.5 h-3.5" />
-              {DOC_LOCALES.includes(locale as DocLocale) ? getLocaleLabel(locale as DocLocale) : locale}
+              {locales.includes(locale) ? getLocaleLabel(locale) : locale}
             </button>
             {langOpen && (
               <>
@@ -136,8 +139,11 @@ export default function DocsLocaleLayout({ children }: { children: React.ReactNo
                   className="absolute bottom-full left-0 mb-1 py-1 rounded-lg z-20 min-w-[140px]"
                   style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-panel)' }}
                 >
-                  {DOC_LOCALES.map((l) => (
-                    <Link
+                  {/* 纯 <a>，非 next-intl 的 <Link>：switchLocalePath() 已经是
+                      getPathname() 算出的、带前缀的最终 URL，交给 <Link> 会再按
+                      当前 locale 处理一遍造成双重前缀（如 /zh-CN/fr/docs）。 */}
+                  {locales.map((l) => (
+                    <a
                       key={l}
                       href={switchLocalePath(l)}
                       onClick={() => setLangOpen(false)}
@@ -148,7 +154,7 @@ export default function DocsLocaleLayout({ children }: { children: React.ReactNo
                       }}
                     >
                       {getLocaleLabel(l)}
-                    </Link>
+                    </a>
                   ))}
                 </div>
               </>

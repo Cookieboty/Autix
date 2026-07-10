@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   CheckCircle,
   XCircle,
@@ -64,18 +65,18 @@ const GALLERY_IMPORT_TEMPLATE = [
   },
 ];
 
-const SOURCE_LABEL: Record<GalleryPostAdminItem['sourceType'], string> = {
-  USER_UPLOAD: '用户上传',
-  FROM_GENERATION: '生成结果',
-  FROM_TEMPLATE: '模板作品',
-  ADMIN_CURATED: '运营精选',
+const SOURCE_LABEL_KEY: Record<GalleryPostAdminItem['sourceType'], string> = {
+  USER_UPLOAD: 'gallery.sources.USER_UPLOAD',
+  FROM_GENERATION: 'gallery.sources.FROM_GENERATION',
+  FROM_TEMPLATE: 'gallery.sources.FROM_TEMPLATE',
+  ADMIN_CURATED: 'gallery.sources.ADMIN_CURATED',
 };
 
-const SOURCE_OPTIONS: { value: GalleryAdminSourceType; label: string }[] = [
-  { value: 'USER_UPLOAD', label: '用户上传' },
-  { value: 'FROM_GENERATION', label: '生成结果' },
-  { value: 'FROM_TEMPLATE', label: '模板作品' },
-  { value: 'ADMIN_CURATED', label: '运营精选' },
+const SOURCE_OPTIONS: { value: GalleryAdminSourceType; labelKey: string }[] = [
+  { value: 'USER_UPLOAD', labelKey: 'gallery.sources.USER_UPLOAD' },
+  { value: 'FROM_GENERATION', labelKey: 'gallery.sources.FROM_GENERATION' },
+  { value: 'FROM_TEMPLATE', labelKey: 'gallery.sources.FROM_TEMPLATE' },
+  { value: 'ADMIN_CURATED', labelKey: 'gallery.sources.ADMIN_CURATED' },
 ];
 
 const PAGE_SIZE = 20;
@@ -86,10 +87,10 @@ function thumbnailOf(item: GalleryPostAdminItem): string | null {
   return item.coverImage ?? item.mediaUrls[0] ?? null;
 }
 
-function formatTime(iso: string | null): string {
+function formatTime(iso: string | null, locale: string): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString('zh-CN');
+    return new Date(iso).toLocaleString(locale);
   } catch {
     return iso;
   }
@@ -97,12 +98,13 @@ function formatTime(iso: string | null): string {
 
 type GalleryAdminTab = Extract<GalleryAdminStatus, 'PENDING' | 'PUBLISHED'>;
 
-const TABS: { value: GalleryAdminTab; label: string }[] = [
-  { value: 'PENDING', label: '待审核' },
-  { value: 'PUBLISHED', label: '已审核' },
+const TABS: { value: GalleryAdminTab; labelKey: string }[] = [
+  { value: 'PENDING', labelKey: 'gallery.tabs.pending' },
+  { value: 'PUBLISHED', labelKey: 'gallery.tabs.published' },
 ];
 
 export function GalleryModerationView() {
+  const t = useTranslations('adminOperations');
   const [tab, setTab] = useState<GalleryAdminTab>('PENDING');
   const [importOpen, setImportOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -113,9 +115,9 @@ export function GalleryModerationView() {
     <div className="flex h-full flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-base font-semibold text-foreground">广场审核</h1>
+          <h1 className="text-base font-semibold text-foreground">{t('gallery.title')}</h1>
           <p className="text-xs text-muted-foreground">
-            审核用户投稿到广场的作品，管理已发布作品并支持内联加热。
+            {t('gallery.description')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -126,21 +128,21 @@ export function GalleryModerationView() {
             onClick={() => setImportOpen(true)}
           >
             <Upload className="h-3.5 w-3.5 mr-1" />
-            导入
+            {t('gallery.import')}
           </Button>
           <div className="inline-flex items-center gap-1 rounded-md border bg-muted/40 p-1">
-            {TABS.map((t) => (
+            {TABS.map((tabOption) => (
               <button
-                key={t.value}
+                key={tabOption.value}
                 type="button"
                 className={`cursor-pointer rounded px-3 py-1.5 text-sm font-medium transition-colors ${
-                  tab === t.value
+                  tab === tabOption.value
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
-                onClick={() => setTab(t.value)}
+                onClick={() => setTab(tabOption.value)}
               >
-                {t.label}
+                {t(tabOption.labelKey)}
               </button>
             ))}
           </div>
@@ -174,6 +176,8 @@ type Filters = {
 const EMPTY_FILTERS: Filters = { kind: '', category: '', sourceType: '', externalOnly: false };
 
 function GalleryPanel({ status }: { status: GalleryAdminTab }) {
+  const t = useTranslations('adminOperations');
+  const locale = useLocale();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -234,14 +238,14 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   };
 
   const handleHide = (item: GalleryPostAdminItem) => {
-    if (!window.confirm(`确定要下架《${item.title ?? item.id}》吗？`)) return;
+    if (!window.confirm(t('gallery.hideConfirm', { title: item.title ?? item.id }))) return;
     hide.mutate(item.id);
   };
 
   const handleRemove = (item: GalleryPostAdminItem) => {
     if (
       !window.confirm(
-        `确定要移除《${item.title ?? item.id}》吗？仅从广场移除，不影响用户自己的生成记录。`,
+        t('gallery.removeConfirm', { title: item.title ?? item.id }),
       )
     )
       return;
@@ -257,7 +261,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="搜索标题"
+            placeholder={t('gallery.searchPlaceholder')}
             className={`${CONTROL_CLASS} w-48 pl-7`}
           />
         </div>
@@ -266,20 +270,20 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
           value={filters.kind}
           onChange={(e) => patchFilter({ kind: e.target.value as Filters['kind'] })}
           className={CONTROL_CLASS}
-          aria-label="类型"
+          aria-label={t('gallery.filters.type')}
         >
-          <option value="">全部类型</option>
-          <option value="IMAGE">图片</option>
-          <option value="VIDEO">视频</option>
+          <option value="">{t('gallery.filters.allTypes')}</option>
+          <option value="IMAGE">{t('gallery.kind.image')}</option>
+          <option value="VIDEO">{t('gallery.kind.video')}</option>
         </select>
 
         <select
           value={filters.category}
           onChange={(e) => patchFilter({ category: e.target.value })}
           className={CONTROL_CLASS}
-          aria-label="分类"
+          aria-label={t('gallery.filters.category')}
         >
-          <option value="">全部分类</option>
+          <option value="">{t('gallery.filters.allCategories')}</option>
           {(categoriesQuery.data ?? []).map((c) => (
             <option key={c} value={c}>
               {c}
@@ -291,12 +295,12 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
           value={filters.sourceType}
           onChange={(e) => patchFilter({ sourceType: e.target.value as Filters['sourceType'] })}
           className={CONTROL_CLASS}
-          aria-label="来源"
+          aria-label={t('gallery.filters.source')}
         >
-          <option value="">全部来源</option>
+          <option value="">{t('gallery.filters.allSources')}</option>
           {SOURCE_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>
-              {s.label}
+              {t(s.labelKey)}
             </option>
           ))}
         </select>
@@ -308,7 +312,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
             onChange={(e) => patchFilter({ externalOnly: e.target.checked })}
             className="cursor-pointer"
           />
-          仅非我域名
+          {t('gallery.filters.externalOnly')}
         </label>
 
         {(filters.kind || filters.category || filters.sourceType || filters.externalOnly || search) && (
@@ -323,17 +327,19 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               setPage(1);
             }}
           >
-            清除筛选
+            {t('gallery.filters.clear')}
           </Button>
         )}
 
         <div className="ml-auto flex items-center gap-3">
           <span className="text-xs text-muted-foreground">
-            共 {total} 条{total > 0 ? ` · 第 ${rangeStart}-${rangeEnd} 条` : ''}
+            {total > 0
+              ? t('gallery.rangeWithTotal', { total, start: rangeStart, end: rangeEnd })
+              : t('gallery.totalOnly', { total })}
           </span>
           <Button variant="ghost" size="sm" className="cursor-pointer" onClick={() => refetch()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            刷新
+            {t('common.refresh')}
           </Button>
         </div>
       </div>
@@ -341,7 +347,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
       <div className="flex-1 overflow-y-auto rounded-lg border bg-surface">
         {loading && items.length === 0 ? (
           <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-            加载中…
+            {t('common.loading')}
           </div>
         ) : items.length === 0 ? (
           <Empty>
@@ -349,13 +355,13 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               <EmptyMedia variant="icon">
                 <ImageOff />
               </EmptyMedia>
-              <EmptyTitle>{isPending ? '暂无待审核作品' : '暂无匹配作品'}</EmptyTitle>
+              <EmptyTitle>{isPending ? t('gallery.emptyPendingTitle') : t('gallery.emptyMatchedTitle')}</EmptyTitle>
               <EmptyDescription>
                 {search || filters.kind || filters.category || filters.sourceType || filters.externalOnly
-                  ? '当前筛选下没有作品，试试调整筛选条件。'
+                  ? t('gallery.emptyFilteredDescription')
                   : isPending
-                    ? '广场投稿队列已清空，稍后再来看看吧。'
-                    : '通过审核的作品会展示在这里。'}
+                    ? t('gallery.emptyPendingDescription')
+                    : t('gallery.emptyPublishedDescription')}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -363,12 +369,12 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>作品</TableHead>
-                <TableHead>作者</TableHead>
-                <TableHead>分类</TableHead>
-                <TableHead>来源</TableHead>
-                <TableHead>{isPending ? '提交时间' : '发布时间'}</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead>{t('gallery.columns.work')}</TableHead>
+                <TableHead>{t('gallery.columns.author')}</TableHead>
+                <TableHead>{t('gallery.columns.category')}</TableHead>
+                <TableHead>{t('gallery.columns.source')}</TableHead>
+                <TableHead>{isPending ? t('gallery.columns.submittedAt') : t('gallery.columns.publishedAt')}</TableHead>
+                <TableHead className="text-right">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -391,10 +397,10 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                         )}
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium text-foreground">
-                            {item.title || '未命名作品'}
+                            {item.title || t('gallery.untitled')}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {item.kind === 'IMAGE' ? '图片' : '视频'}
+                            {item.kind === 'IMAGE' ? t('gallery.kind.image') : t('gallery.kind.video')}
                           </div>
                         </div>
                       </div>
@@ -406,10 +412,10 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                       <Badge variant="secondary">{item.category}</Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {SOURCE_LABEL[item.sourceType] ?? item.sourceType}
+                      {SOURCE_LABEL_KEY[item.sourceType] ? t(SOURCE_LABEL_KEY[item.sourceType]) : item.sourceType}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {formatTime(isPending ? item.createdAt : item.publishedAt)}
+                      {formatTime(isPending ? item.createdAt : item.publishedAt, locale)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -423,7 +429,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                               onClick={() => approve.mutate(item.id)}
                             >
                               <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                              通过
+                              {t('gallery.approve')}
                             </Button>
                             <Button
                               variant="ghost"
@@ -436,7 +442,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                               }}
                             >
                               <XCircle className="h-3.5 w-3.5 mr-1" />
-                              驳回
+                              {t('gallery.reject')}
                             </Button>
                           </>
                         ) : (
@@ -448,7 +454,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                             onClick={() => setBoostTarget(item)}
                           >
                             <Flame className="h-3.5 w-3.5 mr-1" />
-                            加热
+                            {t('gallery.boost')}
                           </Button>
                         )}
                         <Button
@@ -459,7 +465,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                           onClick={() => handleHide(item)}
                         >
                           <EyeOff className="h-3.5 w-3.5 mr-1" />
-                          {isPending ? '下架' : '隐藏'}
+                          {isPending ? t('gallery.unpublish') : t('gallery.hide')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -469,7 +475,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                           onClick={() => handleRemove(item)}
                         >
                           <Trash2 className="h-3.5 w-3.5 mr-1" />
-                          移除
+                          {t('common.remove')}
                         </Button>
                       </div>
                     </TableCell>
@@ -490,10 +496,10 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            上一页
+            {t('gallery.previousPage')}
           </Button>
           <span className="text-sm text-muted-foreground">
-            第 {page} / {totalPages} 页
+            {t('gallery.pageIndicator', { page, totalPages })}
           </span>
           <Button
             variant="outline"
@@ -502,7 +508,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
             disabled={page >= totalPages || loading}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           >
-            下一页
+            {t('gallery.nextPage')}
           </Button>
         </div>
       )}
@@ -517,13 +523,13 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
         }}
       >
         <DialogContent>
-          <DialogHeader><DialogTitle>驳回作品</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('gallery.rejectDialogTitle')}</DialogTitle></DialogHeader>
           <DialogBody>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">驳回原因</label>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">{t('gallery.rejectReason')}</label>
             <Textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="请填写驳回原因，将展示给作者"
+              placeholder={t('gallery.rejectReasonPlaceholder')}
               className="min-h-[80px]"
             />
           </DialogBody>
@@ -536,7 +542,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                 setRejectReason('');
               }}
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -544,7 +550,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               disabled={reject.isPending || rejectReason.trim().length === 0}
               onClick={handleReject}
             >
-              {reject.isPending ? '处理中…' : '确认驳回'}
+              {reject.isPending ? t('common.processing') : t('gallery.confirmReject')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -557,8 +563,8 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
         }}
         resourceType="GALLERY_POST"
         resourceId={boostTarget?.id ?? ''}
-        resourceLabel={boostTarget ? `《${boostTarget.title || '未命名作品'}》` : undefined}
-        title="加热作品"
+        resourceLabel={boostTarget ? t('gallery.resourceLabel', { title: boostTarget.title || t('gallery.untitled') }) : undefined}
+        title={t('gallery.boostDialogTitle')}
       />
     </>
   );

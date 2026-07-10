@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { AnyResource, ResourceType } from '@autix/shared-store';
 import { PublicGrowthShell } from '../growth/PublicGrowthShell';
 import { FallbackImage } from '../template/FallbackImage';
+import { Link } from '../navigation';
 import { MarketplaceChatDock } from './MarketplaceChatDock';
 import { ResourceGrid } from './ResourceGrid';
 import { getVideoPreviewUrl } from './VideoHoverPreview';
@@ -240,34 +241,34 @@ export function MarketplaceCommunityView({
           <div className="relative mx-auto max-w-7xl px-4 py-5 md:px-6 md:py-7">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <a
+                <Link
                   href="/community"
                   className="inline-flex min-h-9 items-center rounded-md bg-foreground px-3 text-sm font-semibold text-background"
                 >
                   {t('community.feedTitle')}
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/marketplace/image-templates"
                   className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm font-semibold text-foreground/72 transition hover:bg-secondary hover:text-foreground"
                 >
                   <Images className="size-4" />
                   {t('resourceType.imageTemplate')}
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/marketplace/video-templates"
                   className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm font-semibold text-foreground/72 transition hover:bg-secondary hover:text-foreground"
                 >
                   <Video className="size-4" />
                   {t('resourceType.videoTemplate')}
-                </a>
+                </Link>
               </div>
-              <a
+              <Link
                 href="/marketplace/video-templates"
                 className="hidden items-center gap-2 text-sm font-semibold text-foreground/52 transition hover:text-foreground md:inline-flex"
               >
                 {t('community.moreVideo')}
                 <ArrowRight className="size-4" />
-              </a>
+              </Link>
             </div>
 
             {loading && !featured ? (
@@ -329,13 +330,13 @@ export function MarketplaceCommunityView({
                   {t('community.feedTitle')}
                 </h1>
               </div>
-              <a
+              <Link
                 href="/marketplace/image-templates"
                 className="hidden items-center gap-2 text-sm font-semibold text-foreground/62 transition hover:text-foreground md:inline-flex"
               >
                 {t('resourceType.imageTemplate')}
                 <ArrowRight className="size-4" />
-              </a>
+              </Link>
             </div>
             <ResourceGrid
               items={merged}

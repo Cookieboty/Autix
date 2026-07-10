@@ -132,8 +132,8 @@ export function DrawModelPicker(props: {
   onChange: (id: string | null) => void;
 }) {
   const label = props.loading
-    ? tr(props.t, 'chat.modelLoading', '加载模型…')
-    : props.selectedModel?.name ?? tr(props.t, 'chat.modelEmpty', '暂无模型');
+    ? tr(props.t, 'chat.modelLoading', 'Loading models...')
+    : props.selectedModel?.name ?? tr(props.t, 'chat.modelEmpty', 'No models');
   const triggerClassName = props.triggerClassName ?? 'inline-flex h-8 min-w-0 max-w-[260px] items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.08] px-2.5 text-xs font-semibold text-white transition hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-50';
   return (
     <ModelPickerPopover
@@ -141,8 +141,8 @@ export function DrawModelPicker(props: {
       value={props.selectedModelId}
       onChange={props.onChange}
       labels={{
-        searchPlaceholder: tr(props.t, 'chat.modelSearchPlaceholder', '搜索模型'),
-        empty: tr(props.t, 'chat.modelEmptyResult', '没有匹配的模型'),
+        searchPlaceholder: tr(props.t, 'chat.modelSearchPlaceholder', 'Search models'),
+        empty: tr(props.t, 'chat.modelEmptyResult', 'No matching models'),
       }}
       trigger={(
         <button
@@ -160,6 +160,7 @@ export function DrawModelPicker(props: {
 }
 
 export function CanvasConnectionHandles(props: {
+  t: Tr;
   images: CanvasImageNodeView[];
   videos: VideoNodeOverlayView[];
   drag: CanvasConnectionDrag | null;
@@ -203,7 +204,7 @@ export function CanvasConnectionHandles(props: {
             />
             <button
               type="button"
-              title="连接图片"
+              title={props.t('video.connectImage')}
               onPointerDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -234,6 +235,7 @@ export function CanvasConnectionHandles(props: {
 }
 
 export function VideoCanvasEdges(props: {
+  t: Tr;
   edges: VideoLinkLabelInfo[];
   onSelectEdge: (edge: VideoLinkLabelInfo) => void;
   onDeleteEdge: (edgeId: string) => void;
@@ -320,7 +322,7 @@ export function VideoCanvasEdges(props: {
         >
           <button
             type="button"
-            title="编辑镜头描述"
+            title={props.t('video.editShotDescription')}
             onClick={() => props.onSelectEdge(edge)}
             className="min-w-0 flex-1 break-words px-2.5 py-1 text-left leading-4"
             style={{
@@ -330,11 +332,11 @@ export function VideoCanvasEdges(props: {
               overflow: 'hidden',
             }}
           >
-            {videoLinkLabelText(edge)}
+            {videoLinkLabelText(edge, props.t)}
           </button>
           <button
             type="button"
-            title="删除连接线"
+            title={props.t('video.deleteConnection')}
             onClick={(event) => {
               event.stopPropagation();
               props.onDeleteEdge(edge.id);
@@ -390,7 +392,7 @@ export function BottomDock(props: {
   onStrokeColorChange: (color: string) => void;
 }) {
   const { t, tool } = props;
-  const arrangeVideoTitle = tr(t, 'dock.arrangeVideo', '一键排版');
+  const arrangeVideoTitle = tr(t, 'dock.arrangeVideo', 'Auto layout');
   return (
     <div className="absolute bottom-4 left-1/2 z-20 flex max-w-[calc(100%-32px)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-xl border border-white/12 bg-black/90 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
       <DockBtn title={t('dock.select')} active={tool === 'selection'} onClick={props.onSelect}><MousePointer2 className="size-5" /></DockBtn>
@@ -401,7 +403,7 @@ export function BottomDock(props: {
       <DockBtn title={t('dock.pen')} active={tool === 'freedraw'} onClick={props.onPen}><Pencil className="size-5" /></DockBtn>
       <DockBtn title={t('dock.text')} active={tool === 'text'} onClick={props.onText}><Type className="size-5" /></DockBtn>
       <span className="mx-1 h-6 w-px bg-white/10" />
-      <div className="flex items-center gap-1 px-1" title={tr(t, 'dock.color', '颜色')}>
+      <div className="flex items-center gap-1 px-1" title={tr(t, 'dock.color', 'Color')}>
         <Palette className="size-4 shrink-0 text-white/45" />
         {DRAW_COLOR_SWATCHES.map((color) => (
           <button
@@ -514,6 +516,7 @@ export function QuickEditBox(props: {
 }
 
 export function LinePromptEditor(props: {
+  t: Tr;
   edgeId: string;
   value: string;
   left: number;
@@ -544,12 +547,12 @@ export function LinePromptEditor(props: {
     >
       <div className="mb-1.5 flex items-center gap-1.5">
         <Film className="size-4 shrink-0 text-emerald-200" />
-        <span className="text-xs font-semibold text-white/68">镜头描述</span>
+        <span className="text-xs font-semibold text-white/68">{props.t('video.shotDescription')}</span>
         <span className="flex-1" />
         {props.modelPicker}
         <button
           type="button"
-          title="删除连接线"
+          title={props.t('video.deleteConnection')}
           onMouseDown={(event) => event.preventDefault()}
           onClick={props.onDelete}
           className="grid size-7 place-items-center rounded-md text-white/45 transition hover:bg-red-500/16 hover:text-red-100"
@@ -572,13 +575,13 @@ export function LinePromptEditor(props: {
             props.onClose();
           }
         }}
-        placeholder="描述主体动作、镜头运动、转场、情绪和画面细节"
+        placeholder={props.t('video.shotDescriptionPlaceholder')}
         className="min-h-40 max-h-72 w-full resize-y rounded-md border border-white/10 bg-white/[0.06] px-2.5 py-2 text-sm leading-5 text-white outline-none placeholder:text-white/34 focus:border-emerald-200/55"
       />
       <div className="mt-2 flex items-center justify-end gap-1.5">
         <button
           type="button"
-          title="优化提示词"
+          title={props.t('video.optimizePrompt')}
           disabled={!canOptimize}
           onMouseDown={(event) => event.preventDefault()}
           onClick={async () => {
@@ -588,11 +591,11 @@ export function LinePromptEditor(props: {
           className="inline-flex h-8 items-center gap-1.5 rounded-md border border-white/10 px-2.5 text-xs font-semibold text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-35"
         >
           {props.optimizing ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-          优化
+          {props.t('video.optimize')}
         </button>
         <button
           type="button"
-          title="应用描述"
+          title={props.t('video.applyDescription')}
           onMouseDown={(event) => event.preventDefault()}
           onClick={commit}
           className="grid size-8 place-items-center rounded-md bg-white text-black transition hover:bg-white/90"
@@ -605,6 +608,7 @@ export function LinePromptEditor(props: {
 }
 
 export function LineActionPopover(props: {
+  t: Tr;
   edge: VideoLinkEditorInfo;
   left: number;
   top: number;
@@ -619,22 +623,22 @@ export function LineActionPopover(props: {
     >
       <span className="inline-flex h-7 items-center gap-1.5 rounded-md bg-white/[0.06] px-2 text-xs font-semibold text-white/70">
         <Film className="size-3.5 text-emerald-200" />
-        {props.edge.role === 'input' ? '输入' : '连接线'}
+        {props.edge.role === 'input' ? props.t('video.input') : props.t('video.connection')}
       </span>
       {props.onAddPrompt && (
         <button
           type="button"
-          title="添加分镜描述"
+          title={props.t('video.addShotDescription')}
           onClick={props.onAddPrompt}
           className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
         >
           <Wand2 className="size-3.5" />
-          添加描述
+          {props.t('video.addDescription')}
         </button>
       )}
       <button
         type="button"
-        title="删除连接线"
+        title={props.t('video.deleteConnection')}
         onClick={props.onDelete}
         className="grid size-7 place-items-center rounded-md text-white/45 transition hover:bg-red-500/16 hover:text-red-100"
       >

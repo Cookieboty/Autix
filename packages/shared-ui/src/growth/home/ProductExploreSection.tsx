@@ -10,7 +10,7 @@ import { demoVideoItem, HOME_VIDEO_DEMOS, HomeSectionIntro, releaseDetail } from
 function videoEntryItem(features: PublicGrowthFeature[], fallback: PublicGrowthMediaItem): PublicGrowthMediaItem {
   const videoFeature = features.find((feature) => {
     const marker = `${feature.key} ${feature.href} ${feature.title}`.toLowerCase();
-    return marker.includes('video') || marker.includes('/ai/video') || marker.includes('视频');
+    return marker.includes('video') || marker.includes('/ai/video');
   }) ?? features[0];
   return {
     ...fallback,

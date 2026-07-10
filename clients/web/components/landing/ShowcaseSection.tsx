@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Check, Coins, ImageIcon, Layers3, Play, Sparkles } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import { formatCurrency } from '@autix/shared-ui/format';
@@ -203,11 +203,11 @@ export function ShowcaseSection() {
               Studio Console
             </p>
             <h2 className="max-w-4xl text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-              内容、积分和交付状态都在一个控制台里
+              {t('showcaseConsoleTitle')}
             </h2>
           </div>
           <p className="max-w-md text-sm leading-7 text-white/58">
-            精选作品、会员积分、套餐权益和视频预览统一呈现，让团队能快速判断下一步创作和交付动作。
+            {t('showcaseConsoleDesc')}
           </p>
         </motion.div>
 
@@ -260,8 +260,8 @@ export function ShowcaseSection() {
                 <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.22em] text-white/48">{t('showcaseGallery')}</p>
-                    <h3 className="mt-2 text-3xl font-bold">精选作品预览</h3>
-                    <p className="mt-2 max-w-md text-sm leading-6 text-white/62">图像模板、视频模板和 Agent 生成结果统一回到作品库。</p>
+                    <h3 className="mt-2 text-3xl font-bold">{t('showcaseGalleryPreviewTitle')}</h3>
+                    <p className="mt-2 max-w-md text-sm leading-6 text-white/62">{t('showcaseGalleryPreviewDesc')}</p>
                   </div>
                   <span className="hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-950 md:inline-flex">
                     <Play className="size-3" /> Live
@@ -345,8 +345,8 @@ export function ShowcaseSection() {
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {[
-                  [ImageIcon, '作品库'],
-                  [Layers3, '模板资产'],
+                  [ImageIcon, t('showcaseAssetGallery')],
+                  [Layers3, t('showcaseAssetTemplates')],
                 ].map(([Icon, label]) => {
                   const TypedIcon = Icon as typeof ImageIcon;
                   return (

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ResolvedFeaturedSlot } from '@autix/domain';
 
 // 卡片视觉与横向 rail 与 FeaturedModelsShowcase 保持一致，仅数据来源换成 DB 解析后的运营位。
@@ -56,6 +57,7 @@ function SlotCard({ slot }: { slot: ResolvedFeaturedSlot }) {
 
 /** DB 驱动的首页 hero 横向 rail：由服务端聚合 resolveSlot 结果渲染，视觉与 FeaturedModelsShowcase 一致。 */
 export function HomeHeroCuratedBar({ slots }: { slots: ResolvedFeaturedSlot[] }) {
+  const t = useTranslations('publicGrowth.home');
   const railRef = useRef<HTMLDivElement | null>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
@@ -113,7 +115,7 @@ export function HomeHeroCuratedBar({ slots }: { slots: ResolvedFeaturedSlot[] })
           {canLeft ? (
             <button
               type="button"
-              aria-label="Previous"
+              aria-label={t('prev')}
               onClick={() => scrollByCard(-1)}
               className="absolute left-2 top-[calc((100%-3.75rem)/2)] grid size-10 -translate-y-1/2 place-items-center rounded-full border border-border bg-background/70 text-foreground opacity-0 backdrop-blur transition duration-300 hover:bg-background focus-visible:opacity-100 group-hover/rail:opacity-100"
             >
@@ -123,7 +125,7 @@ export function HomeHeroCuratedBar({ slots }: { slots: ResolvedFeaturedSlot[] })
           {canRight ? (
             <button
               type="button"
-              aria-label="Next"
+              aria-label={t('next')}
               onClick={() => scrollByCard(1)}
               className="absolute right-2 top-[calc((100%-3.75rem)/2)] grid size-10 -translate-y-1/2 place-items-center rounded-full border border-border bg-background/70 text-foreground opacity-0 backdrop-blur transition duration-300 hover:bg-background focus-visible:opacity-100 group-hover/rail:opacity-100"
             >

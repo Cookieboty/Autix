@@ -12,7 +12,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import type { VideoComposition, VideoCompositionMode } from './draw-video-graph';
+import type { VideoComposition, VideoCompositionIssue, VideoCompositionMode } from './draw-video-graph';
 
 type Tr = (key: string, values?: Record<string, string | number>) => string;
 
@@ -114,7 +114,7 @@ export function VideoNodeOverlay(props: {
               href={videoUrl}
               target="_blank"
               rel="noreferrer"
-              title="打开视频"
+              title={t('video.openVideo')}
               className="pointer-events-auto absolute right-2 top-2 grid size-8 place-items-center rounded-md bg-black/70 text-white transition hover:bg-black"
             >
               <ExternalLink className="size-4" />
@@ -129,14 +129,14 @@ export function VideoNodeOverlay(props: {
             <Film className="size-4" />
           </div>
           <div
-            title="自动识别模式"
+            title={t('video.autoMode')}
             className="min-w-0 flex-1 rounded-md border border-white/10 bg-white/[0.06] px-2 py-1.5 text-xs font-semibold text-white"
           >
-            <span className="block truncate">识别为: {modeLabel(composition.autoMode)}</span>
+            <span className="block truncate">{t('video.recognizedAs', { mode: modeLabel(composition.autoMode, t) })}</span>
           </div>
           {(blockingCount > 0 || warningCount > 0) && (
             <span
-              title={composition.issues.map((issue) => issue.message).join('\n')}
+              title={composition.issues.map((issue) => videoIssueMessage(issue, t)).join('\n')}
               className={`pointer-events-auto inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold ${
                 blockingCount > 0 ? 'bg-red-500/18 text-red-100' : 'bg-amber-400/16 text-amber-100'
               }`}
@@ -147,7 +147,7 @@ export function VideoNodeOverlay(props: {
           )}
           <button
             type="button"
-            title="删除视频节点"
+            title={t('video.deleteVideoNode')}
             onClick={props.onDelete}
             className="pointer-events-auto grid size-7 shrink-0 place-items-center rounded-md border border-white/10 text-white/50 transition hover:border-red-300/35 hover:bg-red-500/15 hover:text-red-100"
           >
@@ -170,7 +170,7 @@ export function VideoNodeOverlay(props: {
             {composition.shots.length === 0 ? (
               <div className="flex h-9 items-center gap-1.5 px-2 text-xs text-white/45">
                 <Clapperboard className="size-3.5" />
-                暂无镜头
+                {t('video.noShots')}
               </div>
             ) : (
               composition.shots.map((shot, index) => (
@@ -192,7 +192,7 @@ export function VideoNodeOverlay(props: {
                   <button
                     type="button"
                     draggable
-                    title="拖拽排序"
+                    title={t('video.dragToSort')}
                     onDragStart={(event) => {
                       event.dataTransfer.setData('application/x-video-shot-id', shot.linkElementId);
                       event.dataTransfer.effectAllowed = 'move';
@@ -205,7 +205,7 @@ export function VideoNodeOverlay(props: {
                   <input
                     value={shot.prompt}
                     onChange={(event) => props.onShotPromptChange(shot.linkElementId, event.target.value)}
-                    placeholder="镜头描述"
+                    placeholder={t('video.shotDescription')}
                     className="min-w-0 flex-1 bg-transparent text-white/78 outline-none placeholder:text-white/35"
                   />
                 </div>
@@ -218,13 +218,13 @@ export function VideoNodeOverlay(props: {
           <textarea
             value={view.prompt}
             onChange={(event) => props.onPromptChange(event.target.value)}
-            placeholder={mode === 'storyboard' ? '整片提示词' : '描述这条视频'}
+            placeholder={mode === 'storyboard' ? t('video.storyboardPromptPlaceholder') : t('video.videoPromptPlaceholder')}
             rows={3}
             className="pointer-events-auto max-h-32 min-h-20 w-full resize-none rounded-md border border-white/10 bg-white/[0.05] px-2.5 py-2 pr-10 text-sm text-white outline-none placeholder:text-white/35 focus:border-emerald-200/55"
           />
           <button
             type="button"
-            title="优化视频提示词"
+            title={t('video.optimizeVideoPrompt')}
             disabled={props.optimizingPrompt || !view.prompt.trim()}
             onClick={props.onOptimizePrompt}
             className="pointer-events-auto absolute right-2 top-2 grid size-7 place-items-center rounded-md border border-white/10 bg-black/50 text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
@@ -238,7 +238,7 @@ export function VideoNodeOverlay(props: {
             view.generation?.error ? 'bg-red-500/14 text-red-100' : 'bg-emerald-300/12 text-emerald-100'
           }`}
           >
-            {view.generation?.error || '生成中...'}
+            {view.generation?.error || t('video.generating')}
           </div>
         )}
 
@@ -248,12 +248,12 @@ export function VideoNodeOverlay(props: {
           </div>
           <button
             type="button"
-            title="打开专业工作台"
+            title={t('video.openWorkbench')}
             onClick={props.onOpenWorkbench}
             className="pointer-events-auto inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/10 px-2.5 text-xs font-semibold text-white/72 transition hover:bg-white/10 hover:text-white"
           >
             <ExternalLink className="size-3.5" />
-            工作台
+            {t('video.workbench')}
           </button>
           <button
             type="button"
@@ -263,7 +263,7 @@ export function VideoNodeOverlay(props: {
             className="pointer-events-auto inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-white px-3 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isGenerating ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-            生成
+            {t('video.generate')}
           </button>
         </div>
       </div>
@@ -271,12 +271,16 @@ export function VideoNodeOverlay(props: {
   );
 }
 
-function modeLabel(mode: VideoCompositionMode): string {
-  if (mode === 'text_to_video') return '文生视频';
-  if (mode === 'image_to_video') return '图生视频';
-  if (mode === 'first_last_frame') return '首尾帧';
-  if (mode === 'storyboard') return '分镜';
-  return '参考图';
+export function videoIssueMessage(issue: VideoCompositionIssue, t: Tr): string {
+  return t(`video.issues.${issue.code}`) || issue.message;
+}
+
+function modeLabel(mode: VideoCompositionMode, t: Tr): string {
+  if (mode === 'text_to_video') return t('video.modes.textToVideo');
+  if (mode === 'image_to_video') return t('video.modes.imageToVideo');
+  if (mode === 'first_last_frame') return t('video.modes.firstLastFrame');
+  if (mode === 'storyboard') return t('video.modes.storyboard');
+  return t('video.modes.reference');
 }
 
 // Drop `sourceId` onto `targetId` so the source takes the target's slot. The

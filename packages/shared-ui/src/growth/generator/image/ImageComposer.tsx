@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Link } from '../../../navigation';
 import {
   buildImageSizeResolutionGroups,
   getUniqueImageAspectOptions,
@@ -441,13 +442,13 @@ export function ImageComposer({
                 </TooltipContent>
               </Tooltip>
               {/* 「绘制」只是跳转 /draw 的导航链接，无生成相关后端逻辑，暂隐藏（需要时取消注释即可）
-              <a
+              <Link
                 href="/draw"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
               >
                 <Pencil className="size-4" />
                 {t('draw')}
-              </a>
+              </Link>
               */}
             </div>
           </div>

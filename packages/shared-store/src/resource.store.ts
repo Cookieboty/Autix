@@ -39,7 +39,7 @@ function errorMessage(e: unknown): string {
     ?.data?.message;
   if (typeof data === 'string') return data;
   if (e instanceof Error && e.message) return e.message;
-  return '加载失败,请稍后重试';
+  return 'Loading failed. Please try again later.';
 }
 
 type AnyResourceItem =
@@ -176,7 +176,7 @@ export const useResourceStore = create<ResourceState>((set, get) => ({
 
   acquire: async (slug, resourceId) => {
     if (!ACQUIRABLE_SLUGS.has(slug)) {
-      throw new Error('该资源类型不支持获取(仅 skills/mcp/agents)');
+      throw new Error('This resource type cannot be acquired (skills/mcp/agents only).');
     }
     const res = await acquisitionsApi.acquire(slug, resourceId);
     const payload = res.data as { newBalance: number };

@@ -7,7 +7,7 @@ import { useChatStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useAIUIStore } from '@autix/shared-store';
 import { useRouter, usePathname } from '../navigation';
-import { useTheme } from 'next-themes';
+import { useTheme } from '../theme';
 import { useTaskStore } from '@autix/shared-store';
 import { useUiStore } from '@autix/shared-store';
 import { useLanguageStore } from '@autix/shared-store';

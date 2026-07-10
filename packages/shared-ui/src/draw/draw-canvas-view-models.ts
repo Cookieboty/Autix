@@ -11,6 +11,7 @@ import type {
   AppStateLike,
   CanvasConnectionTarget,
   CanvasImageNodeView,
+  Tr,
   VideoLinkEditorInfo,
   VideoLinkLabelInfo,
 } from './draw-types';
@@ -174,6 +175,7 @@ export function buildVideoLinkLabels(
   elements: readonly DrawElement[],
   appState: AppStateLike,
   canvasRect?: DOMRect,
+  t?: Tr,
 ): VideoLinkLabelInfo[] {
   const byId = new Map(elements.map((element) => [element.id, element] as const));
   const arrows = elements
@@ -192,7 +194,9 @@ export function buildVideoLinkLabels(
       appState,
       canvasRect,
       role === 'sequence' ? sequenceOrder.get(element.id) : undefined,
-      role === 'sequence' && !hasPromptField ? (plainCount === 1 ? '首尾' : '序列') : undefined,
+      role === 'sequence' && !hasPromptField
+        ? (plainCount === 1 ? t?.('video.firstLast') ?? 'First/Last' : t?.('video.sequence') ?? 'Sequence')
+        : undefined,
     );
   });
 }
@@ -535,12 +539,12 @@ export function isImageToImageArrow(element: DrawElement, elements: readonly Dra
   return start?.type === 'image' && !start.isDeleted && end?.type === 'image' && !end.isDeleted;
 }
 
-export function videoModeLabel(mode: VideoCompositionMode): string {
-  if (mode === 'text_to_video') return '文生视频';
-  if (mode === 'image_to_video') return '图生视频';
-  if (mode === 'first_last_frame') return '首尾帧';
-  if (mode === 'storyboard') return '分镜';
-  return '参考图';
+export function videoModeLabel(mode: VideoCompositionMode, t?: Tr): string {
+  if (mode === 'text_to_video') return t?.('video.modes.textToVideo') ?? 'Text to video';
+  if (mode === 'image_to_video') return t?.('video.modes.imageToVideo') ?? 'Image to video';
+  if (mode === 'first_last_frame') return t?.('video.modes.firstLastFrame') ?? 'First/last frame';
+  if (mode === 'storyboard') return t?.('video.modes.storyboard') ?? 'Storyboard';
+  return t?.('video.modes.reference') ?? 'Reference image';
 }
 
 export function normalizeVideoCanvasElement(element: DrawElement): DrawElement {

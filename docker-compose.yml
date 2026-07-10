@@ -74,6 +74,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       API_URL: http://api:4000
+      NEXT_PUBLIC_SITE_URL: https://REPLACE_ME.example.com # TODO: 替换为实际生产域名
     depends_on:
       api:
         condition: service_healthy

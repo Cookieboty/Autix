@@ -10,7 +10,7 @@ export const SUPPORTED_LANGUAGES = [
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
-export const DEFAULT_LANGUAGE: SupportedLanguage = 'zh-CN';
+export const DEFAULT_LANGUAGE: SupportedLanguage = 'en';
 export const FALLBACK_LANGUAGE: SupportedLanguage = 'en';
 
 export const LANGUAGE_NAME_FIELDS: Record<SupportedLanguage, string> = {

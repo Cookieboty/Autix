@@ -14,7 +14,7 @@ import {
   Video,
   type LucideIcon,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { useTheme } from '../theme';
 import { useTranslations } from 'next-intl';
 
 import { useChatEnabled, useLibraryEnabled } from '../hooks/useModelConfigEnabled';

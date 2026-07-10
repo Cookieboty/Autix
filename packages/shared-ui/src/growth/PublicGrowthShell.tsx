@@ -13,52 +13,58 @@ import { Link, useRouter } from '../navigation';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
 
-const FOOTER_HEADLINE = 'The all-in-one AI studio for image & video creators';
+const FOOTER_YEAR = '2026';
 
-const FOOTER_GROUPS: Array<{ title: string; links: Array<[string, string]> }> = [
+/**
+ * `labelKey` resolves against `publicGrowth.footer.links`; a plain `label` is a
+ * proper noun (model name) that stays untranslated in every locale.
+ */
+type FooterLink = { labelKey?: string; label?: string; href: string };
+
+const FOOTER_GROUPS: Array<{ titleKey: string; links: FooterLink[] }> = [
   {
-    title: 'Amux Studio',
+    titleKey: 'studio',
     links: [
-      ['Explore', '/'],
-      ['Pricing', '/pricing'],
-      ['Community', '/community'],
-      ['Canvas', '/draw'],
-      ['Marketing Studio', '/marketing-studio'],
-      ['Cinema Studio', '/original-series'],
-      ['Originals', '/original-series'],
-      ['Docs', '/docs'],
+      { labelKey: 'explore', href: '/' },
+      { labelKey: 'pricing', href: '/pricing' },
+      { labelKey: 'community', href: '/community' },
+      { labelKey: 'canvas', href: '/draw' },
+      { labelKey: 'marketingStudio', href: '/marketing-studio' },
+      { labelKey: 'cinemaStudio', href: '/original-series' },
+      { labelKey: 'originals', href: '/original-series' },
+      { labelKey: 'docs', href: '/docs' },
     ],
   },
   {
-    title: 'Image',
+    titleKey: 'image',
     links: [
-      ['AI Image', '/ai/image'],
-      ['Templates', '/ai/image?mode=templates'],
-      ['Edit Image', '/ai/image'],
-      ['Image Upscale', '/ai/image'],
-      ['Nano Banana Pro', '/ai/image?model=Nano%20Banana%20Pro'],
-      ['Nano Banana 2', '/ai/image?model=Nano%20Banana%202'],
-      ['GPT Image 2', '/ai/image?model=GPT%20Image%202'],
-      ['Seedream 5 Lite', '/ai/image?model=Seedream%205%20Lite'],
+      { labelKey: 'aiImage', href: '/ai/image' },
+      { labelKey: 'templates', href: '/ai/image?mode=templates' },
+      { labelKey: 'editImage', href: '/ai/image' },
+      { labelKey: 'imageUpscale', href: '/ai/image' },
+      { label: 'Nano Banana Pro', href: '/ai/image?model=Nano%20Banana%20Pro' },
+      { label: 'Nano Banana 2', href: '/ai/image?model=Nano%20Banana%202' },
+      { label: 'GPT Image 2', href: '/ai/image?model=GPT%20Image%202' },
+      { label: 'Seedream 5 Lite', href: '/ai/image?model=Seedream%205%20Lite' },
     ],
   },
   {
-    title: 'Video',
+    titleKey: 'video',
     links: [
-      ['AI Video', '/ai/video'],
-      ['Create Video', '/ai/video'],
-      ['Seedance 2.0', '/ai/video?model=Seedance%202.0'],
-      ['Gemini Omni Flash', '/ai/video?model=Gemini%20Omni%20Flash'],
+      { labelKey: 'aiVideo', href: '/ai/video' },
+      { labelKey: 'createVideo', href: '/ai/video' },
+      { label: 'Seedance 2.0', href: '/ai/video?model=Seedance%202.0' },
+      { label: 'Gemini Omni Flash', href: '/ai/video?model=Gemini%20Omni%20Flash' },
     ],
   },
   {
-    title: 'Discover',
+    titleKey: 'discover',
     links: [
-      ['Presets', '/presets'],
-      ['Viral Presets', '/viral-presets'],
-      ['Community', '/community'],
-      ['Membership', '/membership'],
-      ['Pricing', '/pricing'],
+      { labelKey: 'presets', href: '/presets' },
+      { labelKey: 'viralPresets', href: '/viral-presets' },
+      { labelKey: 'community', href: '/community' },
+      { labelKey: 'membership', href: '/membership' },
+      { labelKey: 'pricing', href: '/pricing' },
     ],
   },
 ];
@@ -72,38 +78,46 @@ const FOOTER_SOCIAL: Array<[string, string]> = [
 ];
 
 const FOOTER_LEGAL: Array<[string, string]> = [
-  ['Privacy', '#'],
-  ['Terms', '#'],
-  ['Cookie Notice', '#'],
+  ['privacy', '#'],
+  ['terms', '#'],
+  ['cookieNotice', '#'],
 ];
 
 export function PublicFooter() {
+  const t = useTranslations('publicGrowth.footer');
+
   return (
     <footer className="bg-growth-accent text-background">
       <div className="mx-auto max-w-[1920px] px-6 py-14 md:px-10 md:py-20">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
           <div className="lg:pr-8">
             <h2 className="max-w-md text-3xl font-black uppercase leading-[1.05] tracking-tight md:text-4xl">
-              {FOOTER_HEADLINE}
+              {t('headline')}
             </h2>
           </div>
-          {FOOTER_GROUPS.map((group) => (
-            <nav key={group.title} aria-label={group.title}>
-              <h3 className="mb-4 text-sm font-semibold text-background/45">{group.title}</h3>
-              <ul className="space-y-2.5">
-                {group.links.map(([label, href]) => (
-                  <li key={label}>
-                    <Link
-                      href={href}
-                      className="text-sm text-background/80 transition hover:text-background"
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
+          {FOOTER_GROUPS.map((group) => {
+            const groupTitle = t(`groups.${group.titleKey}`);
+            return (
+              <nav key={group.titleKey} aria-label={groupTitle}>
+                <h3 className="mb-4 text-sm font-semibold text-background/45">{groupTitle}</h3>
+                <ul className="space-y-2.5">
+                  {group.links.map((link) => {
+                    const label = link.labelKey ? t(`links.${link.labelKey}`) : link.label!;
+                    return (
+                      <li key={`${link.labelKey ?? link.label}-${link.href}`}>
+                        <Link
+                          href={link.href}
+                          className="text-sm text-background/80 transition hover:text-background"
+                        >
+                          {label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            );
+          })}
         </div>
 
         <div className="mt-16 flex flex-col gap-5 border-t border-background/15 pt-6 md:flex-row md:items-center md:justify-between">
@@ -120,11 +134,11 @@ export function PublicFooter() {
 
       <div className="bg-background text-foreground/55">
         <div className="mx-auto flex max-w-[1920px] flex-col gap-3 px-6 pt-4 pb-24 text-xs md:flex-row md:items-center md:justify-between md:px-10 md:pb-4">
-          <span>© 2026 Amux Studio. All rights reserved.</span>
+          <span>{t('copyright', { year: FOOTER_YEAR })}</span>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
-            {FOOTER_LEGAL.map(([label, href]) => (
-              <a key={label} href={href} className="transition hover:text-foreground">
-                {label}
+            {FOOTER_LEGAL.map(([labelKey, href]) => (
+              <a key={labelKey} href={href} className="transition hover:text-foreground">
+                {t(`legal.${labelKey}`)}
               </a>
             ))}
           </div>

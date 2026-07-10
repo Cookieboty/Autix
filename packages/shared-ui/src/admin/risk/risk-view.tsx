@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { RefreshCw, ShieldAlert, Ban, ShieldCheck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   useBlockRiskUserMutation,
   useRiskUserDetailQuery,
@@ -14,12 +15,6 @@ import {
 import { Button } from '../../ui';
 
 const LEVELS: RiskLevel[] = ['L0', 'L1', 'L2', 'L3'];
-const LEVEL_LABEL: Record<RiskLevel, string> = {
-  L0: '正常',
-  L1: '关注',
-  L2: '受限',
-  L3: '封禁',
-};
 const LEVEL_COLOR: Record<RiskLevel, string> = {
   L0: 'var(--muted)',
   L1: '#b8860b',
@@ -27,13 +22,18 @@ const LEVEL_COLOR: Record<RiskLevel, string> = {
   L3: '#c0392b',
 };
 
+function levelLabelKey(level: RiskLevel) {
+  return `risk.levels.${level}` as const;
+}
+
 function LevelBadge({ level }: { level: RiskLevel }) {
+  const t = useTranslations('adminOperations');
   return (
     <span
       className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
       style={{ color: '#fff', background: LEVEL_COLOR[level] }}
     >
-      {level} · {LEVEL_LABEL[level]}
+      {t('risk.levelBadge', { level, label: t(levelLabelKey(level)) })}
     </span>
   );
 }
@@ -43,6 +43,7 @@ export interface AdminRiskViewProps {
 }
 
 export function AdminRiskView(_props: AdminRiskViewProps = {}) {
+  const t = useTranslations('adminOperations');
   const [level, setLevel] = useState<string>('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -55,24 +56,24 @@ export function AdminRiskView(_props: AdminRiskViewProps = {}) {
         <ShieldAlert className="h-5 w-5" style={{ color: 'var(--foreground)' }} />
         <div>
           <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-            风控与用户管理
+            {t('risk.title')}
           </h1>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
-            异常/封控用户、邀请关系与安全等级
+            {t('risk.description')}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <div className="flex gap-1">
-            <FilterChip active={level === ''} onClick={() => setLevel('')}>全部</FilterChip>
+            <FilterChip active={level === ''} onClick={() => setLevel('')}>{t('common.all')}</FilterChip>
             {LEVELS.map((lv) => (
               <FilterChip key={lv} active={level === lv} onClick={() => setLevel(lv)}>
-                {LEVEL_LABEL[lv]}
+                {t(levelLabelKey(lv))}
               </FilterChip>
             ))}
           </div>
           <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => void refetch()}>
             <RefreshCw className="mr-1 h-3.5 w-3.5" />
-            刷新
+            {t('common.refresh')}
           </Button>
         </div>
       </header>
@@ -80,19 +81,19 @@ export function AdminRiskView(_props: AdminRiskViewProps = {}) {
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-1 overflow-auto">
           {isFetching && items.length === 0 ? (
-            <Centered>加载中…</Centered>
+            <Centered>{t('common.loading')}</Centered>
           ) : items.length === 0 ? (
-            <Centered>暂无风控用户</Centered>
+            <Centered>{t('risk.emptyUsers')}</Centered>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <Th>用户</Th>
-                  <Th>安全等级</Th>
-                  <Th>分数</Th>
-                  <Th>邀请人</Th>
-                  <Th>邀请数</Th>
-                  <Th>信号</Th>
+                  <Th>{t('risk.columns.user')}</Th>
+                  <Th>{t('risk.columns.securityLevel')}</Th>
+                  <Th>{t('risk.columns.score')}</Th>
+                  <Th>{t('risk.columns.inviter')}</Th>
+                  <Th>{t('risk.columns.inviteCount')}</Th>
+                  <Th>{t('risk.columns.signals')}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -138,6 +139,7 @@ function RiskRow({ row, selected, onSelect }: { row: RiskUserListItem; selected:
 }
 
 function RiskDetailPanel({ userId, onClose, onChanged }: { userId: string; onClose: () => void; onChanged: () => void }) {
+  const t = useTranslations('adminOperations');
   const { data, isFetching } = useRiskUserDetailQuery(userId);
   const [reason, setReason] = useState('');
   const onSuccess = () => {
@@ -152,33 +154,38 @@ function RiskDetailPanel({ userId, onClose, onChanged }: { userId: string; onClo
   return (
     <aside className="w-96 shrink-0 overflow-auto p-4" style={{ borderLeft: '1px solid var(--border)' }}>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>用户风控详情</h2>
-        <Button size="xs" variant="ghost" className="cursor-pointer" onClick={onClose}>关闭</Button>
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('risk.detailTitle')}</h2>
+        <Button size="xs" variant="ghost" className="cursor-pointer" onClick={onClose}>{t('common.close')}</Button>
       </div>
 
       {isFetching && !data ? (
-        <Centered>加载中…</Centered>
+        <Centered>{t('common.loading')}</Centered>
       ) : !data ? (
-        <Centered>无数据</Centered>
+        <Centered>{t('common.noData')}</Centered>
       ) : (
         <div className="space-y-4 text-sm">
           <section>
-            <Label>等级</Label>
+            <Label>{t('risk.labels.level')}</Label>
             <LevelBadge level={data.profile.level} />
-            <span className="ml-2 text-xs" style={{ color: 'var(--muted)' }}>分数 {data.profile.score}{data.profile.manualOverride ? ' · 人工置级' : ''}</span>
+            <span className="ml-2 text-xs" style={{ color: 'var(--muted)' }}>
+              {t('risk.scoreText', { score: data.profile.score })}{data.profile.manualOverride ? t('risk.manualOverrideSuffix') : ''}
+            </span>
           </section>
 
           <section>
-            <Label>邀请关系</Label>
+            <Label>{t('risk.labels.inviteRelation')}</Label>
             <div className="text-xs" style={{ color: 'var(--muted)' }}>
-              邀请人：{data.inviter?.username ?? data.inviter?.id ?? '无'} · 共邀请 {data.inviteCount} 人
+              {t('risk.inviteSummary', {
+                inviter: data.inviter?.username ?? data.inviter?.id ?? t('common.none'),
+                count: data.inviteCount,
+              })}
             </div>
           </section>
 
           <section>
-            <Label>风险时间线</Label>
+            <Label>{t('risk.labels.timeline')}</Label>
             <ul className="space-y-1">
-              {data.events.length === 0 && <li className="text-xs" style={{ color: 'var(--muted)' }}>无事件</li>}
+              {data.events.length === 0 && <li className="text-xs" style={{ color: 'var(--muted)' }}>{t('risk.noEvents')}</li>}
               {data.events.map((e) => (
                 <li key={e.id} className="text-xs" style={{ color: 'var(--muted)' }}>
                   <span style={{ color: 'var(--foreground)' }}>{e.type}</span> · sev {e.severity} · {new Date(e.createdAt).toLocaleString()}
@@ -188,14 +195,14 @@ function RiskDetailPanel({ userId, onClose, onChanged }: { userId: string; onClo
           </section>
 
           <section className="space-y-2">
-            <Label>处置（原因可选）</Label>
+            <Label>{t('risk.labels.action')}</Label>
             <textarea
               className="w-full rounded border bg-transparent p-2 text-xs"
               style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
               rows={2}
               value={reason}
               onChange={(ev) => setReason(ev.target.value)}
-              placeholder="处置原因"
+              placeholder={t('risk.reasonPlaceholder')}
             />
             <div className="flex flex-wrap gap-2">
               {LEVELS.map((lv) => (
@@ -207,7 +214,7 @@ function RiskDetailPanel({ userId, onClose, onChanged }: { userId: string; onClo
                   className="cursor-pointer"
                   onClick={() => setLevelMutation.mutate({ userId, level: lv, reason: reason || undefined })}
                 >
-                  置为 {LEVEL_LABEL[lv]}
+                  {t('risk.setLevel', { level: t(levelLabelKey(lv)) })}
                 </Button>
               ))}
             </div>
@@ -219,7 +226,7 @@ function RiskDetailPanel({ userId, onClose, onChanged }: { userId: string; onClo
                 className="cursor-pointer"
                 onClick={() => blockMutation.mutate({ userId, reason: reason || undefined })}
               >
-                <Ban className="mr-1 h-3 w-3" /> 封禁
+                <Ban className="mr-1 h-3 w-3" /> {t('risk.block')}
               </Button>
               <Button
                 size="xs"
@@ -228,7 +235,7 @@ function RiskDetailPanel({ userId, onClose, onChanged }: { userId: string; onClo
                 className="cursor-pointer"
                 onClick={() => unblockMutation.mutate({ userId, reason: reason || undefined })}
               >
-                <ShieldCheck className="mr-1 h-3 w-3" /> 解封
+                <ShieldCheck className="mr-1 h-3 w-3" /> {t('risk.unblock')}
               </Button>
             </div>
           </section>

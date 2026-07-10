@@ -1,6 +1,9 @@
-export const DOC_LOCALES = ['zh-CN', 'en'] as const;
-export type DocLocale = (typeof DOC_LOCALES)[number];
-export const DEFAULT_DOC_LOCALE: DocLocale = 'zh-CN';
+import { getPolicy, DOC_LOCALES } from './i18n/route-policy';
+import enDocsConfig from '../../../packages/i18n/src/messages/docs-layout.en.json';
+import zhCNDocsConfig from '../../../packages/i18n/src/messages/docs-layout.zh-CN.json';
+
+/** doc locale 的字面量联合类型，直接来自 route-policy 的唯一真源。 */
+type DocLocale = (typeof DOC_LOCALES)[number];
 
 export const DOC_SLUGS = [
   'workflow',
@@ -11,8 +14,10 @@ export const DOC_SLUGS = [
   'changelog',
 ] as const;
 
-export function isValidDocLocale(locale: string): locale is DocLocale {
-  return (DOC_LOCALES as readonly string[]).includes(locale);
+/** `/docs` 的可用 locale 唯一由 `ROUTE_POLICY` 定义，不再维护并行列表。 */
+export function isValidDocLocale(locale: string): boolean {
+  const policy = getPolicy('/docs');
+  return policy.kind === 'partial' && (policy.locales as string[]).includes(locale);
 }
 
 // --- Navigation config per locale ---
@@ -35,59 +40,24 @@ interface DocsLocaleConfig {
   ui: DocsUIStrings;
 }
 
-function buildNav(locale: string): NavItem[] {
-  const base = `/${locale}/docs`;
-  if (locale === 'zh-CN') {
-    return [
-      { label: '快速开始', href: base },
-      {
-        label: '平台指南',
-        children: [
-          { label: '工作流概述', href: `${base}/workflow` },
-          { label: '模板系统', href: `${base}/templates` },
-          { label: '积分与套餐', href: `${base}/pricing` },
-          { label: '作品管理', href: `${base}/gallery` },
-        ],
-      },
-      { label: '常见问题', href: `${base}/faq` },
-      { label: '更新日志', href: `${base}/changelog` },
-    ];
-  }
-  return [
-    { label: 'Getting Started', href: base },
-    {
-      label: 'Platform Guide',
-      children: [
-        { label: 'Workflow Overview', href: `${base}/workflow` },
-        { label: 'Template System', href: `${base}/templates` },
-        { label: 'Credits & Plans', href: `${base}/pricing` },
-        { label: 'Asset Management', href: `${base}/gallery` },
-      ],
-    },
-    { label: 'FAQ', href: `${base}/faq` },
-    { label: 'Changelog', href: `${base}/changelog` },
-  ];
-}
-
-const UI_STRINGS: Record<DocLocale, DocsUIStrings> = {
-  'zh-CN': {
-    siteTitle: 'Amux Studio Docs',
-    backToHome: '返回首页',
-    lightMode: '浅色模式',
-    darkMode: '深色模式',
-  },
-  en: {
-    siteTitle: 'Amux Studio Docs',
-    backToHome: 'Back to Home',
-    lightMode: 'Light Mode',
-    darkMode: 'Dark Mode',
-  },
+// 键类型为 `DocLocale`：ROUTE_POLICY['/docs'].locales 若新增 locale（经 DOC_LOCALES），
+// 这里缺对应文案会编译报错，而不再是 `isValidDocLocale` 放行、`UI_STRINGS[locale]` 却
+// undefined 的静默兜底。
+const DOCS_CONFIGS: Record<DocLocale, DocsLocaleConfig> = {
+  'zh-CN': zhCNDocsConfig,
+  en: enDocsConfig,
 };
 
+/** 每个声明的 doc locale 都有 UI 文案（编译期由 `Record<DocLocale>` 保证）。测试用。 */
+export function docLocalesWithUIStrings(): string[] {
+  return Object.keys(DOCS_CONFIGS);
+}
+
 export function getDocsConfig(locale: string): DocsLocaleConfig {
-  const safeLocale: DocLocale = isValidDocLocale(locale) ? locale : DEFAULT_DOC_LOCALE;
-  return {
-    nav: buildNav(safeLocale),
-    ui: UI_STRINGS[safeLocale],
-  };
+  const safeLocale: DocLocale = isValidDocLocale(locale)
+    ? (locale as DocLocale)
+    : locale.toLowerCase().startsWith('zh')
+      ? 'zh-CN'
+      : 'en';
+  return DOCS_CONFIGS[safeLocale];
 }

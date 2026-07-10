@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Film, ImageIcon, Layers3, Play, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';

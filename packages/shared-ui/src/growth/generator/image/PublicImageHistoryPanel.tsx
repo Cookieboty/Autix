@@ -300,7 +300,7 @@ export function PublicImageHistoryPanel({
                       <div className="absolute right-2 top-2 z-30 flex flex-col gap-1 opacity-0 transition duration-200 group-hover:opacity-100">
                         <button
                           type="button"
-                          aria-label="like"
+                          aria-label={t('ariaLike')}
                           onClick={(event) => {
                             event.stopPropagation();
                             toggleKey(setLikedKeys, key);
@@ -311,7 +311,7 @@ export function PublicImageHistoryPanel({
                         </button>
                         <button
                           type="button"
-                          aria-label="download"
+                          aria-label={t('ariaDownload')}
                           onClick={(event) => {
                             event.stopPropagation();
                             void downloadImageFile(image.url, `image-${image.index + 1}.png`);
@@ -322,7 +322,7 @@ export function PublicImageHistoryPanel({
                         </button>
                         <button
                           type="button"
-                          aria-label="recreate"
+                          aria-label={t('recreate')}
                           onClick={(event) => {
                             event.stopPropagation();
                             onRecreate?.(item);
@@ -337,7 +337,7 @@ export function PublicImageHistoryPanel({
                   {/* 左上复选框：多选态下全部常显（未选为淡色）；否则悬浮出现。较小、小圆角 */}
                   <button
                     type="button"
-                    aria-label="select"
+                    aria-label={t('ariaSelect')}
                     aria-pressed={selected}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -405,7 +405,7 @@ export function PublicImageHistoryPanel({
           <button
             type="button"
             onClick={likeSelected}
-            aria-label="like"
+            aria-label={t('ariaLike')}
             className="grid size-9 place-items-center rounded-xl text-foreground/85 transition hover:bg-white/5"
           >
             <Heart className="size-4" />
@@ -413,7 +413,7 @@ export function PublicImageHistoryPanel({
           <button
             type="button"
             onClick={deleteSelected}
-            aria-label="delete"
+            aria-label={t('ariaDelete')}
             className="grid size-9 place-items-center rounded-xl text-foreground/85 transition hover:bg-white/5"
           >
             <Trash2 className="size-4" />
@@ -421,7 +421,7 @@ export function PublicImageHistoryPanel({
           <button
             type="button"
             onClick={clearSelection}
-            aria-label="close"
+            aria-label={t('close')}
             className="grid size-9 place-items-center rounded-xl text-foreground/85 transition hover:bg-white/5"
           >
             <X className="size-4" />

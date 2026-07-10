@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
 import { ArrowRight, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -45,7 +45,7 @@ export function CTABanner() {
                   {t('ctaTitle')}
                 </h2>
                 <p className="mt-5 max-w-2xl text-base leading-8 text-white/68">
-                  {t('ctaDesc')}。从第一个想法开始，把产品、内容和视频一起推进到可交付状态。
+                  {t('ctaDesc')} {t('ctaDescSuffix')}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -53,7 +53,7 @@ export function CTABanner() {
                   {t('ctaButton')} <ArrowRight className="size-4" />
                 </Link>
                 <Link href="/video" className="inline-flex items-center gap-2 rounded-full border border-white/24 bg-white/10 px-7 py-3.5 text-sm font-medium text-white backdrop-blur-md transition-transform hover:scale-[1.03]">
-                  视频创作 <Play className="size-4" />
+                  {t('ctaVideoCta')} <Play className="size-4" />
                 </Link>
               </div>
             </div>

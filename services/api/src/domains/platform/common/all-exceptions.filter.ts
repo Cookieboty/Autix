@@ -10,6 +10,7 @@ import { Request, Response } from 'express';
 import { ApiResponse, ErrorCode } from '@autix/domain';
 import { I18nService } from '../i18n/i18n.service';
 import { I18nHttpException } from '../i18n/i18n-http.exception';
+import { DEFAULT_LANGUAGE } from '@autix/i18n';
 
 type LocalizedRequest = Request & { lang?: string };
 type HttpExceptionResponse = {
@@ -27,7 +28,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<LocalizedRequest>();
-    const lang = request.lang ?? 'zh-CN';
+    const lang = request.lang ?? DEFAULT_LANGUAGE;
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code: ErrorCode = 'INTERNAL_ERROR';

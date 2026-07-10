@@ -20,6 +20,7 @@ import {
 } from '@autix/shared-store';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
+import { Link } from '../navigation';
 import { MagneticButton, MagneticLink, SpotlightPanel } from '../growth/GrowthInteractions';
 import {
   StoryboardTimeline,
@@ -241,7 +242,7 @@ export function VideoSharePageView({ code }: { code: string }) {
           <h1 className="text-base font-semibold">{t('unavailableTitle')}</h1>
           <p className="mt-2 text-sm leading-6 text-white/60">{t('loadFailed')}</p>
           <Button asChild className="mt-5">
-            <a href="/workbench/video">{t('goCreate')}</a>
+            <Link href="/workbench/video">{t('goCreate')}</Link>
           </Button>
         </section>
       </main>

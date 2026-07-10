@@ -122,7 +122,7 @@ export function PublicGalleryDetailDialog({
               </span>
               <div className="min-w-0">
                 <div className="truncate text-sm font-bold text-foreground">{author}</div>
-                <div className="text-xs text-foreground/45">Author</div>
+                <div className="text-xs text-foreground/45">{t('author')}</div>
               </div>
             </div>
             <button
@@ -139,9 +139,9 @@ export function PublicGalleryDetailDialog({
           <div className="mt-4 grid grid-cols-5 gap-2 rounded-lg border border-border/60 bg-secondary/40 py-3">
             <StatCell label="PV" value={metrics.pvCount} />
             <StatCell label="UV" value={metrics.uvCount} />
-            <StatCell label="点赞" value={metrics.likeCount} />
-            <StatCell label="收藏" value={metrics.favoriteCount} />
-            <StatCell label="二创" value={metrics.referenceCount} />
+            <StatCell label={t('likes')} value={metrics.likeCount} />
+            <StatCell label={t('favorites')} value={metrics.favoriteCount} />
+            <StatCell label={t('remixes')} value={metrics.referenceCount} />
           </div>
 
           <div className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
@@ -178,7 +178,7 @@ export function PublicGalleryDetailDialog({
               </h3>
               <div className="mt-2 divide-y divide-border/60 text-sm">
                 <InfoRow label={t('model')} value={post.model || t('auto')} />
-                <InfoRow label="尺寸" value={dimensions || '-'} />
+                <InfoRow label={t('dimensions')} value={dimensions || '-'} />
                 {post.category ? <InfoRow label={t('category')} value={post.category} /> : null}
               </div>
             </section>

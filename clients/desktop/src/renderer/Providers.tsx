@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from '@autix/shared-ui/theme';
 import { Toaster } from '@autix/shared-ui/ui';
-import { InsufficientPointsGate } from '@autix/shared-ui';
+import { InsufficientPointsGate, LocaleRoutingProvider } from '@autix/shared-ui';
 import { hydrateStores, wireInsufficientPointsReporter } from '@autix/shared-store';
 import { IntlProvider } from './i18n/IntlProvider';
+
+// desktop 路径无 locale 前缀，"本地化"就是恒等函数——模块级常量，避免每次渲染
+// 都创建新的函数引用触发依赖它的组件重渲染。
+const identity = (p: string) => p;
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -50,11 +54,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem={false}
         themes={['light', 'dark']}
       >
-        <IntlProvider>
-          {children}
-          <InsufficientPointsGate />
-          <Toaster />
-        </IntlProvider>
+        <LocaleRoutingProvider value={identity}>
+          <IntlProvider>
+            {children}
+            <InsufficientPointsGate />
+            <Toaster />
+          </IntlProvider>
+        </LocaleRoutingProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

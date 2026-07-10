@@ -21,12 +21,12 @@ import {
   type Translate,
 } from './task-costs-helpers';
 
-const CATEGORY_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'all', label: '全部分类' },
-  { value: 'chat', label: '对话' },
-  { value: 'image', label: '图片' },
-  { value: 'video', label: '视频' },
-  { value: 'prompt', label: '提示词' },
+const CATEGORY_OPTIONS: Array<{ value: string; labelKey: string }> = [
+  { value: 'all', labelKey: 'filters.allCategories' },
+  { value: 'chat', labelKey: 'categories.chat.title' },
+  { value: 'image', labelKey: 'categories.image.title' },
+  { value: 'video', labelKey: 'categories.video.title' },
+  { value: 'prompt', labelKey: 'categories.prompt.title' },
 ];
 
 interface TaskCostsRuleListProps {
@@ -90,7 +90,7 @@ export function TaskCostsRuleList({
           <SelectContent>
             {CATEGORY_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                {tAdmin(option.labelKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -98,10 +98,10 @@ export function TaskCostsRuleList({
 
         <Select value={taskType} onValueChange={setTaskType}>
           <SelectTrigger className="w-56">
-            <SelectValue placeholder="全部任务" />
+            <SelectValue placeholder={tAdmin('filters.allTasks')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部任务</SelectItem>
+            <SelectItem value="all">{tAdmin('filters.allTasks')}</SelectItem>
             {taskOptions.map((task) => (
               <SelectItem key={task.taskType} value={task.taskType}>
                 {getTaskName(tAdmin, task)}
@@ -113,18 +113,18 @@ export function TaskCostsRuleList({
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="搜索规则名称"
+          placeholder={tAdmin('filters.searchRuleName')}
           className="w-56"
         />
 
         <span className="ml-auto text-xs" style={{ color: 'var(--muted)' }}>
-          共 {filtered.length} 条规则
+          {tAdmin('rules.count', { count: filtered.length })}
         </span>
 
         {activeTask && (
           <Button size="sm" variant="outline" onClick={() => onCreate(activeTask)}>
             <Plus className="mr-1 size-4" />
-            新增规则
+            {tAdmin('rules.create')}
           </Button>
         )}
       </div>
@@ -133,11 +133,11 @@ export function TaskCostsRuleList({
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10" style={{ background: 'var(--background)' }}>
             <tr style={bodyBorder}>
-              <th className={headerCell} style={{ color: 'var(--muted)' }}>规则名称 / taskType</th>
-              <th className={headerCell} style={{ color: 'var(--muted)' }}>业务任务 / 单位</th>
-              <th className={headerCell} style={{ color: 'var(--muted)' }}>作用域</th>
-              <th className={headerCell} style={{ color: 'var(--muted)' }}>扣费</th>
-              <th className={`${headerCell} text-right`} style={{ color: 'var(--muted)' }}>状态 / 操作</th>
+              <th className={headerCell} style={{ color: 'var(--muted)' }}>{tAdmin('rules.headers.rule')}</th>
+              <th className={headerCell} style={{ color: 'var(--muted)' }}>{tAdmin('rules.headers.task')}</th>
+              <th className={headerCell} style={{ color: 'var(--muted)' }}>{tAdmin('rules.headers.scope')}</th>
+              <th className={headerCell} style={{ color: 'var(--muted)' }}>{tAdmin('rules.headers.cost')}</th>
+              <th className={`${headerCell} text-right`} style={{ color: 'var(--muted)' }}>{tAdmin('rules.headers.status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -183,7 +183,7 @@ export function TaskCostsRuleList({
                           border: `1px solid ${active ? '#16a34a55' : 'var(--border)'}`,
                         }}
                       >
-                        {active ? '启用' : '停用'}
+                        {active ? tAdmin('rules.enabled') : tAdmin('rules.disabled')}
                       </span>
                       <Button
                         size="sm"
@@ -192,7 +192,7 @@ export function TaskCostsRuleList({
                         onClick={() => onPreview(rule)}
                       >
                         <Stethoscope className="mr-1 size-3.5" />
-                        预览
+                        {tAdmin('rules.preview')}
                       </Button>
                       {task ? (
                         <Button
@@ -218,7 +218,7 @@ export function TaskCostsRuleList({
                   className="px-4 py-12 text-center text-sm"
                   style={{ color: 'var(--muted)' }}
                 >
-                  无匹配规则
+                  {tAdmin('rules.empty')}
                 </td>
               </tr>
             )}

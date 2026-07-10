@@ -1,11 +1,13 @@
 import { getRequestConfig } from 'next-intl/server';
-import { cookies } from 'next/headers';
-import { DEFAULT_LANGUAGE, normalizeLang, messageLoaders } from '@autix/i18n';
+import { hasLocale } from 'next-intl';
+import { messageLoaders, type SupportedLanguage } from '@autix/i18n';
+import { routing } from './routing';
 
-export default getRequestConfig(async () => {
-  const store = await cookies();
-  const raw = store.get('NEXT_LOCALE')?.value;
-  const locale = (raw && normalizeLang(raw)) || DEFAULT_LANGUAGE;
+export default getRequestConfig(async ({ requestLocale }) => {
+  const requested = await requestLocale;
+  const locale: SupportedLanguage = hasLocale(routing.locales, requested)
+    ? requested
+    : routing.defaultLocale;
 
   return {
     locale,

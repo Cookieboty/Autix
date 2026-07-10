@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   useBoostAdmin,
   type BoostReason,
@@ -26,27 +27,27 @@ import {
   DialogFooter,
 } from '../../ui/dialog';
 
-export const BOOST_RESOURCE_TYPE_OPTIONS: { value: MetricResourceType; label: string }[] = [
-  { value: 'SKILL', label: '技能' },
-  { value: 'MCP', label: 'MCP' },
-  { value: 'AGENT', label: '智能体' },
-  { value: 'IMAGE_TEMPLATE', label: '图片模板' },
-  { value: 'VIDEO_TEMPLATE', label: '视频模板' },
-  { value: 'GALLERY_POST', label: '广场作品' },
+export const BOOST_RESOURCE_TYPE_OPTIONS: { value: MetricResourceType; labelKey: string }[] = [
+  { value: 'SKILL', labelKey: 'resourceTypes.SKILL' },
+  { value: 'MCP', labelKey: 'resourceTypes.MCP' },
+  { value: 'AGENT', labelKey: 'resourceTypes.AGENT' },
+  { value: 'IMAGE_TEMPLATE', labelKey: 'resourceTypes.IMAGE_TEMPLATE' },
+  { value: 'VIDEO_TEMPLATE', labelKey: 'resourceTypes.VIDEO_TEMPLATE' },
+  { value: 'GALLERY_POST', labelKey: 'resourceTypes.GALLERY_POST' },
 ];
 
-export const BOOST_REASON_OPTIONS: { value: BoostReason; label: string }[] = [
-  { value: 'MANUAL', label: '人工加热' },
-  { value: 'CAMPAIGN', label: '活动加热' },
-  { value: 'EDITORIAL_PICK', label: '编辑精选' },
-  { value: 'CORRECTION', label: '修正' },
+export const BOOST_REASON_OPTIONS: { value: BoostReason; labelKey: string }[] = [
+  { value: 'MANUAL', labelKey: 'boost.reasons.MANUAL' },
+  { value: 'CAMPAIGN', labelKey: 'boost.reasons.CAMPAIGN' },
+  { value: 'EDITORIAL_PICK', labelKey: 'boost.reasons.EDITORIAL_PICK' },
+  { value: 'CORRECTION', labelKey: 'boost.reasons.CORRECTION' },
 ];
 
 /** 加热强度档位：小 / 中 / 大，对应 boostScore 数值。 */
-export const BOOST_SCORE_TIERS: { value: string; label: string; score: number }[] = [
-  { value: 'small', label: '小（+200）', score: 200 },
-  { value: 'medium', label: '中（+500）', score: 500 },
-  { value: 'large', label: '大（+1000）', score: 1000 },
+export const BOOST_SCORE_TIERS: { value: string; labelKey: string; score: number }[] = [
+  { value: 'small', labelKey: 'boost.tiers.small', score: 200 },
+  { value: 'medium', labelKey: 'boost.tiers.medium', score: 500 },
+  { value: 'large', labelKey: 'boost.tiers.large', score: 1000 },
 ];
 
 type BoostDialogForm = {
@@ -105,9 +106,10 @@ export function BoostDialog({
   resourceType: lockedResourceType,
   resourceId: lockedResourceId,
   resourceLabel,
-  title = '新增加热',
+  title,
   onSuccess,
 }: BoostDialogProps) {
+  const t = useTranslations('adminOperations');
   const locked = lockedResourceType !== undefined && lockedResourceId !== undefined;
   const [form, setForm] = useState<BoostDialogForm>(
     emptyForm(lockedResourceType ?? 'IMAGE_TEMPLATE', lockedResourceId ?? ''),
@@ -126,7 +128,7 @@ export function BoostDialog({
       onOpenChange(false);
       onSuccess?.();
     },
-    onError: (err) => setError(errorMessage(err, '操作失败')),
+    onError: (err) => setError(errorMessage(err, t('common.operationFailed'))),
   });
 
   const handleCreate = () => {
@@ -147,7 +149,7 @@ export function BoostDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{title ?? t('boost.dialogTitle')}</DialogTitle></DialogHeader>
         <DialogBody className="flex flex-col gap-4">
           {error && (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
@@ -157,7 +159,7 @@ export function BoostDialog({
           <div className="grid grid-cols-2 gap-3">
             {locked ? (
               <div className="col-span-2">
-                <Label className="mb-1.5">目标资源</Label>
+                <Label className="mb-1.5">{t('boost.targetResource')}</Label>
                 <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-foreground">
                   {resourceLabel ?? `${lockedResourceType} ${lockedResourceId}`}
                 </div>
@@ -165,7 +167,7 @@ export function BoostDialog({
             ) : (
               <>
                 <div>
-                  <Label className="mb-1.5">资源类型</Label>
+                  <Label className="mb-1.5">{t('boost.resourceType')}</Label>
                   <Select
                     value={form.resourceType}
                     onValueChange={(value) =>
@@ -178,24 +180,24 @@ export function BoostDialog({
                     <SelectContent>
                       {BOOST_RESOURCE_TYPE_OPTIONS.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
+                          {t(opt.labelKey)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="mb-1.5">资源 ID</Label>
+                  <Label className="mb-1.5">{t('boost.resourceId')}</Label>
                   <Input
                     value={form.resourceId}
                     onChange={(e) => setForm((f) => ({ ...f, resourceId: e.target.value }))}
-                    placeholder="目标资源 ID"
+                    placeholder={t('boost.resourceIdPlaceholder')}
                   />
                 </div>
               </>
             )}
             <div>
-              <Label className="mb-1.5">加热强度</Label>
+              <Label className="mb-1.5">{t('boost.intensity')}</Label>
               <Select
                 value={form.tier}
                 onValueChange={(value) => setForm((f) => ({ ...f, tier: value }))}
@@ -206,14 +208,14 @@ export function BoostDialog({
                 <SelectContent>
                   {BOOST_SCORE_TIERS.map((tier) => (
                     <SelectItem key={tier.value} value={tier.value}>
-                      {tier.label}
+                      {t(tier.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="mb-1.5">原因</Label>
+              <Label className="mb-1.5">{t('boost.reason')}</Label>
               <Select
                 value={form.reason}
                 onValueChange={(value) => setForm((f) => ({ ...f, reason: value as BoostReason }))}
@@ -224,14 +226,14 @@ export function BoostDialog({
                 <SelectContent>
                   {BOOST_REASON_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="col-span-2">
-              <Label className="mb-1.5">结束时间</Label>
+              <Label className="mb-1.5">{t('boost.endsAt')}</Label>
               <Input
                 type="datetime-local"
                 value={form.endsAt}
@@ -239,26 +241,26 @@ export function BoostDialog({
               />
             </div>
             <div className="col-span-2">
-              <Label className="mb-1.5">备注</Label>
+              <Label className="mb-1.5">{t('boost.note')}</Label>
               <Textarea
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                 className="min-h-[70px]"
-                placeholder="加热原因说明，仅后台可见"
+                placeholder={t('boost.notePlaceholder')}
               />
             </div>
           </div>
         </DialogBody>
         <DialogFooter>
           <Button variant="outline" className="cursor-pointer" onClick={() => onOpenChange(false)}>
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             className="cursor-pointer"
             disabled={create.isPending || !form.resourceId.trim() || !form.endsAt}
             onClick={handleCreate}
           >
-            {create.isPending ? '保存中…' : '确认加热'}
+            {create.isPending ? t('common.saving') : t('boost.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -10,7 +10,7 @@ import {
 
 type NextRouter = {
   push: (path: string) => void;
-  replace: (path: string) => void;
+  replace: (path: string, options?: { locale?: string }) => void;
 };
 
 let _initialized = false;
@@ -124,6 +124,11 @@ function initPlatform(): void {
       window.location.assign(url);
     },
     getPathname: () => _pathname || window.location.pathname,
+    switchLocale: (locale: string) => {
+      // next-intl 的 router.replace(pathname, { locale }) 会把已剥离前缀的
+      // _pathname 重新按目标 locale 组装 URL（as-needed：默认 locale 走裸路径）。
+      if (_router) _router.replace(_pathname, { locale });
+    },
     getSearch: () => _search,
     getOrigin: () => window.location.origin,
     subscribe: (listener) => {

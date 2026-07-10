@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { Archive, ArrowRight, Download, ImageIcon, LayoutTemplate, RefreshCw, Sparkles, Users, Video } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
@@ -52,7 +52,7 @@ export function FeaturesSection() {
               {t('featuresTitle')}
             </h2>
             <p className="mt-6 max-w-2xl text-base leading-8 text-white/68 md:text-lg">
-              {t('featuresDesc')}。从需求、模板、素材、视频到交付记录，都在同一个工作台持续沉淀。
+              {t('featuresDesc')} {t('featuresDescSuffix')}
             </p>
           </motion.div>
 
@@ -79,14 +79,14 @@ export function FeaturesSection() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4">
                   <p className="text-xl font-bold">AI Director</p>
-                  <p className="mt-1 text-sm text-white/68">Prompt、分镜、素材和版本同步推进</p>
+                  <p className="mt-1 text-sm text-white/68">{t('featuresDirectorCaption')}</p>
                 </div>
               </div>
               <div className="grid gap-3">
                 {[
-                  ['PRD', '需求已拆解'],
-                  ['Code', '组件生成中'],
-                  ['Video', '15s 竖屏预览'],
+                  ['PRD', t('featuresStatusPrd')],
+                  ['Code', t('featuresStatusCode')],
+                  ['Video', t('featuresStatusVideo')],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-lg border border-white/12 bg-white/10 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-white/45">{label}</p>
