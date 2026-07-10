@@ -14,6 +14,7 @@ import { ResourceMigrationService } from './resource-migration.service';
 import { AdminAuditStore } from './admin-audit.store';
 import { AdminRepository } from './admin.repository';
 import { BatchJobRepository } from './batch-job.repository';
+import { PricingConfigAdminModule } from './pricing-config/pricing-config-admin.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { BatchJobRepository } from './batch-job.repository';
     PointsModule,
     OrderModule,
     MembershipModule,
+    PricingConfigAdminModule,
   ],
   controllers: [AdminController],
   providers: [
