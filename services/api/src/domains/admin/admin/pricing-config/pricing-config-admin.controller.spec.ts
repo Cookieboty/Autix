@@ -43,3 +43,122 @@ describe('PricingConfigAdminController', () => {
     expect(service.dryRun).toHaveBeenCalledWith(body);
   });
 });
+
+describe('PricingConfigAdminController task_definitions routes', () => {
+  it('listTaskDefinitions delegates to the service', async () => {
+    const service = { listTaskDefinitions: jest.fn().mockResolvedValue([{ taskType: 't' }]) };
+    const controller = new PricingConfigAdminController(service as never);
+
+    await expect(controller.listTaskDefinitions()).resolves.toEqual([{ taskType: 't' }]);
+    expect(service.listTaskDefinitions).toHaveBeenCalledWith();
+  });
+
+  it('createTaskDefinition forwards the body to the service', async () => {
+    const service = { createTaskDefinition: jest.fn().mockResolvedValue({ taskType: 't' }) };
+    const controller = new PricingConfigAdminController(service as never);
+    const body = { taskType: 't', name: 'T', category: 'chat', fixedCostSchema: null };
+
+    await controller.createTaskDefinition(body as never);
+
+    expect(service.createTaskDefinition).toHaveBeenCalledWith(body);
+  });
+
+  it('updateTaskDefinition forwards taskType and body to the service', async () => {
+    const service = { updateTaskDefinition: jest.fn().mockResolvedValue({ taskType: 't' }) };
+    const controller = new PricingConfigAdminController(service as never);
+    const body = { isActive: false };
+
+    await controller.updateTaskDefinition('t', body as never);
+
+    expect(service.updateTaskDefinition).toHaveBeenCalledWith('t', body);
+  });
+
+  it('deleteTaskDefinition forwards taskType to the service', async () => {
+    const service = { deleteTaskDefinition: jest.fn().mockResolvedValue({ taskType: 't', isActive: false }) };
+    const controller = new PricingConfigAdminController(service as never);
+
+    await controller.deleteTaskDefinition('t');
+
+    expect(service.deleteTaskDefinition).toHaveBeenCalledWith('t');
+  });
+});
+
+describe('PricingConfigAdminController task_model_bindings routes', () => {
+  it('listTaskModelBindings forwards the optional taskType query param', async () => {
+    const service = { listTaskModelBindings: jest.fn().mockResolvedValue([]) };
+    const controller = new PricingConfigAdminController(service as never);
+
+    await controller.listTaskModelBindings('image_generation');
+
+    expect(service.listTaskModelBindings).toHaveBeenCalledWith('image_generation');
+  });
+
+  it('createTaskModelBinding forwards the body to the service', async () => {
+    const service = { createTaskModelBinding: jest.fn().mockResolvedValue({}) };
+    const controller = new PricingConfigAdminController(service as never);
+    const body = { taskType: 't', modelConfigId: 'm1', multiplier: 1, isDefault: true };
+
+    await controller.createTaskModelBinding(body as never);
+
+    expect(service.createTaskModelBinding).toHaveBeenCalledWith(body);
+  });
+
+  it('updateTaskModelBinding forwards taskType, modelConfigId, and body to the service', async () => {
+    const service = { updateTaskModelBinding: jest.fn().mockResolvedValue({}) };
+    const controller = new PricingConfigAdminController(service as never);
+    const body = { multiplier: 2 };
+
+    await controller.updateTaskModelBinding('t', 'm1', body as never);
+
+    expect(service.updateTaskModelBinding).toHaveBeenCalledWith('t', 'm1', body);
+  });
+
+  it('deleteTaskModelBinding forwards taskType and modelConfigId to the service', async () => {
+    const service = { deleteTaskModelBinding: jest.fn().mockResolvedValue({}) };
+    const controller = new PricingConfigAdminController(service as never);
+
+    await controller.deleteTaskModelBinding('t', 'm1');
+
+    expect(service.deleteTaskModelBinding).toHaveBeenCalledWith('t', 'm1');
+  });
+});
+
+describe('PricingConfigAdminController discounts routes', () => {
+  it('listDiscounts delegates to the service', async () => {
+    const service = { listDiscounts: jest.fn().mockResolvedValue([]) };
+    const controller = new PricingConfigAdminController(service as never);
+
+    await controller.listDiscounts();
+
+    expect(service.listDiscounts).toHaveBeenCalledWith();
+  });
+
+  it('createDiscount forwards the body to the service', async () => {
+    const service = { createDiscount: jest.fn().mockResolvedValue({ id: 'd1' }) };
+    const controller = new PricingConfigAdminController(service as never);
+    const body = { code: 'SUMMER', name: 'x', factor: 0.8, scope: {} };
+
+    await controller.createDiscount(body as never);
+
+    expect(service.createDiscount).toHaveBeenCalledWith(body);
+  });
+
+  it('updateDiscount forwards id and body to the service', async () => {
+    const service = { updateDiscount: jest.fn().mockResolvedValue({ id: 'd1' }) };
+    const controller = new PricingConfigAdminController(service as never);
+    const body = { isActive: false };
+
+    await controller.updateDiscount('d1', body as never);
+
+    expect(service.updateDiscount).toHaveBeenCalledWith('d1', body);
+  });
+
+  it('deleteDiscount forwards id to the service', async () => {
+    const service = { deleteDiscount: jest.fn().mockResolvedValue({}) };
+    const controller = new PricingConfigAdminController(service as never);
+
+    await controller.deleteDiscount('d1');
+
+    expect(service.deleteDiscount).toHaveBeenCalledWith('d1');
+  });
+});

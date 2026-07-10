@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   quoteTask,
   validateParamsSchema,
@@ -21,6 +21,69 @@ export interface DryRunInput {
 export interface DryRunResult {
   total: number;
   breakdown: Breakdown[];
+}
+
+/**
+ * Mirrors DiscountScope in services/api/src/domains/billing/points/pricing-discount.helpers.ts.
+ * Not imported from there directly — this admin module is deliberately a Prisma-only leaf
+ * (see pricing-config-admin.module.ts) with no dependency on the billing/points domain, so the
+ * shape is duplicated at this narrow boundary rather than adding a cross-domain import.
+ */
+interface AdminDiscountScope {
+  membershipLevelNumbers?: number[];
+  taskTypes?: string[];
+  modelConfigIds?: string[];
+}
+
+export interface CreateTaskDefinitionInput {
+  taskType: string;
+  name: string;
+  category: string;
+  fixedCostSchema?: unknown | null;
+}
+
+export interface UpdateTaskDefinitionInput {
+  name?: string;
+  category?: string;
+  fixedCostSchema?: unknown | null;
+  isActive?: boolean;
+  sort?: number;
+}
+
+export interface CreateTaskModelBindingInput {
+  taskType: string;
+  modelConfigId: string;
+  multiplier?: number;
+  isDefault?: boolean;
+}
+
+export interface UpdateTaskModelBindingInput {
+  multiplier?: number;
+  isDefault?: boolean;
+  isActive?: boolean;
+  sort?: number;
+}
+
+export interface CreateDiscountInput {
+  code: string;
+  name: string;
+  factor: number;
+  scope: unknown;
+  stackable?: boolean;
+  priority?: number;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+}
+
+export interface UpdateDiscountInput {
+  name?: string;
+  factor?: number;
+  scope?: unknown;
+  stackable?: boolean;
+  priority?: number;
+  isActive?: boolean;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
 }
 
 /**
@@ -124,5 +187,342 @@ export class PricingConfigAdminService {
       });
     }
     return candidate;
+  }
+
+  // =======================================================================
+  // task_definitions (Task 18)
+  // =======================================================================
+
+  async listTaskDefinitions() {
+    return this.repo.listTaskDefinitions();
+  }
+
+  async createTaskDefinition(input: CreateTaskDefinitionInput) {
+    const fixedCostSchema = this.narrowFixedCostSchema(input.fixedCostSchema ?? null);
+    try {
+      return await this.repo.createTaskDefinition({
+        taskType: input.taskType,
+        name: input.name,
+        category: input.category,
+        fixedCostSchema: fixedCostSchema as unknown as Prisma.InputJsonValue | null,
+      });
+    } catch (err) {
+      throw this.translatePrismaError(err, { conflict: `任务类型已存在: ${input.taskType}` });
+    }
+  }
+
+  async updateTaskDefinition(taskType: string, input: UpdateTaskDefinitionInput) {
+    const data: Partial<{
+      name: string;
+      category: string;
+      fixedCostSchema: Prisma.InputJsonValue | null;
+      isActive: boolean;
+      sort: number;
+    }> = {};
+    if (input.name !== undefined) data.name = input.name;
+    if (input.category !== undefined) data.category = input.category;
+    if (input.isActive !== undefined) data.isActive = input.isActive;
+    if (input.sort !== undefined) data.sort = input.sort;
+    if (input.fixedCostSchema !== undefined) {
+      data.fixedCostSchema = this.narrowFixedCostSchema(
+        input.fixedCostSchema,
+      ) as unknown as Prisma.InputJsonValue | null;
+    }
+
+    try {
+      return await this.repo.updateTaskDefinition(taskType, data);
+    } catch (err) {
+      throw this.translatePrismaError(err, { notFound: `任务不存在: ${taskType}` });
+    }
+  }
+
+  /**
+   * DELETE /admin/task-definitions/:taskType — a soft delete (isActive: false), not a hard
+   * row delete. Deliberately does NOT block deactivating a task that still has active
+   * task_model_bindings pointing at it: TaskPricingEstimatorService already checks
+   * `task.isActive` on every estimate and throws a clean, distinct 400 ("任务已停用") before
+   * it ever looks at bindings — the exact same controlled-4xx contract this module owes
+   * everywhere else. Adding a second, admin-side "does this task have live bindings" guard
+   * would duplicate that check, could race with a binding being created concurrently, and
+   * would not prevent anything worse than the 400 the pricing engine already returns.
+   * assertActiveTasksHaveDefaultBinding (services/api/scripts/seed-pricing.ts) enforces the
+   * "every active task has exactly one active default binding" invariant at seed time — that
+   * is a data-hygiene gate for what ships, not a live constraint this endpoint must re-police
+   * on every admin edit.
+   */
+  async deleteTaskDefinition(taskType: string) {
+    try {
+      return await this.repo.deactivateTaskDefinition(taskType);
+    } catch (err) {
+      throw this.translatePrismaError(err, { notFound: `任务不存在: ${taskType}` });
+    }
+  }
+
+  /** fixedCostSchema 校验：task 的固定费是真实金额，与 model pricingSchema 走同一条 validate-and-throw 路径。 */
+  private narrowFixedCostSchema(raw: unknown): PricingSchema | null {
+    if (raw === null) return null;
+    const candidate = raw as unknown as PricingSchema;
+    const violations = validatePricingSchema(candidate);
+    if (violations.length > 0) {
+      throw new BadRequestException({ message: 'fixedCostSchema 校验失败', violations });
+    }
+    return candidate;
+  }
+
+  // =======================================================================
+  // task_model_bindings (Task 19)
+  // =======================================================================
+
+  async listTaskModelBindings(taskType?: string) {
+    return this.repo.listTaskModelBindings(taskType);
+  }
+
+  async createTaskModelBinding(input: CreateTaskModelBindingInput) {
+    const multiplier = input.multiplier ?? 1;
+    this.assertPositiveFiniteMultiplier(multiplier);
+    await this.assertModelIsPriceable(input.modelConfigId);
+
+    try {
+      return await this.repo.createTaskModelBinding({
+        taskType: input.taskType,
+        modelConfigId: input.modelConfigId,
+        multiplier,
+        isDefault: input.isDefault ?? false,
+      });
+    } catch (err) {
+      throw this.translatePrismaError(err, {
+        conflict: `绑定已存在: 任务 ${input.taskType} 与模型 ${input.modelConfigId}`,
+        badRequest: `任务或模型不存在: 任务 ${input.taskType}, 模型 ${input.modelConfigId}`,
+      });
+    }
+  }
+
+  async updateTaskModelBinding(taskType: string, modelConfigId: string, input: UpdateTaskModelBindingInput) {
+    const data: Partial<{ multiplier: number; isDefault: boolean; isActive: boolean; sort: number }> = {};
+    if (input.multiplier !== undefined) {
+      this.assertPositiveFiniteMultiplier(input.multiplier);
+      data.multiplier = input.multiplier;
+    }
+    if (input.isDefault !== undefined) data.isDefault = input.isDefault;
+    if (input.isActive !== undefined) data.isActive = input.isActive;
+    if (input.sort !== undefined) data.sort = input.sort;
+
+    try {
+      return await this.repo.updateTaskModelBinding(taskType, modelConfigId, data);
+    } catch (err) {
+      throw this.translatePrismaError(err, {
+        notFound: `绑定不存在: 任务 ${taskType}, 模型 ${modelConfigId}`,
+      });
+    }
+  }
+
+  async deleteTaskModelBinding(taskType: string, modelConfigId: string) {
+    try {
+      return await this.repo.deleteTaskModelBinding(taskType, modelConfigId);
+    } catch (err) {
+      throw this.translatePrismaError(err, {
+        notFound: `绑定不存在: 任务 ${taskType}, 模型 ${modelConfigId}`,
+      });
+    }
+  }
+
+  /** multiplier is Decimal(6,3): a zero or negative multiplier would price every call at 0 or negative. */
+  private assertPositiveFiniteMultiplier(multiplier: number) {
+    if (!Number.isFinite(multiplier) || multiplier <= 0) {
+      throw new BadRequestException(`multiplier 必须是正数: ${multiplier}`);
+    }
+  }
+
+  /**
+   * A binding authorises a model for a task (task_model_bindings presence is the
+   * authorisation check in TaskPricingEstimatorService.resolveBinding) — authorising a model
+   * whose pricingSchema is NULL would create a binding that can never actually be priced,
+   * failing every real request with a 400 the admin could have caught at binding-creation
+   * time instead.
+   */
+  private async assertModelIsPriceable(modelConfigId: string) {
+    const model = await this.repo.findModelConfig(modelConfigId);
+    if (!model) {
+      throw new NotFoundException(`模型配置不存在: ${modelConfigId}`);
+    }
+    if (model.pricingSchema === null) {
+      throw new BadRequestException(`模型未配置计价规则(pricingSchema)，无法绑定: ${modelConfigId}`);
+    }
+  }
+
+  // =======================================================================
+  // pricing_discounts (Task 20)
+  // =======================================================================
+
+  async listDiscounts() {
+    return this.repo.listDiscounts();
+  }
+
+  async createDiscount(input: CreateDiscountInput) {
+    this.assertPositiveFiniteFactor(input.factor);
+    const scope = this.narrowDiscountScope(input.scope);
+    const { effectiveFrom, effectiveTo } = this.narrowEffectiveRange(input.effectiveFrom, input.effectiveTo);
+
+    try {
+      return await this.repo.createDiscount({
+        code: input.code,
+        name: input.name,
+        factor: input.factor,
+        scope: scope as unknown as Prisma.InputJsonValue,
+        stackable: input.stackable ?? false,
+        priority: input.priority ?? 0,
+        effectiveFrom: effectiveFrom ?? null,
+        effectiveTo: effectiveTo ?? null,
+      });
+    } catch (err) {
+      throw this.translatePrismaError(err, { conflict: `折扣码已存在: ${input.code}` });
+    }
+  }
+
+  async updateDiscount(id: string, input: UpdateDiscountInput) {
+    const data: Partial<{
+      name: string;
+      factor: number;
+      scope: Prisma.InputJsonValue;
+      stackable: boolean;
+      priority: number;
+      isActive: boolean;
+      effectiveFrom: Date | null;
+      effectiveTo: Date | null;
+    }> = {};
+    if (input.name !== undefined) data.name = input.name;
+    if (input.factor !== undefined) {
+      this.assertPositiveFiniteFactor(input.factor);
+      data.factor = input.factor;
+    }
+    if (input.scope !== undefined) {
+      data.scope = this.narrowDiscountScope(input.scope) as unknown as Prisma.InputJsonValue;
+    }
+    if (input.stackable !== undefined) data.stackable = input.stackable;
+    if (input.priority !== undefined) data.priority = input.priority;
+    if (input.isActive !== undefined) data.isActive = input.isActive;
+    if (input.effectiveFrom !== undefined || input.effectiveTo !== undefined) {
+      const { effectiveFrom, effectiveTo } = this.narrowEffectiveRange(input.effectiveFrom, input.effectiveTo);
+      if (input.effectiveFrom !== undefined) data.effectiveFrom = effectiveFrom ?? null;
+      if (input.effectiveTo !== undefined) data.effectiveTo = effectiveTo ?? null;
+    }
+
+    try {
+      return await this.repo.updateDiscount(id, data);
+    } catch (err) {
+      throw this.translatePrismaError(err, {
+        conflict: `折扣码已存在`,
+        notFound: `折扣不存在: ${id}`,
+      });
+    }
+  }
+
+  async deleteDiscount(id: string) {
+    try {
+      return await this.repo.deleteDiscount(id);
+    } catch (err) {
+      throw this.translatePrismaError(err, { notFound: `折扣不存在: ${id}` });
+    }
+  }
+
+  /**
+   * factor > 0 only. factor > 1 (a surcharge) is deliberately ALLOWED: nothing in
+   * resolveDiscountFactor/discountApplies (pricing-discount.helpers.ts) assumes factor <= 1 —
+   * stackable discounts multiply, non-stackable discounts pick the minimum factor among
+   * matches — so a >1 "discount" is just a legitimate surcharge row (e.g. peak-time pricing
+   * for a specific taskType/modelConfigId scope) and the arithmetic handles it correctly. Only
+   * factor <= 0 is nonsensical: 0 makes the scoped calls free, negative makes them pay the
+   * user.
+   */
+  private assertPositiveFiniteFactor(factor: number) {
+    if (!Number.isFinite(factor) || factor <= 0) {
+      throw new BadRequestException(`factor 必须是正数: ${factor}`);
+    }
+  }
+
+  /**
+   * `scope` is free-form JSON, but membershipLevelNumbers/taskTypes/modelConfigIds have a
+   * specific runtime shape that discountApplies (pricing-discount.helpers.ts) reads without
+   * further validation. membershipLevelNumbers in particular must be number[] — it's compared
+   * against resolveActiveMembershipLevel()'s numeric level, NOT membership_levels' cuid id — a
+   * caller passing string numbers (e.g. ['1']) would silently never match anything, and the
+   * discount would appear configured but never apply. Unknown extra keys are left alone (UI
+   * forward-compatibility); only the three known dimensions are shape-checked.
+   */
+  private narrowDiscountScope(raw: unknown): AdminDiscountScope {
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new BadRequestException('scope 必须是对象');
+    }
+    const candidate = raw as Record<string, unknown>;
+
+    if (candidate.membershipLevelNumbers !== undefined && !this.isNumberArray(candidate.membershipLevelNumbers)) {
+      throw new BadRequestException(
+        'scope.membershipLevelNumbers 必须是 number[]（会员等级序号，而非 cuid 字符串）',
+      );
+    }
+    if (candidate.taskTypes !== undefined && !this.isStringArray(candidate.taskTypes)) {
+      throw new BadRequestException('scope.taskTypes 必须是 string[]');
+    }
+    if (candidate.modelConfigIds !== undefined && !this.isStringArray(candidate.modelConfigIds)) {
+      throw new BadRequestException('scope.modelConfigIds 必须是 string[]');
+    }
+
+    return candidate as AdminDiscountScope;
+  }
+
+  private isStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every((v) => typeof v === 'string');
+  }
+
+  private isNumberArray(value: unknown): value is number[] {
+    return Array.isArray(value) && value.every((v) => typeof v === 'number' && Number.isFinite(v));
+  }
+
+  /**
+   * Validates internal consistency of the payload's own from/to pair only (both provided in
+   * the same request). It does not read back the persisted counterpart when only one side is
+   * being patched — doing so would need an extra repository round trip for a same-request
+   * ordering check the brief scopes to "if both set". A discount whose from/to straddle across
+   * two separate PATCHes into an inconsistent order is a known gap; see report.
+   */
+  private narrowEffectiveRange(
+    fromRaw: string | null | undefined,
+    toRaw: string | null | undefined,
+  ): { effectiveFrom?: Date | null; effectiveTo?: Date | null } {
+    const effectiveFrom = fromRaw === undefined ? undefined : fromRaw === null ? null : new Date(fromRaw);
+    const effectiveTo = toRaw === undefined ? undefined : toRaw === null ? null : new Date(toRaw);
+
+    if (effectiveFrom instanceof Date && effectiveTo instanceof Date && effectiveFrom >= effectiveTo) {
+      throw new BadRequestException('effectiveFrom 必须早于 effectiveTo');
+    }
+
+    return { effectiveFrom, effectiveTo };
+  }
+
+  /**
+   * Single point of Prisma error → controlled-4xx translation for the CRUD added in Task
+   * 18/19/20, mirroring the not-found-as-null contract Task 17 already established
+   * (updateModelSchemas/updateModelDescription) at the DB-constraint layer instead: P2002
+   * (unique violation — duplicate taskType / composite binding key / discount code, or a
+   * default-binding race the repository's transaction didn't already prevent) becomes 409;
+   * P2025 (record to update/delete not found) becomes 404; P2003 (foreign key violation — e.g.
+   * a binding referencing a taskType/modelConfigId that doesn't exist) becomes 400. Anything
+   * else is rethrown as-is rather than swallowed.
+   */
+  private translatePrismaError(
+    err: unknown,
+    labels: { conflict?: string; notFound?: string; badRequest?: string } = {},
+  ): never {
+    const code = err && typeof err === 'object' ? (err as { code?: string }).code : undefined;
+    if (code === 'P2002') {
+      throw new ConflictException(labels.conflict ?? '记录已存在');
+    }
+    if (code === 'P2025') {
+      throw new NotFoundException(labels.notFound ?? '记录不存在');
+    }
+    if (code === 'P2003') {
+      throw new BadRequestException(labels.badRequest ?? '引用的记录不存在');
+    }
+    throw err as Error;
   }
 }

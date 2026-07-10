@@ -1,5 +1,7 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PricingConfigAdminService } from './pricing-config-admin.service';
+
+const VALID_FIXED_COST_SCHEMA = { terms: [{ id: 'base', op: 'add' as const, const: 1 }] };
 
 const VALID_PRICING_SCHEMA = {
   terms: [
@@ -19,7 +21,27 @@ function buildRepo() {
     findModelConfig: jest.fn(),
     updateModelSchemas: jest.fn(),
     updateModelDescription: jest.fn(),
+    listTaskDefinitions: jest.fn(),
+    createTaskDefinition: jest.fn(),
+    updateTaskDefinition: jest.fn(),
+    deactivateTaskDefinition: jest.fn(),
+    listTaskModelBindings: jest.fn(),
+    createTaskModelBinding: jest.fn(),
+    updateTaskModelBinding: jest.fn(),
+    deleteTaskModelBinding: jest.fn(),
+    listDiscounts: jest.fn(),
+    createDiscount: jest.fn(),
+    updateDiscount: jest.fn(),
+    deleteDiscount: jest.fn(),
   };
+}
+
+function p2002() {
+  return Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+}
+
+function p2025() {
+  return Object.assign(new Error('Record not found'), { code: 'P2025' });
 }
 
 describe('PricingConfigAdminService.dryRun', () => {
@@ -212,5 +234,452 @@ describe('PricingConfigAdminService.updateModelDescription', () => {
     await expect(
       service.updateModelDescription('missing', { 'zh-CN': 'a description' }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('PricingConfigAdminService.createTaskDefinition', () => {
+  it('persists a valid fixedCostSchema', async () => {
+    const repo = buildRepo();
+    repo.createTaskDefinition.mockResolvedValue({ taskType: 'new_task' });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.createTaskDefinition({
+      taskType: 'new_task',
+      name: 'New Task',
+      category: 'chat',
+      fixedCostSchema: VALID_FIXED_COST_SCHEMA,
+    });
+
+    expect(repo.createTaskDefinition).toHaveBeenCalledWith({
+      taskType: 'new_task',
+      name: 'New Task',
+      category: 'chat',
+      fixedCostSchema: VALID_FIXED_COST_SCHEMA,
+    });
+  });
+
+  it('persists a null fixedCostSchema without running it through validatePricingSchema', async () => {
+    const repo = buildRepo();
+    repo.createTaskDefinition.mockResolvedValue({ taskType: 'new_task' });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.createTaskDefinition({
+      taskType: 'new_task',
+      name: 'New Task',
+      category: 'image',
+      fixedCostSchema: null,
+    });
+
+    expect(repo.createTaskDefinition).toHaveBeenCalledWith({
+      taskType: 'new_task',
+      name: 'New Task',
+      category: 'image',
+      fixedCostSchema: null,
+    });
+  });
+
+  it('rejects an empty-terms fixedCostSchema with 400 and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskDefinition({
+        taskType: 'new_task',
+        name: 'New Task',
+        category: 'chat',
+        fixedCostSchema: { terms: [] },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createTaskDefinition).not.toHaveBeenCalled();
+  });
+
+  it('rejects a fixedCostSchema whose first term is a mul (not unconditional const add) and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskDefinition({
+        taskType: 'new_task',
+        name: 'New Task',
+        category: 'chat',
+        fixedCostSchema: { terms: [{ id: 'base', op: 'mul', const: 1 }] },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createTaskDefinition).not.toHaveBeenCalled();
+  });
+
+  it('translates a duplicate taskType (P2002) into ConflictException and persists nothing further', async () => {
+    const repo = buildRepo();
+    repo.createTaskDefinition.mockRejectedValue(p2002());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskDefinition({ taskType: 'dup', name: 'Dup', category: 'chat', fixedCostSchema: null }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('PricingConfigAdminService.updateTaskDefinition', () => {
+  it('only forwards fields present in the patch', async () => {
+    const repo = buildRepo();
+    repo.updateTaskDefinition.mockResolvedValue({ taskType: 't', isActive: false });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.updateTaskDefinition('t', { isActive: false });
+
+    expect(repo.updateTaskDefinition).toHaveBeenCalledWith('t', { isActive: false });
+  });
+
+  it('rejects an invalid fixedCostSchema in the patch and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.updateTaskDefinition('t', { fixedCostSchema: { terms: [] } })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(repo.updateTaskDefinition).not.toHaveBeenCalled();
+  });
+
+  it('translates a not-found (P2025) into NotFoundException', async () => {
+    const repo = buildRepo();
+    repo.updateTaskDefinition.mockRejectedValue(p2025());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.updateTaskDefinition('missing', { isActive: false })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+});
+
+describe('PricingConfigAdminService.deleteTaskDefinition', () => {
+  it('soft-deletes via the repository (isActive: false), never a hard delete', async () => {
+    const repo = buildRepo();
+    repo.deactivateTaskDefinition.mockResolvedValue({ taskType: 't', isActive: false });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.deleteTaskDefinition('t');
+
+    expect(repo.deactivateTaskDefinition).toHaveBeenCalledWith('t');
+  });
+
+  it('translates a not-found (P2025) into NotFoundException', async () => {
+    const repo = buildRepo();
+    repo.deactivateTaskDefinition.mockRejectedValue(p2025());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.deleteTaskDefinition('missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('PricingConfigAdminService.createTaskModelBinding', () => {
+  it('creates a binding when the model has a non-null pricingSchema', async () => {
+    const repo = buildRepo();
+    repo.findModelConfig.mockResolvedValue({ id: 'model-2', pricingSchema: { terms: [] } });
+    repo.createTaskModelBinding.mockResolvedValue({ taskType: 'image_generation', modelConfigId: 'model-2' });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.createTaskModelBinding({
+      taskType: 'image_generation',
+      modelConfigId: 'model-2',
+      multiplier: 1.5,
+      isDefault: false,
+    });
+
+    expect(repo.createTaskModelBinding).toHaveBeenCalledWith({
+      taskType: 'image_generation',
+      modelConfigId: 'model-2',
+      multiplier: 1.5,
+      isDefault: false,
+    });
+  });
+
+  it('defaults multiplier to 1 and isDefault to false when omitted', async () => {
+    const repo = buildRepo();
+    repo.findModelConfig.mockResolvedValue({ id: 'model-2', pricingSchema: { terms: [] } });
+    repo.createTaskModelBinding.mockResolvedValue({});
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'model-2' });
+
+    expect(repo.createTaskModelBinding).toHaveBeenCalledWith({
+      taskType: 'image_generation',
+      modelConfigId: 'model-2',
+      multiplier: 1,
+      isDefault: false,
+    });
+  });
+
+  it('rejects a binding to a model whose pricingSchema is NULL and persists nothing', async () => {
+    const repo = buildRepo();
+    repo.findModelConfig.mockResolvedValue({ id: 'model-2', pricingSchema: null });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'model-2' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createTaskModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('rejects a binding to a model that does not exist and persists nothing', async () => {
+    const repo = buildRepo();
+    repo.findModelConfig.mockResolvedValue(null);
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'missing' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(repo.createTaskModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('rejects a zero multiplier and persists nothing (never reaches the model-priceable check)', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'model-2', multiplier: 0 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.findModelConfig).not.toHaveBeenCalled();
+    expect(repo.createTaskModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('rejects a negative multiplier and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'model-2', multiplier: -1 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createTaskModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('translates a Prisma unique-constraint error (duplicate composite key) into ConflictException', async () => {
+    const repo = buildRepo();
+    repo.findModelConfig.mockResolvedValue({ id: 'model-2', pricingSchema: { terms: [] } });
+    repo.createTaskModelBinding.mockRejectedValue(p2002());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'model-2', isDefault: true }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('PricingConfigAdminService.updateTaskModelBinding', () => {
+  it('only forwards fields present in the patch, validating multiplier when given', async () => {
+    const repo = buildRepo();
+    repo.updateTaskModelBinding.mockResolvedValue({ taskType: 't', modelConfigId: 'm1', multiplier: 2 });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.updateTaskModelBinding('t', 'm1', { multiplier: 2 });
+
+    expect(repo.updateTaskModelBinding).toHaveBeenCalledWith('t', 'm1', { multiplier: 2 });
+  });
+
+  it('rejects a non-positive multiplier in the patch and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.updateTaskModelBinding('t', 'm1', { multiplier: 0 })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(repo.updateTaskModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('translates not-found (P2025) into NotFoundException', async () => {
+    const repo = buildRepo();
+    repo.updateTaskModelBinding.mockRejectedValue(p2025());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.updateTaskModelBinding('t', 'missing', { multiplier: 2 })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+});
+
+describe('PricingConfigAdminService list/delete passthroughs', () => {
+  it('listTaskModelBindings forwards the optional taskType filter', async () => {
+    const repo = buildRepo();
+    repo.listTaskModelBindings.mockResolvedValue([]);
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.listTaskModelBindings('image_generation');
+
+    expect(repo.listTaskModelBindings).toHaveBeenCalledWith('image_generation');
+  });
+
+  it('deleteTaskModelBinding translates not-found into NotFoundException', async () => {
+    const repo = buildRepo();
+    repo.deleteTaskModelBinding.mockRejectedValue(p2025());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.deleteTaskModelBinding('t', 'm1')).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('PricingConfigAdminService.createDiscount', () => {
+  it('persists a valid discount with defaults applied', async () => {
+    const repo = buildRepo();
+    repo.createDiscount.mockResolvedValue({ id: 'd1' });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.createDiscount({
+      code: 'SUMMER',
+      name: '夏季活动',
+      factor: 0.8,
+      scope: { taskTypes: ['image_generation'] },
+    });
+
+    expect(repo.createDiscount).toHaveBeenCalledWith({
+      code: 'SUMMER',
+      name: '夏季活动',
+      factor: 0.8,
+      scope: { taskTypes: ['image_generation'] },
+      stackable: false,
+      priority: 0,
+      effectiveFrom: null,
+      effectiveTo: null,
+    });
+  });
+
+  it('allows a factor greater than 1 (a surcharge)', async () => {
+    const repo = buildRepo();
+    repo.createDiscount.mockResolvedValue({ id: 'd1' });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.createDiscount({ code: 'PEAK', name: '高峰加价', factor: 1.2, scope: {} });
+
+    expect(repo.createDiscount).toHaveBeenCalledWith(
+      expect.objectContaining({ factor: 1.2 }),
+    );
+  });
+
+  it('rejects a zero factor and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createDiscount({ code: 'FREE', name: 'x', factor: 0, scope: {} }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createDiscount).not.toHaveBeenCalled();
+  });
+
+  it('rejects a negative factor and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createDiscount({ code: 'NEG', name: 'x', factor: -0.5, scope: {} }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createDiscount).not.toHaveBeenCalled();
+  });
+
+  it('rejects scope.membershipLevelNumbers given as strings (the level-number-vs-cuid trap) and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createDiscount({
+        code: 'BAD',
+        name: 'x',
+        factor: 0.8,
+        scope: { membershipLevelNumbers: ['1'] },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createDiscount).not.toHaveBeenCalled();
+  });
+
+  it('rejects scope.taskTypes given as non-strings and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createDiscount({ code: 'BAD', name: 'x', factor: 0.8, scope: { taskTypes: [1, 2] } }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createDiscount).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-object scope and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createDiscount({ code: 'BAD', name: 'x', factor: 0.8, scope: 'not-an-object' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createDiscount).not.toHaveBeenCalled();
+  });
+
+  it('rejects effectiveFrom >= effectiveTo when both are set, and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createDiscount({
+        code: 'BAD',
+        name: 'x',
+        factor: 0.8,
+        scope: {},
+        effectiveFrom: '2026-08-01T00:00:00.000Z',
+        effectiveTo: '2026-07-01T00:00:00.000Z',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.createDiscount).not.toHaveBeenCalled();
+  });
+
+  it('translates a duplicate code (P2002) into ConflictException', async () => {
+    const repo = buildRepo();
+    repo.createDiscount.mockRejectedValue(p2002());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createDiscount({ code: 'DUP', name: 'x', factor: 0.8, scope: {} }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('PricingConfigAdminService.updateDiscount', () => {
+  it('only forwards fields present in the patch', async () => {
+    const repo = buildRepo();
+    repo.updateDiscount.mockResolvedValue({ id: 'd1', isActive: false });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await service.updateDiscount('d1', { isActive: false });
+
+    expect(repo.updateDiscount).toHaveBeenCalledWith('d1', { isActive: false });
+  });
+
+  it('rejects an invalid factor in the patch and persists nothing', async () => {
+    const repo = buildRepo();
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.updateDiscount('d1', { factor: 0 })).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.updateDiscount).not.toHaveBeenCalled();
+  });
+
+  it('translates not-found (P2025) into NotFoundException', async () => {
+    const repo = buildRepo();
+    repo.updateDiscount.mockRejectedValue(p2025());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.updateDiscount('missing', { isActive: false })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+});
+
+describe('PricingConfigAdminService.deleteDiscount', () => {
+  it('translates not-found (P2025) into NotFoundException', async () => {
+    const repo = buildRepo();
+    repo.deleteDiscount.mockRejectedValue(p2025());
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.deleteDiscount('missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('lists discounts by delegating to the repository', async () => {
+    const repo = buildRepo();
+    repo.listDiscounts.mockResolvedValue([{ id: 'd1' }]);
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(service.listDiscounts()).resolves.toEqual([{ id: 'd1' }]);
   });
 });
