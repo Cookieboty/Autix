@@ -10,7 +10,6 @@ import {
   buildImageGenerationSuccessResult,
   buildImageResultMessageMetadata,
   buildPersistedImageVariables,
-  buildPromptOptimizeActualEstimateInput,
   buildPromptOptimizeEstimateInput,
   buildPromptOptimizeHoldCreateInput,
   buildPromptOptimizeHoldMetadata,
@@ -30,7 +29,6 @@ import {
   normalizePromptOverride,
   resolvePersistedGenerationId,
   resolveImageRequestMode,
-  resolvePromptOptimizeConfirmAmount,
   selectImageReferenceUrl,
   shouldTuneWorkbenchPrompt,
   supportsImagePromptChatModel,
@@ -253,10 +251,9 @@ describe('image generation flow helpers', () => {
       buildPromptOptimizeEstimateInput('prompt_optimize_generation', config, tokens),
     ).toEqual({
       taskType: 'prompt_optimize_generation',
-      modelProvider: 'openai-official',
-      modelName: 'gpt-4o-mini',
-      inputTokens: 120,
-      outputTokens: 80,
+      modelConfigId: 'chat-1',
+      params: {},
+      usage: { inputTokens: 120, outputTokens: 80 },
     });
     expect(
       buildPromptOptimizeHoldMetadata({
@@ -286,7 +283,6 @@ describe('image generation flow helpers', () => {
         estimate: {
           estimatedCost: 25,
           pricingSnapshot: { ruleId: 'rule-1' },
-          refundPolicy: { systemFailed: 'full_refund' },
         },
         mode: 'edit',
         prompt: 'edit prompt',
@@ -300,7 +296,6 @@ describe('image generation flow helpers', () => {
       taskId: 'prompt-optimize:user-1:1:abc',
       amount: 25,
       pricingSnapshot: { ruleId: 'rule-1' },
-      refundPolicySnapshot: { systemFailed: 'full_refund' },
       metadata: {
         mode: 'edit',
         promptLength: 11,
@@ -312,34 +307,6 @@ describe('image generation flow helpers', () => {
       },
       remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
     });
-    expect(
-      buildPromptOptimizeActualEstimateInput({
-        taskType: 'prompt_optimize_generation',
-        config,
-        hold: { inputTokens: 120 },
-        usage: { outputTokens: 77, contextTokens: 300 },
-        fallbackOutputTokens: 80,
-      }),
-    ).toEqual({
-      taskType: 'prompt_optimize_generation',
-      modelProvider: 'openai-official',
-      modelName: 'gpt-4o-mini',
-      inputTokens: 120,
-      outputTokens: 77,
-      contextTokens: 300,
-    });
-    expect(
-      resolvePromptOptimizeConfirmAmount({
-        actualEstimatedCost: 12,
-        heldEstimatedCost: 25,
-      }),
-    ).toBe(12);
-    expect(
-      resolvePromptOptimizeConfirmAmount({
-        actualEstimatedCost: 30,
-        heldEstimatedCost: 25,
-      }),
-    ).toBe(25);
   });
 
   it('builds image generation hold and estimate inputs', () => {
@@ -359,16 +326,17 @@ describe('image generation flow helpers', () => {
 
     expect(buildImageGenerationEstimateInput(request, 3)).toEqual({
       taskType: 'image_generation',
-      modelProvider: 'openai-official',
-      modelName: 'gpt-image-2',
-      quality: 'hd',
-      resolution: '1K',
-      quantity: 3,
-      referenceImages: 1,
+      modelConfigId: 'image-model-1',
+      params: {
+        quality: 'hd',
+        resolution: '1K',
+        quantity: 3,
+        referenceImages: 1,
+      },
     });
     expect(buildImageGenerationEstimateInput(request, 3, 2)).toMatchObject({
       taskType: 'image_generation',
-      quantity: 3,
+      params: expect.objectContaining({ quantity: 3 }),
       membershipLevel: 2,
     });
     expect(
@@ -395,7 +363,6 @@ describe('image generation flow helpers', () => {
           taskType: 'image_generation',
           estimatedCost: 90,
           pricingSnapshot: { ruleId: 'image-rule-1' },
-          refundPolicy: { systemFailed: 'full_refund' },
         },
         requestInput: {
           templateId: 'tpl-1',
@@ -409,7 +376,6 @@ describe('image generation flow helpers', () => {
       taskId: 'image:user-1:1:abc',
       amount: 90,
       pricingSnapshot: { ruleId: 'image-rule-1' },
-      refundPolicySnapshot: { systemFailed: 'full_refund' },
       metadata: {
         templateId: 'tpl-1',
         modelConfigId: 'image-model-1',

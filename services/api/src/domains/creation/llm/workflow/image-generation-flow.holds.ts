@@ -38,10 +38,9 @@ export function buildPromptOptimizeEstimateInput(
 ) {
   return {
     taskType,
-    modelProvider: config.provider ?? undefined,
-    modelName: config.model,
-    inputTokens: tokens.inputTokens,
-    outputTokens: tokens.outputTokens,
+    modelConfigId: config.id,
+    params: {},
+    usage: { inputTokens: tokens.inputTokens, outputTokens: tokens.outputTokens },
     ...(membershipLevel !== undefined ? { membershipLevel } : {}),
   };
 }
@@ -80,7 +79,6 @@ export function buildPromptOptimizeHoldCreateInput(input: {
   estimate: {
     estimatedCost: number;
     pricingSnapshot?: unknown;
-    refundPolicy?: unknown;
   };
   mode: 'generate' | 'edit';
   prompt: string;
@@ -94,9 +92,6 @@ export function buildPromptOptimizeHoldCreateInput(input: {
     taskId: input.taskId,
     amount: input.estimate.estimatedCost,
     pricingSnapshot: toImageFlowJsonValue(input.estimate.pricingSnapshot),
-    refundPolicySnapshot: input.estimate.refundPolicy
-      ? toImageFlowJsonValue(input.estimate.refundPolicy)
-      : undefined,
     metadata: toImageFlowJsonValue(
       buildPromptOptimizeHoldMetadata({
         mode: input.mode,
@@ -114,36 +109,6 @@ export function buildPromptOptimizeHoldCreateInput(input: {
   };
 }
 
-export function buildPromptOptimizeActualEstimateInput(input: {
-  taskType: string;
-  config: ImageFlowModelConfigLike;
-  hold: { inputTokens: number };
-  usage: {
-    inputTokens?: number;
-    outputTokens?: number;
-    contextTokens?: number;
-  };
-  fallbackOutputTokens: number;
-  membershipLevel?: number;
-}) {
-  return {
-    taskType: input.taskType,
-    modelProvider: input.config.provider ?? undefined,
-    modelName: input.config.model,
-    inputTokens: input.usage.inputTokens ?? input.hold.inputTokens,
-    outputTokens: input.usage.outputTokens ?? input.fallbackOutputTokens,
-    contextTokens: input.usage.contextTokens,
-    ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
-  };
-}
-
-export function resolvePromptOptimizeConfirmAmount(input: {
-  actualEstimatedCost: number;
-  heldEstimatedCost: number;
-}): number {
-  return Math.min(input.actualEstimatedCost, input.heldEstimatedCost);
-}
-
 export function buildImageGenerationEstimateInput(
   request: ResolvedImageRequest,
   quantity: number,
@@ -152,15 +117,16 @@ export function buildImageGenerationEstimateInput(
   const pricingResolution = resolveImagePricingResolution(request.settings?.size);
   return {
     taskType: IMAGE_GENERATION_TASK_TYPE,
-    modelProvider: request.modelConfig.provider ?? undefined,
-    modelName: request.modelConfig.model,
-    quality: normalizeImageQuality(request.settings?.quality),
-    ...(pricingResolution ? { resolution: pricingResolution } : {}),
-    // FIX-24: 按真实数量计费（hold 用请求数量、settle 用实际产图数量），不再硬编码 1。
-    quantity: Math.max(1, quantity),
-    referenceImages:
-      (request.sourceImages?.length ?? 0) +
-      (request.referenceImages?.length ?? 0),
+    modelConfigId: request.modelConfig.id,
+    params: {
+      quality: normalizeImageQuality(request.settings?.quality),
+      ...(pricingResolution ? { resolution: pricingResolution } : {}),
+      // FIX-24: 按真实数量计费（hold 用请求数量、settle 用实际产图数量），不再硬编码 1。
+      quantity: Math.max(1, quantity),
+      referenceImages:
+        (request.sourceImages?.length ?? 0) +
+        (request.referenceImages?.length ?? 0),
+    },
     ...(membershipLevel !== undefined ? { membershipLevel } : {}),
   };
 }
@@ -194,7 +160,6 @@ export function buildImageGenerationHoldCreateInput(input: {
     taskType: string;
     estimatedCost: number;
     pricingSnapshot?: unknown;
-    refundPolicy?: unknown;
   };
   requestInput: {
     templateId: string;
@@ -208,7 +173,6 @@ export function buildImageGenerationHoldCreateInput(input: {
     taskId: input.taskId,
     amount: input.estimate.estimatedCost,
     pricingSnapshot: toImageFlowJsonValue(input.estimate.pricingSnapshot),
-    refundPolicySnapshot: toImageFlowJsonValue(input.estimate.refundPolicy),
     metadata: toImageFlowJsonValue(
       buildImageGenerationHoldMetadata(input.requestInput, input.request),
     ),

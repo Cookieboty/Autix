@@ -31,7 +31,6 @@ import {
   buildImageGenerationEstimateInput,
   buildImageGenerationHoldCreateInput,
   buildImageGenerationSuccessResult,
-  buildPromptOptimizeActualEstimateInput,
   buildPromptOptimizeEstimateInput,
   assertPromptOptimizeInputWithinLimit,
   buildPromptOptimizeHoldCreateInput,
@@ -48,7 +47,6 @@ import {
   normalizePromptOverride,
   resolvePersistedGenerationId,
   resolveImageRequestMode,
-  resolvePromptOptimizeConfirmAmount,
   shouldTuneWorkbenchPrompt,
   supportsImagePromptChatModel,
   supportsImagePromptVision,
@@ -377,7 +375,7 @@ export class ImageGenerationFlowService {
         typeof result.content === 'string'
           ? result.content
           : JSON.stringify(result.content);
-      await this.confirmPromptOptimizeHold(hold, config, result, content);
+      await this.confirmPromptOptimizeHold(hold, result, content);
       return content.trim() || input.prompt;
     } catch (err) {
       await this.safeRefundPromptOptimizeHold(hold.holdId, 'Prompt 优化失败');
@@ -428,31 +426,23 @@ export class ImageGenerationFlowService {
     };
   }
 
+  // Settlement re-prices from the hold's frozen pricingSnapshot (quoteHoldFromSnapshot),
+  // never from a live estimateCost() re-query — an admin price change must not
+  // re-price a task already in flight. `membershipLevel` is no longer read here:
+  // the discount is already baked into the snapshot captured at hold time.
   private async confirmPromptOptimizeHold(
-    hold: { holdId: string; estimatedCost: number; inputTokens: number; membershipLevel?: number },
-    config: ChatModelConfigLike,
+    hold: { holdId: string; estimatedCost: number; inputTokens: number },
     result: unknown,
     content: string,
   ) {
     const usage = extractTokenUsage(result);
     try {
-      const actualEstimate = await this.pointsService.estimateCost(
-        buildPromptOptimizeActualEstimateInput({
-          taskType: PROMPT_OPTIMIZE_TASK_TYPE,
-          config,
-          hold,
-          usage,
-          fallbackOutputTokens: estimateTextTokens(content),
-          membershipLevel: hold.membershipLevel,
-        }),
-      );
-      await this.pointsService.confirmHold(
-        hold.holdId,
-        resolvePromptOptimizeConfirmAmount({
-          actualEstimatedCost: actualEstimate.estimatedCost,
-          heldEstimatedCost: hold.estimatedCost,
-        }),
-      );
+      const actualAmount = await this.pointsService.quoteHoldFromSnapshot(hold.holdId, {
+        inputTokens: usage.inputTokens ?? hold.inputTokens,
+        outputTokens: usage.outputTokens ?? estimateTextTokens(content),
+        contextTokens: usage.contextTokens,
+      });
+      await this.pointsService.confirmHold(hold.holdId, actualAmount);
     } catch {
       await this.pointsService.confirmHold(hold.holdId);
     }
@@ -681,15 +671,22 @@ export class ImageGenerationFlowService {
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
-    const actualEstimate =
+    // Settlement re-prices from the hold's frozen pricingSnapshot, never a live
+    // estimateCost() re-query — an admin price change must not re-price a task
+    // already in flight. `quantity` in the image preset's pricingSchema is a
+    // `params` term (frozen at hold time), not a `usage` term, so passing
+    // images.length here does not change the priced quantity; it is kept as an
+    // informational usage payload for observability, and to let
+    // quoteHoldFromSnapshot's cap-at-frozen-amount logic run and warn on cap.
+    const actualAmount =
       options?.confirmHoldId && images.length > 0
-        ? await this.pointsService.estimateCost(
-            buildImageGenerationEstimateInput(request, images.length, options.membershipLevel),
-          )
+        ? await this.pointsService.quoteHoldFromSnapshot(options.confirmHoldId, {
+            quantity: images.length,
+          })
         : null;
-    if (options?.confirmHoldId && actualEstimate) {
+    if (options?.confirmHoldId && actualAmount !== null) {
       this.logger.log(
-        `image generation hold actual cost: hold=${options.confirmHoldId} actualImages=${images.length} actualAmount=${actualEstimate.estimatedCost}`,
+        `image generation hold actual cost: hold=${options.confirmHoldId} actualImages=${images.length} actualAmount=${actualAmount}`,
       );
     }
 
@@ -708,7 +705,7 @@ export class ImageGenerationFlowService {
               const confirmation = await this.pointsService.confirmHoldWithinTx(
                 tx,
                 options.confirmHoldId!,
-                actualEstimate?.estimatedCost,
+                actualAmount ?? undefined,
               );
               if (
                 !confirmation.confirmed &&

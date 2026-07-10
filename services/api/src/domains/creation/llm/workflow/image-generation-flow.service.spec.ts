@@ -161,13 +161,13 @@ function createService() {
       estimatedCost: 90,
       taskType: 'image_generation',
       pricingSnapshot: { ruleId: 'rule-1' },
-      refundPolicy: { systemFailed: 'full_refund' },
     }),
     createHold: jest.fn().mockResolvedValue({
       hold: { id: 'hold-1' },
       balance: 910,
     }),
     confirmHold: jest.fn(),
+    quoteHoldFromSnapshot: jest.fn().mockResolvedValue(90),
     confirmHoldWithinTx: jest.fn(async () => ({
       confirmed: true,
       hold: { id: 'hold-1', userId: 'user-1', status: PointHoldStatus.CONFIRMED },
@@ -331,8 +331,8 @@ describe('ImageGenerationFlowService', () => {
       estimatedCost: 20,
       taskType: 'prompt_optimize_generation',
       pricingSnapshot: { ruleId: 'prompt-rule' },
-      refundPolicy: { systemFailed: 'full_refund' },
     });
+    pointsService.quoteHoldFromSnapshot.mockResolvedValueOnce(20);
     modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
       if (id === 'image-model-1') {
         return {
@@ -377,15 +377,13 @@ describe('ImageGenerationFlowService', () => {
     expect(result.chatModel).toBe('gpt-4o-mini');
     expect(prisma.image_generations.create).not.toHaveBeenCalled();
     expect(prisma.messages.create).not.toHaveBeenCalled();
-    expect(pointsService.estimateCost).toHaveBeenCalledWith(
-      expect.objectContaining({
-        taskType: 'prompt_optimize_generation',
-        modelProvider: 'openai-official',
-        modelName: 'gpt-4o-mini',
-        inputTokens: expect.any(Number),
-        outputTokens: expect.any(Number),
-      }),
-    );
+    expect(pointsService.estimateCost).toHaveBeenCalledWith({
+      taskType: 'prompt_optimize_generation',
+      modelConfigId: 'chat-1',
+      params: {},
+      usage: { inputTokens: expect.any(Number), outputTokens: expect.any(Number) },
+      membershipLevel: 2,
+    });
     expect(pointsService.createHold).toHaveBeenCalledWith(
       'user-1',
       expect.objectContaining({
@@ -394,7 +392,57 @@ describe('ImageGenerationFlowService', () => {
         remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
       }),
     );
+    // Task 13: settlement re-prices from the frozen hold snapshot, not by
+    // calling estimateCost() again.
+    expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
+    expect(pointsService.quoteHoldFromSnapshot).toHaveBeenCalledWith(
+      'hold-1',
+      expect.objectContaining({ outputTokens: expect.any(Number) }),
+    );
     expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1', 20);
+  });
+
+  it('falls back to a plain confirmHold when settlement quoteHoldFromSnapshot throws (no re-estimate fallback)', async () => {
+    const { service, modelConfigService, pointsService } = createService();
+    pointsService.estimateCost.mockResolvedValueOnce({
+      estimatedCost: 20,
+      taskType: 'prompt_optimize_generation',
+      pricingSnapshot: { ruleId: 'prompt-rule' },
+    });
+    pointsService.quoteHoldFromSnapshot.mockRejectedValueOnce(new Error('缺少快照'));
+    modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
+      if (id === 'image-model-1') {
+        return {
+          id,
+          model: 'gpt-image-1',
+          provider: 'openai-official',
+          baseUrl: 'https://api.example.com/v1',
+          apiKey: 'key',
+          metadata: {},
+          capabilities: ['image'],
+        };
+      }
+      return {
+        id,
+        model: 'gpt-4o-mini',
+        provider: 'openai-official',
+        baseUrl: 'https://chat.example.com/v1',
+        apiKey: 'key',
+        metadata: {},
+        capabilities: ['text', 'vision'],
+      };
+    });
+
+    await service.refineWorkbenchPrompt('user-1', {
+      mode: 'generate',
+      imageModelConfigId: 'image-model-1',
+      chatModelId: 'chat-1',
+      prompt: '手机海报',
+      settings: { promptTuning: '自动优化' },
+    });
+
+    expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
+    expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
   });
 
   it('refunds prompt optimization hold when prompt refinement fails', async () => {
@@ -404,7 +452,6 @@ describe('ImageGenerationFlowService', () => {
       estimatedCost: 20,
       taskType: 'prompt_optimize_generation',
       pricingSnapshot: { ruleId: 'prompt-rule' },
-      refundPolicy: { systemFailed: 'full_refund' },
     });
     modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
       if (id === 'image-model-1') {
@@ -857,22 +904,18 @@ describe('ImageGenerationFlowService', () => {
     global.fetch = originalFetch;
   });
 
-  it('freezes configurable image points before provider call and confirms after persistence', async () => {
+  it('freezes configurable image points before provider call and settles from the frozen snapshot after persistence', async () => {
     const { service, prisma, pointsService } = createService();
     const order: string[] = [];
-    pointsService.estimateCost
-      .mockResolvedValueOnce({
-        estimatedCost: 90,
-        taskType: 'image_generation',
-        pricingSnapshot: { ruleId: 'rule-2' },
-        refundPolicy: { systemFailed: 'full_refund' },
-      })
-      .mockResolvedValueOnce({
-        estimatedCost: 45,
-        taskType: 'image_generation',
-        pricingSnapshot: { ruleId: 'rule-2' },
-        refundPolicy: { systemFailed: 'full_refund' },
-      });
+    pointsService.estimateCost.mockResolvedValueOnce({
+      estimatedCost: 90,
+      taskType: 'image_generation',
+      pricingSnapshot: { ruleId: 'rule-2' },
+    });
+    pointsService.quoteHoldFromSnapshot.mockImplementation(async () => {
+      order.push('quote');
+      return 45;
+    });
     pointsService.createHold.mockImplementation(async () => {
       order.push('hold');
       return { hold: { id: 'hold-1' }, balance: 910 };
@@ -938,29 +981,19 @@ describe('ImageGenerationFlowService', () => {
       2,
     );
 
-    // FIX-24: hold-time estimate uses the requested count (2), settle-time uses actual images (1).
-    expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        taskType: 'image_generation',
+    // Hold-time estimate uses the new task/params/usage shape and the requested count (2).
+    expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
+    expect(pointsService.estimateCost).toHaveBeenCalledWith({
+      taskType: 'image_generation',
+      modelConfigId: 'image-model-1',
+      params: expect.objectContaining({
         quantity: 2,
         referenceImages: 1,
         quality: 'high',
         resolution: '1K',
-        membershipLevel: 2,
       }),
-    );
-    expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        taskType: 'image_generation',
-        quantity: 1,
-        referenceImages: 1,
-        quality: 'high',
-        resolution: '1K',
-        membershipLevel: 2,
-      }),
-    );
+      membershipLevel: 2,
+    });
     expect(pointsService.createHold).toHaveBeenCalledWith(
       'user-1',
       expect.objectContaining({
@@ -969,13 +1002,16 @@ describe('ImageGenerationFlowService', () => {
         pricingSnapshot: { ruleId: 'rule-2' },
       }),
     );
+    // Task 13: settlement re-prices from the frozen hold snapshot via
+    // quoteHoldFromSnapshot, never by calling estimateCost() a second time.
+    expect(pointsService.quoteHoldFromSnapshot).toHaveBeenCalledWith('hold-1', { quantity: 1 });
     expect(pointsService.confirmHoldWithinTx).toHaveBeenCalledWith(
       expect.any(Object),
       'hold-1',
       45,
     );
     expect(pointsService.refundHold).not.toHaveBeenCalled();
-    expect(order).toEqual(['hold', 'provider', 'upload', 'persist', 'confirm', 'image_record']);
+    expect(order).toEqual(['hold', 'provider', 'upload', 'persist', 'quote', 'confirm', 'image_record']);
     expect(result.prompt).toBe('A scene');
   });
 
@@ -1079,6 +1115,83 @@ describe('ImageGenerationFlowService', () => {
     expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
     expect(persistSpy).not.toHaveBeenCalled();
+  });
+
+  it('propagates when the image generation hold-time estimate throws (no fallback price)', async () => {
+    const { service, pointsService } = createService();
+    pointsService.estimateCost.mockRejectedValueOnce(new Error('模型未配置计价规则'));
+
+    await expect(
+      service.generateAndPersistImage(
+        {
+          userId: 'user-1',
+          templateId: 'tpl-1',
+          modelConfigId: 'image-model-1',
+        },
+        {
+          mode: 'generate',
+          prompt: 'A scene',
+          modelConfig: {
+            id: 'image-model-1',
+            model: 'gpt-image-2',
+            provider: 'openai-official',
+            baseUrl: 'https://api.example.com/v1',
+            apiKey: 'key',
+          },
+          template: {},
+          variables: {},
+        },
+        1,
+      ),
+    ).rejects.toThrow('模型未配置计价规则');
+
+    expect(pointsService.createHold).not.toHaveBeenCalled();
+  });
+
+  it('propagates when settlement quoteHoldFromSnapshot throws for image generation (no live re-estimate fallback)', async () => {
+    const { service, prisma, pointsService } = createService();
+    jest.spyOn(service, 'callImageApi').mockResolvedValue({
+      images: ['https://img.test/1.png'],
+      appliedSettings: {
+        size: '1024x1024',
+        quality: 'medium',
+        count: 1,
+        coerced: false,
+        notes: [],
+        kind: 'gpt-image',
+      },
+    });
+    jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+    pointsService.quoteHoldFromSnapshot.mockRejectedValueOnce(new Error('积分冻结不存在'));
+
+    await expect(
+      service.generateAndPersistImage(
+        {
+          userId: 'user-1',
+          templateId: 'tpl-1',
+          modelConfigId: 'image-model-1',
+        },
+        {
+          mode: 'generate',
+          prompt: 'A scene',
+          modelConfig: {
+            id: 'image-model-1',
+            model: 'gpt-image-2',
+            provider: 'openai-official',
+            baseUrl: 'https://api.example.com/v1',
+            apiKey: 'key',
+          },
+          template: {},
+          variables: {},
+        },
+        1,
+      ),
+    ).rejects.toThrow('积分冻结不存在');
+
+    // Settlement must not fall back to estimateCost() when the snapshot quote fails.
+    expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
+    expect(prisma.image_generations.create).not.toHaveBeenCalled();
   });
 
   it('does not persist completed images when point confirmation fails', async () => {
