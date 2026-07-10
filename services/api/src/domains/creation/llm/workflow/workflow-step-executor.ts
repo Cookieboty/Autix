@@ -73,6 +73,11 @@ export async function* executeStep(
   );
 
   // 2. Create tracked model
+  // taskType 固定字面量 'chat_message_standard'：DeepAgent 工作流步骤模型没有可
+  // 映射到更精细 taskType 的字段（agent_workflow_steps 未携带这类字段，本次改
+  // 动也未新增），resolveChatTaskType 被删除前对这类调用恒定猜出这个值，这里
+  // 保持行为不变。若未来工作流步骤需要独立计费分类，需要一次单独的设计决策
+  // （例如给 agent_workflow_steps 加 taskType 列），不在本次改动范围内。
   const {
     model: trackedModel,
   } = createTrackedWorkflowModel({
@@ -80,6 +85,7 @@ export async function* executeStep(
     modelConfig,
     userId,
     runId: run.id,
+    taskType: 'chat_message_standard',
   });
 
   // 3. Enforce single-goal constraint in system prompt
@@ -168,11 +174,13 @@ export async function* executeStep(
       );
 
       if (criticRuntimeConfig) {
+        // 评审（critic）模型同样固定字面量 'chat_message_standard'，理由同上。
         const { model: trackedCriticModel } = createTrackedWorkflowModel({
           billing,
           modelConfig: criticRuntimeConfig,
           userId,
           runId: run.id,
+          taskType: 'chat_message_standard',
         });
         const threshold = resolveCriticPassThreshold(stepDef.criticPassThreshold);
 

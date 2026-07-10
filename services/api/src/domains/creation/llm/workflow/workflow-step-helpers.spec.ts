@@ -8,7 +8,6 @@ import {
 } from './workflow-prompts';
 import {
   createTrackedWorkflowModel,
-  resolveBillingTier,
   toRuntimeModelConfig,
 } from './workflow-models';
 import {
@@ -96,11 +95,10 @@ describe('workflow step helpers', () => {
       provider: 'openai',
       metadata: { billingTier: 'standard' },
       type: 'general',
-      pointCostWeight: '2',
     });
 
     const platform = createTrackedWorkflowModel(
-      { billing, modelConfig, userId: 'user-1', runId: 'run-1' },
+      { billing, modelConfig, userId: 'user-1', runId: 'run-1', taskType: 'chat_message_standard' },
       { createModel, createTracked },
     );
 
@@ -112,8 +110,7 @@ describe('workflow step helpers', () => {
       modelConfigId: 'model-1',
       modelName: 'gpt-4.1',
       modelProvider: 'openai',
-      modelTier: 'standard',
-      pointCostWeight: 2,
+      taskType: 'chat_message_standard',
     });
     expect(createTracked).toHaveBeenCalledWith(baseModel, billing, platform.trackerContext);
 
@@ -124,6 +121,7 @@ describe('workflow step helpers', () => {
         billing,
         modelConfig: { ...modelConfig, id: 'model-2', createdBy: 'user-1' },
         userId: 'user-1',
+        taskType: 'chat_message_standard',
       },
       { createModel, createTracked },
     );
@@ -132,10 +130,7 @@ describe('workflow step helpers', () => {
     expect(createTracked).toHaveBeenCalledTimes(1);
   });
 
-  it('resolves billing tier and critic settings with existing defaults', async () => {
-    expect(resolveBillingTier({ metadata: { billingTier: 'reasoning' } })).toBe('reasoning');
-    expect(resolveBillingTier({ metadata: { billingTier: 1 } })).toBeUndefined();
-
+  it('resolves critic settings with existing defaults', async () => {
     expect(shouldEvaluateCritic('deep', {
       criticEnabled: true,
       criticPromptTemplate: 'score it',
@@ -153,7 +148,6 @@ describe('workflow step helpers', () => {
       model: 'gpt-4.1',
       provider: 'openai',
       type: 'general',
-      pointCostWeight: '3',
     });
     const criticConfig = await resolveCriticRuntimeModelConfig(
       { findModelConfig } as never,
@@ -169,7 +163,6 @@ describe('workflow step helpers', () => {
     expect(criticConfig).toMatchObject({
       id: 'critic-1',
       model: 'gpt-4.1',
-      pointCostWeight: 3,
     });
   });
 });

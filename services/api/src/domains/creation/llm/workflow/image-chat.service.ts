@@ -79,13 +79,15 @@ export class ImageChatService {
 
     const history = await this.repository.findConversationMessages(input.conversationId, 20);
     // 图片模式下"理解需求 / 决定是否生图"这次对话调用也要按对话消息计费（token）。
+    // taskType 固定字面量 'chat_message_standard'：这是这次调用在删除
+    // resolveChatTaskType 前恒定被猜出的值（真实 chat 模型名都不含
+    // fast/mini/flash/reason 关键字），删除"猜档"机制不改变实际计费结果。
     const model = createTrackedModel(createChatModelFromDbConfig(config), this.billing, {
       userId: input.userId,
       modelConfigId: config.id,
       modelName: config.model,
       modelProvider: config.provider,
-      modelTier: resolveBillingTier(config),
-      pointCostWeight: Number(config.pointCostWeight ?? 1),
+      taskType: 'chat_message_standard',
     });
     const sourceImages = (input.sourceImages ?? [])
       .map((image, index) => `${index + 1}. ${image.url}${image.prompt ? ` | prompt: ${image.prompt}` : ''}`)
@@ -266,10 +268,4 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
-}
-
-function resolveBillingTier(config: unknown): string | undefined {
-  const metadata = asRecord(config)?.metadata;
-  const tier = asRecord(metadata)?.billingTier;
-  return typeof tier === 'string' ? tier : undefined;
 }

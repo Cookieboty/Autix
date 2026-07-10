@@ -53,14 +53,14 @@ export class ChatFallbackService {
     const model = createChatModelFromDbConfig(dbConfig);
 
     // 自有模型不再免费：所有对话调用一律计费（tracked model）。
-    const pointCostWeight = dbConfig.pointCostWeight;
+    // taskType 固定字面量 'chat_message_standard'：resolveChatTaskType 被删除前，
+    // 这里的调用（modelTier 从未真正被运营配置过）恒定猜出这个值，行为不变。
     const invokeModel = createTrackedModel(model, this.billing, {
       userId,
       modelConfigId: resolvedId,
       modelName: dbConfig.model ?? dbConfig.name,
       modelProvider: dbConfig.provider,
-      modelTier: this.resolveBillingTier(dbConfig),
-      pointCostWeight,
+      taskType: 'chat_message_standard',
     });
 
     const systemPrompt = await this.renderSystemPrompt(options?.imageTool);
@@ -207,15 +207,6 @@ export class ChatFallbackService {
     return { sourceImages: tool.referenceImages };
   }
 
-  private resolveBillingTier(config: unknown): string | undefined {
-    const metadata = config && typeof config === 'object'
-      ? (config as { metadata?: unknown }).metadata
-      : undefined;
-    const tier = metadata && typeof metadata === 'object'
-      ? (metadata as Record<string, unknown>).billingTier
-      : undefined;
-    return typeof tier === 'string' ? tier : undefined;
-  }
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

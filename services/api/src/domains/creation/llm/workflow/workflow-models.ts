@@ -13,12 +13,9 @@ export interface RuntimeModelConfig {
   metadata?: unknown;
   type: string;
   createdBy?: string | null;
-  pointCostWeight: number;
 }
 
-export type RuntimeModelConfigInput = Omit<RuntimeModelConfig, 'pointCostWeight'> & {
-  pointCostWeight?: unknown;
-};
+export type RuntimeModelConfigInput = RuntimeModelConfig;
 
 export interface WorkflowModelFactories {
   createModel?: (config: RuntimeModelConfig) => BaseChatModel;
@@ -29,21 +26,13 @@ export interface WorkflowModelFactories {
   ) => BaseChatModel;
 }
 
+// model_configs.pointCostWeight 列本身不删（第四期与旧表一起处理），但已经没有
+// 任何代码读取它了：这个函数以前会把 pointCostWeight 从 DB JSON 转成 number 并
+// 冻结进 RuntimeModelConfig，现在只是把入参原样传回——保留这个函数是为了不改
+// 所有调用点的调用形态（toRuntimeModelConfig(config) 仍然是把任意 DB 配置对象
+// 收窄成 RuntimeModelConfig 的唯一入口）。
 export function toRuntimeModelConfig(config: RuntimeModelConfigInput): RuntimeModelConfig {
-  return {
-    ...config,
-    pointCostWeight: Number(config.pointCostWeight ?? 1),
-  };
-}
-
-export function resolveBillingTier(config: unknown): string | undefined {
-  const metadata = config && typeof config === 'object'
-    ? (config as { metadata?: unknown }).metadata
-    : undefined;
-  const tier = metadata && typeof metadata === 'object'
-    ? (metadata as Record<string, unknown>).billingTier
-    : undefined;
-  return typeof tier === 'string' ? tier : undefined;
+  return config;
 }
 
 export function buildTrackerContext(opts: {
@@ -51,6 +40,7 @@ export function buildTrackerContext(opts: {
   runId?: string;
   runStepId?: string;
   modelConfig: RuntimeModelConfig;
+  taskType: string;
 }): TrackerContext {
   return {
     userId: opts.userId,
@@ -59,8 +49,7 @@ export function buildTrackerContext(opts: {
     modelConfigId: opts.modelConfig.id,
     modelName: opts.modelConfig.model ?? opts.modelConfig.name,
     modelProvider: opts.modelConfig.provider,
-    modelTier: resolveBillingTier(opts.modelConfig),
-    pointCostWeight: opts.modelConfig.pointCostWeight,
+    taskType: opts.taskType,
   };
 }
 
@@ -71,6 +60,7 @@ export function createTrackedWorkflowModel(
     userId: string;
     runId?: string;
     runStepId?: string;
+    taskType: string;
   },
   factories: WorkflowModelFactories = {},
 ): {
@@ -86,6 +76,7 @@ export function createTrackedWorkflowModel(
     runId: opts.runId,
     runStepId: opts.runStepId,
     modelConfig: opts.modelConfig,
+    taskType: opts.taskType,
   });
 
   // 自有模型不再免费：工作流每步调用一律计费（tracked model）。

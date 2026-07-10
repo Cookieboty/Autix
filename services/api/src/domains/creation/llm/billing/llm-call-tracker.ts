@@ -11,10 +11,7 @@ export interface TrackerContext {
   modelConfigId: string;
   modelName?: string;
   modelProvider?: string | null;
-  modelTier?: string;
-  pointCostWeight: number;
-  basePerCall?: number;
-  taskType?: string;
+  taskType: string;
   estimatedInputTokens?: number;
   estimatedOutputTokens?: number;
   estimatedContextTokens?: number;
@@ -26,15 +23,18 @@ export interface TrackerContext {
 /**
  * 包装任意 ChatModel，在每次 invoke/stream 前后执行 hold/confirm/refund。
  * 使用 Object.create 创建代理，不 mutate 原始（可能被缓存的）实例。
+ *
+ * `taskType` 现在是 `TrackerContext` 的必填字段，由调用方显式声明——不再有
+ * "按 modelTier/modelName 字符串猜档" 的 resolveChatTaskType，也不再有
+ * pointCostWeight 兜底积分数：hold 的第二个参数固定传 0，真正的计费金额完全
+ * 由 CallBillingService.hold 内部的定价引擎（taskType + modelConfigId 绑定）
+ * 算出；查不到绑定就是 400，不会退回一个按权重算出的数字。
  */
 export function createTrackedModel(
   model: BaseChatModel,
   billing: CallBillingService,
   ctx: TrackerContext,
 ): BaseChatModel {
-  const basePerCall = ctx.basePerCall ?? 1;
-  const pointsPerCall = Math.ceil(ctx.pointCostWeight * basePerCall);
-
   // Object.create 保证原始（缓存）实例的 _generate 不被 mutate
   const proxy = Object.create(model) as BaseChatModel;
   const originalGenerate = model._generate.bind(model);
@@ -44,16 +44,14 @@ export function createTrackedModel(
     options: any,
     runManager?: CallbackManagerForLLMRun,
   ): Promise<ChatResult> {
-    const { holdId } = await billing.hold(ctx.userId, pointsPerCall, {
+    const { holdId } = await billing.hold(ctx.userId, 0, {
       runId: ctx.runId,
       runStepId: ctx.runStepId,
       modelConfigId: ctx.modelConfigId,
       modelName: ctx.modelName,
       pricing: {
-        taskType: ctx.taskType ?? resolveChatTaskType(ctx),
-        modelProvider: ctx.modelProvider ?? undefined,
-        modelName: ctx.modelName,
-        modelTier: ctx.modelTier,
+        taskType: ctx.taskType,
+        modelConfigId: ctx.modelConfigId,
         inputTokens: ctx.estimatedInputTokens,
         outputTokens: ctx.estimatedOutputTokens,
         contextTokens: ctx.estimatedContextTokens,
@@ -66,10 +64,8 @@ export function createTrackedModel(
     try {
       const result = await originalGenerate(messages, options, runManager);
       await billing.confirm(holdId, {
-        taskType: ctx.taskType ?? resolveChatTaskType(ctx),
-        modelProvider: ctx.modelProvider ?? undefined,
-        modelName: ctx.modelName,
-        modelTier: ctx.modelTier,
+        taskType: ctx.taskType,
+        modelConfigId: ctx.modelConfigId,
         ...extractTokenUsage(result),
         toolCalls: ctx.toolCalls,
         mcpCalls: ctx.mcpCalls,
@@ -83,18 +79,6 @@ export function createTrackedModel(
   };
 
   return proxy;
-}
-
-function resolveChatTaskType(ctx: TrackerContext): string {
-  if (ctx.taskType) return ctx.taskType;
-  const key = `${ctx.modelTier ?? ''} ${ctx.modelName ?? ''}`.toLowerCase();
-  if (key.includes('reason') || key.includes('thinking') || key.includes('o1') || key.includes('o3')) {
-    return 'chat_message_reasoning';
-  }
-  if (key.includes('fast') || key.includes('mini') || key.includes('flash')) {
-    return 'chat_message_fast';
-  }
-  return 'chat_message_standard';
 }
 
 function extractTokenUsage(result: ChatResult) {

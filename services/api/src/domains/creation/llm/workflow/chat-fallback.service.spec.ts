@@ -20,7 +20,6 @@ function createService() {
       provider: 'openai',
       type: 'general',
       capabilities: ['text'],
-      pointCostWeight: 1,
     }),
     findDefaultByTypeForUser: jest.fn().mockResolvedValue({ id: 'chat-model' }),
   };
