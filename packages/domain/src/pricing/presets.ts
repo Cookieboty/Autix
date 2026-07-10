@@ -1,6 +1,6 @@
 import type { ParamsSchema, PricingSchema } from './types';
 
-export type ModelPresetKey = 'chat_fast' | 'chat_standard' | 'chat_reasoning' | 'image' | 'video';
+export type ModelPresetKey = 'text' | 'image' | 'video';
 
 export interface ModelPreset {
   paramsSchema: ParamsSchema;
@@ -15,45 +15,37 @@ const tokenProperties = {
   outputTokens: { type: 'integer' as const, minimum: 0, default: 0, 'x-ui': { control: 'hidden' as const } },
 };
 
-function chatPreset(base: number, inputPerK: number, outputPerK: number): ModelPreset {
-  return {
-    paramsSchema: {
-      $schema: JSON_SCHEMA_DRAFT,
-      type: 'object',
-      properties: {
-        temperature: { type: 'number', minimum: 0, maximum: 2, default: 0.7, 'x-ui': { control: 'slider', labelKey: 'pricing.params.temperature', order: 10, step: 0.1 } },
-        maxTokens: { type: 'integer', minimum: 1, maximum: 128000, default: 4096, 'x-ui': { control: 'stepper', labelKey: 'pricing.params.maxTokens', order: 20 } },
-        ...tokenProperties,
-      },
+/**
+ * 唯一的 text 模型 preset（原 chat_fast / chat_standard / chat_reasoning 三档合并）。
+ *
+ * 旧的三档靠 metadata.tier 选择，线上 13 个模型没有一个设置过这个字段，
+ * 分档在事实上从未生效——见 spec §3.1.1.6。现在所有 text 模型统一走纯 token
+ * 计价，没有每条消息的基础费；任务之间的差异化改由 TaskPreset.fixedCostSchema
+ * 承担（同一模型跑不同任务时固定费不同，token 单价相同）。
+ */
+const textPreset: ModelPreset = {
+  paramsSchema: {
+    $schema: JSON_SCHEMA_DRAFT,
+    type: 'object',
+    properties: {
+      temperature: { type: 'number', minimum: 0, maximum: 2, default: 0.7, 'x-ui': { control: 'slider', labelKey: 'pricing.params.temperature', order: 10, step: 0.1 } },
+      maxTokens: { type: 'integer', minimum: 1, maximum: 128000, default: 4096, 'x-ui': { control: 'stepper', labelKey: 'pricing.params.maxTokens', order: 20 } },
+      ...tokenProperties,
     },
-    pricingSchema: {
-      terms: [
-        { id: 'base', op: 'add', const: base },
-        { id: 'inputTokens', op: 'add', perUnit: { param: 'inputTokens', unitCost: inputPerK, divisor: 1000 } },
-        { id: 'outputTokens', op: 'add', perUnit: { param: 'outputTokens', unitCost: outputPerK, divisor: 1000 } },
-      ],
-    },
-  };
-}
-
-const chatReasoning: ModelPreset = (() => {
-  const preset = chatPreset(10, 3, 15);
-  return {
-    paramsSchema: {
-      ...preset.paramsSchema,
-      properties: {
-        ...preset.paramsSchema.properties,
-        reasoning: { type: 'boolean', default: true, 'x-ui': { control: 'switch', labelKey: 'pricing.params.reasoning', order: 30 } },
-      },
-    },
-    pricingSchema: {
-      terms: [
-        ...preset.pricingSchema.terms,
-        { id: 'reasoning', op: 'mul', const: 1.2, when: { all: [{ param: 'reasoning', op: 'eq', value: true }] } },
-      ],
-    },
-  };
-})();
+  },
+  pricingSchema: {
+    terms: [
+      // base: 0 不是可省略的装饰——validatePricingSchema 要求首项是无 when 的
+      // const add，因为累加器从 0 起步，mul 作用在 0 上恒为 0；table/perUnit
+      // 首项还可能因查表未命中/参数缺失被跳过。const 0 是唯一总能兜住的首项。
+      { id: 'base', op: 'add', const: 0 },
+      // 费率 1 / 5 沿用旧 chat_standard 档，只是个占位继承值。
+      // 各模型单独配费率是后续工作——gpt-5.5 不该和 kimi 同价。
+      { id: 'inputTokens', op: 'add', perUnit: { param: 'inputTokens', unitCost: 1, divisor: 1000 } },
+      { id: 'outputTokens', op: 'add', perUnit: { param: 'outputTokens', unitCost: 5, divisor: 1000 } },
+    ],
+  },
+};
 
 const imagePreset: ModelPreset = {
   paramsSchema: {
@@ -106,9 +98,7 @@ const videoPreset: ModelPreset = {
 };
 
 export const MODEL_PRESETS: Record<ModelPresetKey, ModelPreset> = {
-  chat_fast: chatPreset(1, 0.5, 2),
-  chat_standard: chatPreset(3, 1, 5),
-  chat_reasoning: chatReasoning,
+  text: textPreset,
   image: imagePreset,
   video: videoPreset,
 };
@@ -119,20 +109,38 @@ export interface TaskPreset {
   taskType: string;
   name: string;
   category: TaskCategory;
-  /** 任务侧固定开销。求值输入是 usage（toolCalls / mcpCalls / ...），不是模型参数。 */
+  /**
+   * 任务侧固定开销。求值输入是 usage（toolCalls / mcpCalls / ...），不是模型参数。
+   * 数值取自旧 seed（services/api/scripts/ensure-pricing-rules.ts）的 base 组件。
+   *
+   * null 与「schema 里一个 const 0 的 term」在 quoteTask() 眼里等价——taskFixedSchema
+   * 缺省时按 total: 0 处理。这里选择用 null 表示「该任务在旧规则里根本没有 base
+   * 组件」（image_generation / video_generation），而不是编一个恒为 0 的 term
+   * 假装存在过这样一笔费用；有非零固定费的任务一律显式给 schema，哪怕将来某个
+   * 新任务的固定费恰好也是 0，也应该给它一个 const 0 的 schema 而非 null——
+   * 那样 breakdown 里才看得见「这个任务确实评估过固定费，只是当前是 0」。
+   * 但现有 9 个任务里唯二的 0 都对应「旧规则从未有 base 组件」，所以两者都用 null。
+   */
   fixedCostSchema: PricingSchema | null;
+  /** 该任务当前是否可用。无可用模型可绑的任务必须置 false（spec §3.1.1.7）。 */
+  isActive: boolean;
   /** 该任务默认绑定哪些模型 preset。seed 据此建 task_model_bindings。 */
   modelPresets: ModelPresetKey[];
 }
 
+/** 任务侧固定费 schema 的唯一形状：一个无条件的 const add 项。 */
+function fixedFee(amount: number): PricingSchema {
+  return { terms: [{ id: 'taskBase', op: 'add', const: amount }] };
+}
+
 export const TASK_PRESETS: TaskPreset[] = [
-  { taskType: 'chat_message_fast', name: '快速对话', category: 'chat', fixedCostSchema: null, modelPresets: ['chat_fast'] },
-  { taskType: 'chat_message_standard', name: '普通对话', category: 'chat', fixedCostSchema: null, modelPresets: ['chat_standard'] },
-  { taskType: 'chat_message_reasoning', name: '深度思考对话', category: 'chat', fixedCostSchema: null, modelPresets: ['chat_reasoning'] },
-  { taskType: 'image_generation', name: '图片生成', category: 'image', fixedCostSchema: null, modelPresets: ['image'] },
-  { taskType: 'video_generation', name: '视频生成', category: 'video', fixedCostSchema: null, modelPresets: ['video'] },
-  { taskType: 'prompt_optimize_generation', name: '图片工作台 Prompt 优化', category: 'prompt', fixedCostSchema: null, modelPresets: ['chat_fast'] },
-  { taskType: 'video_template_optimize', name: '视频模板 Prompt 优化', category: 'prompt', fixedCostSchema: null, modelPresets: ['chat_fast'] },
-  { taskType: 'video_storyboard_optimize', name: '视频分镜优化', category: 'prompt', fixedCostSchema: null, modelPresets: ['chat_fast'] },
-  { taskType: 'prompt_optimize_pro', name: 'Artifact 文档 AI 优化', category: 'prompt', fixedCostSchema: null, modelPresets: ['chat_fast'] },
+  { taskType: 'chat_message_fast', name: '快速对话', category: 'chat', fixedCostSchema: fixedFee(1), isActive: false, modelPresets: ['text'] },
+  { taskType: 'chat_message_standard', name: '普通对话', category: 'chat', fixedCostSchema: fixedFee(3), isActive: true, modelPresets: ['text'] },
+  { taskType: 'chat_message_reasoning', name: '深度思考对话', category: 'chat', fixedCostSchema: fixedFee(10), isActive: false, modelPresets: ['text'] },
+  { taskType: 'image_generation', name: '图片生成', category: 'image', fixedCostSchema: null, isActive: true, modelPresets: ['image'] },
+  { taskType: 'video_generation', name: '视频生成', category: 'video', fixedCostSchema: null, isActive: true, modelPresets: ['video'] },
+  { taskType: 'prompt_optimize_generation', name: '图片工作台 Prompt 优化', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
+  { taskType: 'video_template_optimize', name: '视频模板 Prompt 优化', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
+  { taskType: 'video_storyboard_optimize', name: '视频分镜优化', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
+  { taskType: 'prompt_optimize_pro', name: 'Artifact 文档 AI 优化', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
 ];
