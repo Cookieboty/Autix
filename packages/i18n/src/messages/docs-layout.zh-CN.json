@@ -1,0 +1,43 @@
+{
+  "nav": [
+    {
+      "label": "快速开始",
+      "href": "/docs"
+    },
+    {
+      "label": "平台指南",
+      "children": [
+        {
+          "label": "工作流概述",
+          "href": "/docs/workflow"
+        },
+        {
+          "label": "模板系统",
+          "href": "/docs/templates"
+        },
+        {
+          "label": "积分与套餐",
+          "href": "/docs/pricing"
+        },
+        {
+          "label": "作品管理",
+          "href": "/docs/gallery"
+        }
+      ]
+    },
+    {
+      "label": "常见问题",
+      "href": "/docs/faq"
+    },
+    {
+      "label": "更新日志",
+      "href": "/docs/changelog"
+    }
+  ],
+  "ui": {
+    "siteTitle": "Amux Studio Docs",
+    "backToHome": "返回首页",
+    "lightMode": "浅色模式",
+    "darkMode": "深色模式"
+  }
+}

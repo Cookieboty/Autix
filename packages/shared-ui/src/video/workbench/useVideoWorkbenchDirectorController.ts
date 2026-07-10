@@ -188,7 +188,7 @@ export function useVideoWorkbenchDirectorController({
         const result = await runDirectorMessage(
           message,
           storyboardPromptOptimized,
-          `AI 优化整片提示词：\n${prompt}`,
+          `AI optimize full-video prompt:\n${prompt}`,
           'video_storyboard_optimize',
         );
         const optimizedPrompt = extractStoryboardPromptFromDirectorContent(result?.content);
@@ -213,7 +213,7 @@ export function useVideoWorkbenchDirectorController({
       await runDirectorMessage(
         message,
         videoPromptOptimized,
-        `AI 优化当前视频提示词：\n${prompt}`,
+        `AI optimize current video prompt:\n${prompt}`,
         'video_template_optimize',
       );
       toast.success(videoPromptOptimized);
@@ -276,7 +276,7 @@ export function useVideoWorkbenchDirectorController({
       const result = await runDirectorMessage(
         message,
         storyboardGenerated(targetCount),
-        `生成 ${targetCount} 个分镜脚本：\n${prompt}`,
+        `Generate ${targetCount} storyboard clips:\n${prompt}`,
         'video_storyboard_optimize',
       );
       if (result) {

@@ -10,7 +10,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const t = await getTranslations('publicGrowth.metadata');
+  const t = await getTranslations({ locale, namespace: 'publicGrowth.metadata' });
   const name = slug.replaceAll('-', ' ');
   return {
     title: t('presetTitle', { name }),

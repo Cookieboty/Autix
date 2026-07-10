@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   ArrowDown,
   ArrowUp,
@@ -53,10 +54,10 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '..
 
 const DEFAULT_PLACEMENT = 'home_hero';
 
-const CANDIDATE_RESOURCE_TYPES: { value: FeaturedSlotCandidateResourceType; label: string }[] = [
-  { value: 'IMAGE_TEMPLATE', label: '图片模板' },
-  { value: 'VIDEO_TEMPLATE', label: '视频模板' },
-  { value: 'GALLERY_POST', label: '广场作品' },
+const CANDIDATE_RESOURCE_TYPES: { value: FeaturedSlotCandidateResourceType; labelKey: string }[] = [
+  { value: 'IMAGE_TEMPLATE', labelKey: 'resourceTypes.IMAGE_TEMPLATE' },
+  { value: 'VIDEO_TEMPLATE', labelKey: 'resourceTypes.VIDEO_TEMPLATE' },
+  { value: 'GALLERY_POST', labelKey: 'resourceTypes.GALLERY_POST' },
 ];
 
 type SlotForm = {
@@ -134,6 +135,7 @@ export interface FeaturedSlotsAdminViewProps {
 export function FeaturedSlotsAdminView({
   placement = DEFAULT_PLACEMENT,
 }: FeaturedSlotsAdminViewProps) {
+  const t = useTranslations('adminOperations');
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; id?: string; form: SlotForm } | null>(
     null,
   );
@@ -146,7 +148,7 @@ export function FeaturedSlotsAdminView({
       setModal(null);
       setError(null);
     },
-    onError: (err) => setError(errorMessage(err, '操作失败')),
+    onError: (err) => setError(errorMessage(err, t('common.operationFailed'))),
   });
 
   const { data: candidates, isFetching: candidatesLoading } = useFeaturedSlotCandidates(
@@ -192,7 +194,7 @@ export function FeaturedSlotsAdminView({
 
   const handleDelete = (slot: FeaturedSlot) => {
     const label = slot.overrideTitle ?? slot.resourceId ?? slot.id;
-    if (!window.confirm(`确定要删除运营位《${label}》吗？`)) return;
+    if (!window.confirm(t('featured.deleteConfirm', { label }))) return;
     remove.mutate(slot.id);
   };
 
@@ -212,19 +214,19 @@ export function FeaturedSlotsAdminView({
     <div className="flex h-full flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-base font-semibold text-foreground">运营位编排</h1>
+          <h1 className="text-base font-semibold text-foreground">{t('featured.title')}</h1>
           <p className="text-xs text-muted-foreground">
-            管理首页 Hero 展示位（{placement}），override 仅影响展示，不修改来源资源本身。
+            {t('featured.description', { placement })}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="cursor-pointer" onClick={() => refetch()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            刷新
+            {t('common.refresh')}
           </Button>
           <Button size="sm" className="cursor-pointer" onClick={openCreate}>
             <Plus className="h-3.5 w-3.5" />
-            新增运营位
+            {t('featured.add')}
           </Button>
         </div>
       </div>
@@ -238,7 +240,7 @@ export function FeaturedSlotsAdminView({
       <div className="flex-1 overflow-y-auto rounded-lg border bg-surface">
         {loading && items.length === 0 ? (
           <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-            加载中…
+            {t('common.loading')}
           </div>
         ) : items.length === 0 ? (
           <Empty>
@@ -246,19 +248,19 @@ export function FeaturedSlotsAdminView({
               <EmptyMedia variant="icon">
                 <ImageOff />
               </EmptyMedia>
-              <EmptyTitle>暂无运营位</EmptyTitle>
-              <EmptyDescription>点击右上角“新增运营位”开始编排首页展示内容。</EmptyDescription>
+              <EmptyTitle>{t('featured.emptyTitle')}</EmptyTitle>
+              <EmptyDescription>{t('featured.emptyDescription')}</EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-20">顺序</TableHead>
-                <TableHead>展示内容</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>启用</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead className="w-20">{t('featured.columns.order')}</TableHead>
+                <TableHead>{t('featured.columns.content')}</TableHead>
+                <TableHead>{t('featured.columns.type')}</TableHead>
+                <TableHead>{t('featured.columns.enabled')}</TableHead>
+                <TableHead className="text-right">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -303,7 +305,7 @@ export function FeaturedSlotsAdminView({
                         )}
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium text-foreground">
-                            {slot.overrideTitle || (slot.resourceId ? `资源 ${slot.resourceId}` : '未命名运营位')}
+                            {slot.overrideTitle || (slot.resourceId ? t('featured.resourceFallback', { id: slot.resourceId }) : t('featured.untitled'))}
                           </div>
                           {slot.kind === 'RESOURCE' && (
                             <div className="truncate text-xs text-muted-foreground">
@@ -334,7 +336,7 @@ export function FeaturedSlotsAdminView({
                           onClick={() => openEdit(slot)}
                         >
                           <Pencil className="h-3.5 w-3.5 mr-1" />
-                          编辑
+                          {t('common.edit')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -344,7 +346,7 @@ export function FeaturedSlotsAdminView({
                           onClick={() => handleDelete(slot)}
                         >
                           <Trash2 className="h-3.5 w-3.5 mr-1" />
-                          删除
+                          {t('common.delete')}
                         </Button>
                       </div>
                     </TableCell>
@@ -358,11 +360,11 @@ export function FeaturedSlotsAdminView({
 
       <Dialog open={!!modal} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{modal?.mode === 'create' ? '新增运营位' : '编辑运营位'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{modal?.mode === 'create' ? t('featured.add') : t('featured.edit')}</DialogTitle></DialogHeader>
           {modal && (
             <DialogBody className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto">
               <div>
-                <Label className="mb-1.5">类型</Label>
+                <Label className="mb-1.5">{t('featured.form.type')}</Label>
                 <Select
                   value={modal.form.kind}
                   onValueChange={(value) =>
@@ -373,15 +375,15 @@ export function FeaturedSlotsAdminView({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CUSTOM">CUSTOM（自定义内容）</SelectItem>
-                    <SelectItem value="RESOURCE">RESOURCE（引用资源）</SelectItem>
+                    <SelectItem value="CUSTOM">{t('featured.kind.custom')}</SelectItem>
+                    <SelectItem value="RESOURCE">{t('featured.kind.resource')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {modal.form.kind === 'RESOURCE' && (
                 <div className="flex flex-col gap-2 rounded-md border p-3">
-                  <Label className="mb-1">资源类型</Label>
+                  <Label className="mb-1">{t('featured.form.resourceType')}</Label>
                   <Select
                     value={modal.form.resourceType}
                     onValueChange={(value) =>
@@ -402,23 +404,23 @@ export function FeaturedSlotsAdminView({
                     <SelectContent>
                       {CANDIDATE_RESOURCE_TYPES.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
+                          {t(opt.labelKey)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
 
-                  <Label className="mb-1 mt-2">搜索候选资源</Label>
+                  <Label className="mb-1 mt-2">{t('featured.form.searchCandidates')}</Label>
                   <Input
                     value={candidateQuery}
                     onChange={(e) => setCandidateQuery(e.target.value)}
-                    placeholder="按标题搜索"
+                    placeholder={t('featured.form.searchPlaceholder')}
                   />
                   <div className="max-h-40 overflow-y-auto rounded-md border">
                     {candidatesLoading ? (
-                      <div className="p-3 text-xs text-muted-foreground">搜索中…</div>
+                      <div className="p-3 text-xs text-muted-foreground">{t('featured.searching')}</div>
                     ) : (candidates ?? []).length === 0 ? (
-                      <div className="p-3 text-xs text-muted-foreground">无匹配候选资源</div>
+                      <div className="p-3 text-xs text-muted-foreground">{t('featured.noCandidates')}</div>
                     ) : (
                       (candidates ?? []).map((c) => (
                         <button
@@ -435,14 +437,14 @@ export function FeaturedSlotsAdminView({
                           }
                         >
                           <span className="truncate">{c.title}</span>
-                          {modal.form.resourceId === c.id && <Badge variant="secondary">已选</Badge>}
+                          {modal.form.resourceId === c.id && <Badge variant="secondary">{t('featured.selected')}</Badge>}
                         </button>
                       ))
                     )}
                   </div>
                   {modal.form.resourceId && (
                     <div className="text-xs text-muted-foreground">
-                      已选资源 ID：{modal.form.resourceId}
+                      {t('featured.selectedResourceId', { id: modal.form.resourceId })}
                     </div>
                   )}
                 </div>
@@ -450,17 +452,17 @@ export function FeaturedSlotsAdminView({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="mb-1.5">标题（覆盖）</Label>
+                  <Label className="mb-1.5">{t('featured.form.overrideTitle')}</Label>
                   <Input
                     value={modal.form.overrideTitle}
                     onChange={(e) =>
                       setModal({ ...modal, form: { ...modal.form, overrideTitle: e.target.value } })
                     }
-                    placeholder="展示标题"
+                    placeholder={t('featured.form.titlePlaceholder')}
                   />
                 </div>
                 <div>
-                  <Label className="mb-1.5">封面图片 URL</Label>
+                  <Label className="mb-1.5">{t('featured.form.coverImage')}</Label>
                   <Input
                     value={modal.form.overrideCoverImage}
                     onChange={(e) =>
@@ -473,7 +475,7 @@ export function FeaturedSlotsAdminView({
                   />
                 </div>
                 <div>
-                  <Label className="mb-1.5">封面视频 URL</Label>
+                  <Label className="mb-1.5">{t('featured.form.coverVideo')}</Label>
                   <Input
                     value={modal.form.overrideCoverVideo}
                     onChange={(e) =>
@@ -486,17 +488,17 @@ export function FeaturedSlotsAdminView({
                   />
                 </div>
                 <div>
-                  <Label className="mb-1.5">CTA 文案</Label>
+                  <Label className="mb-1.5">{t('featured.form.ctaText')}</Label>
                   <Input
                     value={modal.form.overrideCtaText}
                     onChange={(e) =>
                       setModal({ ...modal, form: { ...modal.form, overrideCtaText: e.target.value } })
                     }
-                    placeholder="立即体验"
+                    placeholder={t('featured.form.ctaPlaceholder')}
                   />
                 </div>
                 <div className="col-span-2">
-                  <Label className="mb-1.5">CTA 跳转链接</Label>
+                  <Label className="mb-1.5">{t('featured.form.ctaHref')}</Label>
                   <Input
                     value={modal.form.overrideCtaHref}
                     onChange={(e) =>
@@ -506,7 +508,7 @@ export function FeaturedSlotsAdminView({
                   />
                 </div>
                 <div className="col-span-2">
-                  <Label className="mb-1.5">描述（覆盖）</Label>
+                  <Label className="mb-1.5">{t('featured.form.overrideDescription')}</Label>
                   <Textarea
                     value={modal.form.overrideDescription}
                     onChange={(e) =>
@@ -521,7 +523,7 @@ export function FeaturedSlotsAdminView({
               </div>
 
               <div className="flex items-center justify-between rounded-md border p-3">
-                <Label>启用该运营位</Label>
+                <Label>{t('featured.form.enableSlot')}</Label>
                 <Switch
                   checked={modal.form.isEnabled}
                   onCheckedChange={(checked) =>
@@ -531,20 +533,20 @@ export function FeaturedSlotsAdminView({
               </div>
 
               <p className="text-xs text-muted-foreground">
-                提示：以上覆盖字段仅影响该运营位的展示内容，不会修改所引用的来源资源本身。
+                {t('featured.form.hint')}
               </p>
             </DialogBody>
           )}
           <DialogFooter>
             <Button variant="outline" className="cursor-pointer" onClick={closeModal}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               className="cursor-pointer"
               disabled={saving || (modal?.form.kind === 'RESOURCE' && !modal.form.resourceId)}
               onClick={handleSave}
             >
-              {saving ? '保存中…' : '保存'}
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -31,25 +31,25 @@ export function MetricsBar({ type, id }: MetricsBarProps) {
     {
       key: 'like',
       icon: <Heart className="w-4 h-4" />,
-      label: '点赞',
+      label: 'Likes',
       value: data?.likeCount ?? 0,
     },
     {
       key: 'favorite',
       icon: <Bookmark className="w-4 h-4" />,
-      label: '收藏',
+      label: 'Favorites',
       value: data?.favoriteCount ?? 0,
     },
     {
       key: 'reference',
       icon: <Quote className="w-4 h-4" />,
-      label: '引用',
+      label: 'References',
       value: data?.referenceCount ?? 0,
     },
     {
       key: 'share',
       icon: <Share2 className="w-4 h-4" />,
-      label: '分享',
+      label: 'Shares',
       value: data?.shareCount ?? 0,
     },
   ];

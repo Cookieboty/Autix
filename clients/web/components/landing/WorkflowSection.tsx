@@ -2,11 +2,12 @@
 
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, MessageSquareText, Play, Workflow } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { VIDEO_DEMO_CDN } from '@/lib/constants';
 const STEP_KEYS = ['step1', 'step2', 'step3', 'step4'] as const;
+const SUMMARY_KEYS = ['Requirement', 'Assets', 'Delivery'] as const;
 
 export function WorkflowSection() {
   const t = useTranslations('landing');
@@ -31,16 +32,16 @@ export function WorkflowSection() {
               {t('workflowTitle')}
             </h2>
             <p className="mt-6 max-w-xl text-base leading-8 text-white/64 md:text-lg">
-              {t('workflowDesc')}。模板、Chat、Agents 和 Workflow 串成一条连续链路，每一次生成都能继续编辑、复用和交付。
+              {t('workflowDesc')} {t('workflowDescSuffix')}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               {chatEnabled && (
                 <Link href="/chat" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.03]">
-                  打开工作台 <ArrowRight className="size-4" />
+                  {t('workflowOpenWorkspace')} <ArrowRight className="size-4" />
                 </Link>
               )}
               <Link href="/video" className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-5 py-3 text-sm font-medium text-white backdrop-blur-md transition-transform hover:scale-[1.03]">
-                查看视频链路 <Play className="size-4" />
+                {t('workflowViewVideoFlow')} <Play className="size-4" />
               </Link>
             </div>
           </motion.div>
@@ -70,7 +71,7 @@ export function WorkflowSection() {
                   <div className="absolute bottom-4 left-4 right-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-white/50">Preview</p>
                     <p className="mt-2 text-2xl font-bold">Video + Product</p>
-                    <p className="mt-2 text-sm leading-6 text-white/64">同一个会话里生成文档、界面、素材与视频版本</p>
+                    <p className="mt-2 text-sm leading-6 text-white/64">{t('workflowPreviewDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -106,7 +107,7 @@ export function WorkflowSection() {
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-white">Chat keeps context</p>
-                      <p className="mt-2 text-xs leading-5 text-white/56">每一次反馈都会进入当前项目上下文，下一轮生成直接沿用。</p>
+                      <p className="mt-2 text-xs leading-5 text-white/56">{t('workflowContextDesc')}</p>
                     </div>
                   </div>
                 </div>
@@ -116,11 +117,11 @@ export function WorkflowSection() {
         </div>
 
         <div className="mt-10 grid gap-3 md:grid-cols-3">
-          {[
-            ['需求', '结构化成 PRD 和任务'],
-            ['素材', '图片、视频、音频统一管理'],
-            ['交付', '作品、版本、记录自动归档'],
-          ].map(([title, desc]) => (
+          {SUMMARY_KEYS.map((key) => {
+            const title = t(`workflowSummary${key}Title`);
+            const desc = t(`workflowSummary${key}Desc`);
+
+            return (
             <div key={title} className="flex items-center gap-3 rounded-lg border border-white/12 bg-white/[0.065] px-4 py-3 text-white/72 backdrop-blur-xl">
               <CheckCircle2 className="size-4 shrink-0 text-white" />
               <div>
@@ -128,7 +129,8 @@ export function WorkflowSection() {
                 <p className="text-xs text-white/48">{desc}</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

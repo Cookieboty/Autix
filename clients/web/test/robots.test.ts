@@ -39,8 +39,10 @@ beforeAll(() => {
 describe('robots', () => {
   it('每个认证段的裸路径与全部 6 个 locale 前缀变体都被 disallow', () => {
     for (const segment of AUTHED_SEGMENTS) {
+      expect(disallow).toContain(`/${segment}`);
       expect(disallow).toContain(`/${segment}/`);
       for (const locale of PREFIXED_LOCALES) {
+        expect(disallow).toContain(`/${locale}/${segment}`);
         expect(disallow).toContain(`/${locale}/${segment}/`);
       }
     }

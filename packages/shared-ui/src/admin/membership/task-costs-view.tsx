@@ -307,7 +307,7 @@ export function AdminTaskCostsView() {
         tAdmin={t}
       />
 
-      <TaskCostsBulkExcel systemModels={systemModels} membershipLevels={membershipLevels} />
+      <TaskCostsBulkExcel systemModels={systemModels} membershipLevels={membershipLevels} tAdmin={t} />
 
       <div className="flex-1 overflow-hidden">
         {loading ? (

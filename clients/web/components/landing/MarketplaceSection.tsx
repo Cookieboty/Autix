@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
 import {
   // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
@@ -26,7 +26,7 @@ interface CategoryCard {
   icon: LucideIcon;
   previewType: 'image' | 'video';
   previewUrl: string;
-  meta: string[];
+  metaKeys: string[];
   accent: string;
 }
 
@@ -57,7 +57,7 @@ const CATEGORIES: CategoryCard[] = [
     icon: ImageIcon,
     previewType: 'image',
     previewUrl: 'https://images.unsplash.com/photo-1633177317976-3f9bc45e1d1d?w=900&h=620&fit=crop',
-    meta: ['封面', '电商', '海报'],
+    metaKeys: ['mktImageMetaCover', 'mktImageMetaCommerce', 'mktImageMetaPoster'],
     accent: '#38bdf8',
   },
   {
@@ -67,15 +67,15 @@ const CATEGORIES: CategoryCard[] = [
     icon: Video,
     previewType: 'video',
     previewUrl: `${VIDEO_DEMO_CDN}/1770627047985_WYEvEd7j.mp4`,
-    meta: ['短片', '营销', '分镜'],
+    metaKeys: ['mktVideoMetaShort', 'mktVideoMetaMarketing', 'mktVideoMetaStoryboard'],
     accent: '#a78bfa',
   },
 ];
 
 const MARKETPLACE_STEPS = [
-  { icon: Layers3, label: '选模板' },
-  { icon: Coins, label: '会员积分消耗' },
-  { icon: Check, label: '激活到会话' },
+  { icon: Layers3, labelKey: 'mktStepTemplate' },
+  { icon: Coins, labelKey: 'mktStepPoints' },
+  { icon: Check, labelKey: 'mktStepActivate' },
 ];
 
 const containerVariants = {
@@ -147,13 +147,13 @@ export function MarketplaceSection() {
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 0.45, delay: 0.05 }}
         >
-          {MARKETPLACE_STEPS.map(({ icon: Icon, label }) => (
+          {MARKETPLACE_STEPS.map(({ icon: Icon, labelKey }) => (
             <div
-              key={label}
+              key={labelKey}
               className="flex items-center justify-center gap-2 border-white/10 px-4 py-3 text-xs font-medium text-white/72 sm:border-r last:sm:border-r-0"
             >
               <Icon className="size-4 text-white" />
-              {label}
+              {t(labelKey)}
             </div>
           ))}
         </motion.div>
@@ -206,12 +206,12 @@ export function MarketplaceSection() {
                     </div>
                     <div className="absolute bottom-4 left-4 right-4">
                       <div className="mb-3 flex flex-wrap gap-1.5">
-                        {c.meta.map((item) => (
+                        {c.metaKeys.map((item) => (
                           <span
                             key={item}
                             className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[11px] text-white/80"
                           >
-                            {item}
+                            {t(item)}
                           </span>
                         ))}
                       </div>

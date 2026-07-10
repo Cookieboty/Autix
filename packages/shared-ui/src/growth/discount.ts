@@ -21,7 +21,7 @@ export function formatDiscountOffLabel() {
 }
 
 export function formatChineseDiscountLabel() {
-  return `${getChineseDiscountTenths()} 折`;
+  return `${getChineseDiscountTenths()} zhe`;
 }
 
 export function buildDiscountTranslationValues() {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from 'next-themes';
+import { useTheme } from '../../theme';
 import { useTranslations } from 'next-intl';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '../../ui/button';

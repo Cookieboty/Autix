@@ -22,7 +22,7 @@ function errorMessage(e: unknown): string {
     ?.data?.message;
   if (typeof data === 'string') return data;
   if (e instanceof Error && e.message) return e.message;
-  return '加载失败,请稍后重试';
+  return 'Loading failed. Please try again later.';
 }
 
 export const useMarketplaceStore = create<MarketplaceState>((set) => ({

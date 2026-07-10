@@ -396,7 +396,7 @@ export function readVideoComposition(
   if (!target) {
     return fallbackComposition(
       videoNodeId,
-      issue('missing-video-node', 'blocking', [videoNodeId], '找不到目标视频节点。'),
+      issue('missing-video-node', 'blocking', [videoNodeId], 'Target video node was not found.'),
     );
   }
 
@@ -460,7 +460,7 @@ export function readVideoComposition(
       'empty-prompt',
       mode === 'text_to_video' ? 'blocking' : 'warning',
       [videoNodeId],
-      mode === 'text_to_video' ? '文生视频需要填写 prompt。' : '当前视频节点没有 prompt,仍可用图片材料继续。',
+      mode === 'text_to_video' ? 'Text-to-video requires a prompt.' : 'This video node has no prompt, but image materials can still be used.',
     ));
   }
 
@@ -470,7 +470,7 @@ export function readVideoComposition(
       'text-node-compatibility',
       'warning',
       unfoldedTextIds,
-      '文本节点未能唯一归属到两张图片之间,未参与分镜;分镜主路径请用图与图之间的连接线描述。',
+      'A text node could not be assigned uniquely between two images, so it was not used in the storyboard. Describe the main storyboard path with image-to-image links.',
     ));
   }
 
@@ -483,7 +483,7 @@ export function readVideoComposition(
   if (mode === 'image_to_video') {
     firstFrameUrl = assetUrlOf(byId.get(nodeData.firstFrameElementId ?? '')) ?? images[0]?.url;
     if (!firstFrameUrl) {
-      issues.push(issue('missing-first-frame', 'blocking', [videoNodeId], '图生视频需要一张首帧图片。'));
+      issues.push(issue('missing-first-frame', 'blocking', [videoNodeId], 'Image-to-video requires a first-frame image.'));
     }
   }
 
@@ -491,7 +491,7 @@ export function readVideoComposition(
     const referenceIds = (nodeData.referenceElementIds?.length ?? 0) > 0 ? nodeData.referenceElementIds ?? [] : imageIds;
     referenceUrls = orderedImages(referenceIds, byId).map((item) => item.url);
     if (referenceUrls.length === 0) {
-      issues.push(issue('missing-reference-images', 'blocking', [videoNodeId], '参考图模式需要至少一张图片。'));
+      issues.push(issue('missing-reference-images', 'blocking', [videoNodeId], 'Reference image mode requires at least one image.'));
     }
   }
 
@@ -514,7 +514,7 @@ export function readVideoComposition(
           'missing-first-last-link',
           'blocking',
           [videoNodeId, ...spatial.slice(0, 2)],
-          '首尾帧需要一条无描述的图与图连接线。',
+          'First/last frame mode requires an image-to-image link without a description.',
         ));
       }
     }
@@ -533,12 +533,12 @@ export function readVideoComposition(
     }));
 
     if (shots.length === 0) {
-      issues.push(issue('storyboard-no-shots', 'blocking', [videoNodeId], '分镜模式需要至少一条带描述的图与图连接线。'));
+      issues.push(issue('storyboard-no-shots', 'blocking', [videoNodeId], 'Storyboard mode requires at least one described image-to-image link.'));
     }
 
     for (const shot of shots) {
       if (!shot.prompt) {
-        issues.push(issue('empty-shot-prompt', 'blocking', [shot.linkElementId], '分镜连接线需要填写描述。'));
+        issues.push(issue('empty-shot-prompt', 'blocking', [shot.linkElementId], 'Storyboard links require descriptions.'));
       }
     }
 
@@ -553,22 +553,22 @@ export function readVideoComposition(
       ...[...incomingCounts.entries()].filter(([, count]) => count > 1).map(([id]) => id),
     ]);
     if (branchIds.length > 0) {
-      issues.push(issue('storyboard-branch', 'blocking', branchIds, '分镜存在分支,需要在线性时间线条中确认或拆分。'));
+      issues.push(issue('storyboard-branch', 'blocking', branchIds, 'The storyboard has branches. Confirm or split it into a linear timeline.'));
     }
     if (hasShotCycle(shotEdges)) {
-      issues.push(issue('storyboard-cycle', 'blocking', shotEdges.map((edge) => edge.id), '分镜连接形成了环,需要断开后再生成。'));
+      issues.push(issue('storyboard-cycle', 'blocking', shotEdges.map((edge) => edge.id), 'Storyboard links form a cycle. Break the cycle before generating.'));
     }
 
     for (const edge of shotEdges) {
       const sinks = reachableVideoSinks(edge.to, edges, byId);
       if (sinks.size === 0) {
-        issues.push(issue('shot-link-dangling', 'warning', [edge.id], '这条分镜线没有汇入任何视频节点,不会参与生成。'));
+        issues.push(issue('shot-link-dangling', 'warning', [edge.id], 'This storyboard link does not flow into any video node, so it will not be generated.'));
       } else if (!sinks.has(videoNodeId) || sinks.size > 1) {
         issues.push(issue(
           'shot-link-multi-sink',
           'blocking',
           [edge.id, ...sinks],
-          '这条分镜线下游可达多个视频节点,需要复制/拆分或从某个节点时间线条显式收编。',
+          'This storyboard link reaches multiple downstream video nodes. Copy or split it, or explicitly include it in one node timeline.',
         ));
       }
     }

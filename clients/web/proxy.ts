@@ -2,6 +2,7 @@ import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routing } from './i18n/routing';
 import { resolveProxyAction } from './lib/proxy-handler';
+import { isNoindexPathname } from './lib/i18n/route-policy';
 
 /**
  * BFF 反向代理 + @handle 虚荣链接 + next-intl locale 路由。
@@ -19,6 +20,13 @@ function getApiOrigin(): string {
     .replace(/\/api$/, '');
 }
 
+function withRobotsHeader(req: NextRequest, res: NextResponse): NextResponse {
+  if (isNoindexPathname(req.nextUrl.pathname)) {
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  }
+  return res;
+}
+
 export default function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const localeCookie = req.cookies.get('NEXT_LOCALE')?.value;
@@ -26,7 +34,7 @@ export default function proxy(req: NextRequest) {
 
   switch (action.type) {
     case 'rewrite':
-      return NextResponse.rewrite(new URL(action.url, req.url));
+      return withRobotsHeader(req, NextResponse.rewrite(new URL(action.url, req.url)));
     case 'redirect': {
       const res = NextResponse.redirect(new URL(action.url, req.url), action.status);
       // 302（根路径按 cookie 跳转）的决策依赖请求 cookie，绝不能被共享缓存存储——
@@ -35,10 +43,10 @@ export default function proxy(req: NextRequest) {
       if (action.status === 302) {
         res.headers.set('Cache-Control', 'private, no-store');
       }
-      return res;
+      return withRobotsHeader(req, res);
     }
     case 'intl':
-      return handleIntl(req);
+      return withRobotsHeader(req, handleIntl(req));
   }
 }
 

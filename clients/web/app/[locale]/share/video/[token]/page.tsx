@@ -11,7 +11,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, token } = await params;
-  const t = await getTranslations('publicGrowth.metadata');
+  const t = await getTranslations({ locale, namespace: 'publicGrowth.metadata' });
   const detail = await getSharedVideoProject(token);
   const image = detail?.thumbnailUrl || detail?.coverImage || undefined;
   const description = detail

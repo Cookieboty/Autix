@@ -11,8 +11,8 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const t = await getTranslations('publicGrowth.metadata');
-  const detail = await getPublicCollection(slug);
+  const t = await getTranslations({ locale, namespace: 'publicGrowth.metadata' });
+  const detail = await getPublicCollection(slug, locale);
   return {
     title: detail
       ? t('collectionTitle', { title: detail.collection.title })
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CommunityCollectionPage({ params }: Props) {
-  const { slug } = await params;
-  const detail = await getPublicCollection(slug);
+  const { locale, slug } = await params;
+  const detail = await getPublicCollection(slug, locale);
   return <CommunityCollectionView detail={detail} />;
 }

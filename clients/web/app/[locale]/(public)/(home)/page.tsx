@@ -9,7 +9,7 @@ export async function generateMetadata({
   params,
 }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations('publicGrowth.metadata.home');
+  const t = await getTranslations({ locale, namespace: 'publicGrowth.metadata.home' });
   return {
     title: t('title'),
     description: t('description'),
@@ -22,6 +22,6 @@ export default async function HomePage({
 }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const home = await getPublicHome();
+  const home = await getPublicHome(locale);
   return <PublicHomeView home={home} />;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useTheme } from 'next-themes';
+import { useTheme } from '../../theme';
 import { useTranslations } from 'next-intl';
 import {
   ChevronsUpDown,
@@ -140,7 +140,7 @@ export function Sidebar({
         ...(!hasRisk
           ? [{
               id: 'fallback-risk',
-              name: '风控管理',
+              name: t('navRiskManagement'),
               path: '/risk',
               icon: 'ShieldAlert',
               sort: 11,
@@ -170,7 +170,7 @@ export function Sidebar({
         ...(!hasSystemPrompts
           ? [{
               id: 'fallback-system-prompts',
-              name: '系统 Prompt',
+              name: t('navSystemPrompts'),
               path: '/prompts',
               icon: 'FileText',
               sort: 11,

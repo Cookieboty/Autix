@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { Menu, X, Sun, Moon, Languages, ChevronDown, ImageIcon, Video, ArrowRight } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@autix/shared-ui/theme';
 import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@autix/shared-store';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
@@ -67,8 +67,8 @@ export function Navbar() {
 
   const docsLocale = language === 'zh-CN' || language === 'zh-TW' ? 'zh-CN' : 'en';
   const NAV_LINKS = [
-    ...(chatEnabled ? [{ label: '专业工作台', href: '/workbench/image' }] : []),
-    { label: '视频创作', href: '/video' },
+    ...(chatEnabled ? [{ label: t('navProfessionalWorkbench'), href: '/workbench/image' }] : []),
+    { label: t('navVideoCreation'), href: '/video' },
     ...(chatEnabled ? [{ label: t('navWorkspace'), href: '/chat' }] : []),
     { label: t('navPricing'), href: '#pricing' },
     { label: t('navDocs'), href: `/${docsLocale}/docs` },

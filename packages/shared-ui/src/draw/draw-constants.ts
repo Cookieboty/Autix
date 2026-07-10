@@ -20,7 +20,12 @@ export const DRAW_COLOR_SWATCHES = [
   '#3b82f6',
   '#a855f7',
 ];
-export const GENERIC_CONVERSATION_TITLES = new Set(['新绘制对话', 'New Conversation', 'Untitled', '绘制对话']);
+export const GENERIC_CONVERSATION_TITLES = new Set([
+  '\u65b0\u7ed8\u5236\u5bf9\u8bdd',
+  'New Conversation',
+  'Untitled',
+  '\u7ed8\u5236\u5bf9\u8bdd',
+]);
 
 export const HIDE_EXCALIDRAW_UI = `
 .draw-canvas .App-menu__left,

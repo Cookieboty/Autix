@@ -13,8 +13,8 @@ export function resolveSiteUrl(): URL {
 
   if (!raw && process.env.NODE_ENV === 'production') {
     throw new Error(
-      'NEXT_PUBLIC_SITE_URL 未设置。生产构建必须提供绝对站点基址，' +
-        '否则 sitemap 与 hreflang 会写入 localhost。',
+      'NEXT_PUBLIC_SITE_URL is not set. Production builds must provide an absolute site URL, ' +
+        'otherwise sitemap and hreflang output will point to localhost.',
     );
   }
 

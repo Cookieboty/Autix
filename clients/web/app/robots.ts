@@ -44,7 +44,9 @@ export default function robots(): MetadataRoute.Robots {
   // Bare path + all 6 locale-prefixed variants, cross-producted so
   // `/ja/chat` etc. are blocked too — generated, not hand-written.
   const disallow = segments.flatMap((segment) => [
+    `/${segment}`,
     `/${segment}/`,
+    ...PREFIXED_LOCALES.map((locale) => `/${locale}/${segment}`),
     ...PREFIXED_LOCALES.map((locale) => `/${locale}/${segment}/`),
   ]);
 

@@ -182,7 +182,7 @@ function resolveModelConfigId(
   opts?: StartVideoCompositionOptions,
 ): string {
   const modelConfigId = opts?.modelConfigId ?? composition.params?.modelConfigId;
-  if (!modelConfigId) throw new Error('缺少视频模型');
+  if (!modelConfigId) throw new Error('Missing video model.');
   return modelConfigId;
 }
 
@@ -205,7 +205,7 @@ function buildSingleClipParams(
 
 function assertCompositionReady(composition: DrawVideoCompositionInput): void {
   const blocking = composition.issues?.find((item) => item.level === 'blocking');
-  if (blocking) throw new Error(blocking.message || blocking.code || '视频生成配置未通过预检');
+  if (blocking) throw new Error(blocking.message || blocking.code || 'Video generation configuration did not pass preflight checks.');
 }
 
 function readProjectClips(response: unknown): VideoProjectClipRecord[] {
@@ -249,7 +249,7 @@ async function addCompositionMaterial(
 
 async function createFirstDrawConversation(): Promise<Conversation> {
   if (!firstDrawConversationInFlight) {
-    firstDrawConversationInFlight = createConversation({ title: '新绘制对话', kind: 'image' })
+    firstDrawConversationInFlight = createConversation({ title: 'New drawing conversation', kind: 'image' })
       .then((res) => res.data)
       .finally(() => {
         firstDrawConversationInFlight = null;
@@ -275,7 +275,7 @@ export const drawBoardActions = {
   },
 
   createConversation: async (title?: string): Promise<Conversation> => {
-    const res = await createConversation({ title: title || '新绘制对话', kind: 'image' });
+    const res = await createConversation({ title: title || 'New drawing conversation', kind: 'image' });
     return res.data;
   },
 
@@ -296,7 +296,7 @@ export const drawBoardActions = {
     const existing = list.data.items.find((board) => board.description === marker);
     if (existing) return existing.id;
     const created = await canvasBoardApi.create({
-      title: conversation.title || '绘制对话',
+      title: conversation.title || 'Drawing conversation',
       description: marker,
     });
     return created.data.board.id;
@@ -389,7 +389,7 @@ export const drawBoardActions = {
       }
     }
     const created = await videoProjectApi.create({
-      title: opts.title || '画布视频',
+      title: opts.title || 'Canvas video',
       standalone: true,
     });
     return { projectId: (created.data as { id: string }).id };
@@ -419,7 +419,7 @@ export const drawBoardActions = {
   }): Promise<{ projectId: string; generationId: string }> => {
     const projectId =
       opts.projectId ??
-      ((await videoProjectApi.create({ title: opts.title || '绘制视频', standalone: true }))
+      ((await videoProjectApi.create({ title: opts.title || 'Drawing video', standalone: true }))
         .data as { id: string }).id;
 
     const clip = (await videoProjectApi.addClip(projectId, {
@@ -468,7 +468,7 @@ export const drawBoardActions = {
     await replaceProjectClips(projectId);
 
     if (composition.mode === 'storyboard') {
-      if (composition.shots.length === 0) throw new Error('分镜模式需要至少一个镜头');
+      if (composition.shots.length === 0) throw new Error('Storyboard mode requires at least one shot.');
 
       // Backend sums per-clip durations for a storyboard; cap the per-shot
       // duration so the total stays within the model/entitlement limit.
@@ -484,7 +484,7 @@ export const drawBoardActions = {
       for (let i = 0; i < composition.shots.length; i += 1) {
         const shot = composition.shots[i];
         const clip = (await videoProjectApi.addClip(projectId, {
-          title: `镜头 ${i + 1}`,
+          title: `Shot ${i + 1}`,
           prompt: shot.prompt,
           params: shotParams,
           chainFromPrev: i > 0,
@@ -500,7 +500,7 @@ export const drawBoardActions = {
 
       const triggered = (await videoProjectApi.generateAll(projectId)).data ?? [];
       const generationId = triggered[0]?.generationId;
-      if (!generationId) throw new Error('分镜生成任务未创建');
+      if (!generationId) throw new Error('Storyboard generation task was not created.');
       return { projectId, generationId };
     }
 
@@ -511,18 +511,18 @@ export const drawBoardActions = {
     }).then((res) => res.data as { id: string }));
 
     if (composition.mode === 'image_to_video') {
-      if (!composition.firstFrameUrl) throw new Error('图生视频需要首帧图片');
+      if (!composition.firstFrameUrl) throw new Error('Image-to-video mode requires a first-frame image.');
       await addCompositionMaterial(projectId, clip.id, 'first_frame', composition.firstFrameUrl, uploadedUrls);
     }
 
     if (composition.mode === 'first_last_frame') {
-      if (!composition.firstFrameUrl || !composition.lastFrameUrl) throw new Error('首尾帧模式需要首帧和尾帧图片');
+      if (!composition.firstFrameUrl || !composition.lastFrameUrl) throw new Error('First/last-frame mode requires both first-frame and last-frame images.');
       await addCompositionMaterial(projectId, clip.id, 'first_frame', composition.firstFrameUrl, uploadedUrls);
       await addCompositionMaterial(projectId, clip.id, 'last_frame', composition.lastFrameUrl, uploadedUrls);
     }
 
     if (composition.mode === 'reference') {
-      if (composition.referenceUrls.length === 0) throw new Error('参考图模式需要至少一张图片');
+      if (composition.referenceUrls.length === 0) throw new Error('Reference-image mode requires at least one image.');
       for (const url of composition.referenceUrls) {
         await addCompositionMaterial(projectId, clip.id, 'reference_image', url, uploadedUrls);
       }
@@ -573,7 +573,7 @@ export const drawBoardActions = {
       if (!hit) {
         missingStreak = notFound ? missingStreak + 1 : 0;
         if (missingStreak >= 3) {
-          return { status: 'failed', error: '生成任务不存在或已被删除' };
+          return { status: 'failed', error: 'Generation task does not exist or has been deleted.' };
         }
         continue;
       }

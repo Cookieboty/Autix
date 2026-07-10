@@ -122,7 +122,7 @@ function nowIso() {
 }
 
 export function createLocalVideoProject(
-  title = '专业视频工作台',
+  title = 'Professional video workspace',
   clips: Array<{
     title?: string;
     prompt?: string;
@@ -155,7 +155,7 @@ function createLocalClip(
     id: nextLocalId(LOCAL_CLIP_PREFIX),
     projectId,
     order,
-    title: data.title ?? `分镜 ${order}`,
+    title: data.title ?? `Shot ${order}`,
     prompt: data.prompt ?? '',
     params: data.params,
     chainFromPrev: data.chainFromPrev ?? false,
@@ -166,7 +166,7 @@ function createLocalClip(
 }
 
 function extractErrorMessage(err: unknown): string {
-  if (!err) return '未知错误';
+  if (!err) return 'Unknown error';
   if (typeof err === 'object' && err !== null) {
     const anyErr = err as { response?: { data?: { message?: string | string[]; msg?: string } }; message?: string };
     const respMsg = anyErr.response?.data?.message;
@@ -394,7 +394,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
 
   persistDraftProject: async (options) => {
     const { project } = get();
-    if (!project) throw new Error('没有可保存的视频草稿');
+    if (!project) throw new Error('No video draft is available to save.');
     if (!isLocalProject(project)) return { project, clipIdMap: {} };
 
     const created = await videoProjectApi.create({

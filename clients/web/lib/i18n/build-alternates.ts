@@ -15,7 +15,7 @@ function fillParams(template: string, params?: Record<string, string>): string {
   return template.replace(/\[(\.\.\.)?([^\]]+)\]/g, (_, catchAll: string | undefined, key: string) => {
     const value = params[key];
     if (value === undefined) {
-      throw new Error(`buildAlternates: 模板 "${template}" 缺少参数 "${key}"`);
+      throw new Error(`buildAlternates: template "${template}" is missing parameter "${key}"`);
     }
     // catch-all（如 `[...slug]`）的值本身合法地包含 `/`：按 `/` 拆段、丢弃空段
     // （防止前导/尾随/连续 `/` 产生双斜杠或悬挂斜杠）、逐段转义、再拼回去，保留

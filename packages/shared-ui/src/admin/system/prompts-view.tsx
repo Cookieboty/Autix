@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { CheckCircle2, Copy, FileText, RefreshCw, Save } from 'lucide-react';
 import {
   Badge,
@@ -72,6 +73,7 @@ function readPromptError(error: unknown, fallback: string) {
 }
 
 export function AdminSystemPromptsView() {
+  const t = useTranslations('adminOperations');
   const [saving, setSaving] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [form, setForm] = useState<PromptForm | null>(null);
@@ -84,7 +86,7 @@ export function AdminSystemPromptsView() {
   const prompts = promptsQuery.data ?? [];
   const loading = promptsQuery.isLoading || promptsQuery.isFetching;
   const queryError = promptsQuery.error
-    ? readPromptError(promptsQuery.error, '加载系统 Prompt 失败')
+    ? readPromptError(promptsQuery.error, t('systemPrompts.loadFailed'))
     : null;
   const displayError = error ?? queryError;
 
@@ -109,7 +111,7 @@ export function AdminSystemPromptsView() {
     setError(null);
     const result = await promptsQuery.refetch();
     if (result.error) {
-      setError(readPromptError(result.error, '加载系统 Prompt 失败'));
+      setError(readPromptError(result.error, t('systemPrompts.loadFailed')));
     }
   };
 
@@ -140,9 +142,9 @@ export function AdminSystemPromptsView() {
       }
       setForm(null);
       await load();
-      toast.success('Prompt 草稿已保存');
+      toast.success(t('systemPrompts.draftSaved'));
     } catch (err: any) {
-      const message = err?.response?.data?.msg ?? err?.message ?? '保存失败';
+      const message = err?.response?.data?.msg ?? err?.message ?? t('common.saveFailed');
       setError(message);
       toast.error(message);
     } finally {
@@ -157,9 +159,9 @@ export function AdminSystemPromptsView() {
     try {
       await publishPromptMutation.mutateAsync(prompt.id);
       await load();
-      toast.success(`${prompt.key}@${prompt.version} 已发布`);
+      toast.success(t('systemPrompts.published', { key: prompt.key, version: prompt.version }));
     } catch (err: any) {
-      const message = err?.response?.data?.msg ?? err?.message ?? '发布失败';
+      const message = err?.response?.data?.msg ?? err?.message ?? t('systemPrompts.publishFailed');
       setError(message);
       toast.error(message);
     } finally {
@@ -171,14 +173,14 @@ export function AdminSystemPromptsView() {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="border-border flex items-center justify-between gap-4 border-b pb-4">
         <div className="min-w-0">
-          <h1 className="text-foreground text-lg font-semibold">系统 Prompt</h1>
+          <h1 className="text-foreground text-lg font-semibold">{t('systemPrompts.title')}</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            集中管理默认提示词、变量、版本和发布状态。
+            {t('systemPrompts.description')}
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className="h-3.5 w-3.5" />
-          刷新
+          {t('common.refresh')}
         </Button>
       </div>
 
@@ -190,7 +192,7 @@ export function AdminSystemPromptsView() {
 
       <div className="flex-1 overflow-y-auto py-5">
         {loading ? (
-          <div className="text-muted-foreground text-sm">加载中...</div>
+          <div className="text-muted-foreground text-sm">{t('common.loading')}</div>
         ) : (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {grouped.map((group) => (
@@ -203,12 +205,12 @@ export function AdminSystemPromptsView() {
                         {group.active?.name ?? group.key}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {group.active?.description ?? '暂无描述'}
+                        {group.active?.description ?? t('systemPrompts.noDescription')}
                       </CardDescription>
                     </div>
                     {group.active && (
                       <Badge variant={group.active.source === 'default' ? 'outline' : 'secondary'}>
-                        {group.active.source === 'default' ? '默认' : `v${group.active.version}`}
+                        {group.active.source === 'default' ? t('systemPrompts.defaultSource') : `v${group.active.version}`}
                       </Badge>
                     )}
                   </div>
@@ -232,7 +234,7 @@ export function AdminSystemPromptsView() {
                           <div className="flex items-center gap-2">
                             <Button type="button" size="sm" variant="outline" onClick={() => openDraft(prompt)}>
                               <Copy className="h-3.5 w-3.5" />
-                              {prompt.status === 'draft' ? '编辑' : '复制为新版本'}
+                              {prompt.status === 'draft' ? t('common.edit') : t('systemPrompts.copyAsNewVersion')}
                             </Button>
                             {prompt.source === 'database' && prompt.status !== 'active' && (
                               <Button
@@ -242,7 +244,7 @@ export function AdminSystemPromptsView() {
                                 disabled={publishingId === prompt.id}
                               >
                                 <CheckCircle2 className="h-3.5 w-3.5" />
-                                发布
+                                {t('systemPrompts.publish')}
                               </Button>
                             )}
                           </div>
@@ -263,8 +265,8 @@ export function AdminSystemPromptsView() {
       <Sheet open={!!form} onOpenChange={(open) => !open && setForm(null)}>
         <SheetContent side="right" className="flex w-full flex-col overflow-hidden sm:max-w-2xl">
           <SheetHeader className="px-6">
-            <SheetTitle>{form?.id ? '编辑 Prompt 草稿' : '创建 Prompt 版本'}</SheetTitle>
-            <SheetDescription>保存为草稿后再发布，发布后会替换同 key 的当前 active 版本。</SheetDescription>
+            <SheetTitle>{form?.id ? t('systemPrompts.editDraftTitle') : t('systemPrompts.createVersionTitle')}</SheetTitle>
+            <SheetDescription>{t('systemPrompts.sheetDescription')}</SheetDescription>
           </SheetHeader>
 
           {form && (
@@ -275,20 +277,20 @@ export function AdminSystemPromptsView() {
                   <Input value={form.key} disabled={!!form.id} onChange={(event) => setForm({ ...form, key: event.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>版本</Label>
+                  <Label>{t('systemPrompts.version')}</Label>
                   <Input value={form.version} onChange={(event) => setForm({ ...form, version: event.target.value })} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>名称</Label>
+                <Label>{t('systemPrompts.name')}</Label>
                 <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>描述</Label>
+                <Label>{t('systemPrompts.promptDescription')}</Label>
                 <Input value={form.description ?? ''} onChange={(event) => setForm({ ...form, description: event.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>变量</Label>
+                <Label>{t('systemPrompts.variables')}</Label>
                 <Input
                   value={variableInput}
                   placeholder="language, appName, candidateList"
@@ -296,7 +298,7 @@ export function AdminSystemPromptsView() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Prompt 内容</Label>
+                <Label>{t('systemPrompts.content')}</Label>
                 <Textarea
                   className="min-h-[360px] font-mono text-xs leading-5"
                   value={form.content}
@@ -308,11 +310,11 @@ export function AdminSystemPromptsView() {
 
           <SheetFooter className="flex-row justify-end gap-2 border-t px-6">
             <Button type="button" variant="outline" onClick={() => setForm(null)}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={save} disabled={saving || !form}>
               <Save className="h-3.5 w-3.5" />
-              {saving ? '保存中...' : '保存草稿'}
+              {saving ? t('common.saving') : t('systemPrompts.saveDraft')}
             </Button>
           </SheetFooter>
         </SheetContent>

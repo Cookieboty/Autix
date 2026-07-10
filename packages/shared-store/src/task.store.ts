@@ -61,7 +61,7 @@ export const useTaskStore = create<TaskState>((set) => ({
         return { events: [...localOnly, ...historyItems], error: null };
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '加载失败';
+      const msg = err instanceof Error ? err.message : 'Loading failed';
       set({ error: msg });
     }
   },

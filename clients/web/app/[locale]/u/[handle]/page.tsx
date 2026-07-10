@@ -11,8 +11,8 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, handle } = await params;
-  const t = await getTranslations('publicGrowth.metadata');
-  const detail = await getPublicCreator(handle);
+  const t = await getTranslations({ locale, namespace: 'publicGrowth.metadata' });
+  const detail = await getPublicCreator(handle, locale);
   return {
     title: detail
       ? `${detail.profile.displayName} (@${detail.profile.handle}) - Amux Studio`
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CreatorPage({ params }: Props) {
-  const { handle } = await params;
-  const detail = await getPublicCreator(handle);
+  const { locale, handle } = await params;
+  const detail = await getPublicCreator(handle, locale);
   return <CreatorProfileView detail={detail} />;
 }

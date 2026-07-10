@@ -15,7 +15,7 @@ function errorMessage(error: unknown): string {
     ?.data?.message;
   if (typeof data === 'string') return data;
   if (error instanceof Error && error.message) return error.message;
-  return '加载失败,请稍后重试';
+  return 'Loading failed. Please try again later.';
 }
 
 export function useMarketplaceHomeQuery(enabled = true) {

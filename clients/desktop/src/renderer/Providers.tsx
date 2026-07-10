@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from '@autix/shared-ui/theme';
 import { Toaster } from '@autix/shared-ui/ui';
 import { InsufficientPointsGate, LocaleRoutingProvider } from '@autix/shared-ui';
 import { hydrateStores, wireInsufficientPointsReporter } from '@autix/shared-store';

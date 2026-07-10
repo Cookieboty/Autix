@@ -5,6 +5,7 @@ beforeAll(() => {
 });
 
 const { buildAlternates } = await import('@/lib/i18n/build-alternates');
+const { isNoindexPathname } = await import('@/lib/i18n/route-policy');
 
 describe('buildAlternates', () => {
   it('full：7 语 hreflang + x-default 指向裸路径，全为绝对 URL', () => {
@@ -183,5 +184,15 @@ describe('buildAlternates', () => {
   it('非根 full 路由仍带前缀（回归：确保根特判没影响普通路径）', () => {
     const { alternates } = buildAlternates('/pricing', undefined, 'ja');
     expect(alternates!.canonical).toBe('https://example.com/ja/pricing');
+  });
+
+  it('真实 pathname 可匹配 noindex 策略（裸路径、locale 前缀、动态段）', () => {
+    expect(isNoindexPathname('/chat')).toBe(true);
+    expect(isNoindexPathname('/chat/')).toBe(true);
+    expect(isNoindexPathname('/ja/chat')).toBe(true);
+    expect(isNoindexPathname('/zh-CN/membership/orders/order-1')).toBe(true);
+    expect(isNoindexPathname('/share/video/token-1')).toBe(true);
+    expect(isNoindexPathname('/pricing')).toBe(false);
+    expect(isNoindexPathname('/ja/pricing')).toBe(false);
   });
 });

@@ -109,7 +109,7 @@ export function registerPlatform(opts: {
 export function getAuth(): AuthAdapter {
   if (!auth) {
     throw new Error(
-      '[@autix/platform] AuthAdapter 未注册。请在应用入口调用 registerPlatform()',
+      '[@autix/platform] AuthAdapter is not registered. Call registerPlatform() at the app entry point.',
     );
   }
   return auth;
@@ -118,7 +118,7 @@ export function getAuth(): AuthAdapter {
 export function getNavigation(): NavigationAdapter {
   if (!navigation) {
     throw new Error(
-      '[@autix/platform] NavigationAdapter 未注册。请在应用入口调用 registerPlatform()',
+      '[@autix/platform] NavigationAdapter is not registered. Call registerPlatform() at the app entry point.',
     );
   }
   return navigation;
@@ -126,7 +126,7 @@ export function getNavigation(): NavigationAdapter {
 
 export function getEnv(): EnvConfig {
   if (!env) {
-    throw new Error('[@autix/platform] Env 未注册。请在应用入口调用 registerPlatform()');
+    throw new Error('[@autix/platform] Env is not registered. Call registerPlatform() at the app entry point.');
   }
   return env;
 }
@@ -142,7 +142,7 @@ export function getSessionStorage(): StorageAdapter {
 export function getClipboard(): ClipboardAdapter {
   if (!clipboard) {
     throw new Error(
-      '[@autix/platform] ClipboardAdapter 未注册。请在应用入口调用 registerPlatform()',
+      '[@autix/platform] ClipboardAdapter is not registered. Call registerPlatform() at the app entry point.',
     );
   }
   return clipboard;

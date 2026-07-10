@@ -22,8 +22,8 @@ const TYPE_COPY: Record<string, { eyebrow: string; description: string }> = {
 };
 
 export default async function MarketplaceListPage({ params }: Props) {
-  const { type } = await params;
-  const t = await getTranslations('marketplace');
+  const { locale, type } = await params;
+  const t = await getTranslations({ locale, namespace: 'marketplace' });
   const copy = TYPE_COPY[type];
 
   return (

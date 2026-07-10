@@ -1,0 +1,43 @@
+{
+  "nav": [
+    {
+      "label": "Getting Started",
+      "href": "/docs"
+    },
+    {
+      "label": "Platform Guide",
+      "children": [
+        {
+          "label": "Workflow Overview",
+          "href": "/docs/workflow"
+        },
+        {
+          "label": "Template System",
+          "href": "/docs/templates"
+        },
+        {
+          "label": "Credits & Plans",
+          "href": "/docs/pricing"
+        },
+        {
+          "label": "Asset Management",
+          "href": "/docs/gallery"
+        }
+      ]
+    },
+    {
+      "label": "FAQ",
+      "href": "/docs/faq"
+    },
+    {
+      "label": "Changelog",
+      "href": "/docs/changelog"
+    }
+  ],
+  "ui": {
+    "siteTitle": "Amux Studio Docs",
+    "backToHome": "Back to Home",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode"
+  }
+}

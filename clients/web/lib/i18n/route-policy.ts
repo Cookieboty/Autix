@@ -121,11 +121,51 @@ export function getPolicy(template: string): Policy {
   const policy = ROUTE_POLICY[template];
   if (!policy) {
     throw new Error(
-      `ROUTE_POLICY 缺少路由声明: "${template}"。` +
-        `新增页面必须在 clients/web/lib/i18n/route-policy.ts 中声明本地化策略。`,
+      `ROUTE_POLICY is missing a route declaration for "${template}". ` +
+        `New pages must declare their localization policy in clients/web/lib/i18n/route-policy.ts.`,
     );
   }
   return policy;
+}
+
+function stripLocalePrefix(pathname: string): string {
+  for (const locale of routing.locales) {
+    if (pathname === `/${locale}`) return '/';
+    if (pathname.startsWith(`/${locale}/`)) return pathname.slice(locale.length + 1) || '/';
+  }
+  return pathname || '/';
+}
+
+function normalizePolicyPath(pathname: string): string {
+  const withoutLocale = stripLocalePrefix(pathname.split('?')[0] || '/');
+  if (withoutLocale === '/') return '/';
+  return withoutLocale.replace(/\/+$/, '');
+}
+
+function templateToRegex(template: string): RegExp {
+  const source = template
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\\\[\\\.\\\.\\\.[^\]]+\\\]/g, '.+')
+    .replace(/\\\[[^\]]+\\\]/g, '[^/]+');
+  return new RegExp(`^${source}$`);
+}
+
+export function getPolicyForPathname(pathname: string): Policy | undefined {
+  const normalized = normalizePolicyPath(pathname);
+  const exact = ROUTE_POLICY[normalized];
+  if (exact) return exact;
+
+  for (const [template, policy] of Object.entries(ROUTE_POLICY)) {
+    if (template.includes('[') && templateToRegex(template).test(normalized)) {
+      return policy;
+    }
+  }
+
+  return undefined;
+}
+
+export function isNoindexPathname(pathname: string): boolean {
+  return getPolicyForPathname(pathname)?.kind === 'noindex';
 }
 
 /**

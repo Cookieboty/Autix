@@ -24,8 +24,8 @@ export function stopHandledPasteEvent(event: { preventDefault: () => void; stopP
 
 export function localizeExcalidrawContextMenu(root: ParentNode, t: Tr): void {
   const items = [
-    ['wrapSelectionInFrame', 'contextMenu.wrapSelectionInFrame', '将选区包入画框'],
-    ['copyElementLink', 'contextMenu.copyElementLink', '复制对象链接'],
+    ['wrapSelectionInFrame', 'contextMenu.wrapSelectionInFrame', 'Wrap selection in frame'],
+    ['copyElementLink', 'contextMenu.copyElementLink', 'Copy element link'],
   ] as const;
 
   for (const [testId, key, fallback] of items) {

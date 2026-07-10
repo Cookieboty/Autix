@@ -150,11 +150,10 @@ export default function MarketplaceDetailPageContent() {
       return;
     } catch (e) {
       const { status, message } = applyErrorInfo(e, t('detail.applyTemplateFailed'));
-      if (status === 409 && message.includes('已激活')) return;
+      if (status === 409 && !isTemplateResource) return;
       if (
         status === 409 &&
-        isTemplateResource &&
-        message.includes(type === 'IMAGE_TEMPLATE' ? '图片模板' : '视频模板')
+        isTemplateResource
       ) {
         const links = await marketplaceActions.listConversationResources(conversationId);
         const existing = links.find((link) => link.resourceType === type);

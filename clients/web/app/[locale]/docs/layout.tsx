@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Link, usePathname, getPathname } from '@/i18n/navigation';
 import { BookOpen, ChevronDown, ChevronRight, ArrowLeft, Sun, Moon, Menu, X, Languages } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@autix/shared-ui/theme';
 import { getDocsConfig } from '@/lib/docs';
 import { getPolicy } from '@/lib/i18n/route-policy';
 

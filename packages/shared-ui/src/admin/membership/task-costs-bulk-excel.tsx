@@ -28,6 +28,7 @@ import {
   scopeOptionsForTask,
   showScopeField,
   type ScopeField,
+  type Translate,
 } from './task-costs-helpers';
 
 interface ImportResult {
@@ -50,9 +51,10 @@ function errorMessage(error: unknown, fallback: string) {
 interface TaskCostsBulkExcelProps {
   systemModels: ModelConfigItem[];
   membershipLevels: MembershipLevel[];
+  tAdmin: Translate;
 }
 
-export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCostsBulkExcelProps) {
+export function TaskCostsBulkExcel({ systemModels, membershipLevels, tAdmin }: TaskCostsBulkExcelProps) {
   const [taskType, setTaskType] = useState<string>(BUSINESS_TASKS[0]?.taskType ?? '');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -90,7 +92,7 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCosts
       anchor.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(errorMessage(err, '导出失败'));
+      setError(errorMessage(err, tAdmin('bulk.exportFailed')));
     }
   };
 
@@ -106,7 +108,7 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCosts
       const preview = await importMutation.mutateAsync({ file, taskType, dryRun: true });
       setResult(preview);
     } catch (err) {
-      setError(errorMessage(err, '解析失败'));
+      setError(errorMessage(err, tAdmin('bulk.parseFailed')));
     }
   };
 
@@ -125,7 +127,7 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCosts
         setPendingFile(null);
       }
     } catch (err) {
-      setError(errorMessage(err, '导入失败'));
+      setError(errorMessage(err, tAdmin('bulk.importFailed')));
     }
   };
 
@@ -134,10 +136,10 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCosts
 
   return (
     <div className="flex items-center gap-2 px-4 py-2">
-      <span className="text-sm text-muted-foreground">批量 Excel</span>
+      <span className="text-sm text-muted-foreground">{tAdmin('bulk.title')}</span>
       <Select value={taskType} onValueChange={setTaskType}>
         <SelectTrigger className="w-56">
-          <SelectValue placeholder="选择任务" />
+          <SelectValue placeholder={tAdmin('bulk.selectTask')} />
         </SelectTrigger>
         <SelectContent>
           {BUSINESS_TASKS.map((task) => (
@@ -155,7 +157,7 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCosts
         disabled={exportMutation.isPending || !taskType}
       >
         <Download className="mr-1 size-4" />
-        导出模板
+        {tAdmin('bulk.exportTemplate')}
       </Button>
 
       <Button
@@ -165,7 +167,7 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCosts
         disabled={!taskType}
       >
         <Upload className="mr-1 size-4" />
-        导入
+        {tAdmin('bulk.import')}
       </Button>
       <input
         ref={fileInputRef}
@@ -178,29 +180,29 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCosts
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>导入预览 · {taskType}</DialogTitle>
+            <DialogTitle>{tAdmin('bulk.previewTitle', { taskType })}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-3">
             {importMutation.isPending && !result && (
-              <p className="text-sm text-muted-foreground">正在校验…</p>
+              <p className="text-sm text-muted-foreground">{tAdmin('bulk.validating')}</p>
             )}
             {error && <p className="text-sm text-destructive">{error}</p>}
             {result && (
               <div className="space-y-3">
                 <p className="text-sm">
-                  新增 <span className="font-semibold">{result.created}</span> · 更新{' '}
-                  <span className="font-semibold">{result.updated}</span> · 错误{' '}
+                  {tAdmin('bulk.created')} <span className="font-semibold">{result.created}</span> · {tAdmin('bulk.updated')}{' '}
+                  <span className="font-semibold">{result.updated}</span> · {tAdmin('bulk.errors')}{' '}
                   <span className="font-semibold">{result.errors.length}</span>
-                  {result.dryRun ? '（预览，未写入）' : '（已写入）'}
+                  {result.dryRun ? tAdmin('bulk.dryRunSuffix') : tAdmin('bulk.appliedSuffix')}
                 </p>
                 {hasErrors && (
                   <div className="max-h-64 overflow-y-auto rounded border">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-muted">
                         <tr>
-                          <th className="px-2 py-1">行</th>
+                          <th className="px-2 py-1">{tAdmin('bulk.row')}</th>
                           <th className="px-2 py-1">name</th>
-                          <th className="px-2 py-1">原因</th>
+                          <th className="px-2 py-1">{tAdmin('bulk.reason')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -220,10 +222,10 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels }: TaskCosts
           </DialogBody>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-              关闭
+              {tAdmin('bulk.close')}
             </Button>
             <Button onClick={handleConfirmImport} disabled={!canConfirm}>
-              确认导入
+              {tAdmin('bulk.confirmImport')}
             </Button>
           </DialogFooter>
         </DialogContent>

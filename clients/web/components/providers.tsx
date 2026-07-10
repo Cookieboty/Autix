@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from '@autix/shared-ui/theme';
 import { Toaster } from '@autix/shared-ui/ui';
 import { InsufficientPointsGate } from '@autix/shared-ui';
 import { wireInsufficientPointsReporter } from '@autix/shared-store';
@@ -29,7 +29,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <AuthModalHost />
         </Suspense>
         <InsufficientPointsGate
-          onNavigateOrder={(orderId: string) => router.push(`/orders/${orderId}`)}
+          onNavigateOrder={(orderId: string) => router.push(`/membership/orders/${orderId}`)}
         />
         <Toaster />
       </ThemeProvider>

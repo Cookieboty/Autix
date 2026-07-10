@@ -9,7 +9,7 @@ export async function generateMetadata({
   params,
 }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations('publicGrowth.metadata.pricing');
+  const t = await getTranslations({ locale, namespace: 'publicGrowth.metadata.pricing' });
   return {
     title: t('title'),
     description: t('description'),
@@ -23,8 +23,8 @@ export default async function PricingPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const [levels, pointsPackages] = await Promise.all([
-    getPublicMembershipLevels(),
-    getPublicPointsPackages(),
+    getPublicMembershipLevels(locale),
+    getPublicPointsPackages(locale),
   ]);
   return <PublicPricingView levels={levels} pointsPackages={pointsPackages} />;
 }
