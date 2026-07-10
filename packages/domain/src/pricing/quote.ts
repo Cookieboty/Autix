@@ -38,6 +38,28 @@ export interface PricingSnapshot {
 const EMPTY: { total: number; breakdown: Breakdown[] } = { total: 0, breakdown: [] };
 
 /**
+ * 合并下单参数与结算用量,供模型侧求值。两者是独立命名空间且业务上不重叠——
+ * `params` 是下单时确定并冻结的值(quality/resolution/seconds/referenceImages),
+ * `usage` 是结算时才知道的真实值(inputTokens/outputTokens)。
+ *
+ * 键相交即拒绝,而不是静默以 usage 覆盖 params——这是"结算不能篡改下单参数"
+ * 这条防篡改铁律的落地方式:结算时传一个 quality 会被拒绝,而不是被悄悄采纳。
+ * 见 spec §3.1.1.65。
+ */
+function mergeParamsAndUsage(
+  params: Record<string, unknown>,
+  usage: Record<string, unknown>,
+): Record<string, unknown> {
+  const collisions = Object.keys(usage).filter((key) => key in params);
+  if (collisions.length > 0) {
+    throw new Error(
+      `quoteTask: usage key(s) [${collisions.join(', ')}] collide with frozen params — settlement usage must not restate an order-time param`,
+    );
+  }
+  return { ...params, ...usage };
+}
+
+/**
  * total = ceil(模型价 × 倍率 × 折扣 + 任务固定开销)
  *
  * ceil 包住整个账单，只取整一次。它必须包住 taskFixedCost：
@@ -45,9 +67,15 @@ const EMPTY: { total: number; breakdown: Breakdown[] } = { total: 0, breakdown: 
  * 而 taskFixedCost 可以是 toolCalls × 0.5 这样的分数。
  *
  * taskFixedCost 仍不吃折扣——它在 discountFactor 的乘法之外，只是被同一个 ceil 包住。
+ *
+ * 模型侧求值吃 params 与 usage 的合并结果(mergeParamsAndUsage)，不是只吃
+ * params——text 模型的 inputTokens/outputTokens 是 valueSource: 'usage' 的
+ * 模型侧计价项，只在结算时通过 usage 传入真实值；params 里冻结的估算值
+ * (常为 0，见 applyParamDefaults 对 usage 来源参数的跳过)不能是唯一来源，
+ * 否则每一次 text 结算都会按冻结的估算值计费（spec §3.1.1.65 记录的 bug）。
  */
 export function quoteTask(input: QuoteInput): QuoteResult {
-  const model = evaluatePricing(input.modelSchema, input.params);
+  const model = evaluatePricing(input.modelSchema, mergeParamsAndUsage(input.params, input.usage ?? {}));
   const modelSubtotalRaw = model.total * input.multiplier * input.discountFactor;
 
   const task = input.taskFixedSchema

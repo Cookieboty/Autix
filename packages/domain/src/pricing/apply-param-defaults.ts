@@ -39,19 +39,20 @@ import type { ParamsSchema } from './types';
  *   ever violated a narrowed constraint, `validateParams` still catches it
  *   after filling (same as it would with no defaults filled at all) — this
  *   function cannot make that case worse, only fail to make it better.
- * - `x-ui: { control: 'hidden' }` properties (e.g. `inputTokens`,
- *   `outputTokens`, default 0) are filled exactly like any other property.
- *   This function has no notion of "hidden" — that is a UI-layer concept,
- *   and special-casing it here would smuggle caller-specific policy back
- *   into a supposedly mechanical, schema-driven fill, which is what this
- *   refactor exists to get away from. It is also a no-op either way for the
- *   current text preset: those fields are only ever referenced by additive
- *   `perUnit` terms, and an absent `perUnit` param is skipped (contributes
- *   nothing) while a present `0` contributes `0 * unitCost` — identical to
- *   the accumulator. Settlement is unaffected because it always re-prices
- *   from the frozen `PricingSnapshot.params`, filled or not, by design —
- *   this function does not change what settlement re-prices from, only
- *   ensures the snapshot is well-formed at estimate time.
+ * - `x-ui: { control: 'hidden' }` alone does not change filling — `hidden` is a
+ *   UI-layer concept (whether a control renders), orthogonal to *when* a
+ *   value is known. What DOES change filling is `x-ui: { valueSource: 'usage' }`
+ *   (see below) — spec §3.1.1.65 distinguishes the two explicitly.
+ * - Properties with `x-ui: { valueSource: 'usage' }` are NEVER filled, even
+ *   when they declare a `default`. `inputTokens`/`outputTokens` on the text
+ *   preset are the motivating case: their real values are only known at
+ *   settlement, via `usage`, not at order time. Filling `inputTokens: 0` here
+ *   would freeze that 0 into `PricingSnapshot.params`, and because model-side
+ *   evaluation merges `params` with `usage` (see `quoteTask`), a frozen `0`
+ *   would make every settlement price tokens at zero — this was a real
+ *   production bug (spec §3.1.1.65), not a hypothetical. `valueSource`
+ *   defaults to `'params'` when absent, so every other property's behaviour
+ *   is unchanged.
  */
 export function applyParamDefaults(
   paramsSchema: ParamsSchema,
@@ -61,6 +62,7 @@ export function applyParamDefaults(
 
   for (const [name, property] of Object.entries(paramsSchema.properties)) {
     if (!('default' in property)) continue;
+    if (property['x-ui']?.valueSource === 'usage') continue;
     const isAbsent = !(name in filled) || filled[name] === undefined;
     if (isAbsent) {
       filled[name] = property.default;

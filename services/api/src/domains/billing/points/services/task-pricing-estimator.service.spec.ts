@@ -553,6 +553,97 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
       expect(settled.total).toBe(result.estimatedCost);
     });
 
+    describe('text tasks — usage-source params (tokens) must not enter the frozen snapshot (spec §3.1.1.65)', () => {
+      it('does not fill inputTokens/outputTokens defaults and excludes them from the snapshot', async () => {
+        const repo = buildRepo({
+          findTaskDefinition: jest.fn().mockResolvedValue({
+            taskType: 'chat_message_standard',
+            isActive: true,
+            fixedCostSchema: { terms: [{ id: 'taskBase', op: 'add', const: 3 }] },
+          }),
+          findModelPricingConfig: jest.fn().mockResolvedValue({
+            id: 'model-1',
+            name: 'Real Text Model',
+            paramsSchema: MODEL_PRESETS.text.paramsSchema,
+            pricingSchema: MODEL_PRESETS.text.pricingSchema,
+            schemaVersion: 1,
+          }),
+        });
+        const service = new TaskPricingEstimatorService(repo);
+
+        const result = await service.estimateCost({
+          taskType: 'chat_message_standard',
+          modelConfigId: 'model-1',
+          params: {},
+        });
+
+        expect('inputTokens' in result.pricingSnapshot.params).toBe(false);
+        expect('outputTokens' in result.pricingSnapshot.params).toBe(false);
+        // temperature/maxTokens are valueSource: 'params' (default) — still filled.
+        expect(result.pricingSnapshot.params.temperature).toBe(0.7);
+        expect(result.pricingSnapshot.params.maxTokens).toBe(4096);
+      });
+
+      it('strips a caller-supplied token estimate from the snapshot even though it was used to compute the estimate', async () => {
+        const repo = buildRepo({
+          findTaskDefinition: jest.fn().mockResolvedValue({
+            taskType: 'chat_message_standard',
+            isActive: true,
+            fixedCostSchema: { terms: [{ id: 'taskBase', op: 'add', const: 3 }] },
+          }),
+          findModelPricingConfig: jest.fn().mockResolvedValue({
+            id: 'model-1',
+            name: 'Real Text Model',
+            paramsSchema: MODEL_PRESETS.text.paramsSchema,
+            pricingSchema: MODEL_PRESETS.text.pricingSchema,
+            schemaVersion: 1,
+          }),
+        });
+        const service = new TaskPricingEstimatorService(repo);
+
+        // Estimate-time token estimates, if a caller passes them, are used to
+        // compute the estimate but must not be frozen (spec §3.1.1.65).
+        const result = await service.estimateCost({
+          taskType: 'chat_message_standard',
+          modelConfigId: 'model-1',
+          params: { inputTokens: 2000, outputTokens: 1000 },
+        });
+
+        // model side: 2000*1/1000 + 1000*5/1000 = 7; + taskFixed 3 = 10.
+        expect(result.estimatedCost).toBe(10);
+        expect('inputTokens' in result.pricingSnapshot.params).toBe(false);
+        expect('outputTokens' in result.pricingSnapshot.params).toBe(false);
+      });
+
+      it('end-to-end: settlement with real usage prices correctly from the frozen snapshot, not the (absent) estimate-time tokens', async () => {
+        const repo = buildRepo({
+          findTaskDefinition: jest.fn().mockResolvedValue({
+            taskType: 'chat_message_standard',
+            isActive: true,
+            fixedCostSchema: { terms: [{ id: 'taskBase', op: 'add', const: 3 }] },
+          }),
+          findModelPricingConfig: jest.fn().mockResolvedValue({
+            id: 'model-1',
+            name: 'Real Text Model',
+            paramsSchema: MODEL_PRESETS.text.paramsSchema,
+            pricingSchema: MODEL_PRESETS.text.pricingSchema,
+            schemaVersion: 1,
+          }),
+        });
+        const service = new TaskPricingEstimatorService(repo);
+
+        const result = await service.estimateCost({
+          taskType: 'chat_message_standard',
+          modelConfigId: 'model-1',
+          params: {},
+        });
+
+        const settled = quoteTaskFromSnapshot(result.pricingSnapshot, { inputTokens: 2000, outputTokens: 1000 });
+        expect(settled.total).toBe(10);
+        expect(settled.total).not.toBe(0);
+      });
+    });
+
     it('does not overwrite a caller-supplied value with the schema default, even when the caller passes the whole set explicitly', async () => {
       const repo = buildRepo({
         findModelPricingConfig: jest.fn().mockResolvedValue({

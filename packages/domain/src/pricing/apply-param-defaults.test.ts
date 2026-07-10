@@ -93,6 +93,22 @@ describe('applyParamDefaults', () => {
     });
   });
 
+  describe('against the real text preset — valueSource: usage must never be filled', () => {
+    it('does not add inputTokens/outputTokens even though they declare a default of 0', () => {
+      const filled = applyParamDefaults(MODEL_PRESETS.text.paramsSchema, {});
+      expect('inputTokens' in filled).toBe(false);
+      expect('outputTokens' in filled).toBe(false);
+      // params-source properties on the same schema still get filled normally.
+      expect(filled.temperature).toBe(0.7);
+      expect(filled.maxTokens).toBe(4096);
+    });
+
+    it('does not overwrite a caller-supplied token value either (defense in depth: it never even looks)', () => {
+      const filled = applyParamDefaults(MODEL_PRESETS.text.paramsSchema, { inputTokens: 42 });
+      expect(filled.inputTokens).toBe(42);
+    });
+  });
+
   describe('against the real video preset', () => {
     it('fills the required resolution/seconds, and the base default seconds (5) satisfies the 4k-narrowed maximum (8)', () => {
       const filled = applyParamDefaults(MODEL_PRESETS.video.paramsSchema, {});

@@ -118,6 +118,15 @@ export class TaskPricingEstimatorService {
     // Value copy: point_holds.pricingSnapshot is read back at settlement time, so an
     // admin editing model_configs.pricingSchema after a hold is created must never
     // change what that in-flight task is charged.
+    //
+    // The frozen params exclude valueSource: 'usage' properties (spec §3.1.1.65):
+    // a text model's inputTokens/outputTokens are only known at settlement, via
+    // real usage — freezing an estimate-time value (or a default of 0) is the
+    // direct cause of the under-charging bug this fix exists for. If a caller did
+    // pass a token estimate in `params` above, it was already used by quoteTask
+    // to compute `result` — it just does not survive into the frozen snapshot.
+    const frozenParams = this.stripUsageSourceParams(paramsSchema, params);
+
     const pricingSnapshot: PricingSnapshot = {
       schemaVersion: model.schemaVersion,
       modelConfigId,
@@ -126,7 +135,7 @@ export class TaskPricingEstimatorService {
       multiplier,
       discountFactor,
       discountCode,
-      params: structuredClone(params),
+      params: structuredClone(frozenParams),
     };
 
     return {
@@ -206,6 +215,32 @@ export class TaskPricingEstimatorService {
       throw new BadRequestException({ message: errorMessage, violations });
     }
     return candidate;
+  }
+
+  /**
+   * Removes properties whose paramsSchema declares `x-ui.valueSource === 'usage'`
+   * (e.g. text's `inputTokens`/`outputTokens`) before the params are frozen into
+   * `PricingSnapshot.params`. These values are determined at settlement, not at
+   * order time, so they must never be part of the immutable snapshot — settlement
+   * always supplies the real value via `usage` (see `quoteTaskFromSnapshot`).
+   *
+   * This is a defensive strip independent of `applyParamDefaults` (which already
+   * refuses to *fill* a default for these properties): it also covers the case
+   * where a caller explicitly passed a token estimate in `params` to influence
+   * this estimate's `result.total`, without that value leaking into what gets
+   * frozen and later re-priced at settlement.
+   */
+  private stripUsageSourceParams(
+    paramsSchema: ParamsSchema,
+    params: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const stripped: Record<string, unknown> = { ...params };
+    for (const [name, property] of Object.entries(paramsSchema.properties)) {
+      if (property['x-ui']?.valueSource === 'usage') {
+        delete stripped[name];
+      }
+    }
+    return stripped;
   }
 
   /**

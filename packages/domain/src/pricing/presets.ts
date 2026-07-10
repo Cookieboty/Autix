@@ -9,10 +9,18 @@ export interface ModelPreset {
 
 const JSON_SCHEMA_DRAFT = 'https://json-schema.org/draft/2020-12/schema';
 
-/** token 参数由后端在估价/结算时注入，用户不可见。 */
+/**
+ * token 参数由后端注入，用户不可见（hidden）。它们的值在结算时才确定
+ * （valueSource: 'usage'）——不下单时冻结、不填默认值，由 quoteTask 把
+ * settlement 的真实 usage 合并进模型侧求值。见 spec §3.1.1.65。
+ *
+ * `default: 0` 仍然声明在这里是给 ajv 校验用的形状占位（属性存在时的取值
+ * 范围），但 applyParamDefaults 会因 valueSource === 'usage' 而跳过它，
+ * 绝不会把它填进 params 再冻进快照。
+ */
 const tokenProperties = {
-  inputTokens: { type: 'integer' as const, minimum: 0, default: 0, 'x-ui': { control: 'hidden' as const } },
-  outputTokens: { type: 'integer' as const, minimum: 0, default: 0, 'x-ui': { control: 'hidden' as const } },
+  inputTokens: { type: 'integer' as const, minimum: 0, default: 0, 'x-ui': { control: 'hidden' as const, valueSource: 'usage' as const } },
+  outputTokens: { type: 'integer' as const, minimum: 0, default: 0, 'x-ui': { control: 'hidden' as const, valueSource: 'usage' as const } },
 };
 
 /**

@@ -8,6 +8,17 @@ export interface XUi {
   group?: string;
   order?: number;
   step?: number;
+  /**
+   * When a param's value is determined, not whether it renders (`control`/`hidden`
+   * are orthogonal to this). Spec §3.1.1.65.
+   *
+   * - `'params'` (default when absent): determined at order time, frozen into
+   *   `PricingSnapshot.params`, immutable at settlement. e.g. `quality`,
+   *   `resolution`, `seconds`, `referenceImages`.
+   * - `'usage'`: determined at settlement time, NOT frozen, supplied by the real
+   *   `usage` passed to `quoteTaskFromSnapshot`. e.g. `inputTokens`, `outputTokens`.
+   */
+  valueSource?: 'params' | 'usage';
 }
 
 export interface JsonSchemaProperty {

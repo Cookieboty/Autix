@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { quoteTask, quoteTaskFromSnapshot } from './quote';
+import type { PricingSnapshot } from './quote';
+import { MODEL_PRESETS, TASK_PRESETS } from './presets';
+import { applyParamDefaults } from './apply-param-defaults';
 import type { PricingSchema } from './types';
 
 const modelSchema: PricingSchema = {
@@ -126,8 +129,100 @@ describe('quoteTaskFromSnapshot', () => {
     expect(quoteTaskFromSnapshot(withFixed, { toolCalls: 4 }).total).toBe(94);
   });
 
-  it('ignores usage keys that the frozen params would have supplied', () => {
-    // params 来自快照，usage 不能覆盖它——否则结算时用户可以篡改 quality。
-    expect(quoteTaskFromSnapshot(snapshot, { quality: 'high' }).total).toBe(90);
+  it('rejects a usage key that the frozen params already supply — settlement cannot cheapen an order', () => {
+    // params 来自快照，usage 不能覆盖它——否则结算时用户可以把 quality 从
+    // medium 篡改成 high（或反过来cheapen）。相交即拒绝，而不是静默采纳。
+    expect(() => quoteTaskFromSnapshot(snapshot, { quality: 'high' })).toThrow(/quality/);
+  });
+});
+
+describe('quoteTask — model-side merges params and usage (spec §3.1.1.65)', () => {
+  it('feeds usage into the model-side evaluation, not just the task-fixed side', () => {
+    const modelSchemaWithUsageTerm: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 0 },
+        { id: 'inputTokens', op: 'add', perUnit: { param: 'inputTokens', unitCost: 1, divisor: 1000 } },
+      ],
+    };
+    const result = quoteTask({
+      modelSchema: modelSchemaWithUsageTerm,
+      multiplier: 1,
+      discountFactor: 1,
+      params: {},
+      usage: { inputTokens: 2000 },
+    });
+    expect(result.modelSubtotalRaw).toBe(2);
+    expect(result.total).toBe(2);
+  });
+
+  it('throws when a usage key collides with a params key, instead of silently overwriting', () => {
+    expect(() =>
+      quoteTask({
+        modelSchema,
+        multiplier: 1,
+        discountFactor: 1,
+        params: { quality: 'medium' },
+        usage: { quality: 'high' },
+      }),
+    ).toThrow(/quality/);
+  });
+
+  it('the collision throw message names the offending key(s)', () => {
+    expect(() =>
+      quoteTask({
+        modelSchema,
+        multiplier: 1,
+        discountFactor: 1,
+        params: { quality: 'medium', extra: 1 },
+        usage: { quality: 'high', extra: 2 },
+      }),
+    ).toThrow(/quality/);
+  });
+
+  it('does not throw when params and usage keys are disjoint', () => {
+    expect(() =>
+      quoteTask({
+        modelSchema,
+        multiplier: 1,
+        discountFactor: 1,
+        params: { quality: 'medium' },
+        usage: { toolCalls: 5 },
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('end-to-end anchor: settlement prices real tokens, not the frozen estimate (spec §3.1.1.65 bug)', () => {
+  it('prices ceil(2000*1/1000 + 1000*5/1000) + taskFixedCost from real settlement usage, not the frozen 0 estimate', () => {
+    const text = MODEL_PRESETS.text;
+    const chatStandard = TASK_PRESETS.find((t) => t.taskType === 'chat_message_standard');
+    if (!chatStandard) throw new Error('fixture missing: chat_message_standard');
+
+    // Estimate time: caller has no real token counts yet, so applyParamDefaults
+    // fills the params-source defaults only. inputTokens/outputTokens must NOT be
+    // among them (valueSource: 'usage') — they must not enter the frozen snapshot.
+    const estimateParams = applyParamDefaults(text.paramsSchema, {});
+    expect('inputTokens' in estimateParams).toBe(false);
+    expect('outputTokens' in estimateParams).toBe(false);
+
+    const snapshot: PricingSnapshot = {
+      schemaVersion: 1,
+      modelConfigId: 'model-1',
+      modelSchema: text.pricingSchema,
+      taskFixedSchema: chatStandard.fixedCostSchema,
+      multiplier: 1,
+      discountFactor: 1,
+      discountCode: null,
+      params: estimateParams,
+    };
+
+    // Settlement: real usage arrives, distinct from anything in params.
+    const result = quoteTaskFromSnapshot(snapshot, { inputTokens: 2000, outputTokens: 1000 });
+
+    // model side: 2000*1/1000 + 1000*5/1000 = 2 + 5 = 7 (exact)
+    // task side: chat_message_standard fixed fee = 3
+    // total = ceil(7 + 3) = 10, NOT 0.
+    expect(result.total).toBe(10);
+    expect(result.total).not.toBe(0);
   });
 });
