@@ -12,18 +12,48 @@ import {
 import { PointsService } from './points.service';
 import { PointsRepository } from './repositories/points.repository';
 import { PricingRuleRepository } from './repositories/pricing-rule.repository';
+import { TaskPricingRepository } from './repositories/task-pricing.repository';
 import { PointsLedgerService } from './services/points-ledger.service';
 import { PointsHoldService } from './services/points-hold.service';
 import { PricingEstimatorService } from './services/pricing-estimator.service';
+import { TaskPricingEstimatorService } from './services/task-pricing-estimator.service';
 import type { PricingRuleWithComponents } from './pricing-estimator';
 
 function buildPointsService(prisma: unknown) {
   const pointsRepo = new PointsRepository(prisma as never);
   const pricingRuleRepo = new PricingRuleRepository(prisma as never);
+  const taskPricingRepo = new TaskPricingRepository(prisma as never);
   const ledgerService = new PointsLedgerService(pointsRepo);
   const holdService = new PointsHoldService(pointsRepo, ledgerService);
   const pricingService = new PricingEstimatorService(pricingRuleRepo);
-  return new PointsService(pointsRepo, ledgerService, holdService, pricingService);
+  const taskPricingService = new TaskPricingEstimatorService(taskPricingRepo);
+  return new PointsService(pointsRepo, ledgerService, holdService, pricingService, taskPricingService);
+}
+
+// NOTE: the task brief's literal scaffold typed this parameter as
+// `Partial<TaskPricingRepository>` and wrapped it in a real
+// `new TaskPricingEstimatorService(repo)`. That does not exercise the intended
+// delegation: TaskPricingEstimatorService.estimateCost calls
+// `this.repo.findTaskDefinition(...)`, never `this.repo.estimateCost(...)`, so a
+// `{ estimateCost }` stand-in repo is never invoked and the real service throws a
+// TypeError instead of returning the mocked value (confirmed by running it). The
+// test's actual intent — assert PointsService.estimateCost delegates to
+// taskPricingService.estimateCost with the new input shape — is expressed correctly
+// by mocking the *service* directly instead of wrapping a fake repo.
+function buildPointsServiceWithTaskPricing(taskPricingService: Partial<TaskPricingEstimatorService>) {
+  const prisma = createPrisma(createTx());
+  const pointsRepo = new PointsRepository(prisma as never);
+  const pricingRuleRepo = new PricingRuleRepository(prisma as never);
+  const ledgerService = new PointsLedgerService(pointsRepo);
+  const holdService = new PointsHoldService(pointsRepo, ledgerService);
+  const pricingService = new PricingEstimatorService(pricingRuleRepo);
+  return new PointsService(
+    pointsRepo,
+    ledgerService,
+    holdService,
+    pricingService,
+    taskPricingService as TaskPricingEstimatorService,
+  );
 }
 
 function createTx() {
@@ -109,28 +139,6 @@ function pricingComponent(
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     ...values,
   };
-}
-
-function amountComponent(
-  componentType: PricingComponentType,
-  unitCost: number,
-  sort = 10,
-) {
-  return pricingComponent(componentType, {
-    unitCost: new Prisma.Decimal(unitCost),
-    sort,
-  });
-}
-
-function multiplierComponent(
-  componentType: PricingComponentType,
-  multiplier: number,
-  sort = 100,
-) {
-  return pricingComponent(componentType, {
-    multiplier: new Prisma.Decimal(multiplier),
-    sort,
-  });
 }
 
 describe('PointsService.deductPoints (grant ledger)', () => {
@@ -663,245 +671,68 @@ describe('PointsService grant and hold ledger', () => {
   });
 });
 
-describe('PointsService.estimateCost', () => {
-  it('estimates chat cost from base and token pricing', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      pricingRule({
-        id: 'rule-chat',
-        taskType: 'chat_message_fast',
-        name: '普通快速对话',
-        conditions: { modelTier: 'fast' },
-        baseUnit: PricingBaseUnit.message,
-        components: [
-          amountComponent(PricingComponentType.base, 1, 10),
-          amountComponent(PricingComponentType.input_token_per_1k, 0.5, 20),
-          amountComponent(PricingComponentType.output_token_per_1k, 2, 30),
-        ],
-      }),
-    ]);
-    const service = buildPointsService(prisma);
+describe('PointsService.estimateCost — new engine', () => {
+  it('delegates to TaskPricingEstimatorService with the new input shape', async () => {
+    const estimateCost = jest.fn().mockResolvedValue({
+      estimatedCost: 90,
+      taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      breakdown: [],
+      pricingSnapshot: {} as never,
+    });
+    const service = buildPointsServiceWithTaskPricing({ estimateCost } as never);
 
-    const estimate = await service.estimateCost({
-      taskType: 'chat_message_fast',
-      modelTier: 'fast',
-      inputTokens: 500,
-      outputTokens: 800,
+    const result = await service.estimateCost({
+      taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      params: { quality: 'medium' },
     });
 
-    expect(estimate.estimatedCost).toBe(3);
-    expect(estimate.items).toEqual([
-      { label: PricingComponentType.base, amount: 1 },
-      { label: PricingComponentType.input_token_per_1k, amount: 0.25 },
-      { label: PricingComponentType.output_token_per_1k, amount: 1.6 },
-    ]);
-  });
-
-  it('estimates video cost by seconds', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      pricingRule({
-        id: 'rule-video',
-        taskType: 'video_generation',
-        name: 'Seedance 720p',
-        conditions: { resolution: '720p' },
-        baseUnit: PricingBaseUnit.second,
-        components: [
-          amountComponent(PricingComponentType.per_second, 320, 10),
-        ],
-      }),
-    ]);
-    const service = buildPointsService(prisma);
-
-    const estimate = await service.estimateCost({
-      taskType: 'video_generation',
-      resolution: '720p',
-      seconds: 5,
+    expect(estimateCost).toHaveBeenCalledWith({
+      taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      params: { quality: 'medium' },
     });
-
-    expect(estimate.estimatedCost).toBe(1600);
+    expect(result.estimatedCost).toBe(90);
   });
 
-  it('uses the more specific video model rule when model scope is present', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      pricingRule({
-        id: 'rule-video',
-        taskType: 'video_generation',
-        name: 'Video 720p',
-        conditions: { resolution: '720p' },
-        baseUnit: PricingBaseUnit.second,
-        createdAt: new Date('2026-01-03T00:00:00.000Z'),
-        components: [
-          amountComponent(PricingComponentType.per_second, 320, 10),
-        ],
-      }),
-      pricingRule({
-        id: 'rule-video-pro',
-        taskType: 'video_generation',
-        name: 'Video pro 720p',
-        conditions: {
-          resolution: '720p',
-          modelKey: { equals: JSON.stringify(['bytedance', 'seedance-pro']) },
-        },
-        baseUnit: PricingBaseUnit.second,
-        createdAt: new Date('2026-01-01T00:00:00.000Z'),
-        components: [
-          amountComponent(PricingComponentType.per_second, 500, 10),
-        ],
-      }),
-    ]);
-    const service = buildPointsService(prisma);
-
-    const estimate = await service.estimateCost({
-      taskType: 'video_generation',
-      modelProvider: 'bytedance',
-      modelName: 'seedance-pro',
-      resolution: '720p',
-      seconds: 5,
-    });
-
-    expect(estimate.taskType).toBe('video_generation');
-    expect(estimate.estimatedCost).toBe(2500);
-    expect(estimate.pricingSnapshot).toMatchObject({ ruleId: 'rule-video-pro' });
-  });
-
-  it('throws when no active pricing rule is configured', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([]);
-    const service = buildPointsService(prisma);
-
-    await expect(
-      service.estimateCost({ taskType: 'missing_rule' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('charges image quantity from per-image components', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      pricingRule({
-        id: 'rule-image',
-        taskType: 'image_gen',
-        name: '图片生成',
-        baseUnit: PricingBaseUnit.image,
-        components: [
-          amountComponent(PricingComponentType.per_image, 10, 10),
-          amountComponent(PricingComponentType.fixed_extra, 5, 20),
-        ],
-      }),
-    ]);
-    const service = buildPointsService(prisma);
-
-    const estimate = await service.estimateCost({ taskType: 'image_gen', quantity: 3 });
-
-    expect(estimate.estimatedCost).toBe(35);
-    expect(estimate.items).toEqual([
-      { label: PricingComponentType.per_image, amount: 30 },
-      { label: PricingComponentType.fixed_extra, amount: 5 },
-    ]);
-  });
-
-  it('keeps per-second and fixed components together', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      pricingRule({
-        id: 'rule-sec',
-        taskType: 'tts',
-        name: 'TTS',
-        baseUnit: PricingBaseUnit.second,
-        components: [
-          amountComponent(PricingComponentType.per_second, 2, 10),
-          amountComponent(PricingComponentType.fixed_extra, 4, 20),
-        ],
-      }),
-    ]);
-    const service = buildPointsService(prisma);
-
-    const estimate = await service.estimateCost({ taskType: 'tts', seconds: 5 });
-
-    expect(estimate.items).toEqual([
-      { label: PricingComponentType.per_second, amount: 10 },
-      { label: PricingComponentType.fixed_extra, amount: 4 },
-    ]);
-    expect(estimate.estimatedCost).toBe(14);
-  });
-
-  it('stacks multiple multipliers multiplicatively', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      pricingRule({
-        id: 'rule-stack',
-        taskType: 'reasoning_chat',
-        name: '深度推理',
-        baseUnit: PricingBaseUnit.message,
-        components: [
-          amountComponent(PricingComponentType.base, 10, 10),
-          multiplierComponent(PricingComponentType.reasoning_multiplier, 2, 100),
-          multiplierComponent(PricingComponentType.reference_image_multiplier, 1.5, 110),
-          multiplierComponent(PricingComponentType.priority_multiplier, 2, 120),
-        ],
-      }),
-    ]);
-    const service = buildPointsService(prisma);
-
-    const estimate = await service.estimateCost({
-      taskType: 'reasoning_chat',
-      referenceImages: 1,
-      priority: true,
-    });
-
-    expect(estimate.multiplier).toBeCloseTo(6, 5);
-    expect(estimate.estimatedCost).toBe(60);
-  });
-
-  it('rejects when membershipLevel does not match conditions', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      pricingRule({
-        id: 'rule-vip-only',
-        taskType: 'premium_task',
-        name: 'VIP 专属',
-        baseUnit: PricingBaseUnit.message,
-        conditions: { membershipLevel: { in: [2, 3] } },
-        components: [amountComponent(PricingComponentType.base, 1, 10)],
-      }),
-    ]);
-    const service = buildPointsService(prisma);
-
-    await expect(
-      service.estimateCost({ taskType: 'premium_task', membershipLevel: 1 }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('rejects when grantType is excluded by conditions', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      pricingRule({
-        id: 'rule-no-gift',
-        taskType: 'premium_task',
-        name: '禁赠送',
-        baseUnit: PricingBaseUnit.message,
-        conditions: { grantType: { notIn: [PointGrantType.GIFT] } },
-        components: [amountComponent(PricingComponentType.base, 1, 10)],
-      }),
-    ]);
-    const service = buildPointsService(prisma);
+  it('propagates the BadRequestException thrown by the new engine instead of returning a fallback price', async () => {
+    const estimateCost = jest
+      .fn()
+      .mockRejectedValue(new BadRequestException('模型未配置计价规则(pricingSchema): model-1'));
+    const service = buildPointsServiceWithTaskPricing({ estimateCost } as never);
 
     await expect(
       service.estimateCost({
-        taskType: 'premium_task',
-        grantType: PointGrantType.GIFT,
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        params: {},
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('never calls the old PricingEstimatorService engine', async () => {
+    const estimateCost = jest.fn().mockResolvedValue({
+      estimatedCost: 42,
+      taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      breakdown: [],
+      pricingSnapshot: {} as never,
+    });
+    const service = buildPointsServiceWithTaskPricing({ estimateCost } as never);
+    const oldEngineSpy = jest.spyOn(
+      PricingEstimatorService.prototype,
+      'estimateCost',
+    );
+
+    await service.estimateCost({
+      taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      params: {},
+    });
+
+    expect(oldEngineSpy).not.toHaveBeenCalled();
+    oldEngineSpy.mockRestore();
   });
 });
 

@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import { PointsService } from './points.service';
+import { EstimateTaskDto } from './dto/estimate-task.dto';
 import { PointsSource } from '../../platform/prisma/generated';
 import type { AuthUser } from '@autix/domain';
 
@@ -54,7 +55,8 @@ export class PointsController {
 
   @Post('estimate')
   @Public()
-  async estimateCost(@Body() body: any) {
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async estimateCost(@Body() body: EstimateTaskDto) {
     return this.pointsService.estimateCost(body);
   }
 }

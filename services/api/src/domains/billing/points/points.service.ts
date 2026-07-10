@@ -2,10 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { PointsLedgerService, type GrantPointsInput } from './services/points-ledger.service';
 import { PointsHoldService } from './services/points-hold.service';
 import { PricingEstimatorService, type EstimateCostInput } from './services/pricing-estimator.service';
+import {
+  TaskPricingEstimatorService,
+  type TaskEstimateInput,
+} from './services/task-pricing-estimator.service';
 import { PointsRepository } from './repositories/points.repository';
 import { PointsSource, Prisma } from '../../platform/prisma/generated';
 
 export type { EstimateCostInput } from './services/pricing-estimator.service';
+export type { TaskEstimateInput, TaskEstimateResult } from './services/task-pricing-estimator.service';
 
 @Injectable()
 export class PointsService {
@@ -14,6 +19,7 @@ export class PointsService {
     private readonly ledgerService: PointsLedgerService,
     private readonly holdService: PointsHoldService,
     private readonly pricingService: PricingEstimatorService,
+    private readonly taskPricingService: TaskPricingEstimatorService,
   ) {}
 
   async getBalance(userId: string) {
@@ -43,8 +49,8 @@ export class PointsService {
     return this.pricingService.getPricingRules();
   }
 
-  async estimateCost(input: EstimateCostInput) {
-    return this.pricingService.estimateCost(input);
+  async estimateCost(input: TaskEstimateInput) {
+    return this.taskPricingService.estimateCost(input);
   }
 
   async previewPricingRule(input: EstimateCostInput) {
