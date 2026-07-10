@@ -1,3 +1,4 @@
+import { Prisma } from '@autix/database';
 import {
   MODEL_PRESETS,
   TASK_PRESETS,
@@ -14,39 +15,49 @@ import { createPrismaClient } from './db';
 const prisma = createPrismaClient();
 
 /**
- * 按模型行的 type / capabilities 判定它该用哪个 preset。
- * chat 层级取自 metadata.tier，缺省视为 standard。
+ * PricingSchema 是 @autix/domain 里自定义的领域类型，没有索引签名，所以结构上
+ * 不满足 Prisma 的 InputJsonObject（要求 `[key: string]: InputJsonValue`）。
+ * 运行时形状完全就是普通可枚举 JSON，两者没有真实分歧——差异纯粹是 TS 记名
+ * 边界。不用 `as any`/`as unknown as` 抹掉这个不匹配，而是走一次显式的
+ * JSON round-trip：序列化再反解析，产出一个结构上必然满足 InputJsonValue
+ * 的裸对象，再声明它就是 InputJsonValue。
+ */
+function toInputJson(value: PricingSchema): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
+/**
+ * 按模型行的 type / capabilities 判定它该用哪个 preset（spec §3.1.1.6）。
+ * metadata.tier 概念已废弃——线上 13 个模型没有一个设置过它，分档从未生效。
  */
 function presetKeyFor(model: {
   type: string;
   capabilities: string[];
-  metadata: unknown;
 }): ModelPresetKey | null {
   if (model.type === 'video' || model.capabilities.includes('video')) return 'video';
   if (model.capabilities.includes('image') && !model.capabilities.includes('text')) return 'image';
   if (model.type === 'embedding') return null;
-
-  const tier = (model.metadata as { tier?: string } | null)?.tier;
-  if (tier === 'fast') return 'chat_fast';
-  if (tier === 'pro_reasoning') return 'chat_reasoning';
-  return 'chat_standard';
+  return 'text';
 }
 
 async function seedTasks() {
   for (const [index, task] of TASK_PRESETS.entries()) {
+    const fixedCostSchema = task.fixedCostSchema ? toInputJson(task.fixedCostSchema) : Prisma.JsonNull;
     await prisma.task_definitions.upsert({
       where: { taskType: task.taskType },
       update: {
         name: task.name,
         category: task.category,
-        fixedCostSchema: task.fixedCostSchema ?? undefined,
+        fixedCostSchema,
+        isActive: task.isActive,
         sort: index * 10,
       },
       create: {
         taskType: task.taskType,
         name: task.name,
         category: task.category,
-        fixedCostSchema: task.fixedCostSchema ?? undefined,
+        fixedCostSchema,
+        isActive: task.isActive,
         sort: index * 10,
       },
     });
@@ -89,6 +100,10 @@ async function seedModelSchemas() {
 async function seedBindings(assigned: Map<string, ModelPresetKey>) {
   let count = 0;
   for (const task of TASK_PRESETS) {
+    // 非活跃任务（无可用模型档位，如 chat_message_fast / chat_message_reasoning）
+    // 不建绑定——spec §3.1.1.7：它们本就没有模型可绑。
+    if (!task.isActive) continue;
+
     const eligible = [...assigned.entries()].filter(([, key]) => task.modelPresets.includes(key));
 
     for (const [index, [modelConfigId]] of eligible.entries()) {
@@ -145,11 +160,47 @@ async function assertAllActiveModelsValid(skipped: Set<string>) {
   console.log(`validated ${models.length - skipped.size} active model schemas`);
 }
 
+/**
+ * spec §3.1.1.7：每个 isActive=true 的任务必须至少有 1 个绑定，且恰好 1 个
+ * isDefault=true 的绑定。缺了这条断言，"活跃任务零绑定" 会一路拖到第二期
+ * 上线——那时查不到绑定就 400，用户对该任务的每次调用都会报错，而 seed
+ * 时本可以炸得清清楚楚。chat_message_fast / chat_message_reasoning 是
+ * isActive=false，天然没有模型可绑，被排除在断言之外。
+ */
+async function assertActiveTasksHaveDefaultBinding() {
+  const tasks = await prisma.task_definitions.findMany({
+    where: { isActive: true },
+    select: {
+      taskType: true,
+      bindings: { where: { isActive: true }, select: { isDefault: true } },
+    },
+  });
+
+  const offenders: string[] = [];
+  for (const task of tasks) {
+    const activeBindings = task.bindings;
+    const defaultCount = activeBindings.filter((b) => b.isDefault).length;
+    if (activeBindings.length === 0) {
+      offenders.push(`${task.taskType}: 0 个活跃绑定`);
+    } else if (defaultCount !== 1) {
+      offenders.push(`${task.taskType}: ${activeBindings.length} 个活跃绑定，但 ${defaultCount} 个 isDefault（应为 1）`);
+    }
+  }
+
+  if (offenders.length > 0) {
+    console.error('以下活跃任务的绑定不满足「至少 1 个绑定 + 恰好 1 个默认」：');
+    for (const line of offenders) console.error(`  - ${line}`);
+    throw new Error(`${offenders.length} 个活跃任务的绑定不合法，拒绝完成 seed`);
+  }
+  console.log(`validated ${tasks.length} active tasks each have exactly one default binding`);
+}
+
 async function main() {
   await seedTasks();
   const { assigned, skipped } = await seedModelSchemas();
   await seedBindings(assigned);
   await assertAllActiveModelsValid(skipped);
+  await assertActiveTasksHaveDefaultBinding();
 }
 
 main()
