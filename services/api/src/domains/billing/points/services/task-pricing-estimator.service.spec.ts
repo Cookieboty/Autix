@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { MODEL_PRESETS, quoteTaskFromSnapshot } from '@autix/domain/pricing';
 import { TaskPricingEstimatorService } from './task-pricing-estimator.service';
 import type { TaskPricingRepository } from '../repositories/task-pricing.repository';
 
@@ -477,5 +478,105 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
     expect(result.pricingSnapshot).toEqual(snapshotBefore);
     expect((result.pricingSnapshot.modelSchema.terms[0] as { const: number }).const).toBe(1);
     expect(result.pricingSnapshot.params.quality).toBe('medium');
+  });
+
+  describe('paramsSchema defaults — the production bug this suite exists to catch', () => {
+    // Real presets, not a fixture: MODEL_PRESETS.image.paramsSchema declares
+    // required: ['quality', 'resolution']. canvas-action.service.ts legitimately
+    // calls estimateCost with only { quantity } — it has no quality/resolution
+    // picker. Before the fix, ajv (full strict mode, no default-filling) 400s on
+    // this every time in production; the mocked-estimator unit tests for the
+    // caller never caught it because they never touch a real paramsSchema.
+    it('fills required quality/resolution from the schema defaults, prices correctly, and stores the filled params in the snapshot', async () => {
+      const repo = buildRepo({
+        findModelPricingConfig: jest.fn().mockResolvedValue({
+          id: 'model-1',
+          name: 'Real Image Model',
+          paramsSchema: MODEL_PRESETS.image.paramsSchema,
+          pricingSchema: MODEL_PRESETS.image.pricingSchema,
+          schemaVersion: 1,
+        }),
+      });
+      const service = new TaskPricingEstimatorService(repo);
+
+      const result = await service.estimateCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        // Exactly what canvas-action.service.ts sends: no quality, no resolution.
+        params: { quantity: 1 },
+      });
+
+      // base(1) * quality medium(90) * resolution 1K(1) * quantity(1) = 90;
+      // + referenceImages(0 * 5) = 90.
+      expect(result.estimatedCost).toBe(90);
+      expect(result.pricingSnapshot.params).toEqual({
+        quality: 'medium',
+        resolution: '1K',
+        quantity: 1,
+        referenceImages: 0,
+      });
+
+      // Estimate and settlement must agree: settlement re-prices from the
+      // *snapshot*, so if the snapshot held the caller's sparse { quantity: 1 }
+      // instead of the filled params, this would re-price against a schema that
+      // still fails required-property validation, or silently price differently.
+      const settled = quoteTaskFromSnapshot(result.pricingSnapshot, {});
+      expect(settled.total).toBe(result.estimatedCost);
+    });
+
+    it('fills required quality/resolution for a template-shaped call (only referenceImages known)', async () => {
+      const repo = buildRepo({
+        findModelPricingConfig: jest.fn().mockResolvedValue({
+          id: 'model-1',
+          name: 'Real Image Model',
+          paramsSchema: MODEL_PRESETS.image.paramsSchema,
+          pricingSchema: MODEL_PRESETS.image.pricingSchema,
+          schemaVersion: 1,
+        }),
+      });
+      const service = new TaskPricingEstimatorService(repo);
+
+      const result = await service.estimateCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        // Exactly what image-templates.service.ts / video-templates.service.ts send.
+        params: { referenceImages: 2 },
+      });
+
+      expect(result.pricingSnapshot.params).toEqual({
+        quality: 'medium',
+        resolution: '1K',
+        quantity: 1,
+        referenceImages: 2,
+      });
+      const settled = quoteTaskFromSnapshot(result.pricingSnapshot, {});
+      expect(settled.total).toBe(result.estimatedCost);
+    });
+
+    it('does not overwrite a caller-supplied value with the schema default, even when the caller passes the whole set explicitly', async () => {
+      const repo = buildRepo({
+        findModelPricingConfig: jest.fn().mockResolvedValue({
+          id: 'model-1',
+          name: 'Real Image Model',
+          paramsSchema: MODEL_PRESETS.image.paramsSchema,
+          pricingSchema: MODEL_PRESETS.image.pricingSchema,
+          schemaVersion: 1,
+        }),
+      });
+      const service = new TaskPricingEstimatorService(repo);
+
+      const result = await service.estimateCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        params: { quality: 'high', resolution: '4K', quantity: 3, referenceImages: 1 },
+      });
+
+      expect(result.pricingSnapshot.params).toEqual({
+        quality: 'high',
+        resolution: '4K',
+        quantity: 3,
+        referenceImages: 1,
+      });
+    });
   });
 });

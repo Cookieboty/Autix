@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
+  applyParamDefaults,
   quoteTask,
   validateParams,
   validatePricingSchema,
@@ -80,7 +81,16 @@ export class TaskPricingEstimatorService {
         ? null
         : this.narrowPricingSchema(task.fixedCostSchema, `任务固定成本规则结构无效: ${input.taskType}`);
 
-    const violations = validateParams(paramsSchema, input.params);
+    // Callers legitimately submit partial params — canvas has no
+    // quality/resolution picker, a template's params are author-fixed — and
+    // validateParams is ajv in full strict mode, which never fills defaults
+    // itself. Fill from the schema's own `default`s before validating, and use
+    // the filled object for everything downstream (quoteTask + the snapshot),
+    // not just validation, so settlement re-prices from the same params the
+    // estimate was actually priced with.
+    const params = applyParamDefaults(paramsSchema, input.params);
+
+    const violations = validateParams(paramsSchema, params);
     if (violations.length > 0) {
       throw new BadRequestException({ message: '参数不合法', violations });
     }
@@ -101,7 +111,7 @@ export class TaskPricingEstimatorService {
       multiplier,
       discountFactor,
       taskFixedSchema,
-      params: input.params,
+      params,
       usage: input.usage,
     });
 
@@ -116,7 +126,7 @@ export class TaskPricingEstimatorService {
       multiplier,
       discountFactor,
       discountCode,
-      params: structuredClone(input.params),
+      params: structuredClone(params),
     };
 
     return {

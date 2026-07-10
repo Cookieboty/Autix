@@ -1,3 +1,4 @@
+export * from './apply-param-defaults';
 export * from './constraints';
 export * from './evaluate';
 export * from './introspect';
