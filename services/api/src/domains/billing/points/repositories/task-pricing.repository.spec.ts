@@ -2,8 +2,8 @@ import { TaskPricingRepository } from './task-pricing.repository';
 
 function buildPrisma() {
   return {
-    task_definitions: { findUnique: jest.fn() },
-    task_model_bindings: { findUnique: jest.fn(), findFirst: jest.fn() },
+    task_definitions: { findUnique: jest.fn(), findMany: jest.fn() },
+    task_model_bindings: { findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn() },
     model_configs: { findUnique: jest.fn() },
     pricing_discounts: { findMany: jest.fn() },
   };
@@ -148,5 +148,43 @@ describe('TaskPricingRepository', () => {
       },
     });
     expect(result).toEqual([discountRow]);
+  });
+
+  it('findActiveTaskDefinitions orders by sort', async () => {
+    const prisma = buildPrisma();
+    const repo = new TaskPricingRepository(prisma as never);
+
+    await repo.findActiveTaskDefinitions();
+
+    expect(prisma.task_definitions.findMany).toHaveBeenCalledWith({
+      where: { isActive: true },
+      orderBy: { sort: 'asc' },
+    });
+  });
+
+  it('findBindingsForTask joins model config pricing + membership fields', async () => {
+    const prisma = buildPrisma();
+    const repo = new TaskPricingRepository(prisma as never);
+
+    await repo.findBindingsForTask('image_generation');
+
+    expect(prisma.task_model_bindings.findMany).toHaveBeenCalledWith({
+      where: { taskType: 'image_generation', isActive: true },
+      orderBy: { sort: 'asc' },
+      include: {
+        modelConfig: {
+          select: {
+            id: true,
+            name: true,
+            provider: true,
+            visibility: true,
+            paramsSchema: true,
+            pricingSchema: true,
+            description: true,
+            allowedMembershipLevels: { select: { levelId: true } },
+          },
+        },
+      },
+    });
   });
 });

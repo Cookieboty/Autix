@@ -25,6 +25,17 @@ import { PointsController } from './points.controller';
     TaskPricingEstimatorService,
     PointsService,
   ],
-  exports: [PointsService],
+  // TaskPricingRepository is exported (not just PointsService) so TasksModule can
+  // reuse this module's registration instead of standing up a second instance —
+  // see tasks.module.ts for why TasksController/TasksService live in a sibling
+  // module rather than here: PointsModule sits inside an existing
+  // AuthModule -> CampaignModule -> PointsModule <-> MembershipModule -> OrderModule
+  // -> AuthModule cycle (all forwardRef'd already); adding a PointsModule ->
+  // MembershipModule edge here — even forwardRef'd — turns that into a 5-module
+  // cycle Nest's scanner cannot unwind (verified empirically: `nest start` throws
+  // `UndefinedModuleException` on OrderModule's AuthModule import). TasksModule is
+  // a new leaf only BillingDomainModule imports, so it can depend on both
+  // PointsModule and MembershipModule with plain imports and no forwardRef at all.
+  exports: [PointsService, TaskPricingRepository],
 })
 export class PointsModule {}

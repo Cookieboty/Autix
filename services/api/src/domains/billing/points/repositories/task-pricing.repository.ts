@@ -59,4 +59,32 @@ export class TaskPricingRepository {
       },
     });
   }
+
+  async findActiveTaskDefinitions(): Promise<task_definitions[]> {
+    return this.prisma.task_definitions.findMany({
+      where: { isActive: true },
+      orderBy: { sort: 'asc' },
+    });
+  }
+
+  async findBindingsForTask(taskType: string) {
+    return this.prisma.task_model_bindings.findMany({
+      where: { taskType, isActive: true },
+      orderBy: { sort: 'asc' },
+      include: {
+        modelConfig: {
+          select: {
+            id: true,
+            name: true,
+            provider: true,
+            visibility: true,
+            paramsSchema: true,
+            pricingSchema: true,
+            description: true,
+            allowedMembershipLevels: { select: { levelId: true } },
+          },
+        },
+      },
+    });
+  }
 }
