@@ -29,13 +29,26 @@ describe('chat pricing helpers', () => {
       }),
     ).toEqual({
       taskType: 'image_generation',
-      modelProvider: 'bytedance',
-      modelName: 'seedance-fast',
-      quality: 'hd',
-      resolution: '1K',
-      quantity: 1,
-      referenceImages: 2,
+      modelConfigId: 'model-1',
+      params: {
+        quality: 'hd',
+        resolution: '1K',
+        quantity: 1,
+        referenceImages: 2,
+      },
     });
+  });
+
+  test('never puts a token key in params, and never sets a usage field', () => {
+    const input = buildImageEstimateInput({
+      model: baseModel,
+      quality: 'hd',
+      size: '1024x1024',
+      referenceImageCount: 0,
+    });
+    expect(Object.keys(input.params)).not.toContain('inputTokens');
+    expect(Object.keys(input.params)).not.toContain('outputTokens');
+    expect(input).not.toHaveProperty('usage');
   });
 
   test('normalizes video resolution to the supported pricing buckets', () => {
@@ -63,13 +76,14 @@ describe('chat pricing helpers', () => {
       }),
     ).toMatchObject({
       taskType: 'video_generation',
-      modelProvider: 'bytedance',
-      modelName: 'seedance-fast',
-      resolution: '720p',
-      seconds: 5,
-      referenceImages: 1,
-      hasVideoInput: true,
-      hasAudioInput: true,
+      modelConfigId: 'model-1',
+      params: {
+        resolution: '720p',
+        seconds: 5,
+        referenceImages: 1,
+        hasVideoInput: true,
+        hasAudioInput: true,
+      },
     });
   });
 
@@ -88,11 +102,27 @@ describe('chat pricing helpers', () => {
       }),
     ).toMatchObject({
       taskType: 'video_generation',
-      resolution: '1080p',
-      seconds: 8,
-      referenceImages: 1,
-      hasVideoInput: true,
-      hasAudioInput: true,
+      params: {
+        resolution: '1080p',
+        seconds: 8,
+        referenceImages: 1,
+        hasVideoInput: true,
+        hasAudioInput: true,
+      },
     });
+  });
+
+  test('video estimate input never puts a token key in params, and never sets a usage field', () => {
+    const input = buildVideoEstimateInput({
+      model: baseModel,
+      resolutionValue: '720p',
+      duration: 5,
+      mode: 'reference',
+      materials: [],
+      frames: [],
+    });
+    expect(Object.keys(input.params)).not.toContain('inputTokens');
+    expect(Object.keys(input.params)).not.toContain('outputTokens');
+    expect(input).not.toHaveProperty('usage');
   });
 });

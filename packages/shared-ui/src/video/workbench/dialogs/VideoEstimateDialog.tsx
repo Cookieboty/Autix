@@ -60,8 +60,9 @@ export function VideoEstimateDialog({
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="font-medium text-foreground">{t('pricingRule')}</div>
+                      {/* TODO(pricing phase 3): render a localized task label, not the raw taskType id */}
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {item.estimate.ruleName}
+                        {item.estimate.taskType}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">

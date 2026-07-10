@@ -3,8 +3,8 @@ import {
   pointsApi,
   publicImageGeneratorApi,
   videoProjectApi,
-  type GenerationPricingEstimate,
-  type GenerationPricingEstimateInput,
+  type TaskEstimateInput,
+  type TaskEstimateResult,
   type ImageTemplate,
   type PublicImageGenerateInput,
   type PublicImageGenerateResult,
@@ -12,8 +12,8 @@ import {
 } from '@autix/sdk';
 
 export type {
-  GenerationPricingEstimate,
-  GenerationPricingEstimateInput,
+  TaskEstimateInput,
+  TaskEstimateResult,
   ImageTemplate,
 } from '@autix/sdk';
 
@@ -25,8 +25,8 @@ export type {
 
 export const publicGeneratorActions = {
   estimateGeneration: async (
-    input: GenerationPricingEstimateInput,
-  ): Promise<GenerationPricingEstimate> => {
+    input: TaskEstimateInput,
+  ): Promise<TaskEstimateResult> => {
     const res = await pointsApi.estimate(input);
     return res.data;
   },

@@ -4,8 +4,8 @@ import {
   uploadToPresignedUrl,
   videoProjectApi,
   videoTemplateApi,
-  type GenerationPricingEstimate,
-  type GenerationPricingEstimateInput,
+  type TaskEstimateInput,
+  type TaskEstimateResult,
   type MaterialAsset,
   type MaterialAssetType,
   type MaterialCreateInput,
@@ -14,8 +14,8 @@ import {
 } from '@autix/sdk';
 
 export type {
-  GenerationPricingEstimate,
-  GenerationPricingEstimateInput,
+  TaskEstimateInput,
+  TaskEstimateResult,
   MaterialAsset,
   MaterialAssetType,
   VideoTemplate,
@@ -56,8 +56,8 @@ export const videoWorkbenchActions = {
     return res.data?.account?.availableBalance ?? res.data?.account?.balance ?? null;
   },
   estimateGeneration: async (
-    input: GenerationPricingEstimateInput,
-  ): Promise<GenerationPricingEstimate> => {
+    input: TaskEstimateInput,
+  ): Promise<TaskEstimateResult> => {
     const res = await pointsApi.estimate(input);
     return res.data;
   },

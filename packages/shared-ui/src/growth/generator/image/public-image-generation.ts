@@ -1,5 +1,5 @@
 import type {
-  GenerationPricingEstimateInput,
+  TaskEstimateInput,
   ModelConfigItem,
   PublicImageGenerateResult,
 } from '@autix/shared-store';
@@ -74,16 +74,17 @@ export function buildPublicImageEstimateInput({
   model?: ModelConfigItem | null;
   selectedModelId: string;
   referenceImages: number;
-}): GenerationPricingEstimateInput {
+}): TaskEstimateInput {
   const pricingResolution = resolveImagePricingResolution(settings.size);
   return {
     taskType: 'image_generation',
-    modelProvider: model?.provider ?? undefined,
-    modelName: model?.model ?? selectedModelId,
-    ...(settings.quality ? { quality: String(settings.quality) } : {}),
-    ...(pricingResolution ? { resolution: pricingResolution } : {}),
-    quantity: normalizeImageQuantity(settings.count),
-    referenceImages,
+    modelConfigId: model?.id ?? selectedModelId,
+    params: {
+      ...(settings.quality ? { quality: String(settings.quality) } : {}),
+      ...(pricingResolution ? { resolution: pricingResolution } : {}),
+      quantity: normalizeImageQuantity(settings.count),
+      referenceImages,
+    },
   };
 }
 

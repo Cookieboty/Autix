@@ -4,8 +4,8 @@ import {
   imageWorkbenchApi,
   materialsApi,
   pointsApi,
-  type GenerationPricingEstimate,
-  type GenerationPricingEstimateInput,
+  type TaskEstimateInput,
+  type TaskEstimateResult,
   type ImageTemplate,
   type ImageWorkbenchGenerateInput,
   type ImageWorkbenchGenerateResult,
@@ -18,8 +18,8 @@ import {
 } from '@autix/sdk';
 
 export type {
-  GenerationPricingEstimate,
-  GenerationPricingEstimateInput,
+  TaskEstimateInput,
+  TaskEstimateResult,
   ImageTemplate,
   ImageWorkbenchGenerateInput,
   ImageWorkbenchGenerateResult,
@@ -43,8 +43,8 @@ export const imageWorkbenchActions = {
     return res.data?.account?.availableBalance ?? res.data?.account?.balance ?? null;
   },
   estimateGeneration: async (
-    input: GenerationPricingEstimateInput,
-  ): Promise<GenerationPricingEstimate> => {
+    input: TaskEstimateInput,
+  ): Promise<TaskEstimateResult> => {
     const res = await pointsApi.estimate(input);
     return res.data;
   },

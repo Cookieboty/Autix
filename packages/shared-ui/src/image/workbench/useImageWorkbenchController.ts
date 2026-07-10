@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   imageWorkbenchActions,
-  type GenerationPricingEstimate,
+  type TaskEstimateResult,
   type ImageWorkbenchHistoryItem,
   type MaterialAsset,
 } from '@autix/shared-store';
@@ -40,7 +40,7 @@ export function useImageWorkbenchController(resourceOptions: ImageWorkbenchContr
   const [generating, setGenerating] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [estimateLoading, setEstimateLoading] = useState(false);
-  const [estimate, setEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [estimate, setEstimate] = useState<TaskEstimateResult | null>(null);
   const [pendingGenerate, setPendingGenerate] =
     useState<PendingImageWorkbenchGenerate | null>(null);
 

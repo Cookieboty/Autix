@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   videoWorkbenchActions,
   type AgentKind,
-  type GenerationPricingEstimate,
+  type TaskEstimateResult,
   type ModelConfigItem,
 } from '@autix/shared-store';
 import type { FrameSlot, VideoMaterial } from '../video/VideoInputArea';
@@ -43,7 +43,7 @@ export function useChatInputEstimate({
   videoMaterials,
   videoFrames,
 }: UseChatInputEstimateParams) {
-  const [estimate, setEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [estimate, setEstimate] = useState<TaskEstimateResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import {
-  type GenerationPricingEstimate,
-  type GenerationPricingEstimateInput,
+  type TaskEstimateResult,
+  type TaskEstimateInput,
   type VideoTemplate,
   type WorkbenchVideoTemplate,
   createLocalVideoProject,
@@ -108,7 +108,7 @@ export type VideoEstimateTarget =
 
 export interface VideoClipEstimate {
   clip: VideoClip;
-  estimate: GenerationPricingEstimate;
+  estimate: TaskEstimateResult;
   taskType: string;
   seconds: number;
   resolution: string;
@@ -134,19 +134,21 @@ export function resolveClipVideoModel(clip: VideoClip, videoModels: ModelConfigI
   return videoModels.find((model) => model.id === modelConfigId) ?? null;
 }
 
-export function resolveVideoPricingTaskType(clip: VideoClip, videoModel?: ModelConfigItem | null): string {
+export function resolveVideoPricingTaskType(_clip: VideoClip, _videoModel?: ModelConfigItem | null): string {
   return 'video_generation';
 }
 
 export function buildVideoEstimateInput(
   clip: VideoClip,
   videoModel?: ModelConfigItem | null,
-): GenerationPricingEstimateInput & {
-  seconds: number;
-  resolution: string;
-  referenceImages: number;
-  hasVideoInput: boolean;
-  hasAudioInput: boolean;
+): TaskEstimateInput & {
+  params: {
+    seconds: number;
+    resolution: string;
+    referenceImages: number;
+    hasVideoInput: boolean;
+    hasAudioInput: boolean;
+  };
 } {
   const params = clip.params ?? {};
   const taskType = resolveVideoPricingTaskType(clip, videoModel);
@@ -160,32 +162,29 @@ export function buildVideoEstimateInput(
     clip.materials.some((material) => material.role === 'reference_audio') ||
     params.generateAudio === true ||
     params.generate_audio === true;
-  const modelName =
-    typeof params.model === 'string' && params.model.trim()
-      ? params.model
-      : videoModel?.model;
+  const modelConfigId =
+    typeof params.modelConfigId === 'string' && params.modelConfigId.trim()
+      ? params.modelConfigId
+      : videoModel?.id;
 
   return {
     taskType,
-    modelProvider: videoModel?.provider ?? undefined,
-    modelName,
-    resolution,
-    seconds,
-    referenceImages,
-    hasVideoInput,
-    hasAudioInput,
+    modelConfigId,
+    params: { resolution, seconds, referenceImages, hasVideoInput, hasAudioInput },
   };
 }
 
 export function buildVideoBatchEstimateInput(
   clips: VideoClip[],
   videoModels: ModelConfigItem[],
-): (GenerationPricingEstimateInput & {
-  seconds: number;
-  resolution: string;
-  referenceImages: number;
-  hasVideoInput: boolean;
-  hasAudioInput: boolean;
+): (TaskEstimateInput & {
+  params: {
+    seconds: number;
+    resolution: string;
+    referenceImages: number;
+    hasVideoInput: boolean;
+    hasAudioInput: boolean;
+  };
 }) | null {
   const firstClip = clips[0];
   if (!firstClip) return null;
@@ -195,10 +194,13 @@ export function buildVideoBatchEstimateInput(
     const clipInput = buildVideoEstimateInput(clip, resolveClipVideoModel(clip, videoModels));
     return {
       ...input,
-      seconds: input.seconds + clipInput.seconds,
-      referenceImages: input.referenceImages + clipInput.referenceImages,
-      hasVideoInput: input.hasVideoInput || clipInput.hasVideoInput,
-      hasAudioInput: input.hasAudioInput || clipInput.hasAudioInput,
+      params: {
+        ...input.params,
+        seconds: input.params.seconds + clipInput.params.seconds,
+        referenceImages: input.params.referenceImages + clipInput.params.referenceImages,
+        hasVideoInput: input.params.hasVideoInput || clipInput.params.hasVideoInput,
+        hasAudioInput: input.params.hasAudioInput || clipInput.params.hasAudioInput,
+      },
     };
   }, firstInput);
 }

@@ -1656,41 +1656,53 @@ import type {
   GenerationPricingRule,
 } from '@autix/domain/billing';
 
-export interface GenerationPricingEstimateInput {
+export interface TaskEstimateInput {
   taskType: string;
-  modelProvider?: string;
-  modelName?: string;
-  quality?: string;
-  resolution?: string;
-  modelTier?: string;
-  quantity?: number;
-  seconds?: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  contextTokens?: number;
-  toolCalls?: number;
-  mcpCalls?: number;
-  skillCalls?: number;
-  batchCount?: number;
-  referenceImages?: number;
-  hasVideoInput?: boolean;
-  hasAudioInput?: boolean;
-  priority?: boolean;
-  contextMode?: string;
-  membershipLevel?: number;
-  grantType?: 'SUBSCRIPTION' | 'PURCHASED' | 'GIFT' | 'COMPENSATION';
+  modelConfigId?: string;
+  params: Record<string, unknown>;
+  usage?: Record<string, unknown>;
 }
 
-export interface GenerationPricingEstimate {
+export interface Breakdown {
+  id: string;
+  op: 'add' | 'mul';
+  contribution: number;
+  accumulatorAfter: number;
+}
+
+export interface TaskEstimateResult {
   estimatedCost: number;
-  ruleId: string;
   taskType: string;
-  ruleName: string;
-  baseUnit: string;
-  multiplier: number;
-  items: Array<{ label: string; amount: number }>;
+  modelConfigId: string;
+  breakdown: Breakdown[];
   pricingSnapshot: Record<string, unknown>;
-  refundPolicy: Record<string, unknown> | null;
+}
+
+export interface TaskDefinition {
+  id: string;
+  taskType: string;
+  name: string;
+  category: 'chat' | 'image' | 'video' | 'prompt';
+  isActive: boolean;
+  sort: number;
+}
+
+export interface TaskModel {
+  modelConfigId: string;
+  name: string;
+  provider: string;
+  isDefault: boolean;
+  description: string;
+  paramsSchema: Record<string, unknown>;
+  pricingSchema: Record<string, unknown>;
+  multiplier: number;
+  discountFactor: number;
+}
+
+export interface QuoteTaskResult {
+  total: number;
+  breakdown: Breakdown[];
+  snapshot: Record<string, unknown>;
 }
 
 export interface PointGrantBatch {
@@ -1730,8 +1742,16 @@ export const pointsApi = {
     chatApi.get<PaginatedResult<PointsRecord>>('/api/points/records', { params }),
   getPackages: () => chatApi.get<PointsPackage[]>('/api/points/packages'),
   getPricingRules: () => chatApi.get<GenerationPricingRule[]>('/api/points/pricing-rules'),
-  estimate: (data: GenerationPricingEstimateInput) =>
-    chatApi.post<GenerationPricingEstimate>('/api/points/estimate', data),
+  estimate: (data: TaskEstimateInput) =>
+    chatApi.post<TaskEstimateResult>('/api/points/estimate', data),
+};
+
+export const tasksApi = {
+  listTasks: () => chatApi.get<TaskDefinition[]>('/api/tasks'),
+  listModels: (taskType: string) =>
+    chatApi.get<TaskModel[]>(`/api/tasks/${taskType}/models`),
+  quote: (taskType: string, input: { modelConfigId?: string; params: Record<string, unknown>; usage?: Record<string, unknown> }) =>
+    chatApi.post<QuoteTaskResult>(`/api/tasks/${taskType}/quote`, input),
 };
 
 // ── Campaign Rewards ────────────────────────────────────────────────────

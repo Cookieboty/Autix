@@ -79,12 +79,14 @@ describe('buildPublicVideoEstimateInput', () => {
       }),
     ).toEqual({
       taskType: 'video_generation',
-      modelName: 'seedance-2.0',
-      resolution: '1080p',
-      seconds: 5,
-      referenceImages: 0,
-      hasVideoInput: false,
-      hasAudioInput: true,
+      modelConfigId: undefined,
+      params: {
+        resolution: '1080p',
+        seconds: 5,
+        referenceImages: 0,
+        hasVideoInput: false,
+        hasAudioInput: true,
+      },
     });
   });
 
@@ -97,10 +99,11 @@ describe('buildPublicVideoEstimateInput', () => {
         generateAudio: false,
       }),
     ).toMatchObject({
-      modelName: 'seedance-2.0-fast',
-      resolution: '720p',
-      seconds: 1,
-      hasAudioInput: false,
+      params: {
+        resolution: '720p',
+        seconds: 1,
+        hasAudioInput: false,
+      },
     });
   });
 
@@ -129,11 +132,24 @@ describe('buildPublicVideoEstimateInput', () => {
         generateAudio: true,
       }),
     ).toMatchObject({
-      modelProvider: 'bytedance',
-      modelName: 'doubao-seedance-2.0-fast',
-      resolution: '720p',
-      seconds: 4,
-      hasAudioInput: true,
+      modelConfigId: 'seedance-lite-id',
+      params: {
+        resolution: '720p',
+        seconds: 4,
+        hasAudioInput: true,
+      },
     });
+  });
+
+  test('never puts a token key in params, and never sets a usage field', () => {
+    const input = buildPublicVideoEstimateInput({
+      model: 'seedance-2.0',
+      duration: 5,
+      resolution: '720p',
+      generateAudio: false,
+    });
+    expect(Object.keys(input.params)).not.toContain('inputTokens');
+    expect(Object.keys(input.params)).not.toContain('outputTokens');
+    expect(input).not.toHaveProperty('usage');
   });
 });

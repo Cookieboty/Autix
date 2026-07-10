@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Calculator, ChevronRight, Loader2 } from 'lucide-react';
-import type { GenerationPricingEstimate } from '@autix/shared-store';
+import type { TaskEstimateResult } from '@autix/shared-store';
 import {
   Button,
   Dialog,
@@ -26,7 +26,7 @@ export function ImageWorkbenchEstimateDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   estimateLoading: boolean;
-  estimate: GenerationPricingEstimate | null;
+  estimate: TaskEstimateResult | null;
   accountBalance: number | null;
   onConfirm: () => void;
 }) {
@@ -67,18 +67,20 @@ export function ImageWorkbenchEstimateDialog({
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">{t('taskType')}</span>
-                  <span>{estimate.ruleName}</span>
+                  {/* TODO(pricing phase 3): render a localized task label, not the raw taskType id */}
+                  <span>{estimate.taskType}</span>
                 </div>
               </div>
               <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
                 <div className="font-medium">{t('costDetails')}</div>
-                {estimate.items.map((item) => (
+                {estimate.breakdown.map((item) => (
                   <div
-                    key={item.label}
+                    key={item.id}
                     className="flex items-center justify-between gap-3 text-muted-foreground"
                   >
-                    <span>{item.label}</span>
-                    <span>{t('pointsValue', { points: item.amount })}</span>
+                    {/* TODO(pricing phase 3): render a localized term label, not the raw term id */}
+                    <span>{item.id}</span>
+                    <span>{t('pointsValue', { points: item.contribution })}</span>
                   </div>
                 ))}
               </div>

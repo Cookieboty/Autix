@@ -22,7 +22,7 @@ describe('image workbench count', () => {
         settings,
         selectedModelId: 'compatible-image',
         referenceImages: 0,
-      }).quantity,
+      }).params.quantity,
     ).toBe(3);
   });
 

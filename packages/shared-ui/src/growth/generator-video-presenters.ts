@@ -3,7 +3,7 @@ import {
   resolveVideoModelCapability,
   type VideoModelCapability,
 } from '@autix/domain/video';
-import type { GenerationPricingEstimateInput, ModelConfigItem } from '@autix/shared-store';
+import type { TaskEstimateInput, ModelConfigItem } from '@autix/shared-store';
 
 export const DEFAULT_PUBLIC_VIDEO_MODEL = 'seedance-2.0';
 
@@ -74,20 +74,21 @@ export function buildPublicVideoEstimateInput({
   resolution: string;
   generateAudio: boolean;
   referenceImages?: number;
-}): GenerationPricingEstimateInput {
+}): TaskEstimateInput {
   const fallbackModel = model || DEFAULT_PUBLIC_VIDEO_MODEL;
   return {
     taskType: 'video_generation',
-    ...(modelConfig?.provider ? { modelProvider: modelConfig.provider } : {}),
-    modelName: modelConfig?.model || fallbackModel,
-    resolution: normalizeVideoResolutionForModel(
-      resolution,
-      modelConfig ?? { model: fallbackModel },
-    ),
-    seconds: Math.max(1, Math.ceil(Number(duration) || 1)),
-    referenceImages: Math.max(0, Math.floor(Number(referenceImages) || 0)),
-    hasVideoInput: false,
-    hasAudioInput: generateAudio,
+    modelConfigId: modelConfig?.id,
+    params: {
+      resolution: normalizeVideoResolutionForModel(
+        resolution,
+        modelConfig ?? { model: fallbackModel },
+      ),
+      seconds: Math.max(1, Math.ceil(Number(duration) || 1)),
+      referenceImages: Math.max(0, Math.floor(Number(referenceImages) || 0)),
+      hasVideoInput: false,
+      hasAudioInput: generateAudio,
+    },
   };
 }
 

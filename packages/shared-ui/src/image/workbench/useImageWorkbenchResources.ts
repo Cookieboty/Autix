@@ -7,7 +7,7 @@ import {
   hasImageCapability,
   imageWorkbenchActions,
   listAvailableModels,
-  type GenerationPricingEstimate,
+  type TaskEstimateResult,
   type ImageTemplate,
   type ImageWorkbenchHistoryItem,
   type MaterialAsset,
@@ -76,7 +76,7 @@ export function useImageWorkbenchResources({
   const [materialsLoading, setMaterialsLoading] = useState(enableMaterials);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [quickEstimate, setQuickEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [quickEstimate, setQuickEstimate] = useState<TaskEstimateResult | null>(null);
   const [quickEstimateLoading, setQuickEstimateLoading] = useState(false);
   const [accountBalance, setAccountBalance] = useState<number | null>(null);
   const draftAppliedRef = useRef(false);

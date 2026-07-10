@@ -1,11 +1,11 @@
 import type {
-  GenerationPricingEstimateInput,
+  TaskEstimateInput,
   ModelConfigItem,
 } from '@autix/shared-store';
 import { resolveImagePricingResolution } from '@autix/domain/image';
 import type { ImageStudioModelSettings } from '../ImageStudioWorkspace';
 
-export function resolveImagePricingTaskType(settings: ImageStudioModelSettings): string {
+export function resolveImagePricingTaskType(_settings: ImageStudioModelSettings): string {
   return 'image_generation';
 }
 
@@ -25,15 +25,16 @@ export function buildImageWorkbenchEstimateInput({
   model?: ModelConfigItem | null;
   selectedModelId: string;
   referenceImages: number;
-}): GenerationPricingEstimateInput {
+}): TaskEstimateInput {
   const pricingResolution = resolveImagePricingResolution(settings.size);
   return {
     taskType: resolveImagePricingTaskType(settings),
-    modelProvider: model?.provider ?? undefined,
-    modelName: model?.model ?? selectedModelId,
-    ...(settings.quality ? { quality: String(settings.quality) } : {}),
-    ...(pricingResolution ? { resolution: pricingResolution } : {}),
-    quantity: normalizeImageQuantity(settings.count),
-    referenceImages,
+    modelConfigId: model?.id ?? selectedModelId,
+    params: {
+      ...(settings.quality ? { quality: String(settings.quality) } : {}),
+      ...(pricingResolution ? { resolution: pricingResolution } : {}),
+      quantity: normalizeImageQuantity(settings.count),
+      referenceImages,
+    },
   };
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  type GenerationPricingEstimate,
+  type TaskEstimateResult,
   type ModelConfigItem,
   type VideoClip,
   videoWorkbenchActions,
@@ -30,7 +30,7 @@ export function useSelectedClipEstimate({
   canGenerate,
   videoModels,
 }: UseSelectedClipEstimateOptions) {
-  const [estimate, setEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [estimate, setEstimate] = useState<TaskEstimateResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
