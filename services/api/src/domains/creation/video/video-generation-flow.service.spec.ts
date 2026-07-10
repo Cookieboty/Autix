@@ -103,8 +103,9 @@ function makeService(options: {
     estimateCost: jest.fn(async () => ({
       estimatedCost: 1600,
       taskType: 'video_generation',
+      modelConfigId: 'model-config-1',
+      breakdown: [],
       pricingSnapshot: { ruleId: 'rule-video' },
-      refundPolicy: { systemFailed: 'full_refund' },
     })),
     createHold: jest.fn(async () => ({
       hold: { id: 'hold-1' },
@@ -346,22 +347,36 @@ describe('VideoGenerationFlowService billing', () => {
       userId: 'user-1',
     });
 
-    expect(pointsService.estimateCost).toHaveBeenCalledWith(
-      expect.objectContaining({
-        taskType: 'video_generation',
+    // Exact shape (not objectContaining): pins the new task/params contract —
+    // resolution/seconds/ratio live under `params`, modelConfigId is present
+    // because generateClip always has one in scope by this point, and there is
+    // no referenceImages/hasVideoInput/hasAudioInput (not part of the `video`
+    // pricing preset's paramsSchema) and no top-level resolution/seconds.
+    expect(pointsService.estimateCost).toHaveBeenCalledWith({
+      taskType: 'video_generation',
+      modelConfigId: 'model-config-1',
+      params: {
         resolution: '720p',
         seconds: 5,
-        referenceImages: 1,
-      }),
-    );
+        ratio: '16:9',
+      },
+      membershipLevel: 3,
+    });
     expect(pointsService.createHold).toHaveBeenCalledWith(
       'user-1',
       expect.objectContaining({
         taskType: 'video_generation',
         taskId: result.generationId,
         amount: 1600,
+        pricingSnapshot: { ruleId: 'rule-video' },
       }),
     );
+    // refundPolicy is dead — createHold must never receive a refundPolicySnapshot
+    // (not even a fabricated `{}`) for the video-generation charge path.
+    const holdCallArgsForOrder = (
+      pointsService.createHold.mock.calls as unknown as Array<[string, Record<string, unknown>]>
+    ).at(-1)?.[1];
+    expect(holdCallArgsForOrder).not.toHaveProperty('refundPolicySnapshot');
     expect(order).toEqual(['hold', 'generation', 'provider']);
     expect(result).toEqual({
       generationId: expect.any(String),
@@ -462,9 +477,18 @@ describe('VideoGenerationFlowService billing', () => {
     expect(taskRequest.content[0].text).toContain('完整分镜脚本');
     expect(taskRequest.content[0].text).toContain('分镜 1「开场」：赛博朋克城市远景');
     expect(taskRequest.content[0].text).toContain('分镜 2「特写」：红衣少女半身近景');
-    expect(pointsService.estimateCost).toHaveBeenCalledWith(
-      expect.objectContaining({ seconds: 5 }),
-    );
+    // Exact shape: the second (storyboard) estimateCost call site also uses the
+    // task/params contract, with the modelConfigId resolved for the storyboard.
+    expect(pointsService.estimateCost).toHaveBeenCalledWith({
+      taskType: 'video_generation',
+      modelConfigId: 'model-config-1',
+      params: {
+        resolution: '720p',
+        seconds: 5,
+        ratio: '16:9',
+      },
+      membershipLevel: 3,
+    });
     expect(prisma.video_clip_generations.create).toHaveBeenCalledTimes(1);
     expect(prisma.video_clips.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -675,8 +699,10 @@ describe('VideoGenerationFlowService billing', () => {
     );
     expect(pointsService.estimateCost).toHaveBeenCalledWith(
       expect.objectContaining({
-        resolution: '1080p',
-        seconds: 7,
+        params: expect.objectContaining({
+          resolution: '1080p',
+          seconds: 7,
+        }),
       }),
     );
     expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
@@ -730,10 +756,16 @@ describe('VideoGenerationFlowService billing', () => {
         durationSeconds: 5,
       },
     );
+    // Pricing identifies the model via modelConfigId, never by re-deriving it
+    // from the resolved model name (doubao-seedance-2.0-fast is the Seedance
+    // model id, not a pricing identity — see task-15 brief on not reverse-
+    // looking-up a model by name).
     expect(pointsService.estimateCost).toHaveBeenCalledWith(
       expect.objectContaining({
-        modelName: 'doubao-seedance-2.0-fast',
-        resolution: '720p',
+        modelConfigId: 'model-config-1',
+        params: expect.objectContaining({
+          resolution: '720p',
+        }),
       }),
     );
     expect(seedanceApi.createTask).toHaveBeenCalledWith(
@@ -792,7 +824,7 @@ describe('VideoGenerationFlowService billing', () => {
     }
     expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
     expect(pointsService.estimateCost).toHaveBeenCalledWith(
-      expect.objectContaining({ seconds: 10 }),
+      expect.objectContaining({ params: expect.objectContaining({ seconds: 10 }) }),
     );
     expect(prisma.video_clip_generations.create).toHaveBeenCalledTimes(1);
   });
@@ -1038,6 +1070,66 @@ describe('VideoGenerationFlowService billing', () => {
     expect(membershipService.resolveVideoEntitlements).toHaveBeenCalledWith(
       'user-1',
     );
+    expect(pointsService.createHold).not.toHaveBeenCalled();
+    expect(seedanceApi.createTask).not.toHaveBeenCalled();
+  });
+
+  it('propagates estimateCost failures on the clip path without a fallback price (no hold, no provider task)', async () => {
+    const { service, pointsService, seedanceApi } = makeService();
+    pointsService.estimateCost.mockRejectedValueOnce(
+      new Error('任务未配置: video_generation'),
+    );
+
+    await expect(
+      service.generateClip({
+        clipId: 'clip-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+      }),
+    ).rejects.toThrow('任务未配置: video_generation');
+
+    // No fallback on a charging path: a thrown estimate must never be caught
+    // and substituted with a hold/price computed another way.
+    expect(pointsService.createHold).not.toHaveBeenCalled();
+    expect(seedanceApi.createTask).not.toHaveBeenCalled();
+  });
+
+  it('propagates estimateCost failures on the storyboard project path without a fallback price', async () => {
+    const projectClips = [
+      {
+        id: 'clip-1',
+        projectId: 'project-1',
+        order: 1,
+        title: '开场',
+        prompt: '赛博朋克城市远景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '720p',
+          duration: 2,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: false,
+        materials: [],
+      },
+    ];
+    const { service, prisma, pointsService, seedanceApi } = makeService({
+      projectClips,
+    });
+    prisma.video_projects.findUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+    });
+    pointsService.estimateCost.mockRejectedValueOnce(
+      new Error('模型未找到: model-config-1'),
+    );
+
+    await expect(
+      service.generateAllClips('project-1', 'user-1'),
+    ).rejects.toThrow('模型未找到: model-config-1');
+
     expect(pointsService.createHold).not.toHaveBeenCalled();
     expect(seedanceApi.createTask).not.toHaveBeenCalled();
   });

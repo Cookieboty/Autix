@@ -223,7 +223,7 @@ describe('video generation flow helpers', () => {
     });
   });
 
-  it('summarizes Seedance content and builds cost estimate input', () => {
+  it('summarizes Seedance content (an inert content-shape utility, no longer wired into pricing)', () => {
     const content = [
       { type: 'text' as const, text: 'prompt' },
       { type: 'image_url' as const, image_url: { url: 'https://img.test/1.png' } },
@@ -237,46 +237,73 @@ describe('video generation flow helpers', () => {
       hasVideoInput: true,
       hasAudioInput: true,
     });
-    expect(
-      buildSeedanceCostEstimateInput({
-        params: { resolution: '1080P', duration: 5.2, sourceTemplateId: 'tpl-1' },
-        model: 'seedance-pro',
-        content,
-      }),
-    ).toEqual({
-      taskType: 'video_generation',
-      modelName: 'seedance-pro',
-      resolution: '1080p',
-      seconds: 6,
-      referenceImages: 2,
-      hasVideoInput: true,
-      hasAudioInput: true,
+  });
+
+  describe('buildSeedanceCostEstimateInput', () => {
+    it('packs resolution/seconds/ratio into params under the task/params contract, with modelConfigId when known', () => {
+      expect(
+        buildSeedanceCostEstimateInput({
+          params: { resolution: '1080P', duration: 5.2, ratio: '9:16', sourceTemplateId: 'tpl-1' },
+          modelConfigId: 'model-config-1',
+          membershipLevel: 3,
+        }),
+      ).toEqual({
+        taskType: 'video_generation',
+        modelConfigId: 'model-config-1',
+        params: {
+          resolution: '1080p',
+          seconds: 6,
+          ratio: '9:16',
+        },
+        membershipLevel: 3,
+      });
+    });
+
+    it('omits ratio, modelConfigId and membershipLevel when not provided, and never guesses a pointCostWeight-style value', () => {
+      const result = buildSeedanceCostEstimateInput({
+        params: { resolution: '720p', duration: 5 },
+      });
+
+      expect(result).toEqual({
+        taskType: 'video_generation',
+        params: {
+          resolution: '720p',
+          seconds: 5,
+        },
+      });
+      expect(result).not.toHaveProperty('modelConfigId');
+      expect(result).not.toHaveProperty('membershipLevel');
+      expect(result.params).not.toHaveProperty('ratio');
+      // video params are only what the `video` pricing preset declares
+      // (resolution/seconds/ratio) — no referenceImages/hasVideoInput/hasAudioInput,
+      // those never appear in the video preset's paramsSchema.
+      expect(result.params).not.toHaveProperty('referenceImages');
+      expect(result.params).not.toHaveProperty('hasVideoInput');
+      expect(result.params).not.toHaveProperty('hasAudioInput');
     });
   });
 
-  it('builds video hold input with preserved metadata and remark shape', () => {
-    expect(
-      buildVideoHoldInput({
-        billingTaskType: 'video_generation',
-        generationId: 'gen-1',
-        estimatedCost: 1600,
-        pricingSnapshot: { ruleId: 'rule-video', drop: undefined },
-        refundPolicy: { systemFailed: 'full_refund' },
-        projectId: 'project-1',
-        clipId: 'clip-1',
-        modelConfigId: 'model-config-1',
-        taskRequest: {
-          model: 'seedance-pro',
-          content: [{ type: 'text', text: 'prompt' }],
-          duration: 5,
-        },
-      }),
-    ).toEqual({
+  it('builds video hold input with preserved metadata and remark shape, and never sends a refundPolicySnapshot', () => {
+    const result = buildVideoHoldInput({
+      billingTaskType: 'video_generation',
+      generationId: 'gen-1',
+      estimatedCost: 1600,
+      pricingSnapshot: { ruleId: 'rule-video', drop: undefined },
+      projectId: 'project-1',
+      clipId: 'clip-1',
+      modelConfigId: 'model-config-1',
+      taskRequest: {
+        model: 'seedance-pro',
+        content: [{ type: 'text', text: 'prompt' }],
+        duration: 5,
+      },
+    });
+
+    expect(result).toEqual({
       taskType: 'video_generation',
       taskId: 'gen-1',
       amount: 1600,
       pricingSnapshot: { ruleId: 'rule-video' },
-      refundPolicySnapshot: { systemFailed: 'full_refund' },
       metadata: {
         projectId: 'project-1',
         clipId: 'clip-1',
@@ -289,6 +316,9 @@ describe('video generation flow helpers', () => {
       },
       remark: 'video-generation',
     });
+    // refundPolicy is dead (39 old rules all NULL, refundHold never reads the
+    // snapshot) — an impl that fabricates `{}` here must fail this assertion.
+    expect(result).not.toHaveProperty('refundPolicySnapshot');
   });
 
   it('builds chained first-frame input only when the previous generation has a last frame', () => {

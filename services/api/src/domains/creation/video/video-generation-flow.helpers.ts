@@ -61,14 +61,20 @@ export interface SeedanceContentSummary {
   hasAudioInput: boolean;
 }
 
+/**
+ * Shape consumed directly as `TaskEstimateInput` (Task 3/4). Video params are all
+ * order-time `params` sourced from the `video` pricing preset's paramsSchema
+ * (resolution/seconds/ratio — see packages/domain/src/pricing/presets.ts) — video
+ * has no token/usage-source pricing, so there is no `usage` field here.
+ */
 export interface SeedanceCostEstimateInput {
   taskType: string;
-  modelName: string;
-  resolution: NormalizedVideoResolution;
-  seconds: number;
-  referenceImages: number;
-  hasVideoInput: boolean;
-  hasAudioInput: boolean;
+  modelConfigId?: string;
+  params: {
+    resolution: NormalizedVideoResolution;
+    seconds: number;
+    ratio?: string;
+  };
   membershipLevel?: number;
 }
 
@@ -90,7 +96,6 @@ export interface VideoHoldInput {
   taskId: string;
   amount: number;
   pricingSnapshot: Prisma.InputJsonValue;
-  refundPolicySnapshot: Prisma.InputJsonValue;
   metadata: Prisma.InputJsonValue;
   remark: string;
 }
@@ -460,18 +465,19 @@ export function summarizeSeedanceContent(
 export function buildSeedanceCostEstimateInput(input: {
   params: Pick<
     VideoGenerationClipParams,
-    'resolution' | 'duration' | 'sourceTemplateId' | 'sourceTemplateKind'
+    'resolution' | 'duration' | 'ratio' | 'sourceTemplateId' | 'sourceTemplateKind'
   >;
-  model: string;
-  content: SeedanceContentItem[];
+  modelConfigId?: string;
   membershipLevel?: number;
 }): SeedanceCostEstimateInput {
   return {
     taskType: VIDEO_GENERATION_TASK_TYPE,
-    modelName: input.model,
-    resolution: normalizeVideoResolution(input.params.resolution),
-    seconds: normalizeVideoDuration(input.params.duration),
-    ...summarizeSeedanceContent(input.content),
+    ...(input.modelConfigId !== undefined ? { modelConfigId: input.modelConfigId } : {}),
+    params: {
+      resolution: normalizeVideoResolution(input.params.resolution),
+      seconds: normalizeVideoDuration(input.params.duration),
+      ...(input.params.ratio !== undefined ? { ratio: input.params.ratio } : {}),
+    },
     ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
   };
 }
@@ -485,7 +491,6 @@ export function buildVideoHoldInput(input: {
   generationId: string;
   estimatedCost: number;
   pricingSnapshot: unknown;
-  refundPolicy: unknown;
   projectId: string;
   clipId: string;
   modelConfigId: string;
@@ -496,7 +501,9 @@ export function buildVideoHoldInput(input: {
     taskId: input.generationId,
     amount: input.estimatedCost,
     pricingSnapshot: toPrismaInputJson(input.pricingSnapshot),
-    refundPolicySnapshot: toPrismaInputJson(input.refundPolicy),
+    // refundPolicy is dead (Task 15 brief: 39 old rules all NULL, refundHold
+    // never reads refundPolicySnapshot) — createHold's param is optional, so we
+    // simply never populate it here rather than fabricate `{}`.
     metadata: toPrismaInputJson({
       projectId: input.projectId,
       clipId: input.clipId,

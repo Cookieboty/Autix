@@ -255,8 +255,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const generationId: string = randomUUID();
     const estimateInput = buildSeedanceCostEstimateInput({
       params,
-      model: taskRequest.model,
-      content,
+      modelConfigId,
       membershipLevel: entitlement.level,
     });
     const billingTaskType = estimateInput.taskType;
@@ -297,7 +296,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
         generationId,
         estimatedCost: estimate.estimatedCost,
         pricingSnapshot: estimate.pricingSnapshot,
-        refundPolicy: estimate.refundPolicy,
         projectId: input.projectId,
         clipId: input.clipId,
         modelConfigId,
@@ -696,8 +694,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const generationId = randomUUID();
     const estimateInput = buildSeedanceCostEstimateInput({
       params,
-      model: taskRequest.model,
-      content,
+      modelConfigId,
       membershipLevel: entitlement.level,
     });
     const billingTaskType = estimateInput.taskType;
@@ -730,7 +727,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
           generationId,
           estimatedCost: estimate.estimatedCost,
           pricingSnapshot: estimate.pricingSnapshot,
-          refundPolicy: estimate.refundPolicy,
           projectId,
           clipId: anchorClip.id,
           modelConfigId,
