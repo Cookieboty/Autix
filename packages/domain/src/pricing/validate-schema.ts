@@ -12,6 +12,7 @@ export interface SchemaViolation {
     | 'ZERO_DIVISOR'
     | 'MALFORMED_TERM'
     | 'MALFORMED_PROPERTY'
+    | 'MALFORMED_SCHEMA'
     | 'MISSING_X_UI'
     | 'CHOICE_CONTROL_NEEDS_ENUM'
     | 'RANGE_CONTROL_NEEDS_BOUNDS'
@@ -37,6 +38,24 @@ function isMalformedValue(value: unknown): boolean {
 }
 
 /**
+ * 顶层 schema 本身的健全性检查。model_configs.paramsSchema / pricingSchema
+ * 在数据库里是可空的 Json? 列——NULL 是"尚未配置"的合法状态，不是异常。
+ * 校验器的职责就是拒绝垃圾输入，绝不能在解引用垃圾时抛出。
+ */
+function isMalformedSchema(schema: unknown): boolean {
+  return schema === null || schema === undefined || typeof schema !== 'object' || Array.isArray(schema);
+}
+
+/**
+ * 唯一的 MALFORMED_SCHEMA 违规发射点，三处调用方共用（pricingSchema 主参数、
+ * paramsSchema 主参数、paramsSchema 的可选 pricingSchema 交叉校验参数），
+ * 避免同一违规码的字面量在文件中重复出现。
+ */
+function malformedSchemaViolation(subject: string): SchemaViolation {
+  return { code: 'MALFORMED_SCHEMA', message: `${subject} 不是有效的对象` };
+}
+
+/**
  * 保存 pricingSchema 前的结构校验。返回空数组表示合法。
  *
  * 首项的三条约束共同保证累加器一定拿到非零初值——累加器从 0 起步，
@@ -44,6 +63,10 @@ function isMalformedValue(value: unknown): boolean {
  * 缺失而被跳过，只有 const 是无条件的。
  */
 export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] {
+  if (isMalformedSchema(schema)) {
+    return [malformedSchemaViolation('pricingSchema')];
+  }
+
   const violations: SchemaViolation[] = [];
 
   if (!schema.terms || schema.terms.length === 0) {
@@ -121,6 +144,10 @@ export function validateParamsSchema(
   paramsSchema: ParamsSchema,
   pricingSchema?: PricingSchema,
 ): SchemaViolation[] {
+  if (isMalformedSchema(paramsSchema)) {
+    return [malformedSchemaViolation('paramsSchema')];
+  }
+
   const violations: SchemaViolation[] = [];
 
   for (const [name, property] of Object.entries(paramsSchema.properties ?? {})) {
@@ -167,7 +194,12 @@ export function validateParamsSchema(
     }
   }
 
-  if (pricingSchema) {
+  if (pricingSchema !== undefined) {
+    if (isMalformedSchema(pricingSchema)) {
+      violations.push(malformedSchemaViolation('pricingSchema'));
+      return violations;
+    }
+
     for (const name of affectedParams(pricingSchema)) {
       if (!(name in (paramsSchema.properties ?? {}))) {
         violations.push({

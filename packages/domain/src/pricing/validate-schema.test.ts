@@ -156,6 +156,33 @@ describe('validatePricingSchema', () => {
     expect(violations[0].code).toBe('MALFORMED_TERM');
     expect(violations[0].message).toContain('terms[1]');
   });
+
+  describe('malformed top-level schema (does not throw)', () => {
+    it.each([
+      ['null', null],
+      ['undefined', undefined],
+      ['an array', []],
+      ['a string', 'x'],
+      ['a number', 42],
+      ['a boolean', true],
+    ])('returns exactly one MALFORMED_SCHEMA violation for %s', (_label, value) => {
+      const violations = validatePricingSchema(value as unknown as PricingSchema);
+      expect(violations).toEqual([{ code: 'MALFORMED_SCHEMA', message: expect.any(String) }]);
+    });
+
+    it('does not throw for any malformed top-level input', () => {
+      for (const value of [null, undefined, [], 'x', 42, true]) {
+        expect(() => validatePricingSchema(value as unknown as PricingSchema)).not.toThrow();
+      }
+    });
+  });
+
+  it('regression: { terms: null } is a well-formed object with a bad terms field, still yields EMPTY_TERMS', () => {
+    const schema = { terms: null } as unknown as PricingSchema;
+    expect(validatePricingSchema(schema)).toEqual([
+      { code: 'EMPTY_TERMS', message: 'pricingSchema 至少需要一个 term' },
+    ]);
+  });
 });
 
 describe('validateParamsSchema', () => {
@@ -277,5 +304,46 @@ describe('validateParamsSchema', () => {
       { code: 'MALFORMED_PROPERTY', message: 'properties[bad] 不是有效的对象', termId: 'bad' },
       { code: 'MISSING_X_UI', message: '参数 good 缺少 x-ui', termId: 'good' },
     ]);
+  });
+
+  describe('malformed top-level schema (does not throw)', () => {
+    it.each([
+      ['null', null],
+      ['undefined', undefined],
+      ['an array', []],
+      ['a string', 'x'],
+      ['a number', 42],
+      ['a boolean', true],
+    ])('returns exactly one MALFORMED_SCHEMA violation for %s', (_label, value) => {
+      const violations = validateParamsSchema(value as unknown as ParamsSchema);
+      expect(violations).toEqual([{ code: 'MALFORMED_SCHEMA', message: expect.any(String) }]);
+    });
+
+    it('does not throw for any malformed top-level input', () => {
+      for (const value of [null, undefined, [], 'x', 42, true]) {
+        expect(() => validateParamsSchema(value as unknown as ParamsSchema)).not.toThrow();
+      }
+    });
+  });
+
+  it('regression: an empty properties map is valid', () => {
+    expect(validateParamsSchema({} as unknown as ParamsSchema)).toEqual([]);
+  });
+
+  describe('malformed second argument (pricingSchema)', () => {
+    it('does not throw when pricingSchema is null, and reports MALFORMED_SCHEMA instead of silently skipping cross-schema checks', () => {
+      const violations = validateParamsSchema(valid, null as unknown as PricingSchema);
+      expect(() => validateParamsSchema(valid, null as unknown as PricingSchema)).not.toThrow();
+      expect(violations).toEqual([{ code: 'MALFORMED_SCHEMA', message: expect.any(String) }]);
+    });
+
+    it('does not throw when pricingSchema is a malformed primitive', () => {
+      for (const bad of [[], 'x', 42, true]) {
+        expect(() => validateParamsSchema(valid, bad as unknown as PricingSchema)).not.toThrow();
+        expect(validateParamsSchema(valid, bad as unknown as PricingSchema)).toEqual([
+          { code: 'MALFORMED_SCHEMA', message: expect.any(String) },
+        ]);
+      }
+    });
   });
 });
