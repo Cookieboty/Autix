@@ -8,6 +8,14 @@ import { ModelType, ModelVisibility, Prisma } from '../../platform/prisma/genera
 import { invalidateModelCache } from '../llm/model.factory';
 import { ModelConfigRepository } from './model-config.repository';
 import { MembershipService } from '../../billing/membership/membership.service';
+import {
+  validateParamsSchema,
+  validatePricingSchema,
+  type ParamsSchema,
+  type PricingSchema,
+  type SchemaViolation,
+} from '@autix/domain/pricing';
+import { validateDescription, type LocalizedText } from '@autix/domain/model';
 
 export interface CreateModelConfigDto {
   name: string;
@@ -23,6 +31,9 @@ export interface CreateModelConfigDto {
   visibility?: ModelVisibility;
   capabilities?: string[];
   allowedMembershipLevelIds?: string[];
+  paramsSchema: ParamsSchema;
+  pricingSchema: PricingSchema;
+  description?: LocalizedText;
 }
 
 export interface UpdateModelConfigDto {
@@ -39,6 +50,9 @@ export interface UpdateModelConfigDto {
   visibility?: ModelVisibility;
   capabilities?: string[];
   allowedMembershipLevelIds?: string[];
+  paramsSchema?: ParamsSchema;
+  pricingSchema?: PricingSchema;
+  description?: LocalizedText;
 }
 
 type ModelConfigUpdateData = Prisma.model_configsUncheckedUpdateInput;
@@ -147,26 +161,45 @@ export class ModelConfigService {
   async createSystemModel(dto: CreateModelConfigDto, adminUserId: string) {
     const type = dto.type ?? ModelType.general;
 
+    // paramsSchema/pricingSchema are required on create (see CreateModelConfigDto),
+    // so both are already-typed values here — no Prisma.JsonValue to narrow, just
+    // runtime-validate the untrusted HTTP body against the domain rules.
+    this.assertValidPricingConfig(dto.paramsSchema, dto.pricingSchema);
+    if (dto.description !== undefined) {
+      this.assertValidDescription(dto.description);
+    }
+
     if (dto.isDefault) {
       await this.modelConfigRepository.clearPublicDefaults(type);
     }
 
+    const data: Prisma.model_configsUncheckedCreateInput = {
+      name: dto.name,
+      provider: dto.provider ?? 'openai',
+      model: dto.model,
+      type,
+      priority: dto.priority ?? 0,
+      baseUrl: this.normalizeOptionalBaseUrl(dto.baseUrl),
+      apiKey: this.normalizeOptionalSecret(dto.apiKey),
+      metadata: this.toJsonInput(dto.metadata),
+      isActive: dto.isActive ?? true,
+      isDefault: dto.isDefault ?? false,
+      visibility: ModelVisibility.public,
+      createdBy: adminUserId,
+      capabilities: dto.capabilities ?? ['text'],
+      paramsSchema: dto.paramsSchema as unknown as Prisma.InputJsonValue,
+      pricingSchema: dto.pricingSchema as unknown as Prisma.InputJsonValue,
+    };
+    // Deliberately no `dto.description ?? {}` fallback: omitting description on
+    // create should leave the column at the Prisma-level default ("{}"), not force
+    // every caller through description validation just because the DTO happened to
+    // default the field for them.
+    if (dto.description !== undefined) {
+      data.description = dto.description as unknown as Prisma.InputJsonValue;
+    }
+
     return this.modelConfigRepository.createWithAllowedMembershipLevels(
-      {
-        name: dto.name,
-        provider: dto.provider ?? 'openai',
-        model: dto.model,
-        type,
-        priority: dto.priority ?? 0,
-        baseUrl: this.normalizeOptionalBaseUrl(dto.baseUrl),
-        apiKey: this.normalizeOptionalSecret(dto.apiKey),
-        metadata: this.toJsonInput(dto.metadata),
-        isActive: dto.isActive ?? true,
-        isDefault: dto.isDefault ?? false,
-        visibility: ModelVisibility.public,
-        createdBy: adminUserId,
-        capabilities: dto.capabilities ?? ['text'],
-      },
+      data,
       this.normalizeAllowedMembershipLevelIds(dto.allowedMembershipLevelIds),
     );
   }
@@ -175,6 +208,17 @@ export class ModelConfigService {
     const existing = await this.modelConfigRepository.findPublicModel(id);
     if (!existing) {
       throw new NotFoundException('模型配置不存在');
+    }
+
+    // Only validate what is actually being written. `paramsSchema`/`pricingSchema`
+    // are legitimately NULL on models nobody has priced yet; an update that never
+    // touches either field (e.g. renaming a model, or fixing its description) must
+    // not be rejected just because those columns happen to be empty right now.
+    if (dto.paramsSchema !== undefined || dto.pricingSchema !== undefined) {
+      this.assertValidPricingConfigUpdate(dto, existing);
+    }
+    if (dto.description !== undefined) {
+      this.assertValidDescription(dto.description);
     }
 
     if (dto.isDefault) {
@@ -264,8 +308,114 @@ export class ModelConfigService {
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.isDefault !== undefined) data.isDefault = dto.isDefault;
     if (dto.capabilities !== undefined) data.capabilities = dto.capabilities;
+    if (dto.paramsSchema !== undefined) {
+      data.paramsSchema = dto.paramsSchema as unknown as Prisma.InputJsonValue;
+    }
+    if (dto.pricingSchema !== undefined) {
+      data.pricingSchema = dto.pricingSchema as unknown as Prisma.InputJsonValue;
+    }
+    if (dto.description !== undefined) {
+      data.description = dto.description as unknown as Prisma.InputJsonValue;
+    }
 
     return data;
+  }
+
+  /**
+   * Validates an already-typed create payload. Unlike the update path, create
+   * requires both schemas up front, so there is nothing to narrow from
+   * `Prisma.JsonValue` here — `dto.paramsSchema`/`dto.pricingSchema` are already
+   * `ParamsSchema`/`PricingSchema` at the type level; the validators exist
+   * precisely to check that an untrusted HTTP body actually has that shape at
+   * runtime.
+   */
+  private assertValidPricingConfig(paramsSchema: ParamsSchema, pricingSchema: PricingSchema) {
+    const violations: SchemaViolation[] = [
+      ...validatePricingSchema(pricingSchema),
+      ...validateParamsSchema(paramsSchema, pricingSchema),
+    ];
+    if (violations.length > 0) {
+      throw new BadRequestException({ message: 'schema 校验失败', violations });
+    }
+  }
+
+  private assertValidDescription(description: LocalizedText) {
+    const badLocales = validateDescription(description);
+    if (badLocales.length > 0) {
+      throw new BadRequestException({
+        message: `description 含不支持的 locale: ${badLocales.join(', ')}`,
+        violations: badLocales,
+      });
+    }
+  }
+
+  /**
+   * Update path: only the field(s) actually present in `dto` get validated.
+   * The counterpart schema (params vs pricing) is read from `existing` purely to
+   * run the cross-schema reference check — e.g. editing pricingSchema alone must
+   * still catch a term that now references a param absent from the model's
+   * already-saved paramsSchema. If that counterpart is still NULL (not configured
+   * yet), the cross check is skipped rather than rejected: a partially-configured
+   * model is a valid, in-progress state, not an error.
+   *
+   * `existing.paramsSchema`/`existing.pricingSchema` are `Prisma.JsonValue` (raw DB
+   * JSON) — narrowed via the private `narrow*` helpers below, which cast only
+   * immediately before a runtime validation that throws, never letting the
+   * unvalidated cast result escape.
+   */
+  private assertValidPricingConfigUpdate(
+    dto: { paramsSchema?: ParamsSchema; pricingSchema?: PricingSchema },
+    existing: { paramsSchema: Prisma.JsonValue | null; pricingSchema: Prisma.JsonValue | null },
+  ) {
+    const violations: SchemaViolation[] = [];
+
+    if (dto.pricingSchema !== undefined) {
+      violations.push(...validatePricingSchema(dto.pricingSchema));
+    }
+
+    const effectivePricingSchema: PricingSchema | null =
+      dto.pricingSchema !== undefined
+        ? dto.pricingSchema
+        : existing.pricingSchema === null
+          ? null
+          : this.narrowPricingSchema(existing.pricingSchema, '已保存的 pricingSchema');
+
+    if (dto.paramsSchema !== undefined) {
+      violations.push(
+        ...validateParamsSchema(dto.paramsSchema, effectivePricingSchema ?? undefined),
+      );
+    } else if (dto.pricingSchema !== undefined && existing.paramsSchema !== null) {
+      // pricingSchema changed but paramsSchema didn't: still must re-run the
+      // cross-schema check against the saved paramsSchema, otherwise a new term
+      // referencing a nonexistent param would silently no-op forever.
+      const existingParamsSchema = this.narrowParamsSchema(
+        existing.paramsSchema,
+        '已保存的 paramsSchema',
+      );
+      violations.push(...validateParamsSchema(existingParamsSchema, effectivePricingSchema ?? undefined));
+    }
+
+    if (violations.length > 0) {
+      throw new BadRequestException({ message: 'schema 校验失败', violations });
+    }
+  }
+
+  private narrowPricingSchema(value: Prisma.JsonValue, subject: string): PricingSchema {
+    const candidate = value as unknown as PricingSchema;
+    const violations = validatePricingSchema(candidate);
+    if (violations.length > 0) {
+      throw new BadRequestException({ message: `${subject} 结构无效`, violations });
+    }
+    return candidate;
+  }
+
+  private narrowParamsSchema(value: Prisma.JsonValue, subject: string): ParamsSchema {
+    const candidate = value as unknown as ParamsSchema;
+    const violations = validateParamsSchema(candidate);
+    if (violations.length > 0) {
+      throw new BadRequestException({ message: `${subject} 结构无效`, violations });
+    }
+    return candidate;
   }
 
   private toJsonInput(value: Record<string, unknown> | undefined) {

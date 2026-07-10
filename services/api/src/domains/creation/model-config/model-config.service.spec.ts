@@ -2,6 +2,27 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { ModelConfigRepository } from './model-config.repository';
 import { ModelConfigService } from './model-config.service';
+import type { LocalizedText } from '@autix/domain/model';
+
+/**
+ * `{ cn: '...' }` is deliberately not a valid `LocalizedText` at the type
+ * level (locale keys are the closed `Locale` union, e.g. `zh-CN`) — that is
+ * exactly the mistake `validateDescription` exists to catch at runtime, so
+ * the malformed literal has to be forced past the compiler here.
+ */
+const BAD_LOCALE_DESCRIPTION = { cn: '中文' } as unknown as LocalizedText;
+
+const VALID_PARAMS_SCHEMA = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object' as const,
+  required: ['quality'],
+  properties: {
+    quality: { type: 'string' as const, enum: ['low', 'high'], 'x-ui': { control: 'chips' as const } },
+  },
+};
+const VALID_PRICING_SCHEMA = {
+  terms: [{ id: 'base', op: 'add' as const, const: 10 }],
+};
 
 function createService() {
   const prisma = {
@@ -81,6 +102,8 @@ describe('ModelConfigService public model boundaries', () => {
         type: ModelType.general,
         isDefault: true,
         visibility: ModelVisibility.private,
+        paramsSchema: VALID_PARAMS_SCHEMA,
+        pricingSchema: VALID_PRICING_SCHEMA,
       },
       'admin-1',
     );
@@ -218,6 +241,8 @@ describe('ModelConfigService public model boundaries', () => {
         name: 'System model',
         model: 'gpt-system',
         allowedMembershipLevelIds: ['level-pro', 'level-pro', 'level-team'],
+        paramsSchema: VALID_PARAMS_SCHEMA,
+        pricingSchema: VALID_PRICING_SCHEMA,
       },
       'admin-1',
     );
@@ -281,5 +306,283 @@ describe('ModelConfigService getConfigForOrchestrator hardening', () => {
     await expect(service.getConfigForOrchestrator('public-model')).resolves.toEqual(
       publicRecord,
     );
+  });
+});
+
+describe('ModelConfigRepository.findSystemModels select fields', () => {
+  it('selects paramsSchema, pricingSchema, schemaVersion and description', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const repo = new ModelConfigRepository({ model_configs: { findMany } } as never);
+
+    await repo.findSystemModels();
+
+    const selectArg = findMany.mock.calls[0][0].select;
+    expect(selectArg.paramsSchema).toBe(true);
+    expect(selectArg.pricingSchema).toBe(true);
+    expect(selectArg.schemaVersion).toBe(true);
+    expect(selectArg.description).toBe(true);
+  });
+});
+
+describe('ModelConfigService.createSystemModel — schema requirement', () => {
+  it('writes paramsSchema, pricingSchema and description through to the repository', async () => {
+    const { service, prisma } = createService();
+
+    await service.createSystemModel(
+      {
+        name: 'GPT Image',
+        model: 'gpt-image',
+        paramsSchema: VALID_PARAMS_SCHEMA,
+        pricingSchema: VALID_PRICING_SCHEMA,
+        description: { en: 'Fast image model' },
+      },
+      'admin-1',
+    );
+
+    expect(prisma.model_configs.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        paramsSchema: VALID_PARAMS_SCHEMA,
+        pricingSchema: VALID_PRICING_SCHEMA,
+        description: { en: 'Fast image model' },
+      }),
+    });
+  });
+
+  it('does not write a description key when none is provided, leaving the Prisma column default', async () => {
+    const { service, prisma } = createService();
+
+    await service.createSystemModel(
+      {
+        name: 'GPT Image',
+        model: 'gpt-image',
+        paramsSchema: VALID_PARAMS_SCHEMA,
+        pricingSchema: VALID_PRICING_SCHEMA,
+      },
+      'admin-1',
+    );
+
+    const data = prisma.model_configs.create.mock.calls[0][0].data;
+    expect('description' in data).toBe(false);
+  });
+
+  it('rejects an invalid pricingSchema before writing', async () => {
+    const { service, prisma } = createService();
+
+    await expect(
+      service.createSystemModel(
+        {
+          name: 'Bad',
+          model: 'bad-model',
+          paramsSchema: VALID_PARAMS_SCHEMA,
+          pricingSchema: { terms: [] },
+          description: {},
+        },
+        'admin-1',
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.model_configs.create).not.toHaveBeenCalled();
+  });
+
+  it('carries the violation list on the thrown error, not just a generic message', async () => {
+    const { service } = createService();
+
+    try {
+      await service.createSystemModel(
+        {
+          name: 'Bad',
+          model: 'bad-model',
+          paramsSchema: VALID_PARAMS_SCHEMA,
+          pricingSchema: { terms: [] },
+          description: {},
+        },
+        'admin-1',
+      );
+      throw new Error('expected createSystemModel to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+      const response = (error as BadRequestException).getResponse() as {
+        violations: Array<{ code: string }>;
+      };
+      expect(Array.isArray(response.violations)).toBe(true);
+      expect(response.violations.length).toBeGreaterThan(0);
+      expect(response.violations.some((v) => v.code === 'EMPTY_TERMS')).toBe(true);
+    }
+  });
+
+  it('rejects a pricingSchema that references a param missing from paramsSchema', async () => {
+    const { service } = createService();
+
+    try {
+      await service.createSystemModel(
+        {
+          name: 'Bad',
+          model: 'bad-model',
+          paramsSchema: { type: 'object', properties: {} },
+          pricingSchema: {
+            terms: [
+              { id: 'base', op: 'add', const: 1 },
+              { id: 'q', op: 'mul', table: { param: 'quality', values: { low: 1 } } },
+            ],
+          },
+          description: {},
+        },
+        'admin-1',
+      );
+      throw new Error('expected createSystemModel to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+      const response = (error as BadRequestException).getResponse() as {
+        violations: Array<{ code: string }>;
+      };
+      expect(
+        response.violations.some((v) => v.code === 'PRICING_REFERENCES_UNKNOWN_PARAM'),
+      ).toBe(true);
+    }
+  });
+
+  it('rejects a description with an unsupported locale key', async () => {
+    const { service } = createService();
+
+    await expect(
+      service.createSystemModel(
+        {
+          name: 'Bad',
+          model: 'bad-model',
+          paramsSchema: VALID_PARAMS_SCHEMA,
+          pricingSchema: VALID_PRICING_SCHEMA,
+          description: BAD_LOCALE_DESCRIPTION,
+        },
+        'admin-1',
+      ),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('accepts a description using the zh-CN locale key', async () => {
+    const { service, prisma } = createService();
+
+    await service.createSystemModel(
+      {
+        name: 'Good',
+        model: 'good-model',
+        paramsSchema: VALID_PARAMS_SCHEMA,
+        pricingSchema: VALID_PRICING_SCHEMA,
+        description: { 'zh-CN': '中文描述' },
+      },
+      'admin-1',
+    );
+
+    expect(prisma.model_configs.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ description: { 'zh-CN': '中文描述' } }),
+    });
+  });
+});
+
+describe('ModelConfigService.updateSystemModel — schema validation scope', () => {
+  it('updating only the description of a model with NULL schemas succeeds without touching the schemas', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'model-null-schemas',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+      paramsSchema: null,
+      pricingSchema: null,
+    } as never);
+
+    await service.updateSystemModel('model-null-schemas', { description: { en: 'Updated text' } });
+
+    expect(prisma.model_configs.update).toHaveBeenCalledWith({
+      where: { id: 'model-null-schemas' },
+      data: expect.objectContaining({ description: { en: 'Updated text' } }),
+    });
+  });
+
+  it('still rejects a bad locale on a description-only update, even with NULL schemas', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'model-null-schemas',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+      paramsSchema: null,
+      pricingSchema: null,
+    } as never);
+
+    await expect(
+      service.updateSystemModel('model-null-schemas', { description: BAD_LOCALE_DESCRIPTION }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects updating pricingSchema alone when it references a param missing from the saved paramsSchema', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'model-1',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+      paramsSchema: { type: 'object', properties: {} },
+      pricingSchema: VALID_PRICING_SCHEMA,
+    } as never);
+
+    await expect(
+      service.updateSystemModel('model-1', {
+        pricingSchema: {
+          terms: [
+            { id: 'base', op: 'add', const: 1 },
+            { id: 'q', op: 'mul', table: { param: 'quality', values: { low: 1 } } },
+          ],
+        },
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.model_configs.update).not.toHaveBeenCalled();
+  });
+
+  it('allows updating pricingSchema alone when the saved paramsSchema is still NULL', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'model-1',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+      paramsSchema: null,
+      pricingSchema: null,
+    } as never);
+
+    await service.updateSystemModel('model-1', { pricingSchema: VALID_PRICING_SCHEMA });
+
+    expect(prisma.model_configs.update).toHaveBeenCalledWith({
+      where: { id: 'model-1' },
+      data: expect.objectContaining({ pricingSchema: VALID_PRICING_SCHEMA }),
+    });
+  });
+
+  it('rejects an update with an empty-terms pricingSchema', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'model-1',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+      paramsSchema: VALID_PARAMS_SCHEMA,
+      pricingSchema: VALID_PRICING_SCHEMA,
+    } as never);
+
+    await expect(
+      service.updateSystemModel('model-1', { pricingSchema: { terms: [] } }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.model_configs.update).not.toHaveBeenCalled();
+  });
+
+  it('does not validate schemas at all when neither schema field nor description is present in the update', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'model-1',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+      paramsSchema: null,
+      pricingSchema: null,
+    } as never);
+
+    await service.updateSystemModel('model-1', { priority: 5 });
+
+    expect(prisma.model_configs.update).toHaveBeenCalledWith({
+      where: { id: 'model-1' },
+      data: expect.objectContaining({ priority: 5 }),
+    });
   });
 });

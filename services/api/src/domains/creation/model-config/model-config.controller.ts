@@ -20,6 +20,8 @@ import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsObject, Min } from 'c
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import type { AuthUser } from '@autix/domain';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
+import type { LocalizedText } from '@autix/domain/model';
 
 class CreateModelConfigDto {
   @IsString()
@@ -72,6 +74,20 @@ class CreateModelConfigDto {
   @IsOptional()
   @IsString({ each: true })
   allowedMembershipLevelIds?: string[];
+
+  // Nested JSON structures — the fine-grained control-contract / pricing-term
+  // rules are enforced by validateParamsSchema/validatePricingSchema in the
+  // service layer. @IsObject() here only rejects wholesale-wrong-typed input
+  // (e.g. a string or array) before it reaches the service.
+  @IsObject()
+  paramsSchema!: ParamsSchema;
+
+  @IsObject()
+  pricingSchema!: PricingSchema;
+
+  @IsOptional()
+  @IsObject()
+  description?: LocalizedText;
 }
 
 class UpdateModelConfigDto {
@@ -127,6 +143,18 @@ class UpdateModelConfigDto {
   @IsOptional()
   @IsString({ each: true })
   allowedMembershipLevelIds?: string[];
+
+  @IsOptional()
+  @IsObject()
+  paramsSchema?: ParamsSchema;
+
+  @IsOptional()
+  @IsObject()
+  pricingSchema?: PricingSchema;
+
+  @IsOptional()
+  @IsObject()
+  description?: LocalizedText;
 }
 
 @UseGuards(JwtAuthGuard)
