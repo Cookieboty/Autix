@@ -126,19 +126,13 @@ export class ImageTemplatesService extends BaseResourceService {
     const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
     const generationId = randomUUID();
 
-    const modelConfig = data.modelConfigId
-      ? await this.modelConfigService
-          .getConfigForOrchestrator(data.modelConfigId)
-          .catch(() => null)
-      : null;
     // 自有模型不再免费：模板生图一律计费。
     let holdId: string | null = null;
     {
       const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(userId);
       const estimate = await this.estimateTemplateGenerationCost({
         taskType: 'image_generation',
-        modelProvider: modelConfig?.provider ?? undefined,
-        modelName: modelConfig?.model ?? data.modelUsed,
+        modelConfigId: data.modelConfigId,
         referenceImages: data.referenceImage ? 1 : 0,
         membershipLevel,
       });
@@ -149,7 +143,6 @@ export class ImageTemplatesService extends BaseResourceService {
           taskId: generationId,
           amount: estimate.amount,
           pricingSnapshot: estimate.pricingSnapshot,
-          refundPolicySnapshot: estimate.refundPolicySnapshot,
           metadata: this.toJson({
             templateId,
             modelUsed: data.modelUsed,
@@ -246,29 +239,24 @@ export class ImageTemplatesService extends BaseResourceService {
 
   private async estimateTemplateGenerationCost(input: {
     taskType: string;
-    modelProvider?: string;
-    modelName?: string;
+    modelConfigId?: string;
     referenceImages?: number;
     membershipLevel?: number;
   }): Promise<{
     taskType: string;
     amount: number;
     pricingSnapshot?: Prisma.InputJsonValue;
-    refundPolicySnapshot?: Prisma.InputJsonValue;
   }> {
     const estimate = await this.pointsService.estimateCost({
       taskType: input.taskType,
-      modelProvider: input.modelProvider,
-      modelName: input.modelName,
-      quantity: 1,
-      referenceImages: input.referenceImages,
+      ...(input.modelConfigId ? { modelConfigId: input.modelConfigId } : {}),
+      params: { referenceImages: input.referenceImages ?? 0 },
       membershipLevel: input.membershipLevel,
     });
     return {
       taskType: estimate.taskType,
       amount: estimate.estimatedCost,
       pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-      refundPolicySnapshot: this.toJson(estimate.refundPolicy),
     };
   }
 

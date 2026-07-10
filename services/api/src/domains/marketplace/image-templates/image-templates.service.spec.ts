@@ -2,7 +2,11 @@ import { BadRequestException } from '@nestjs/common';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ImageTemplatesService } from './image-templates.service';
 
-function createMocks() {
+interface BuildOverrides {
+  pointsService?: Partial<{ estimateCost: jest.Mock }>;
+}
+
+function createMocks(overrides: BuildOverrides = {}) {
   const template = {
     id: 'tpl-1',
     prompt: 'Make {{subject}}',
@@ -31,12 +35,14 @@ function createMocks() {
     estimateCost: jest.fn(async () => ({
       estimatedCost: 90,
       taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      breakdown: [],
       pricingSnapshot: { ruleId: 'rule-image' },
-      refundPolicy: { systemFailed: 'full_refund' },
     })),
-    createHold: jest.fn(async () => ({ hold: { id: 'hold-1' }, balance: 910 })),
+    createHold: jest.fn(async (_userId: string, _input: unknown) => ({ hold: { id: 'hold-1' }, balance: 910 })),
     confirmHold: jest.fn(),
     refundHold: jest.fn(),
+    ...overrides.pointsService,
   };
   const models = {
     getConfigForOrchestrator: jest.fn(),
@@ -67,15 +73,13 @@ function createMocks() {
   return { service, prisma, tx, points, models, generations, resources, membership };
 }
 
+function buildImageTemplatesService(overrides: BuildOverrides = {}) {
+  return createMocks(overrides).service;
+}
+
 describe('ImageTemplatesService.createGeneration billing', () => {
   it('freezes configurable template image points and confirms after record creation', async () => {
-    const { service, points, models, generations } = createMocks();
-    models.getConfigForOrchestrator.mockResolvedValue({
-      id: 'model-1',
-      provider: 'openai',
-      model: 'gpt-image-2',
-      createdBy: null,
-    });
+    const { service, points, generations } = createMocks();
 
     const gen = await service.createGeneration('tpl-1', 'u1', {
       modelUsed: 'gpt-image-2',
@@ -84,24 +88,24 @@ describe('ImageTemplatesService.createGeneration billing', () => {
       referenceImage: 'https://img.test/ref.png',
     });
 
-    expect(points.estimateCost).toHaveBeenCalledWith(
-      expect.objectContaining({
-        taskType: 'image_generation',
-        modelProvider: 'openai',
-        modelName: 'gpt-image-2',
-        quantity: 1,
-        referenceImages: 1,
-        membershipLevel: 2,
-      }),
-    );
-    expect(points.createHold).toHaveBeenCalledWith(
-      'u1',
+    expect(points.estimateCost).toHaveBeenCalledWith({
+      taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      params: { referenceImages: 1 },
+      membershipLevel: 2,
+    });
+
+    const holdArgs = points.createHold.mock.calls[0][1];
+    expect(holdArgs).toEqual(
       expect.objectContaining({
         taskType: 'image_generation',
         amount: 90,
         taskId: gen.id,
+        pricingSnapshot: { ruleId: 'rule-image' },
       }),
     );
+    expect(holdArgs).not.toHaveProperty('refundPolicySnapshot');
+
     expect(generations.createImageGeneration).toHaveBeenCalledWith(
       expect.objectContaining({
         id: gen.id,
@@ -109,6 +113,23 @@ describe('ImageTemplatesService.createGeneration billing', () => {
       }),
     );
     expect(points.confirmHold).toHaveBeenCalledWith('hold-1');
+  });
+
+  it('omits modelConfigId from the estimate call when the generation has none', async () => {
+    const { service, points } = createMocks();
+
+    await service.createGeneration('tpl-1', 'u1', {
+      modelUsed: 'gpt-image-2',
+      variables: { subject: 'shoe' },
+    });
+
+    const estimateArgs = points.estimateCost.mock.calls[0][0];
+    expect(estimateArgs).not.toHaveProperty('modelConfigId');
+    expect(estimateArgs).toEqual({
+      taskType: 'image_generation',
+      params: { referenceImages: 0 },
+      membershipLevel: 2,
+    });
   });
 
   it('does not create a generation when point hold fails', async () => {
@@ -138,5 +159,66 @@ describe('ImageTemplatesService.createGeneration billing', () => {
     ).rejects.toThrow('未配置计费规则');
 
     expect(points.createHold).not.toHaveBeenCalled();
+  });
+});
+
+describe('ImageTemplatesService.estimateTemplateGenerationCost — new engine', () => {
+  it('passes taskType, modelConfigId and params.referenceImages', async () => {
+    const estimateCost = jest.fn().mockResolvedValue({
+      taskType: 'image_generation',
+      estimatedCost: 45,
+      pricingSnapshot: {},
+    });
+    const service = buildImageTemplatesService({ pointsService: { estimateCost } });
+
+    await (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
+      taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      referenceImages: 1,
+      membershipLevel: 2,
+    });
+
+    expect(estimateCost).toHaveBeenCalledWith({
+      taskType: 'image_generation',
+      modelConfigId: 'model-1',
+      params: { referenceImages: 1 },
+      membershipLevel: 2,
+    });
+  });
+
+  it('omits modelConfigId entirely when not provided (no bogus fallback)', async () => {
+    const estimateCost = jest.fn().mockResolvedValue({
+      taskType: 'image_generation',
+      estimatedCost: 45,
+      pricingSnapshot: {},
+    });
+    const service = buildImageTemplatesService({ pointsService: { estimateCost } });
+
+    await (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
+      taskType: 'image_generation',
+      referenceImages: 0,
+      membershipLevel: 0,
+    });
+
+    const args = estimateCost.mock.calls[0][0];
+    expect(args).not.toHaveProperty('modelConfigId');
+    expect(args).toEqual({
+      taskType: 'image_generation',
+      params: { referenceImages: 0 },
+      membershipLevel: 0,
+    });
+  });
+
+  it('propagates the estimator rejection without a metered fallback', async () => {
+    const estimateCost = jest.fn().mockRejectedValue(new BadRequestException('模型未绑定任务'));
+    const service = buildImageTemplatesService({ pointsService: { estimateCost } });
+
+    await expect(
+      (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        referenceImages: 0,
+      }),
+    ).rejects.toThrow('模型未绑定任务');
   });
 });

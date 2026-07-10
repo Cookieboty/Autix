@@ -129,19 +129,13 @@ export class VideoTemplatesService extends BaseResourceService {
     const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
     const generationId = randomUUID();
 
-    const modelConfig = data.modelConfigId
-      ? await this.modelConfigService
-          .getConfigForOrchestrator(data.modelConfigId)
-          .catch(() => null)
-      : null;
     // 自有模型不再免费：模板生成视频一律计费。
     let holdId: string | null = null;
     {
       const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(userId);
       const estimate = await this.estimateTemplateGenerationCost({
         taskType: 'video_generation',
-        modelProvider: modelConfig?.provider ?? undefined,
-        modelName: modelConfig?.model ?? data.modelUsed,
+        modelConfigId: data.modelConfigId,
         seconds: tpl.durationSec ?? undefined,
         resolution: typeof tpl.defaultParams?.resolution === 'string'
           ? tpl.defaultParams.resolution
@@ -156,7 +150,6 @@ export class VideoTemplatesService extends BaseResourceService {
           taskId: generationId,
           amount: estimate.amount,
           pricingSnapshot: estimate.pricingSnapshot,
-          refundPolicySnapshot: estimate.refundPolicySnapshot,
           metadata: this.toJson({
             templateId,
             modelUsed: data.modelUsed,
@@ -241,8 +234,7 @@ export class VideoTemplatesService extends BaseResourceService {
 
   private async estimateTemplateGenerationCost(input: {
     taskType: string;
-    modelProvider?: string;
-    modelName?: string;
+    modelConfigId?: string;
     seconds?: number;
     resolution?: string;
     referenceImages?: number;
@@ -251,22 +243,21 @@ export class VideoTemplatesService extends BaseResourceService {
     taskType: string;
     amount: number;
     pricingSnapshot?: Prisma.InputJsonValue;
-    refundPolicySnapshot?: Prisma.InputJsonValue;
   }> {
+    const params: Record<string, unknown> = { referenceImages: input.referenceImages ?? 0 };
+    if (input.seconds !== undefined) params.seconds = input.seconds;
+    if (input.resolution !== undefined) params.resolution = input.resolution;
+
     const estimate = await this.pointsService.estimateCost({
       taskType: input.taskType,
-      modelProvider: input.modelProvider,
-      modelName: input.modelName,
-      seconds: input.seconds,
-      resolution: input.resolution,
-      referenceImages: input.referenceImages,
+      ...(input.modelConfigId ? { modelConfigId: input.modelConfigId } : {}),
+      params,
       membershipLevel: input.membershipLevel,
     });
     return {
       taskType: estimate.taskType,
       amount: estimate.estimatedCost,
       pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-      refundPolicySnapshot: this.toJson(estimate.refundPolicy),
     };
   }
 
