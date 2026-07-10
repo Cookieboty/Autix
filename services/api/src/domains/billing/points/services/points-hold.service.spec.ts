@@ -121,12 +121,12 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
     expect(Number.isInteger(result)).toBe(true);
   });
 
-  it('does not let a usage key that collides with a frozen params key change the model-side price', async () => {
-    // modelSchema 只读 params（来自快照），不读 usage——usage.quality 和 params.quality
-    // 撞名不该影响结果。故意把 estimatedAmount 设得远高于两种取值下的价格，避免封顶
-    // 逻辑掩盖掉"usage 覆盖了 params"这个 bug：如果 quoteHoldFromSnapshot 在调用
-    // quoteTaskFromSnapshot 前把 usage 合并进了 params，quality 会从 medium(90) 变成
-    // high(350)，350 仍然小于 estimatedAmount(500)，不会被夹到 500，bug 会原样暴露。
+  it('rejects a usage key that collides with a frozen params key (anti-tampering, spec §3.1.1.65)', async () => {
+    // 结算不能篡改下单参数。usage.quality 与 params.quality 撞名——旧实现是"静默忽略
+    // usage"，新规则(§3.1.1.65 的 merge)是"撞名即抛错"，因为一个结算调用试图重述
+    // 下单参数，本身就是调用方 bug，该炸出来而不是悄悄用冻结值。
+    // estimatedAmount 刻意设得远高于两种取值(90/350)，确保这里失败的原因是碰撞抛错，
+    // 而不是被封顶逻辑夹到 500 掩盖。
     const snapshot = {
       schemaVersion: 1,
       modelConfigId: 'model-1',
@@ -146,7 +146,32 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
     const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
 
-    const result = await service.quoteHoldFromSnapshot('hold-1', { quality: 'high' });
+    await expect(service.quoteHoldFromSnapshot('hold-1', { quality: 'high' })).rejects.toThrow();
+  });
+
+  it('prices from the frozen params when usage carries only non-colliding settlement keys', async () => {
+    // 正常路径：usage 只带结算量(此 schema 不用 token，用一个不撞名的键)，
+    // 模型侧价格完全来自快照冻结的 params，usage 不参与模型侧求值。
+    const snapshot = {
+      schemaVersion: 1,
+      modelConfigId: 'model-1',
+      modelSchema: {
+        terms: [
+          { id: 'base', op: 'add', const: 1 },
+          { id: 'quality', op: 'mul', table: { param: 'quality', values: { medium: 90, high: 350 } } },
+        ],
+      },
+      taskFixedSchema: null,
+      multiplier: 1,
+      discountFactor: 1,
+      discountCode: null,
+      params: { quality: 'medium' },
+    };
+    const hold = buildHold({ estimatedAmount: 500, pricingSnapshot: snapshot });
+    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
+    const service = new PointsHoldService(pointsRepo as never, {} as never);
+
+    const result = await service.quoteHoldFromSnapshot('hold-1', { outputTokens: 999 });
 
     expect(result).toBe(90);
   });
