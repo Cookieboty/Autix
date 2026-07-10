@@ -67,12 +67,21 @@ export class CanvasActionService {
     try {
       const result = await this.pointsService.estimateCost({
         taskType: IMAGE_GENERATION_TASK_TYPE,
-        quantity: dto.count ?? 1,
+        ...(dto.modelConfigId ? { modelConfigId: dto.modelConfigId } : {}),
+        params: { quantity: dto.count ?? 1 },
       });
       return { kind: 'exact', cost: result.estimatedCost };
     } catch (error) {
-      this.logger.warn(`estimate failed, falling back to metered: ${String(error)}`);
-      return { kind: 'metered', note: '无法预估，按实际用量计费' };
+      // A thrown error here means real misconfiguration (missing task_definitions
+      // row, no default binding, null pricingSchema) — not "this action is
+      // inherently metered" like the agent-chat branch above. This endpoint charges
+      // nothing (it's a preview), so falling back to a display-only metered hint is
+      // safe, but the failure itself must be loud for operators.
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `canvas estimate misconfigured for taskType=${IMAGE_GENERATION_TASK_TYPE}: ${message}`,
+      );
+      return { kind: 'metered', note: '定价配置异常，暂按实际用量计费' };
     }
   }
 
