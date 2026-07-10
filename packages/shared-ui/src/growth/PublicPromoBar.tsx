@@ -53,7 +53,7 @@ export function PublicPromoBar({
       </a>
       <button
         type="button"
-        aria-label="Close promotion"
+        aria-label={t('close')}
         className="absolute right-3 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
         onClick={() => {
           void getStorage().setItem(key, '1');

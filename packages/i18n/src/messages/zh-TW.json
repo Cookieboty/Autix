@@ -42,7 +42,9 @@
     "showing": "顯示中",
     "frontend": "前端",
     "backend": "後端",
-    "register": "註冊"
+    "register": "註冊",
+    "actions": "操作",
+    "none": "無"
   },
   "aiUi": {
     "selected": "已選擇",
@@ -795,7 +797,9 @@
     "navAdminPermissions": "權限",
     "navSystemModels": "系統模型配置",
     "navSystemSettings": "系統配置",
-    "navCampaignRewards": "活動獎勵中心"
+    "navCampaignRewards": "活動獎勵中心",
+    "navRiskManagement": "風控管理",
+    "navSystemPrompts": "系統 Prompt"
   },
   "dashboard": {
     "title": "儀表板",
@@ -1884,6 +1888,15 @@
     },
     "topbar": {
       "credits": "積分"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "請輸入鏡頭描述",
+        "enterVideoPrompt": "請輸入影片提示詞"
+      },
+      "alreadyConnectedToVideoNode": "已經連接到影片節點",
+      "imagesAlreadyConnected": "這兩張圖片已經連接",
+      "noVideoNodesOnCanvas": "畫布上還沒有影片節點"
     }
   },
   "imageStudio": {
@@ -3130,7 +3143,9 @@
     "validityDays": "有效期天数",
     "rewardValidityDays": "奖励有效期 {days} 天",
     "rewardValidityDaysLabel": "奖励有效期天数",
-    "showCommercialLicenseLabel": "显示商用授权说明"
+    "showCommercialLicenseLabel": "显示商用授权说明",
+    "holdPoints": "凍結點數",
+    "recordCount": "紀錄數"
   },
   "insufficientPoints": {
     "title": "點數不足",
@@ -3185,7 +3200,10 @@
       "groups": {
         "create": "創作",
         "discover": "發現",
-        "platform": "平台"
+        "platform": "平台",
+        "studio": "Amux Studio",
+        "image": "圖片",
+        "video": "影片"
       },
       "links": {
         "aiImage": "AI 圖片",
@@ -3197,7 +3215,23 @@
         "community": "社群",
         "originalSeries": "原創系列",
         "pricing": "價格",
-        "marketplace": "市集"
+        "marketplace": "市集",
+        "explore": "探索",
+        "cinemaStudio": "影視工作室",
+        "originals": "原創作品",
+        "docs": "文件",
+        "templates": "範本",
+        "editImage": "圖片編輯",
+        "imageUpscale": "圖片高清放大",
+        "createVideo": "影片生成",
+        "membership": "會員"
+      },
+      "headline": "面向圖片與影片創作者的一站式 AI 工作室",
+      "copyright": "© {year} Amux Studio. 保留一切權利。",
+      "legal": {
+        "privacy": "隱私權政策",
+        "terms": "服務條款",
+        "cookieNotice": "Cookie 聲明"
       }
     },
     "media": {
@@ -3260,10 +3294,13 @@
       "onboardCtaTry": "試用",
       "onboardCtaExplore": "探索",
       "onboardCtaClaim": "領取",
-      "onboardCtaClaimed": "已領取"
+      "onboardCtaClaimed": "已領取",
+      "prev": "上一個",
+      "next": "下一個"
     },
     "promoBar": {
-      "discountBadge": "立減 {percent}%"
+      "discountBadge": "立減 {percent}%",
+      "close": "關閉促銷"
     },
     "generator": {
       "promo": "{title}：在目前頁面直接生成",
@@ -3429,7 +3466,12 @@
         "likes": "点赞",
         "favorites": "收藏",
         "remixes": "二创",
-        "dimensions": "尺寸"
+        "dimensions": "尺寸",
+        "author": "作者",
+        "ariaLike": "按讚",
+        "ariaDownload": "下載",
+        "ariaSelect": "選擇",
+        "ariaDelete": "刪除"
       },
       "privateFirst": "預設私有",
       "createPrivately": "目前頁創作",
@@ -3448,7 +3490,8 @@
         "remove": "移除",
         "checkEligibility": "可引用",
         "useImage": "引用素材"
-      }
+      },
+      "qualityStudio": "影棚級"
     },
     "pricing": {
       "promo": "上線優惠：先私密創作，只發布你確認通過的作品",
@@ -4315,7 +4358,8 @@
       "row": "行",
       "reason": "原因",
       "close": "关闭",
-      "confirmImport": "确认导入"
+      "confirmImport": "确认导入",
+      "name": "名稱"
     }
   },
   "adminSystemSettings": {
@@ -4704,6 +4748,245 @@
     "workflowSummaryAssetsTitle": "素材",
     "workflowSummaryAssetsDesc": "图片、视频、音频统一管理",
     "workflowSummaryDeliveryTitle": "交付",
-    "workflowSummaryDeliveryDesc": "作品、版本、记录自动归档"
+    "workflowSummaryDeliveryDesc": "作品、版本、记录自动归档",
+    "videoOverviewEyebrow": "影片流程",
+    "videoShowcaseEyebrow": "影片展示",
+    "videoDirectorEyebrow": "AI 導演",
+    "videoTemplatesEyebrow": "影片範本",
+    "videoQuickEyebrow": "快速開始",
+    "videoQuickSelectedTemplate": "已選範本"
+  },
+  "adminOperations": {
+    "resourceTypes": {
+      "SKILL": "技能",
+      "MCP": "MCP",
+      "AGENT": "智能體",
+      "IMAGE_TEMPLATE": "圖片範本",
+      "VIDEO_TEMPLATE": "影片範本",
+      "GALLERY_POST": "廣場作品"
+    },
+    "systemPrompts": {
+      "title": "系統 Prompt",
+      "description": "集中管理預設提示詞、變數、版本與發布狀態。",
+      "loadFailed": "載入系統 Prompt 失敗",
+      "draftSaved": "Prompt 草稿已儲存",
+      "published": "{key}@{version} 已發布",
+      "publishFailed": "發布失敗",
+      "noDescription": "暫無描述",
+      "defaultSource": "預設",
+      "copyAsNewVersion": "複製為新版本",
+      "publish": "發布",
+      "editDraftTitle": "編輯 Prompt 草稿",
+      "createVersionTitle": "建立 Prompt 版本",
+      "sheetDescription": "儲存為草稿後再發布，發布後會取代同 key 的目前 active 版本。",
+      "version": "版本",
+      "name": "名稱",
+      "promptDescription": "描述",
+      "variables": "變數",
+      "content": "Prompt 內容",
+      "saveDraft": "儲存草稿",
+      "key": "Key"
+    },
+    "gallery": {
+      "title": "廣場審核",
+      "description": "審核使用者投稿到廣場的作品，管理已發布作品並支援內聯加熱。",
+      "import": "匯入",
+      "hideConfirm": "確定要下架《{title}》嗎？",
+      "removeConfirm": "確定要移除《{title}》嗎？僅從廣場移除，不影響使用者自己的生成記錄。",
+      "searchPlaceholder": "搜尋標題",
+      "rangeWithTotal": "共 {total} 筆 · 第 {start}-{end} 筆",
+      "totalOnly": "共 {total} 筆",
+      "emptyPendingTitle": "暫無待審核作品",
+      "emptyMatchedTitle": "暫無符合作品",
+      "emptyFilteredDescription": "目前篩選下沒有作品，試試調整篩選條件。",
+      "emptyPendingDescription": "廣場投稿佇列已清空，稍後再來看看吧。",
+      "emptyPublishedDescription": "通過審核的作品會展示在這裡。",
+      "untitled": "未命名作品",
+      "approve": "通過",
+      "reject": "駁回",
+      "boost": "加熱",
+      "unpublish": "下架",
+      "hide": "隱藏",
+      "previousPage": "上一頁",
+      "pageIndicator": "第 {page} / {totalPages} 頁",
+      "nextPage": "下一頁",
+      "rejectDialogTitle": "駁回作品",
+      "rejectReason": "駁回原因",
+      "rejectReasonPlaceholder": "請填寫駁回原因，將展示給作者",
+      "confirmReject": "確認駁回",
+      "resourceLabel": "《{title}》",
+      "boostDialogTitle": "加熱作品",
+      "sources": {
+        "USER_UPLOAD": "使用者上傳",
+        "FROM_GENERATION": "生成結果",
+        "FROM_TEMPLATE": "範本作品",
+        "ADMIN_CURATED": "營運精選"
+      },
+      "tabs": {
+        "pending": "待審核",
+        "published": "已審核"
+      },
+      "filters": {
+        "type": "類型",
+        "allTypes": "全部類型",
+        "category": "分類",
+        "allCategories": "全部分類",
+        "source": "來源",
+        "allSources": "全部來源",
+        "externalOnly": "僅非本站網域",
+        "clear": "清除篩選"
+      },
+      "kind": {
+        "image": "圖片",
+        "video": "影片"
+      },
+      "columns": {
+        "work": "作品",
+        "author": "作者",
+        "category": "分類",
+        "source": "來源",
+        "submittedAt": "提交時間",
+        "publishedAt": "發布時間"
+      }
+    },
+    "boost": {
+      "title": "內容加熱",
+      "description": "為指定資源手動提升熱度分，支援設定有效期，到期自動失效。",
+      "add": "新增加熱",
+      "allTypes": "全部類型",
+      "searchPlaceholder": "依資源 ID 搜尋",
+      "emptyTitle": "暫無加熱記錄",
+      "emptyDescription": "點擊右上角「新增加熱」為資源提升熱度分。",
+      "dialogTitle": "新增加熱",
+      "targetResource": "目標資源",
+      "resourceType": "資源類型",
+      "resourceId": "資源 ID",
+      "resourceIdPlaceholder": "目標資源 ID",
+      "intensity": "加熱強度",
+      "reason": "原因",
+      "endsAt": "結束時間",
+      "note": "備註",
+      "notePlaceholder": "加熱原因說明，僅後台可見",
+      "confirm": "確認加熱",
+      "revoke": "撤銷",
+      "revokeConfirm": "確定要撤銷對《{resource}》的加熱嗎？",
+      "reasons": {
+        "MANUAL": "人工加熱",
+        "CAMPAIGN": "活動加熱",
+        "EDITORIAL_PICK": "編輯精選",
+        "CORRECTION": "修正"
+      },
+      "tiers": {
+        "small": "小（+200）",
+        "medium": "中（+500）",
+        "large": "大（+1000）"
+      },
+      "columns": {
+        "resource": "資源",
+        "score": "加熱分",
+        "reason": "原因",
+        "validity": "有效期",
+        "status": "狀態"
+      },
+      "status": {
+        "active": "生效中",
+        "outsideWindow": "未在生效期間",
+        "revoked": "已撤銷"
+      }
+    },
+    "risk": {
+      "title": "風控與使用者管理",
+      "description": "異常/封控使用者、邀請關係與安全等級",
+      "emptyUsers": "暫無風控使用者",
+      "levelBadge": "{level} · {label}",
+      "detailTitle": "使用者風控詳情",
+      "scoreText": "分數 {score}",
+      "manualOverrideSuffix": " · 人工設級",
+      "inviteSummary": "邀請人：{inviter} · 共邀請 {count} 人",
+      "noEvents": "無事件",
+      "reasonPlaceholder": "處置原因",
+      "setLevel": "設為 {level}",
+      "block": "封鎖",
+      "unblock": "解除封鎖",
+      "levels": {
+        "L0": "正常",
+        "L1": "關注",
+        "L2": "受限",
+        "L3": "封鎖"
+      },
+      "columns": {
+        "user": "使用者",
+        "securityLevel": "安全等級",
+        "score": "分數",
+        "inviter": "邀請人",
+        "inviteCount": "邀請數",
+        "signals": "信號"
+      },
+      "labels": {
+        "level": "等級",
+        "inviteRelation": "邀請關係",
+        "timeline": "風險時間軸",
+        "action": "處置（原因可選）"
+      }
+    },
+    "featured": {
+      "title": "營運位編排",
+      "description": "管理首頁 Hero 展示位（{placement}），override 僅影響展示，不修改來源資源本身。",
+      "add": "新增營運位",
+      "edit": "編輯營運位",
+      "deleteConfirm": "確定要刪除營運位《{label}》嗎？",
+      "emptyTitle": "暫無營運位",
+      "emptyDescription": "點擊右上角「新增營運位」開始編排首頁展示內容。",
+      "resourceFallback": "資源 {id}",
+      "untitled": "未命名營運位",
+      "searching": "搜尋中…",
+      "noCandidates": "無符合候選資源",
+      "selected": "已選",
+      "selectedResourceId": "已選資源 ID：{id}",
+      "columns": {
+        "order": "順序",
+        "content": "展示內容",
+        "type": "類型",
+        "enabled": "啟用"
+      },
+      "kind": {
+        "custom": "CUSTOM（自訂內容）",
+        "resource": "RESOURCE（引用資源）"
+      },
+      "form": {
+        "type": "類型",
+        "resourceType": "資源類型",
+        "searchCandidates": "搜尋候選資源",
+        "searchPlaceholder": "依標題搜尋",
+        "overrideTitle": "標題（覆蓋）",
+        "titlePlaceholder": "展示標題",
+        "coverImage": "封面圖片 URL",
+        "coverVideo": "封面影片 URL",
+        "ctaText": "CTA 文案",
+        "ctaPlaceholder": "立即體驗",
+        "ctaHref": "CTA 跳轉連結",
+        "overrideDescription": "描述（覆蓋）",
+        "enableSlot": "啟用該營運位",
+        "hint": "提示：以上覆蓋欄位僅影響該營運位的展示內容，不會修改所引用的來源資源本身。"
+      }
+    },
+    "common": {
+      "actions": "操作",
+      "all": "全部",
+      "cancel": "取消",
+      "close": "關閉",
+      "delete": "刪除",
+      "edit": "編輯",
+      "loading": "載入中...",
+      "noData": "暫無資料",
+      "none": "無",
+      "operationFailed": "操作失敗",
+      "processing": "處理中...",
+      "refresh": "重新整理",
+      "remove": "移除",
+      "save": "儲存",
+      "saveFailed": "儲存失敗",
+      "saving": "儲存中..."
+    }
   }
 }

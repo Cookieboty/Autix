@@ -42,7 +42,9 @@
     "showing": "Showing",
     "frontend": "Frontend",
     "backend": "Backend",
-    "register": "Register"
+    "register": "Register",
+    "actions": "Actions",
+    "none": "None"
   },
   "aiUi": {
     "selected": "Selected",
@@ -1070,7 +1072,13 @@
     "workflowSummaryAssetsTitle": "Assets",
     "workflowSummaryAssetsDesc": "Images, video, and audio managed together",
     "workflowSummaryDeliveryTitle": "Delivery",
-    "workflowSummaryDeliveryDesc": "Work, versions, and records archived automatically"
+    "workflowSummaryDeliveryDesc": "Work, versions, and records archived automatically",
+    "videoOverviewEyebrow": "Video pipeline",
+    "videoShowcaseEyebrow": "Video showcase",
+    "videoDirectorEyebrow": "AI director",
+    "videoTemplatesEyebrow": "Video templates",
+    "videoQuickEyebrow": "Quick start",
+    "videoQuickSelectedTemplate": "Selected Template"
   },
   "membership": {
     "center": "Membership",
@@ -1345,7 +1353,9 @@
     "rewardValidityDays": "Reward valid for {days} days",
     "rewardValidityDaysLabel": "Reward validity (days)",
     "showCommercialLicenseLabel": "Show commercial license note",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "holdPoints": "Held Points",
+    "recordCount": "Record Count"
   },
   "insufficientPoints": {
     "title": "Insufficient points",
@@ -1419,7 +1429,9 @@
     "navAdminPermissions": "Permissions",
     "navSystemModels": "System Model Config",
     "navSystemSettings": "System Settings",
-    "navCampaignRewards": "Campaign Rewards Center"
+    "navCampaignRewards": "Campaign Rewards Center",
+    "navRiskManagement": "Risk Management",
+    "navSystemPrompts": "System Prompts"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2508,6 +2520,15 @@
     },
     "topbar": {
       "credits": "Credits"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "Enter a shot description",
+        "enterVideoPrompt": "Enter a video prompt"
+      },
+      "alreadyConnectedToVideoNode": "Already connected to the video node",
+      "imagesAlreadyConnected": "These two images are already connected",
+      "noVideoNodesOnCanvas": "There are no video nodes on the canvas yet"
     }
   },
   "imageStudio": {
@@ -3513,7 +3534,10 @@
       "groups": {
         "create": "Create",
         "discover": "Discover",
-        "platform": "Platform"
+        "platform": "Platform",
+        "studio": "Amux Studio",
+        "image": "Image",
+        "video": "Video"
       },
       "links": {
         "aiImage": "AI Image",
@@ -3525,7 +3549,23 @@
         "community": "Community",
         "originalSeries": "Original Series",
         "pricing": "Pricing",
-        "marketplace": "Marketplace"
+        "marketplace": "Marketplace",
+        "explore": "Explore",
+        "cinemaStudio": "Cinema Studio",
+        "originals": "Originals",
+        "docs": "Docs",
+        "templates": "Templates",
+        "editImage": "Edit Image",
+        "imageUpscale": "Image Upscale",
+        "createVideo": "Create Video",
+        "membership": "Membership"
+      },
+      "headline": "The all-in-one AI studio for image & video creators",
+      "copyright": "© {year} Amux Studio. All rights reserved.",
+      "legal": {
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "cookieNotice": "Cookie Notice"
       }
     },
     "media": {
@@ -3588,10 +3628,13 @@
       "onboardCtaTry": "Try it",
       "onboardCtaExplore": "Explore",
       "onboardCtaClaim": "Claim",
-      "onboardCtaClaimed": "Claimed"
+      "onboardCtaClaimed": "Claimed",
+      "prev": "Previous",
+      "next": "Next"
     },
     "promoBar": {
-      "discountBadge": "{percent}% OFF"
+      "discountBadge": "{percent}% OFF",
+      "close": "Close promotion"
     },
     "generator": {
       "promo": "{title}: generate directly on this page",
@@ -3757,7 +3800,12 @@
         "likes": "Likes",
         "favorites": "Favorites",
         "remixes": "Remixes",
-        "dimensions": "Dimensions"
+        "dimensions": "Dimensions",
+        "author": "Author",
+        "ariaLike": "Like",
+        "ariaDownload": "Download",
+        "ariaSelect": "Select",
+        "ariaDelete": "Delete"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -3776,7 +3824,8 @@
         "remove": "Remove",
         "checkEligibility": "Use image",
         "useImage": "Use image"
-      }
+      },
+      "qualityStudio": "Studio"
     },
     "pricing": {
       "promo": "Launch offer: create privately, publish only the work you approve",
@@ -4643,7 +4692,8 @@
       "row": "Row",
       "reason": "Reason",
       "close": "Close",
-      "confirmImport": "Confirm import"
+      "confirmImport": "Confirm import",
+      "name": "Name"
     }
   },
   "adminSystemSettings": {
@@ -4705,5 +4755,238 @@
   "docsLayout": {
     "localeZhCN": "Simplified Chinese",
     "localeEn": "English"
+  },
+  "adminOperations": {
+    "resourceTypes": {
+      "SKILL": "Skill",
+      "MCP": "MCP",
+      "AGENT": "Agent",
+      "IMAGE_TEMPLATE": "Image template",
+      "VIDEO_TEMPLATE": "Video template",
+      "GALLERY_POST": "Gallery post"
+    },
+    "systemPrompts": {
+      "title": "System Prompt",
+      "description": "Centrally manage default prompts, variables, versions, and publish status.",
+      "loadFailed": "Failed to load system Prompt",
+      "draftSaved": "Prompt draft saved",
+      "published": "{key}@{version} published",
+      "publishFailed": "Publish failed",
+      "noDescription": "No description",
+      "defaultSource": "Default",
+      "copyAsNewVersion": "Copy as new version",
+      "publish": "Publish",
+      "editDraftTitle": "Edit Prompt draft",
+      "createVersionTitle": "Create Prompt version",
+      "sheetDescription": "Save as a draft before publishing. Publishing replaces the current active version for the same key.",
+      "version": "Version",
+      "name": "Name",
+      "promptDescription": "Description",
+      "variables": "Variables",
+      "content": "Prompt content",
+      "saveDraft": "Save draft",
+      "key": "Key"
+    },
+    "gallery": {
+      "title": "Gallery review",
+      "description": "Review user submissions to the Gallery, manage published works, and support inline boosting.",
+      "import": "Import",
+      "hideConfirm": "Unpublish “{title}”?",
+      "removeConfirm": "Remove “{title}”? This only removes it from the Gallery and does not affect the user's own generation history.",
+      "searchPlaceholder": "Search title",
+      "rangeWithTotal": "{total} total · {start}-{end}",
+      "totalOnly": "{total} total",
+      "emptyPendingTitle": "No works pending review",
+      "emptyMatchedTitle": "No matching works",
+      "emptyFilteredDescription": "No works match the current filters. Try adjusting them.",
+      "emptyPendingDescription": "The Gallery submission queue is empty. Check back later.",
+      "emptyPublishedDescription": "Approved works appear here.",
+      "untitled": "Untitled work",
+      "approve": "Approve",
+      "reject": "Reject",
+      "boost": "Boost",
+      "unpublish": "Unpublish",
+      "hide": "Hide",
+      "previousPage": "Previous",
+      "pageIndicator": "Page {page} / {totalPages}",
+      "nextPage": "Next",
+      "rejectDialogTitle": "Reject work",
+      "rejectReason": "Rejection reason",
+      "rejectReasonPlaceholder": "Enter a rejection reason; it will be shown to the author",
+      "confirmReject": "Confirm rejection",
+      "resourceLabel": "“{title}”",
+      "boostDialogTitle": "Boost work",
+      "sources": {
+        "USER_UPLOAD": "User upload",
+        "FROM_GENERATION": "Generation result",
+        "FROM_TEMPLATE": "Template work",
+        "ADMIN_CURATED": "Editorial pick"
+      },
+      "tabs": {
+        "pending": "Pending",
+        "published": "Reviewed"
+      },
+      "filters": {
+        "type": "Type",
+        "allTypes": "All types",
+        "category": "Category",
+        "allCategories": "All categories",
+        "source": "Source",
+        "allSources": "All sources",
+        "externalOnly": "External domains only",
+        "clear": "Clear filters"
+      },
+      "kind": {
+        "image": "Image",
+        "video": "Video"
+      },
+      "columns": {
+        "work": "Work",
+        "author": "Author",
+        "category": "Category",
+        "source": "Source",
+        "submittedAt": "Submitted at",
+        "publishedAt": "Published at"
+      }
+    },
+    "boost": {
+      "title": "Content boost",
+      "description": "Manually raise the hot score for a specific resource. Supports setting an expiry, after which it lapses automatically.",
+      "add": "New boost",
+      "allTypes": "All types",
+      "searchPlaceholder": "Search by resource ID",
+      "emptyTitle": "No boost records",
+      "emptyDescription": "Click “New boost” in the top right to raise a resource's hot score.",
+      "dialogTitle": "New boost",
+      "targetResource": "Target resource",
+      "resourceType": "Resource type",
+      "resourceId": "Resource ID",
+      "resourceIdPlaceholder": "Target resource ID",
+      "intensity": "Boost intensity",
+      "reason": "Reason",
+      "endsAt": "End time",
+      "note": "Note",
+      "notePlaceholder": "Boost reason note, visible in the admin console only",
+      "confirm": "Confirm boost",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke the boost on “{resource}”?",
+      "reasons": {
+        "MANUAL": "Manual boost",
+        "CAMPAIGN": "Campaign boost",
+        "EDITORIAL_PICK": "Editorial pick",
+        "CORRECTION": "Correction"
+      },
+      "tiers": {
+        "small": "Small (+200)",
+        "medium": "Medium (+500)",
+        "large": "Large (+1000)"
+      },
+      "columns": {
+        "resource": "Resource",
+        "score": "Boost score",
+        "reason": "Reason",
+        "validity": "Validity",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Active",
+        "outsideWindow": "Outside window",
+        "revoked": "Revoked"
+      }
+    },
+    "risk": {
+      "title": "Risk control & user management",
+      "description": "Abnormal/banned users, invitation relationships, and security levels",
+      "emptyUsers": "No risk-control users",
+      "levelBadge": "{level} · {label}",
+      "detailTitle": "User risk-control details",
+      "scoreText": "Score {score}",
+      "manualOverrideSuffix": " · level override",
+      "inviteSummary": "Inviter: {inviter} · {count} invited in total",
+      "noEvents": "No events",
+      "reasonPlaceholder": "Action reason",
+      "setLevel": "Set to {level}",
+      "block": "Ban",
+      "unblock": "Unban",
+      "levels": {
+        "L0": "Normal",
+        "L1": "Watch",
+        "L2": "Restricted",
+        "L3": "Banned"
+      },
+      "columns": {
+        "user": "User",
+        "securityLevel": "Security level",
+        "score": "Score",
+        "inviter": "Inviter",
+        "inviteCount": "Invites",
+        "signals": "Signals"
+      },
+      "labels": {
+        "level": "Level",
+        "inviteRelation": "Invitation relationship",
+        "timeline": "Risk timeline",
+        "action": "Action (reason optional)"
+      }
+    },
+    "featured": {
+      "title": "Featured slot arrangement",
+      "description": "Manage the homepage Hero slots ({placement}). override only affects display and does not modify the source resource itself.",
+      "add": "New featured slot",
+      "edit": "Edit featured slot",
+      "deleteConfirm": "Delete featured slot “{label}”?",
+      "emptyTitle": "No featured slots",
+      "emptyDescription": "Click “New featured slot” in the top right to start arranging homepage content.",
+      "resourceFallback": "Resource {id}",
+      "untitled": "Untitled featured slot",
+      "searching": "Searching…",
+      "noCandidates": "No matching candidate resources",
+      "selected": "Selected",
+      "selectedResourceId": "Selected resource ID: {id}",
+      "columns": {
+        "order": "Order",
+        "content": "Display content",
+        "type": "Type",
+        "enabled": "Enabled"
+      },
+      "kind": {
+        "custom": "CUSTOM (custom content)",
+        "resource": "RESOURCE (referenced resource)"
+      },
+      "form": {
+        "type": "Type",
+        "resourceType": "Resource type",
+        "searchCandidates": "Search candidate resources",
+        "searchPlaceholder": "Search by title",
+        "overrideTitle": "Title (override)",
+        "titlePlaceholder": "Display title",
+        "coverImage": "Cover image URL",
+        "coverVideo": "Cover video URL",
+        "ctaText": "CTA text",
+        "ctaPlaceholder": "Try it now",
+        "ctaHref": "CTA link",
+        "overrideDescription": "Description (override)",
+        "enableSlot": "Enable this featured slot",
+        "hint": "Note: the override fields above only affect this featured slot's display content and will not modify the referenced source resource itself."
+      }
+    },
+    "common": {
+      "actions": "Actions",
+      "all": "All",
+      "cancel": "Cancel",
+      "close": "Close",
+      "delete": "Delete",
+      "edit": "Edit",
+      "loading": "Loading...",
+      "noData": "No data",
+      "none": "None",
+      "operationFailed": "Operation failed",
+      "processing": "Processing...",
+      "refresh": "Refresh",
+      "remove": "Remove",
+      "save": "Save",
+      "saveFailed": "Save failed",
+      "saving": "Saving..."
+    }
   }
 }

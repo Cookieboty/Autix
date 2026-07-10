@@ -42,7 +42,9 @@
     "showing": "表示中",
     "frontend": "フロントエンド",
     "backend": "バックエンド",
-    "register": "登録"
+    "register": "登録",
+    "actions": "操作",
+    "none": "なし"
   },
   "aiUi": {
     "selected": "選択済み",
@@ -795,7 +797,9 @@
     "navAdminPermissions": "権限",
     "navSystemModels": "システムモデル設定",
     "navSystemSettings": "システム設定",
-    "navCampaignRewards": "キャンペーン報酬センター"
+    "navCampaignRewards": "キャンペーン報酬センター",
+    "navRiskManagement": "リスク管理",
+    "navSystemPrompts": "システム Prompt"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -1884,6 +1888,15 @@
     },
     "topbar": {
       "credits": "Credits"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "ショットの説明を入力してください",
+        "enterVideoPrompt": "動画プロンプトを入力してください"
+      },
+      "alreadyConnectedToVideoNode": "すでに動画ノードに接続されています",
+      "imagesAlreadyConnected": "これら 2 枚の画像はすでに接続されています",
+      "noVideoNodesOnCanvas": "キャンバスにまだ動画ノードがありません"
     }
   },
   "imageStudio": {
@@ -3130,7 +3143,9 @@
     "validityDays": "有效期天数",
     "rewardValidityDays": "奖励有效期 {days} 天",
     "rewardValidityDaysLabel": "奖励有效期天数",
-    "showCommercialLicenseLabel": "显示商用授权说明"
+    "showCommercialLicenseLabel": "显示商用授权说明",
+    "holdPoints": "保留ポイント",
+    "recordCount": "レコード数"
   },
   "insufficientPoints": {
     "title": "ポイントが不足しています",
@@ -3184,20 +3199,39 @@
       "plans": "Plans and credits",
       "groups": {
         "create": "Create",
-        "discover": "Discover",
-        "platform": "Platform"
+        "discover": "見つける",
+        "platform": "Platform",
+        "studio": "Amux Studio",
+        "image": "画像",
+        "video": "動画"
       },
       "links": {
-        "aiImage": "AI Image",
-        "aiVideo": "AI Video",
-        "canvas": "Canvas",
-        "marketingStudio": "Marketing Studio",
-        "presets": "Presets",
-        "viralPresets": "Viral Presets",
-        "community": "Community",
+        "aiImage": "AI 画像",
+        "aiVideo": "AI 動画",
+        "canvas": "キャンバス",
+        "marketingStudio": "マーケティングスタジオ",
+        "presets": "プリセット",
+        "viralPresets": "バイラルプリセット",
+        "community": "コミュニティ",
         "originalSeries": "Original Series",
-        "pricing": "Pricing",
-        "marketplace": "Marketplace"
+        "pricing": "料金",
+        "marketplace": "Marketplace",
+        "explore": "探索",
+        "cinemaStudio": "シネマスタジオ",
+        "originals": "オリジナル",
+        "docs": "ドキュメント",
+        "templates": "テンプレート",
+        "editImage": "画像編集",
+        "imageUpscale": "画像アップスケール",
+        "createVideo": "動画を作成",
+        "membership": "メンバーシップ"
+      },
+      "headline": "画像・動画クリエイターのためのオールインワン AI スタジオ",
+      "copyright": "© {year} Amux Studio. 無断複写・転載を禁じます。",
+      "legal": {
+        "privacy": "プライバシー",
+        "terms": "利用規約",
+        "cookieNotice": "Cookie に関する通知"
       }
     },
     "media": {
@@ -3260,10 +3294,13 @@
       "onboardCtaTry": "試す",
       "onboardCtaExplore": "体験する",
       "onboardCtaClaim": "受け取る",
-      "onboardCtaClaimed": "受取済み"
+      "onboardCtaClaimed": "受取済み",
+      "prev": "前へ",
+      "next": "次へ"
     },
     "promoBar": {
-      "discountBadge": "{percent}% オフ"
+      "discountBadge": "{percent}% オフ",
+      "close": "プロモーションを閉じる"
     },
     "generator": {
       "promo": "{title}: generate directly on this page",
@@ -3429,7 +3466,12 @@
         "likes": "いいね",
         "favorites": "お気に入り",
         "remixes": "リミックス",
-        "dimensions": "サイズ"
+        "dimensions": "サイズ",
+        "author": "作者",
+        "ariaLike": "いいね",
+        "ariaDownload": "ダウンロード",
+        "ariaSelect": "選択",
+        "ariaDelete": "削除"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -3448,7 +3490,8 @@
         "remove": "削除",
         "checkEligibility": "参照する",
         "useImage": "画像を参照"
-      }
+      },
+      "qualityStudio": "スタジオ品質"
     },
     "pricing": {
       "promo": "ローンチ特典：非公開で制作し、承認した作品だけを公開",
@@ -4315,7 +4358,8 @@
       "row": "行",
       "reason": "理由",
       "close": "閉じる",
-      "confirmImport": "インポートを確定"
+      "confirmImport": "インポートを確定",
+      "name": "名前"
     }
   },
   "adminSystemSettings": {
@@ -4704,6 +4748,245 @@
     "workflowSummaryAssetsTitle": "素材",
     "workflowSummaryAssetsDesc": "画像・動画・音声を一元管理",
     "workflowSummaryDeliveryTitle": "納品",
-    "workflowSummaryDeliveryDesc": "作品・バージョン・記録を自動アーカイブ"
+    "workflowSummaryDeliveryDesc": "作品・バージョン・記録を自動アーカイブ",
+    "videoOverviewEyebrow": "動画パイプライン",
+    "videoShowcaseEyebrow": "動画ショーケース",
+    "videoDirectorEyebrow": "AI ディレクター",
+    "videoTemplatesEyebrow": "動画テンプレート",
+    "videoQuickEyebrow": "クイックスタート",
+    "videoQuickSelectedTemplate": "選択中のテンプレート"
+  },
+  "adminOperations": {
+    "resourceTypes": {
+      "SKILL": "スキル",
+      "MCP": "MCP",
+      "AGENT": "エージェント",
+      "IMAGE_TEMPLATE": "画像テンプレート",
+      "VIDEO_TEMPLATE": "動画テンプレート",
+      "GALLERY_POST": "ギャラリー作品"
+    },
+    "systemPrompts": {
+      "title": "システム Prompt",
+      "description": "既定のプロンプト、変数、バージョン、公開状態を一元管理します。",
+      "loadFailed": "システム Prompt の読み込みに失敗しました",
+      "draftSaved": "Prompt の下書きを保存しました",
+      "published": "{key}@{version} を公開しました",
+      "publishFailed": "公開に失敗しました",
+      "noDescription": "説明なし",
+      "defaultSource": "既定",
+      "copyAsNewVersion": "新しいバージョンとして複製",
+      "publish": "公開",
+      "editDraftTitle": "Prompt の下書きを編集",
+      "createVersionTitle": "Prompt バージョンを作成",
+      "sheetDescription": "下書きとして保存してから公開します。公開すると同じ key の現在の active バージョンを置き換えます。",
+      "version": "バージョン",
+      "name": "名前",
+      "promptDescription": "説明",
+      "variables": "変数",
+      "content": "Prompt 内容",
+      "saveDraft": "下書きを保存",
+      "key": "Key"
+    },
+    "gallery": {
+      "title": "ギャラリー審査",
+      "description": "ユーザーがギャラリーに投稿した作品を審査し、公開済み作品を管理します。インラインでのブーストにも対応します。",
+      "import": "インポート",
+      "hideConfirm": "「{title}」を公開停止しますか？",
+      "removeConfirm": "「{title}」を削除しますか？ギャラリーから削除するだけで、ユーザー自身の生成記録には影響しません。",
+      "searchPlaceholder": "タイトルを検索",
+      "rangeWithTotal": "全 {total} 件 · {start}-{end} 件目",
+      "totalOnly": "全 {total} 件",
+      "emptyPendingTitle": "審査待ちの作品はありません",
+      "emptyMatchedTitle": "一致する作品はありません",
+      "emptyFilteredDescription": "現在の絞り込み条件に該当する作品がありません。条件を調整してみてください。",
+      "emptyPendingDescription": "ギャラリーの投稿キューは空です。しばらくしてからご確認ください。",
+      "emptyPublishedDescription": "審査を通過した作品がここに表示されます。",
+      "untitled": "無題の作品",
+      "approve": "承認",
+      "reject": "却下",
+      "boost": "ブースト",
+      "unpublish": "公開停止",
+      "hide": "非表示",
+      "previousPage": "前のページ",
+      "pageIndicator": "{page} / {totalPages} ページ",
+      "nextPage": "次のページ",
+      "rejectDialogTitle": "作品を却下",
+      "rejectReason": "却下理由",
+      "rejectReasonPlaceholder": "却下理由を入力してください。作者に表示されます。",
+      "confirmReject": "却下を確認",
+      "resourceLabel": "「{title}」",
+      "boostDialogTitle": "作品をブースト",
+      "sources": {
+        "USER_UPLOAD": "ユーザーアップロード",
+        "FROM_GENERATION": "生成結果",
+        "FROM_TEMPLATE": "テンプレート作品",
+        "ADMIN_CURATED": "運営精選"
+      },
+      "tabs": {
+        "pending": "審査待ち",
+        "published": "審査済み"
+      },
+      "filters": {
+        "type": "タイプ",
+        "allTypes": "すべてのタイプ",
+        "category": "カテゴリ",
+        "allCategories": "すべてのカテゴリ",
+        "source": "ソース",
+        "allSources": "すべてのソース",
+        "externalOnly": "自ドメイン以外のみ",
+        "clear": "絞り込みをクリア"
+      },
+      "kind": {
+        "image": "画像",
+        "video": "動画"
+      },
+      "columns": {
+        "work": "作品",
+        "author": "作者",
+        "category": "カテゴリ",
+        "source": "ソース",
+        "submittedAt": "投稿日時",
+        "publishedAt": "公開日時"
+      }
+    },
+    "boost": {
+      "title": "コンテンツブースト",
+      "description": "指定したリソースのホットスコアを手動で引き上げます。有効期間を設定でき、期限が切れると自動的に無効になります。",
+      "add": "ブーストを追加",
+      "allTypes": "すべてのタイプ",
+      "searchPlaceholder": "リソース ID で検索",
+      "emptyTitle": "ブースト記録はありません",
+      "emptyDescription": "右上の「ブーストを追加」をクリックしてリソースのホットスコアを引き上げます。",
+      "dialogTitle": "ブーストを追加",
+      "targetResource": "対象リソース",
+      "resourceType": "リソースタイプ",
+      "resourceId": "リソース ID",
+      "resourceIdPlaceholder": "対象リソース ID",
+      "intensity": "ブースト強度",
+      "reason": "理由",
+      "endsAt": "終了時刻",
+      "note": "備考",
+      "notePlaceholder": "ブースト理由の説明。管理画面のみに表示されます。",
+      "confirm": "ブーストを確認",
+      "revoke": "取り消し",
+      "revokeConfirm": "「{resource}」のブーストを取り消しますか？",
+      "reasons": {
+        "MANUAL": "手動ブースト",
+        "CAMPAIGN": "キャンペーンブースト",
+        "EDITORIAL_PICK": "編集精選",
+        "CORRECTION": "修正"
+      },
+      "tiers": {
+        "small": "小（+200）",
+        "medium": "中（+500）",
+        "large": "大（+1000）"
+      },
+      "columns": {
+        "resource": "リソース",
+        "score": "ブーストスコア",
+        "reason": "理由",
+        "validity": "有効期間",
+        "status": "ステータス"
+      },
+      "status": {
+        "active": "有効",
+        "outsideWindow": "期間外",
+        "revoked": "取り消し済み"
+      }
+    },
+    "risk": {
+      "title": "リスク管理とユーザー管理",
+      "description": "異常・BAN ユーザー、招待関係、セキュリティレベル",
+      "emptyUsers": "リスク管理対象のユーザーはいません",
+      "levelBadge": "{level} · {label}",
+      "detailTitle": "ユーザーリスク詳細",
+      "scoreText": "スコア {score}",
+      "manualOverrideSuffix": " · 手動設定",
+      "inviteSummary": "招待者：{inviter} · 招待 {count} 人",
+      "noEvents": "イベントなし",
+      "reasonPlaceholder": "処置理由",
+      "setLevel": "{level} に設定",
+      "block": "BAN",
+      "unblock": "解除",
+      "levels": {
+        "L0": "正常",
+        "L1": "注意",
+        "L2": "制限",
+        "L3": "BAN"
+      },
+      "columns": {
+        "user": "ユーザー",
+        "securityLevel": "セキュリティレベル",
+        "score": "スコア",
+        "inviter": "招待者",
+        "inviteCount": "招待数",
+        "signals": "シグナル"
+      },
+      "labels": {
+        "level": "レベル",
+        "inviteRelation": "招待関係",
+        "timeline": "リスクタイムライン",
+        "action": "処置（理由は任意）"
+      }
+    },
+    "featured": {
+      "title": "特集枠の編成",
+      "description": "トップページの Hero 表示枠（{placement}）を管理します。override は表示のみに影響し、ソースリソース自体は変更しません。",
+      "add": "特集枠を追加",
+      "edit": "特集枠を編集",
+      "deleteConfirm": "特集枠「{label}」を削除しますか？",
+      "emptyTitle": "特集枠はありません",
+      "emptyDescription": "右上の「特集枠を追加」をクリックしてトップページの表示内容の編成を開始します。",
+      "resourceFallback": "リソース {id}",
+      "untitled": "無題の特集枠",
+      "searching": "検索中…",
+      "noCandidates": "一致する候補リソースがありません",
+      "selected": "選択済み",
+      "selectedResourceId": "選択済みリソース ID：{id}",
+      "columns": {
+        "order": "順序",
+        "content": "表示内容",
+        "type": "タイプ",
+        "enabled": "有効"
+      },
+      "kind": {
+        "custom": "CUSTOM（カスタム内容）",
+        "resource": "RESOURCE（リソース参照）"
+      },
+      "form": {
+        "type": "タイプ",
+        "resourceType": "リソースタイプ",
+        "searchCandidates": "候補リソースを検索",
+        "searchPlaceholder": "タイトルで検索",
+        "overrideTitle": "タイトル（override）",
+        "titlePlaceholder": "表示タイトル",
+        "coverImage": "カバー画像 URL",
+        "coverVideo": "カバー動画 URL",
+        "ctaText": "CTA テキスト",
+        "ctaPlaceholder": "今すぐ体験",
+        "ctaHref": "CTA リンク",
+        "overrideDescription": "説明（override）",
+        "enableSlot": "この特集枠を有効化",
+        "hint": "ヒント：上記の override フィールドはこの特集枠の表示内容のみに影響し、参照元のソースリソース自体は変更しません。"
+      }
+    },
+    "common": {
+      "actions": "操作",
+      "all": "すべて",
+      "cancel": "キャンセル",
+      "close": "閉じる",
+      "delete": "削除",
+      "edit": "編集",
+      "loading": "読み込み中...",
+      "noData": "データなし",
+      "none": "なし",
+      "operationFailed": "操作に失敗しました",
+      "processing": "処理中...",
+      "refresh": "更新",
+      "remove": "削除",
+      "save": "保存",
+      "saveFailed": "保存に失敗しました",
+      "saving": "保存中..."
+    }
   }
 }

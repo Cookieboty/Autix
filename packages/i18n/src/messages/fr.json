@@ -42,7 +42,9 @@
     "showing": "Affiché",
     "frontend": "Frontend",
     "backend": "Backend",
-    "register": "S'inscrire"
+    "register": "S'inscrire",
+    "actions": "Actions",
+    "none": "Aucun"
   },
   "aiUi": {
     "selected": "Sélectionné",
@@ -795,7 +797,9 @@
     "navAdminPermissions": "Autorisations",
     "navSystemModels": "Configuration des modèles système",
     "navSystemSettings": "Configuration système",
-    "navCampaignRewards": "Centre des récompenses"
+    "navCampaignRewards": "Centre des récompenses",
+    "navRiskManagement": "Gestion des risques",
+    "navSystemPrompts": "Prompts système"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -1884,6 +1888,15 @@
     },
     "topbar": {
       "credits": "Credits"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "Saisissez une description de plan",
+        "enterVideoPrompt": "Saisissez un prompt vidéo"
+      },
+      "alreadyConnectedToVideoNode": "Déjà connecté au nœud vidéo",
+      "imagesAlreadyConnected": "Ces deux images sont déjà connectées",
+      "noVideoNodesOnCanvas": "Aucun nœud vidéo sur le canevas"
     }
   },
   "imageStudio": {
@@ -3141,7 +3154,9 @@
     "benefitBatchGeneration": "批量生成",
     "benefitBatchGenerationPlaceholder": "limited / enabled / custom",
     "benefitInvoice": "发票/合同",
-    "benefitInvoicePlaceholder": "requestable / included / contract"
+    "benefitInvoicePlaceholder": "requestable / included / contract",
+    "holdPoints": "Points bloqués",
+    "recordCount": "Nombre d'enregistrements"
   },
   "insufficientPoints": {
     "title": "Points insuffisants",
@@ -3479,7 +3494,13 @@
     "workflowSummaryAssetsTitle": "Médias",
     "workflowSummaryAssetsDesc": "Images, vidéos et audio gérés ensemble",
     "workflowSummaryDeliveryTitle": "Livraison",
-    "workflowSummaryDeliveryDesc": "Œuvres, versions et historiques archivés automatiquement"
+    "workflowSummaryDeliveryDesc": "Œuvres, versions et historiques archivés automatiquement",
+    "videoOverviewEyebrow": "Pipeline vidéo",
+    "videoShowcaseEyebrow": "Vitrine vidéo",
+    "videoDirectorEyebrow": "Réalisateur IA",
+    "videoTemplatesEyebrow": "Modèles vidéo",
+    "videoQuickEyebrow": "Démarrage rapide",
+    "videoQuickSelectedTemplate": "Modèle sélectionné"
   },
   "publicGrowth": {
     "nav": {
@@ -3512,20 +3533,39 @@
       "plans": "Plans and credits",
       "groups": {
         "create": "Create",
-        "discover": "Discover",
-        "platform": "Platform"
+        "discover": "Découvrir",
+        "platform": "Platform",
+        "studio": "Amux Studio",
+        "image": "Image",
+        "video": "Vidéo"
       },
       "links": {
-        "aiImage": "AI Image",
-        "aiVideo": "AI Video",
+        "aiImage": "Image IA",
+        "aiVideo": "Vidéo IA",
         "canvas": "Canvas",
-        "marketingStudio": "Marketing Studio",
-        "presets": "Presets",
-        "viralPresets": "Viral Presets",
-        "community": "Community",
+        "marketingStudio": "Studio marketing",
+        "presets": "Préréglages",
+        "viralPresets": "Préréglages viraux",
+        "community": "Communauté",
         "originalSeries": "Original Series",
-        "pricing": "Pricing",
-        "marketplace": "Marketplace"
+        "pricing": "Tarifs",
+        "marketplace": "Marketplace",
+        "explore": "Explorer",
+        "cinemaStudio": "Studio cinéma",
+        "originals": "Originaux",
+        "docs": "Documentation",
+        "templates": "Modèles",
+        "editImage": "Retoucher une image",
+        "imageUpscale": "Agrandissement d'image",
+        "createVideo": "Créer une vidéo",
+        "membership": "Abonnement"
+      },
+      "headline": "Le studio IA tout-en-un pour les créateurs d'images et de vidéos",
+      "copyright": "© {year} Amux Studio. Tous droits réservés.",
+      "legal": {
+        "privacy": "Confidentialité",
+        "terms": "Conditions",
+        "cookieNotice": "Avis relatif aux cookies"
       }
     },
     "media": {
@@ -3588,10 +3628,13 @@
       "onboardCtaTry": "Essayer",
       "onboardCtaExplore": "Explorer",
       "onboardCtaClaim": "Obtenir",
-      "onboardCtaClaimed": "Obtenu"
+      "onboardCtaClaimed": "Obtenu",
+      "prev": "Précédent",
+      "next": "Suivant"
     },
     "promoBar": {
-      "discountBadge": "-{percent} %"
+      "discountBadge": "-{percent} %",
+      "close": "Fermer la promotion"
     },
     "generator": {
       "promo": "{title}: generate directly on this page",
@@ -3757,7 +3800,12 @@
         "likes": "J'aime",
         "favorites": "Favoris",
         "remixes": "Remix",
-        "dimensions": "Dimensions"
+        "dimensions": "Dimensions",
+        "author": "Auteur",
+        "ariaLike": "J'aime",
+        "ariaDownload": "Télécharger",
+        "ariaSelect": "Sélectionner",
+        "ariaDelete": "Supprimer"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -3776,7 +3824,8 @@
         "remove": "Supprimer",
         "checkEligibility": "Utiliser l'image",
         "useImage": "Utiliser l'image"
-      }
+      },
+      "qualityStudio": "Studio"
     },
     "pricing": {
       "promo": "Offre de lancement : créez en privé, publiez uniquement les œuvres que vous approuvez",
@@ -4643,7 +4692,8 @@
       "row": "Ligne",
       "reason": "Motif",
       "close": "Fermer",
-      "confirmImport": "Confirmer l'import"
+      "confirmImport": "Confirmer l'import",
+      "name": "Nom"
     }
   },
   "adminSystemSettings": {
@@ -4705,5 +4755,238 @@
   "docsLayout": {
     "localeZhCN": "Chinois simplifié",
     "localeEn": "Anglais"
+  },
+  "adminOperations": {
+    "resourceTypes": {
+      "SKILL": "Compétence",
+      "MCP": "MCP",
+      "AGENT": "Agent",
+      "IMAGE_TEMPLATE": "Modèle d’image",
+      "VIDEO_TEMPLATE": "Modèle de vidéo",
+      "GALLERY_POST": "Œuvre de la Galerie"
+    },
+    "systemPrompts": {
+      "title": "Prompt système",
+      "description": "Gérez de façon centralisée les prompts par défaut, les variables, les versions et l’état de publication.",
+      "loadFailed": "Échec du chargement des Prompts système",
+      "draftSaved": "Brouillon de Prompt enregistré",
+      "published": "{key}@{version} publié",
+      "publishFailed": "Échec de la publication",
+      "noDescription": "Aucune description",
+      "defaultSource": "Par défaut",
+      "copyAsNewVersion": "Copier comme nouvelle version",
+      "publish": "Publier",
+      "editDraftTitle": "Modifier le brouillon de Prompt",
+      "createVersionTitle": "Créer une version de Prompt",
+      "sheetDescription": "Enregistrez comme brouillon avant de publier ; la publication remplace la version active actuelle de la même clé.",
+      "version": "Version",
+      "name": "Nom",
+      "promptDescription": "Description",
+      "variables": "Variables",
+      "content": "Contenu du Prompt",
+      "saveDraft": "Enregistrer le brouillon",
+      "key": "Key"
+    },
+    "gallery": {
+      "title": "Modération de la Galerie",
+      "description": "Modérez les œuvres soumises par les utilisateurs à la Galerie, gérez les œuvres publiées et prenez en charge le boost intégré.",
+      "import": "Importer",
+      "hideConfirm": "Voulez-vous vraiment dépublier « {title} » ?",
+      "removeConfirm": "Voulez-vous vraiment retirer « {title} » ? Retirée uniquement de la Galerie, sans affecter les propres enregistrements de génération de l’utilisateur.",
+      "searchPlaceholder": "Rechercher un titre",
+      "rangeWithTotal": "{total} au total · {start}-{end}",
+      "totalOnly": "{total} au total",
+      "emptyPendingTitle": "Aucune œuvre à modérer",
+      "emptyMatchedTitle": "Aucune œuvre correspondante",
+      "emptyFilteredDescription": "Aucune œuvre avec les filtres actuels, essayez d’ajuster les critères.",
+      "emptyPendingDescription": "La file de soumissions de la Galerie est vide, revenez plus tard.",
+      "emptyPublishedDescription": "Les œuvres approuvées apparaîtront ici.",
+      "untitled": "Œuvre sans titre",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "boost": "Booster",
+      "unpublish": "Dépublier",
+      "hide": "Masquer",
+      "previousPage": "Page précédente",
+      "pageIndicator": "Page {page} / {totalPages}",
+      "nextPage": "Page suivante",
+      "rejectDialogTitle": "Rejeter l’œuvre",
+      "rejectReason": "Motif du rejet",
+      "rejectReasonPlaceholder": "Indiquez le motif du rejet, il sera affiché à l’auteur",
+      "confirmReject": "Confirmer le rejet",
+      "resourceLabel": "« {title} »",
+      "boostDialogTitle": "Booster l’œuvre",
+      "sources": {
+        "USER_UPLOAD": "Téléversement utilisateur",
+        "FROM_GENERATION": "Résultat de génération",
+        "FROM_TEMPLATE": "Œuvre de modèle",
+        "ADMIN_CURATED": "Sélection éditoriale"
+      },
+      "tabs": {
+        "pending": "À modérer",
+        "published": "Modérées"
+      },
+      "filters": {
+        "type": "Type",
+        "allTypes": "Tous les types",
+        "category": "Catégorie",
+        "allCategories": "Toutes les catégories",
+        "source": "Source",
+        "allSources": "Toutes les sources",
+        "externalOnly": "Domaines externes uniquement",
+        "clear": "Effacer les filtres"
+      },
+      "kind": {
+        "image": "Image",
+        "video": "Vidéo"
+      },
+      "columns": {
+        "work": "Œuvre",
+        "author": "Auteur",
+        "category": "Catégorie",
+        "source": "Source",
+        "submittedAt": "Soumis le",
+        "publishedAt": "Publié le"
+      }
+    },
+    "boost": {
+      "title": "Boost de contenu",
+      "description": "Augmentez manuellement le score de popularité d’une ressource donnée, avec une période de validité qui expire automatiquement.",
+      "add": "Nouveau boost",
+      "allTypes": "Tous les types",
+      "searchPlaceholder": "Rechercher par ID de ressource",
+      "emptyTitle": "Aucun boost",
+      "emptyDescription": "Cliquez sur « Nouveau boost » en haut à droite pour augmenter le score de popularité d’une ressource.",
+      "dialogTitle": "Nouveau boost",
+      "targetResource": "Ressource cible",
+      "resourceType": "Type de ressource",
+      "resourceId": "ID de ressource",
+      "resourceIdPlaceholder": "ID de la ressource cible",
+      "intensity": "Intensité du boost",
+      "reason": "Motif",
+      "endsAt": "Date de fin",
+      "note": "Remarque",
+      "notePlaceholder": "Explication du motif du boost, visible uniquement en interne",
+      "confirm": "Confirmer le boost",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Voulez-vous vraiment révoquer le boost de « {resource} » ?",
+      "reasons": {
+        "MANUAL": "Boost manuel",
+        "CAMPAIGN": "Boost de campagne",
+        "EDITORIAL_PICK": "Sélection éditoriale",
+        "CORRECTION": "Correction"
+      },
+      "tiers": {
+        "small": "Petit (+200)",
+        "medium": "Moyen (+500)",
+        "large": "Grand (+1000)"
+      },
+      "columns": {
+        "resource": "Ressource",
+        "score": "Score de boost",
+        "reason": "Motif",
+        "validity": "Validité",
+        "status": "Statut"
+      },
+      "status": {
+        "active": "Actif",
+        "outsideWindow": "Hors période",
+        "revoked": "Révoqué"
+      }
+    },
+    "risk": {
+      "title": "Contrôle des risques et gestion des utilisateurs",
+      "description": "Utilisateurs anormaux/bannis, relations d’invitation et niveaux de sécurité",
+      "emptyUsers": "Aucun utilisateur sous contrôle des risques",
+      "levelBadge": "{level} · {label}",
+      "detailTitle": "Détails du contrôle des risques utilisateur",
+      "scoreText": "Score {score}",
+      "manualOverrideSuffix": " · Niveau défini manuellement",
+      "inviteSummary": "Parrain : {inviter} · {count} invités au total",
+      "noEvents": "Aucun événement",
+      "reasonPlaceholder": "Motif de la mesure",
+      "setLevel": "Définir sur {level}",
+      "block": "Bannir",
+      "unblock": "Débannir",
+      "levels": {
+        "L0": "Normal",
+        "L1": "Surveillé",
+        "L2": "Restreint",
+        "L3": "Banni"
+      },
+      "columns": {
+        "user": "Utilisateur",
+        "securityLevel": "Niveau de sécurité",
+        "score": "Score",
+        "inviter": "Parrain",
+        "inviteCount": "Nombre d’invités",
+        "signals": "Signaux"
+      },
+      "labels": {
+        "level": "Niveau",
+        "inviteRelation": "Relation d’invitation",
+        "timeline": "Chronologie des risques",
+        "action": "Mesure (motif facultatif)"
+      }
+    },
+    "featured": {
+      "title": "Organisation des emplacements mis en avant",
+      "description": "Gérez les emplacements Hero de la page d’accueil ({placement}) ; l’override n’affecte que l’affichage, sans modifier la ressource source elle-même.",
+      "add": "Nouvel emplacement mis en avant",
+      "edit": "Modifier l’emplacement mis en avant",
+      "deleteConfirm": "Voulez-vous vraiment supprimer l’emplacement mis en avant « {label} » ?",
+      "emptyTitle": "Aucun emplacement mis en avant",
+      "emptyDescription": "Cliquez sur « Nouvel emplacement mis en avant » en haut à droite pour organiser le contenu de la page d’accueil.",
+      "resourceFallback": "Ressource {id}",
+      "untitled": "Emplacement sans titre",
+      "searching": "Recherche…",
+      "noCandidates": "Aucune ressource candidate correspondante",
+      "selected": "Sélectionné",
+      "selectedResourceId": "ID de ressource sélectionnée : {id}",
+      "columns": {
+        "order": "Ordre",
+        "content": "Contenu affiché",
+        "type": "Type",
+        "enabled": "Activé"
+      },
+      "kind": {
+        "custom": "CUSTOM (contenu personnalisé)",
+        "resource": "RESOURCE (ressource référencée)"
+      },
+      "form": {
+        "type": "Type",
+        "resourceType": "Type de ressource",
+        "searchCandidates": "Rechercher des ressources candidates",
+        "searchPlaceholder": "Rechercher par titre",
+        "overrideTitle": "Titre (override)",
+        "titlePlaceholder": "Titre affiché",
+        "coverImage": "URL de l’image de couverture",
+        "coverVideo": "URL de la vidéo de couverture",
+        "ctaText": "Texte du CTA",
+        "ctaPlaceholder": "Essayer maintenant",
+        "ctaHref": "Lien du CTA",
+        "overrideDescription": "Description (override)",
+        "enableSlot": "Activer cet emplacement mis en avant",
+        "hint": "Astuce : les champs override ci-dessus n’affectent que le contenu affiché de cet emplacement, sans modifier la ressource source référencée elle-même."
+      }
+    },
+    "common": {
+      "actions": "Actions",
+      "all": "Tout",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "delete": "Supprimer",
+      "edit": "Modifier",
+      "loading": "Chargement...",
+      "noData": "Aucune donnée",
+      "none": "Aucun",
+      "operationFailed": "L'opération a échoué",
+      "processing": "Traitement...",
+      "refresh": "Actualiser",
+      "remove": "Supprimer",
+      "save": "Enregistrer",
+      "saveFailed": "Échec de l'enregistrement",
+      "saving": "Enregistrement..."
+    }
   }
 }

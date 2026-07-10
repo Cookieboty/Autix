@@ -42,7 +42,9 @@
     "showing": "显示中",
     "frontend": "前端",
     "backend": "后端",
-    "register": "注册"
+    "register": "注册",
+    "actions": "操作",
+    "none": "无"
   },
   "aiUi": {
     "selected": "已选择",
@@ -1070,7 +1072,13 @@
     "workflowSummaryAssetsTitle": "素材",
     "workflowSummaryAssetsDesc": "图片、视频、音频统一管理",
     "workflowSummaryDeliveryTitle": "交付",
-    "workflowSummaryDeliveryDesc": "作品、版本、记录自动归档"
+    "workflowSummaryDeliveryDesc": "作品、版本、记录自动归档",
+    "videoOverviewEyebrow": "视频流水线",
+    "videoShowcaseEyebrow": "视频展示",
+    "videoDirectorEyebrow": "AI 导演",
+    "videoTemplatesEyebrow": "视频模板",
+    "videoQuickEyebrow": "快速开始",
+    "videoQuickSelectedTemplate": "已选模板"
   },
   "membership": {
     "center": "会员中心",
@@ -1345,7 +1353,9 @@
     "rewardValidityDays": "奖励有效期 {days} 天",
     "rewardValidityDaysLabel": "奖励有效期天数",
     "showCommercialLicenseLabel": "显示商用授权说明",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "holdPoints": "冻结积分",
+    "recordCount": "记录数"
   },
   "insufficientPoints": {
     "title": "积分不足",
@@ -1419,7 +1429,9 @@
     "navAdminPermissions": "权限",
     "navSystemModels": "系统模型配置",
     "navSystemSettings": "系统配置",
-    "navCampaignRewards": "活动奖励中心"
+    "navCampaignRewards": "活动奖励中心",
+    "navRiskManagement": "风控管理",
+    "navSystemPrompts": "系统 Prompt"
   },
   "dashboard": {
     "title": "仪表板",
@@ -2508,6 +2520,15 @@
     },
     "topbar": {
       "credits": "积分"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "请输入镜头描述",
+        "enterVideoPrompt": "请输入视频提示词"
+      },
+      "alreadyConnectedToVideoNode": "已经连接到视频节点",
+      "imagesAlreadyConnected": "这两张图片已经连接",
+      "noVideoNodesOnCanvas": "画布上还没有视频节点"
     }
   },
   "imageStudio": {
@@ -3513,7 +3534,10 @@
       "groups": {
         "create": "创作",
         "discover": "发现",
-        "platform": "平台"
+        "platform": "平台",
+        "studio": "Amux Studio",
+        "image": "图片",
+        "video": "视频"
       },
       "links": {
         "aiImage": "AI 图片",
@@ -3525,7 +3549,23 @@
         "community": "社区",
         "originalSeries": "原创系列",
         "pricing": "价格",
-        "marketplace": "市场"
+        "marketplace": "市场",
+        "explore": "探索",
+        "cinemaStudio": "影视工作室",
+        "originals": "原创作品",
+        "docs": "文档",
+        "templates": "模板",
+        "editImage": "图片编辑",
+        "imageUpscale": "图片高清放大",
+        "createVideo": "视频生成",
+        "membership": "会员"
+      },
+      "headline": "面向图片与视频创作者的一站式 AI 工作室",
+      "copyright": "© {year} Amux Studio. 保留所有权利。",
+      "legal": {
+        "privacy": "隐私政策",
+        "terms": "服务条款",
+        "cookieNotice": "Cookie 声明"
       }
     },
     "media": {
@@ -3588,10 +3628,13 @@
       "onboardCtaTry": "试用",
       "onboardCtaExplore": "探索",
       "onboardCtaClaim": "领取",
-      "onboardCtaClaimed": "已领取"
+      "onboardCtaClaimed": "已领取",
+      "prev": "上一个",
+      "next": "下一个"
     },
     "promoBar": {
-      "discountBadge": "立减 {percent}%"
+      "discountBadge": "立减 {percent}%",
+      "close": "关闭促销"
     },
     "generator": {
       "promo": "{title}：在当前页面直接生成",
@@ -3757,7 +3800,12 @@
         "likes": "点赞",
         "favorites": "收藏",
         "remixes": "二创",
-        "dimensions": "尺寸"
+        "dimensions": "尺寸",
+        "author": "作者",
+        "ariaLike": "点赞",
+        "ariaDownload": "下载",
+        "ariaSelect": "选择",
+        "ariaDelete": "删除"
       },
       "privateFirst": "默认私有",
       "createPrivately": "当前页创作",
@@ -3776,7 +3824,8 @@
         "remove": "移除",
         "checkEligibility": "可引用",
         "useImage": "引用素材"
-      }
+      },
+      "qualityStudio": "影棚级"
     },
     "pricing": {
       "promo": "上线优惠：先私密创作，只发布你确认通过的作品",
@@ -4643,7 +4692,8 @@
       "row": "行",
       "reason": "原因",
       "close": "关闭",
-      "confirmImport": "确认导入"
+      "confirmImport": "确认导入",
+      "name": "名称"
     }
   },
   "adminSystemSettings": {
@@ -4705,5 +4755,238 @@
   "docsLayout": {
     "localeZhCN": "简体中文",
     "localeEn": "英文"
+  },
+  "adminOperations": {
+    "resourceTypes": {
+      "SKILL": "技能",
+      "MCP": "MCP",
+      "AGENT": "智能体",
+      "IMAGE_TEMPLATE": "图片模板",
+      "VIDEO_TEMPLATE": "视频模板",
+      "GALLERY_POST": "广场作品"
+    },
+    "systemPrompts": {
+      "title": "系统 Prompt",
+      "description": "集中管理默认提示词、变量、版本和发布状态。",
+      "loadFailed": "加载系统 Prompt 失败",
+      "draftSaved": "Prompt 草稿已保存",
+      "published": "{key}@{version} 已发布",
+      "publishFailed": "发布失败",
+      "noDescription": "暂无描述",
+      "defaultSource": "默认",
+      "copyAsNewVersion": "复制为新版本",
+      "publish": "发布",
+      "editDraftTitle": "编辑 Prompt 草稿",
+      "createVersionTitle": "创建 Prompt 版本",
+      "sheetDescription": "保存为草稿后再发布，发布后会替换同 key 的当前 active 版本。",
+      "version": "版本",
+      "name": "名称",
+      "promptDescription": "描述",
+      "variables": "变量",
+      "content": "Prompt 内容",
+      "saveDraft": "保存草稿",
+      "key": "Key"
+    },
+    "gallery": {
+      "title": "广场审核",
+      "description": "审核用户投稿到广场的作品，管理已发布作品并支持内联加热。",
+      "import": "导入",
+      "hideConfirm": "确定要下架《{title}》吗？",
+      "removeConfirm": "确定要移除《{title}》吗？仅从广场移除，不影响用户自己的生成记录。",
+      "searchPlaceholder": "搜索标题",
+      "rangeWithTotal": "共 {total} 条 · 第 {start}-{end} 条",
+      "totalOnly": "共 {total} 条",
+      "emptyPendingTitle": "暂无待审核作品",
+      "emptyMatchedTitle": "暂无匹配作品",
+      "emptyFilteredDescription": "当前筛选下没有作品，试试调整筛选条件。",
+      "emptyPendingDescription": "广场投稿队列已清空，稍后再来看看吧。",
+      "emptyPublishedDescription": "通过审核的作品会展示在这里。",
+      "untitled": "未命名作品",
+      "approve": "通过",
+      "reject": "驳回",
+      "boost": "加热",
+      "unpublish": "下架",
+      "hide": "隐藏",
+      "previousPage": "上一页",
+      "pageIndicator": "第 {page} / {totalPages} 页",
+      "nextPage": "下一页",
+      "rejectDialogTitle": "驳回作品",
+      "rejectReason": "驳回原因",
+      "rejectReasonPlaceholder": "请填写驳回原因，将展示给作者",
+      "confirmReject": "确认驳回",
+      "resourceLabel": "《{title}》",
+      "boostDialogTitle": "加热作品",
+      "sources": {
+        "USER_UPLOAD": "用户上传",
+        "FROM_GENERATION": "生成结果",
+        "FROM_TEMPLATE": "模板作品",
+        "ADMIN_CURATED": "运营精选"
+      },
+      "tabs": {
+        "pending": "待审核",
+        "published": "已审核"
+      },
+      "filters": {
+        "type": "类型",
+        "allTypes": "全部类型",
+        "category": "分类",
+        "allCategories": "全部分类",
+        "source": "来源",
+        "allSources": "全部来源",
+        "externalOnly": "仅非我域名",
+        "clear": "清除筛选"
+      },
+      "kind": {
+        "image": "图片",
+        "video": "视频"
+      },
+      "columns": {
+        "work": "作品",
+        "author": "作者",
+        "category": "分类",
+        "source": "来源",
+        "submittedAt": "提交时间",
+        "publishedAt": "发布时间"
+      }
+    },
+    "boost": {
+      "title": "内容加热",
+      "description": "为指定资源手动提升热度分，支持设定有效期，到期自动失效。",
+      "add": "新增加热",
+      "allTypes": "全部类型",
+      "searchPlaceholder": "按资源 ID 搜索",
+      "emptyTitle": "暂无加热记录",
+      "emptyDescription": "点击右上角“新增加热”为资源提升热度分。",
+      "dialogTitle": "新增加热",
+      "targetResource": "目标资源",
+      "resourceType": "资源类型",
+      "resourceId": "资源 ID",
+      "resourceIdPlaceholder": "目标资源 ID",
+      "intensity": "加热强度",
+      "reason": "原因",
+      "endsAt": "结束时间",
+      "note": "备注",
+      "notePlaceholder": "加热原因说明，仅后台可见",
+      "confirm": "确认加热",
+      "revoke": "撤销",
+      "revokeConfirm": "确定要撤销对《{resource}》的加热吗？",
+      "reasons": {
+        "MANUAL": "人工加热",
+        "CAMPAIGN": "活动加热",
+        "EDITORIAL_PICK": "编辑精选",
+        "CORRECTION": "修正"
+      },
+      "tiers": {
+        "small": "小（+200）",
+        "medium": "中（+500）",
+        "large": "大（+1000）"
+      },
+      "columns": {
+        "resource": "资源",
+        "score": "加热分",
+        "reason": "原因",
+        "validity": "有效期",
+        "status": "状态"
+      },
+      "status": {
+        "active": "生效中",
+        "outsideWindow": "未在窗口期",
+        "revoked": "已撤销"
+      }
+    },
+    "risk": {
+      "title": "风控与用户管理",
+      "description": "异常/封控用户、邀请关系与安全等级",
+      "emptyUsers": "暂无风控用户",
+      "levelBadge": "{level} · {label}",
+      "detailTitle": "用户风控详情",
+      "scoreText": "分数 {score}",
+      "manualOverrideSuffix": " · 人工置级",
+      "inviteSummary": "邀请人：{inviter} · 共邀请 {count} 人",
+      "noEvents": "无事件",
+      "reasonPlaceholder": "处置原因",
+      "setLevel": "置为 {level}",
+      "block": "封禁",
+      "unblock": "解封",
+      "levels": {
+        "L0": "正常",
+        "L1": "关注",
+        "L2": "受限",
+        "L3": "封禁"
+      },
+      "columns": {
+        "user": "用户",
+        "securityLevel": "安全等级",
+        "score": "分数",
+        "inviter": "邀请人",
+        "inviteCount": "邀请数",
+        "signals": "信号"
+      },
+      "labels": {
+        "level": "等级",
+        "inviteRelation": "邀请关系",
+        "timeline": "风险时间线",
+        "action": "处置（原因可选）"
+      }
+    },
+    "featured": {
+      "title": "运营位编排",
+      "description": "管理首页 Hero 展示位（{placement}），override 仅影响展示，不修改来源资源本身。",
+      "add": "新增运营位",
+      "edit": "编辑运营位",
+      "deleteConfirm": "确定要删除运营位《{label}》吗？",
+      "emptyTitle": "暂无运营位",
+      "emptyDescription": "点击右上角“新增运营位”开始编排首页展示内容。",
+      "resourceFallback": "资源 {id}",
+      "untitled": "未命名运营位",
+      "searching": "搜索中…",
+      "noCandidates": "无匹配候选资源",
+      "selected": "已选",
+      "selectedResourceId": "已选资源 ID：{id}",
+      "columns": {
+        "order": "顺序",
+        "content": "展示内容",
+        "type": "类型",
+        "enabled": "启用"
+      },
+      "kind": {
+        "custom": "CUSTOM（自定义内容）",
+        "resource": "RESOURCE（引用资源）"
+      },
+      "form": {
+        "type": "类型",
+        "resourceType": "资源类型",
+        "searchCandidates": "搜索候选资源",
+        "searchPlaceholder": "按标题搜索",
+        "overrideTitle": "标题（覆盖）",
+        "titlePlaceholder": "展示标题",
+        "coverImage": "封面图片 URL",
+        "coverVideo": "封面视频 URL",
+        "ctaText": "CTA 文案",
+        "ctaPlaceholder": "立即体验",
+        "ctaHref": "CTA 跳转链接",
+        "overrideDescription": "描述（覆盖）",
+        "enableSlot": "启用该运营位",
+        "hint": "提示：以上覆盖字段仅影响该运营位的展示内容，不会修改所引用的来源资源本身。"
+      }
+    },
+    "common": {
+      "actions": "操作",
+      "all": "全部",
+      "cancel": "取消",
+      "close": "关闭",
+      "delete": "删除",
+      "edit": "编辑",
+      "loading": "加载中...",
+      "noData": "暂无数据",
+      "none": "无",
+      "operationFailed": "操作失败",
+      "processing": "处理中...",
+      "refresh": "刷新",
+      "remove": "移除",
+      "save": "保存",
+      "saveFailed": "保存失败",
+      "saving": "保存中..."
+    }
   }
 }

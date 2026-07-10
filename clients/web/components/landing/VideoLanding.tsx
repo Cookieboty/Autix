@@ -378,7 +378,7 @@ function OverviewSection() {
   return (
     <section className="relative py-24 md:py-32">
       <Reveal className={contentClass}>
-        <Eyebrow>VIDEO PIPELINE</Eyebrow>
+        <Eyebrow>{t('videoOverviewEyebrow')}</Eyebrow>
         <h2 className="max-w-5xl text-4xl font-bold leading-tight tracking-tight md:text-6xl" style={{ color: 'var(--foreground)' }}>
           {t('videoOverviewTitle')}
         </h2>
@@ -405,7 +405,7 @@ function ShowcaseRail() {
   return (
     <section className="py-16 md:py-24">
       <Reveal className={`${contentClass} mb-10 md:mb-12`}>
-        <Eyebrow>VIDEO SHOWCASE</Eyebrow>
+        <Eyebrow>{t('videoShowcaseEyebrow')}</Eyebrow>
         <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <h2 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-5xl" style={{ color: 'var(--foreground)' }}>
@@ -480,7 +480,7 @@ function StudioWorkflowSection() {
     <section className="py-20 md:py-28" style={{ backgroundColor: 'var(--surface-secondary)' }}>
       <div className={contentClass}>
         <Reveal>
-          <Eyebrow>AI DIRECTOR</Eyebrow>
+          <Eyebrow>{t('videoDirectorEyebrow')}</Eyebrow>
           <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
             <div>
               <h2 className="text-4xl font-bold leading-tight tracking-tight md:text-5xl" style={{ color: 'var(--foreground)' }}>
@@ -595,7 +595,7 @@ function TemplateSection() {
         <Reveal>
           <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <Eyebrow>VIDEO TEMPLATES</Eyebrow>
+              <Eyebrow>{t('videoTemplatesEyebrow')}</Eyebrow>
               <h2 className="text-4xl font-bold tracking-tight md:text-5xl" style={{ color: 'var(--foreground)' }}>
                 {t('videoTemplatesTitle')}
               </h2>
@@ -631,7 +631,7 @@ function QuickStartSection() {
       <div className={contentClass}>
         <Reveal className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <Eyebrow>QUICK START</Eyebrow>
+            <Eyebrow>{t('videoQuickEyebrow')}</Eyebrow>
             <h2 className="text-4xl font-bold leading-tight tracking-tight md:text-5xl" style={{ color: 'var(--foreground)' }}>
               {t('videoQuickTitle')}
             </h2>
@@ -674,7 +674,7 @@ function QuickStartSection() {
                   <HoverSoundVideo src={showcaseVideos[3].src} label={t('videoQuickPreviewLabel')} className="absolute inset-0 h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/12 to-transparent" />
                   <div className="absolute inset-x-4 bottom-4 text-white">
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/62">Selected Template</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/62">{t('videoQuickSelectedTemplate')}</p>
                     <h3 className="mt-2 text-2xl font-bold">{t('videoQuickPreviewTitle')}</h3>
                     <p className="mt-2 max-w-xs text-sm leading-6 text-white/72">{t('videoQuickPreviewDesc')}</p>
                   </div>

@@ -201,7 +201,7 @@ export function TaskCostsBulkExcel({ systemModels, membershipLevels, tAdmin }: T
                       <thead className="bg-muted">
                         <tr>
                           <th className="px-2 py-1">{tAdmin('bulk.row')}</th>
-                          <th className="px-2 py-1">name</th>
+                          <th className="px-2 py-1">{tAdmin('bulk.name')}</th>
                           <th className="px-2 py-1">{tAdmin('bulk.reason')}</th>
                         </tr>
                       </thead>

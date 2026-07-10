@@ -273,7 +273,7 @@ export function AdminSystemPromptsView() {
             <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Key</Label>
+                  <Label>{t('systemPrompts.key')}</Label>
                   <Input value={form.key} disabled={!!form.id} onChange={(event) => setForm({ ...form, key: event.target.value })} />
                 </div>
                 <div className="space-y-2">

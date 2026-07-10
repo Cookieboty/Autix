@@ -42,7 +42,9 @@
     "showing": "Đang hiển thị",
     "frontend": "Frontend",
     "backend": "Backend",
-    "register": "Đăng ký"
+    "register": "Đăng ký",
+    "actions": "Thao tác",
+    "none": "Không có"
   },
   "aiUi": {
     "selected": "Đã chọn",
@@ -795,7 +797,9 @@
     "navAdminPermissions": "Quyền",
     "navSystemModels": "Cấu hình mô hình hệ thống",
     "navSystemSettings": "Cài đặt hệ thống",
-    "navCampaignRewards": "Trung tâm thưởng chiến dịch"
+    "navCampaignRewards": "Trung tâm thưởng chiến dịch",
+    "navRiskManagement": "Quản lý rủi ro",
+    "navSystemPrompts": "Prompt hệ thống"
   },
   "dashboard": {
     "title": "Bảng điều khiển",
@@ -1884,6 +1888,15 @@
     },
     "topbar": {
       "credits": "Credits"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "Hãy nhập mô tả cảnh quay",
+        "enterVideoPrompt": "Hãy nhập prompt video"
+      },
+      "alreadyConnectedToVideoNode": "Đã kết nối với nút video",
+      "imagesAlreadyConnected": "Hai ảnh này đã được kết nối",
+      "noVideoNodesOnCanvas": "Chưa có nút video nào trên canvas"
     }
   },
   "imageStudio": {
@@ -3130,7 +3143,9 @@
     "validityDays": "有效期天数",
     "rewardValidityDays": "奖励有效期 {days} 天",
     "rewardValidityDaysLabel": "奖励有效期天数",
-    "showCommercialLicenseLabel": "显示商用授权说明"
+    "showCommercialLicenseLabel": "显示商用授权说明",
+    "holdPoints": "Điểm bị giữ",
+    "recordCount": "Số bản ghi"
   },
   "insufficientPoints": {
     "title": "Không đủ điểm",
@@ -3184,20 +3199,39 @@
       "plans": "Plans and credits",
       "groups": {
         "create": "Create",
-        "discover": "Discover",
-        "platform": "Platform"
+        "discover": "Khám phá",
+        "platform": "Platform",
+        "studio": "Amux Studio",
+        "image": "Ảnh",
+        "video": "Video"
       },
       "links": {
-        "aiImage": "AI Image",
-        "aiVideo": "AI Video",
+        "aiImage": "Ảnh AI",
+        "aiVideo": "Video AI",
         "canvas": "Canvas",
-        "marketingStudio": "Marketing Studio",
-        "presets": "Presets",
-        "viralPresets": "Viral Presets",
-        "community": "Community",
+        "marketingStudio": "Studio marketing",
+        "presets": "Cài đặt sẵn",
+        "viralPresets": "Cài đặt sẵn viral",
+        "community": "Cộng đồng",
         "originalSeries": "Original Series",
-        "pricing": "Pricing",
-        "marketplace": "Marketplace"
+        "pricing": "Bảng giá",
+        "marketplace": "Marketplace",
+        "explore": "Khám phá",
+        "cinemaStudio": "Studio điện ảnh",
+        "originals": "Nội dung gốc",
+        "docs": "Tài liệu",
+        "templates": "Mẫu",
+        "editImage": "Chỉnh sửa ảnh",
+        "imageUpscale": "Nâng cấp ảnh",
+        "createVideo": "Tạo video",
+        "membership": "Thành viên"
+      },
+      "headline": "Studio AI tất cả trong một cho nhà sáng tạo ảnh và video",
+      "copyright": "© {year} Amux Studio. Bảo lưu mọi quyền.",
+      "legal": {
+        "privacy": "Quyền riêng tư",
+        "terms": "Điều khoản",
+        "cookieNotice": "Thông báo cookie"
       }
     },
     "media": {
@@ -3260,10 +3294,13 @@
       "onboardCtaTry": "Dùng thử",
       "onboardCtaExplore": "Khám phá",
       "onboardCtaClaim": "Nhận",
-      "onboardCtaClaimed": "Đã nhận"
+      "onboardCtaClaimed": "Đã nhận",
+      "prev": "Trước",
+      "next": "Tiếp"
     },
     "promoBar": {
-      "discountBadge": "Giảm {percent}%"
+      "discountBadge": "Giảm {percent}%",
+      "close": "Đóng khuyến mãi"
     },
     "generator": {
       "promo": "{title}: generate directly on this page",
@@ -3429,7 +3466,12 @@
         "likes": "Lượt thích",
         "favorites": "Yêu thích",
         "remixes": "Bản phối lại",
-        "dimensions": "Kích thước"
+        "dimensions": "Kích thước",
+        "author": "Tác giả",
+        "ariaLike": "Thích",
+        "ariaDownload": "Tải xuống",
+        "ariaSelect": "Chọn",
+        "ariaDelete": "Xóa"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -3448,7 +3490,8 @@
         "remove": "Xóa",
         "checkEligibility": "Dùng ảnh",
         "useImage": "Dùng ảnh"
-      }
+      },
+      "qualityStudio": "Chất lượng studio"
     },
     "pricing": {
       "promo": "Ưu đãi ra mắt: sáng tác riêng tư, chỉ đăng tác phẩm bạn chấp thuận",
@@ -4315,7 +4358,8 @@
       "row": "Hàng",
       "reason": "Lý do",
       "close": "Đóng",
-      "confirmImport": "Xác nhận nhập"
+      "confirmImport": "Xác nhận nhập",
+      "name": "Tên"
     }
   },
   "adminSystemSettings": {
@@ -4704,6 +4748,245 @@
     "workflowSummaryAssetsTitle": "Tư liệu",
     "workflowSummaryAssetsDesc": "Quản lý thống nhất hình ảnh, video và âm thanh",
     "workflowSummaryDeliveryTitle": "Bàn giao",
-    "workflowSummaryDeliveryDesc": "Tác phẩm, phiên bản và nhật ký được lưu trữ tự động"
+    "workflowSummaryDeliveryDesc": "Tác phẩm, phiên bản và nhật ký được lưu trữ tự động",
+    "videoOverviewEyebrow": "Quy trình video",
+    "videoShowcaseEyebrow": "Trưng bày video",
+    "videoDirectorEyebrow": "Đạo diễn AI",
+    "videoTemplatesEyebrow": "Mẫu video",
+    "videoQuickEyebrow": "Bắt đầu nhanh",
+    "videoQuickSelectedTemplate": "Mẫu đã chọn"
+  },
+  "adminOperations": {
+    "resourceTypes": {
+      "SKILL": "Kỹ năng",
+      "MCP": "MCP",
+      "AGENT": "Trợ lý AI",
+      "IMAGE_TEMPLATE": "Mẫu ảnh",
+      "VIDEO_TEMPLATE": "Mẫu video",
+      "GALLERY_POST": "Tác phẩm Thư viện"
+    },
+    "systemPrompts": {
+      "title": "Prompt hệ thống",
+      "description": "Quản lý tập trung prompt mặc định, biến, phiên bản và trạng thái phát hành.",
+      "loadFailed": "Không tải được Prompt hệ thống",
+      "draftSaved": "Đã lưu bản nháp Prompt",
+      "published": "Đã phát hành {key}@{version}",
+      "publishFailed": "Phát hành thất bại",
+      "noDescription": "Chưa có mô tả",
+      "defaultSource": "Mặc định",
+      "copyAsNewVersion": "Sao chép thành phiên bản mới",
+      "publish": "Phát hành",
+      "editDraftTitle": "Chỉnh sửa bản nháp Prompt",
+      "createVersionTitle": "Tạo phiên bản Prompt",
+      "sheetDescription": "Lưu thành bản nháp rồi phát hành; sau khi phát hành sẽ thay thế phiên bản active hiện tại cùng key.",
+      "version": "Phiên bản",
+      "name": "Tên",
+      "promptDescription": "Mô tả",
+      "variables": "Biến",
+      "content": "Nội dung Prompt",
+      "saveDraft": "Lưu bản nháp",
+      "key": "Key"
+    },
+    "gallery": {
+      "title": "Kiểm duyệt Thư viện",
+      "description": "Kiểm duyệt tác phẩm người dùng gửi lên Thư viện, quản lý tác phẩm đã phát hành và hỗ trợ tăng nhiệt trực tiếp.",
+      "import": "Nhập",
+      "hideConfirm": "Bạn có chắc muốn gỡ đăng “{title}” không?",
+      "removeConfirm": "Bạn có chắc muốn xóa “{title}” không? Chỉ xóa khỏi Thư viện, không ảnh hưởng đến bản ghi tạo của người dùng.",
+      "searchPlaceholder": "Tìm tiêu đề",
+      "rangeWithTotal": "Tổng {total} mục · Mục {start}-{end}",
+      "totalOnly": "Tổng {total} mục",
+      "emptyPendingTitle": "Chưa có tác phẩm chờ duyệt",
+      "emptyMatchedTitle": "Không có tác phẩm phù hợp",
+      "emptyFilteredDescription": "Không có tác phẩm với bộ lọc hiện tại, hãy thử điều chỉnh điều kiện lọc.",
+      "emptyPendingDescription": "Hàng chờ gửi bài lên Thư viện đã trống, hãy quay lại sau.",
+      "emptyPublishedDescription": "Tác phẩm được duyệt sẽ hiển thị ở đây.",
+      "untitled": "Tác phẩm chưa đặt tên",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "boost": "Tăng nhiệt",
+      "unpublish": "Gỡ đăng",
+      "hide": "Ẩn",
+      "previousPage": "Trang trước",
+      "pageIndicator": "Trang {page} / {totalPages}",
+      "nextPage": "Trang sau",
+      "rejectDialogTitle": "Từ chối tác phẩm",
+      "rejectReason": "Lý do từ chối",
+      "rejectReasonPlaceholder": "Vui lòng nhập lý do từ chối, sẽ hiển thị cho tác giả",
+      "confirmReject": "Xác nhận từ chối",
+      "resourceLabel": "“{title}”",
+      "boostDialogTitle": "Tăng nhiệt tác phẩm",
+      "sources": {
+        "USER_UPLOAD": "Người dùng tải lên",
+        "FROM_GENERATION": "Kết quả tạo",
+        "FROM_TEMPLATE": "Tác phẩm từ mẫu",
+        "ADMIN_CURATED": "Vận hành tuyển chọn"
+      },
+      "tabs": {
+        "pending": "Chờ duyệt",
+        "published": "Đã duyệt"
+      },
+      "filters": {
+        "type": "Loại",
+        "allTypes": "Tất cả loại",
+        "category": "Danh mục",
+        "allCategories": "Tất cả danh mục",
+        "source": "Nguồn",
+        "allSources": "Tất cả nguồn",
+        "externalOnly": "Chỉ ngoài miền của tôi",
+        "clear": "Xóa bộ lọc"
+      },
+      "kind": {
+        "image": "Ảnh",
+        "video": "Video"
+      },
+      "columns": {
+        "work": "Tác phẩm",
+        "author": "Tác giả",
+        "category": "Danh mục",
+        "source": "Nguồn",
+        "submittedAt": "Thời gian gửi",
+        "publishedAt": "Thời gian phát hành"
+      }
+    },
+    "boost": {
+      "title": "Tăng nhiệt nội dung",
+      "description": "Tăng điểm nổi bật thủ công cho tài nguyên chỉ định, hỗ trợ đặt thời hạn, tự động hết hiệu lực khi đến hạn.",
+      "add": "Thêm tăng nhiệt",
+      "allTypes": "Tất cả loại",
+      "searchPlaceholder": "Tìm theo ID tài nguyên",
+      "emptyTitle": "Chưa có bản ghi tăng nhiệt",
+      "emptyDescription": "Nhấn “Thêm tăng nhiệt” ở góc trên bên phải để tăng điểm nổi bật cho tài nguyên.",
+      "dialogTitle": "Thêm tăng nhiệt",
+      "targetResource": "Tài nguyên mục tiêu",
+      "resourceType": "Loại tài nguyên",
+      "resourceId": "ID tài nguyên",
+      "resourceIdPlaceholder": "ID tài nguyên mục tiêu",
+      "intensity": "Cường độ tăng nhiệt",
+      "reason": "Lý do",
+      "endsAt": "Thời gian kết thúc",
+      "note": "Ghi chú",
+      "notePlaceholder": "Giải thích lý do tăng nhiệt, chỉ hiển thị ở hậu trường",
+      "confirm": "Xác nhận tăng nhiệt",
+      "revoke": "Thu hồi",
+      "revokeConfirm": "Bạn có chắc muốn thu hồi tăng nhiệt cho “{resource}” không?",
+      "reasons": {
+        "MANUAL": "Tăng nhiệt thủ công",
+        "CAMPAIGN": "Tăng nhiệt chiến dịch",
+        "EDITORIAL_PICK": "Biên tập tuyển chọn",
+        "CORRECTION": "Hiệu chỉnh"
+      },
+      "tiers": {
+        "small": "Nhỏ (+200)",
+        "medium": "Vừa (+500)",
+        "large": "Lớn (+1000)"
+      },
+      "columns": {
+        "resource": "Tài nguyên",
+        "score": "Điểm tăng nhiệt",
+        "reason": "Lý do",
+        "validity": "Thời hạn hiệu lực",
+        "status": "Trạng thái"
+      },
+      "status": {
+        "active": "Đang hiệu lực",
+        "outsideWindow": "Ngoài thời gian hiệu lực",
+        "revoked": "Đã thu hồi"
+      }
+    },
+    "risk": {
+      "title": "Kiểm soát rủi ro và quản lý người dùng",
+      "description": "Người dùng bất thường/bị cấm, quan hệ mời và mức độ bảo mật",
+      "emptyUsers": "Chưa có người dùng kiểm soát rủi ro",
+      "levelBadge": "{level} · {label}",
+      "detailTitle": "Chi tiết kiểm soát rủi ro người dùng",
+      "scoreText": "Điểm {score}",
+      "manualOverrideSuffix": " · Đặt mức thủ công",
+      "inviteSummary": "Người mời: {inviter} · Đã mời tổng {count} người",
+      "noEvents": "Không có sự kiện",
+      "reasonPlaceholder": "Lý do xử lý",
+      "setLevel": "Đặt thành {level}",
+      "block": "Cấm",
+      "unblock": "Bỏ cấm",
+      "levels": {
+        "L0": "Bình thường",
+        "L1": "Theo dõi",
+        "L2": "Hạn chế",
+        "L3": "Cấm"
+      },
+      "columns": {
+        "user": "Người dùng",
+        "securityLevel": "Mức bảo mật",
+        "score": "Điểm",
+        "inviter": "Người mời",
+        "inviteCount": "Số lượt mời",
+        "signals": "Tín hiệu"
+      },
+      "labels": {
+        "level": "Cấp độ",
+        "inviteRelation": "Quan hệ mời",
+        "timeline": "Dòng thời gian rủi ro",
+        "action": "Xử lý (lý do tùy chọn)"
+      }
+    },
+    "featured": {
+      "title": "Sắp xếp vị trí nổi bật",
+      "description": "Quản lý vị trí hiển thị Hero trang chủ ({placement}), override chỉ ảnh hưởng đến hiển thị, không sửa tài nguyên nguồn.",
+      "add": "Thêm vị trí nổi bật",
+      "edit": "Chỉnh sửa vị trí nổi bật",
+      "deleteConfirm": "Bạn có chắc muốn xóa vị trí nổi bật “{label}” không?",
+      "emptyTitle": "Chưa có vị trí nổi bật",
+      "emptyDescription": "Nhấn “Thêm vị trí nổi bật” ở góc trên bên phải để bắt đầu sắp xếp nội dung hiển thị trang chủ.",
+      "resourceFallback": "Tài nguyên {id}",
+      "untitled": "Vị trí nổi bật chưa đặt tên",
+      "searching": "Đang tìm…",
+      "noCandidates": "Không có tài nguyên ứng viên phù hợp",
+      "selected": "Đã chọn",
+      "selectedResourceId": "ID tài nguyên đã chọn: {id}",
+      "columns": {
+        "order": "Thứ tự",
+        "content": "Nội dung hiển thị",
+        "type": "Loại",
+        "enabled": "Bật"
+      },
+      "kind": {
+        "custom": "CUSTOM (nội dung tùy chỉnh)",
+        "resource": "RESOURCE (tài nguyên tham chiếu)"
+      },
+      "form": {
+        "type": "Loại",
+        "resourceType": "Loại tài nguyên",
+        "searchCandidates": "Tìm tài nguyên ứng viên",
+        "searchPlaceholder": "Tìm theo tiêu đề",
+        "overrideTitle": "Tiêu đề (override)",
+        "titlePlaceholder": "Tiêu đề hiển thị",
+        "coverImage": "URL ảnh bìa",
+        "coverVideo": "URL video bìa",
+        "ctaText": "Nội dung CTA",
+        "ctaPlaceholder": "Trải nghiệm ngay",
+        "ctaHref": "Liên kết CTA",
+        "overrideDescription": "Mô tả (override)",
+        "enableSlot": "Bật vị trí nổi bật này",
+        "hint": "Gợi ý: các trường override ở trên chỉ ảnh hưởng đến nội dung hiển thị của vị trí nổi bật này, không sửa tài nguyên nguồn được tham chiếu."
+      }
+    },
+    "common": {
+      "actions": "Thao tác",
+      "all": "Tất cả",
+      "cancel": "Hủy",
+      "close": "Đóng",
+      "delete": "Xóa",
+      "edit": "Chỉnh sửa",
+      "loading": "Đang tải...",
+      "noData": "Không có dữ liệu",
+      "none": "Không có",
+      "operationFailed": "Thao tác thất bại",
+      "processing": "Đang xử lý...",
+      "refresh": "Làm mới",
+      "remove": "Xóa",
+      "save": "Lưu",
+      "saveFailed": "Lưu thất bại",
+      "saving": "Đang lưu..."
+    }
   }
 }

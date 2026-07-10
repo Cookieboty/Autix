@@ -128,7 +128,7 @@ export function PublicGeneratorEntryView({
                       isVideo ? t('generator.videoModelValue') : t('generator.imageModelValue'),
                     ],
                     [t('generator.ratio'), isVideo ? '16:9' : '1:1'],
-                    [t('generator.quality'), t('generator.studio')],
+                    [t('generator.quality'), t('generator.qualityStudio')],
                     [t('generator.visibility'), t('generator.privateFirst')],
                   ].map(([label, value]) => (
                     <div key={label} className="relative overflow-hidden rounded-md border border-border bg-background px-3 py-2">
