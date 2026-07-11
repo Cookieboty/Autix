@@ -54,8 +54,10 @@ export class ModelConfigRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   findSystemModels() {
+    // 管理端「系统模型配置」页（AdminGuard 保护）要能看到并管理**全部**模型，含 private——
+    // 否则私有模型（如运营手动配的 doubao-seedance-2.0）在后台完全不可见，无法改可见性/密钥。
+    // 可见性过滤只用于用户侧的 findAvailablePublicModels，不属于这里。
     return this.prisma.model_configs.findMany({
-      where: { visibility: ModelVisibility.public },
       orderBy: [{ type: 'asc' }, { priority: 'desc' }],
       select: modelSelectFields,
     });
