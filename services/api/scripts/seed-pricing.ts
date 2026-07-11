@@ -63,22 +63,21 @@ interface SeedModelRow {
 
 const SEED_MODELS: SeedModelRow[] = [
   // —— 对话 / 文本（text preset）——
-  { name: 'GPT-5.5', provider: 'openai', model: 'amux/gpt-5.5', type: 'general', capabilities: ['text', 'vision'], isDefault: true, metadata: {}, description: { en: 'General chat / text model', 'zh-CN': '通用对话 / 文本模型' } },
-  { name: 'GPT-5', provider: 'openai', model: 'amux/gpt-5', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'General chat / text model', 'zh-CN': '通用对话 / 文本模型' } },
-  { name: 'GPT-4o mini', provider: 'openai', model: 'amux/gpt-4o-mini', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Lightweight chat model', 'zh-CN': '轻量对话模型' } },
+  { name: 'GPT-5.5', provider: 'amux', model: 'gpt-5.5', type: 'general', capabilities: ['text', 'vision'], isDefault: true, metadata: {}, description: { en: 'General chat / text model', 'zh-CN': '通用对话 / 文本模型' } },
+  { name: 'GPT-5', provider: 'amux', model: 'gpt-5', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'General chat / text model', 'zh-CN': '通用对话 / 文本模型' } },
+  { name: 'GPT-4o mini', provider: 'amux', model: 'gpt-4o-mini', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Lightweight chat model', 'zh-CN': '轻量对话模型' } },
 
-  // —— 图像（image preset）——
-  { name: 'Nano Banana Pro', provider: 'openai', model: 'amux/nano-banana-pro', type: 'general', capabilities: ['image'], isDefault: true, metadata: { imageModelKind: 'gemini-3-pro-image' }, description: { en: 'Flagship image model', 'zh-CN': '旗舰图像模型' } },
-  { name: 'Nano Banana Flash', provider: 'openai', model: 'amux/nano-banana-flash', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Fast image model', 'zh-CN': '快速图像模型' } },
-  { name: 'GPT Image', provider: 'openai', model: 'amux/gpt-image-1', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'GPT image model', 'zh-CN': 'GPT 图像模型' } },
-  { name: 'Gemini Flash Image', provider: 'openai', model: 'amux/gemini-flash-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-flash-image' }, description: { en: 'Gemini flash image model', 'zh-CN': 'Gemini 快速图像模型' } },
+  // —— 图像（image preset）—— model-id 与线上一致；metadata.imageModelKind 给能力面板确定性识别
+  { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2', type: 'general', capabilities: ['image'], isDefault: true, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'GPT image model', 'zh-CN': 'GPT 图像模型' } },
+  { name: 'GPT Image 1', provider: 'amux', model: 'gpt-image-1', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'GPT image model', 'zh-CN': 'GPT 图像模型' } },
+  { name: 'Nano Banana', provider: 'amux', model: 'gemini-3.1-flash-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Gemini flash image model', 'zh-CN': 'Gemini 快速图像模型' } },
 
-  // —— 视频（video preset）——
-  { name: 'Seedance 2.0', provider: 'openai', model: 'amux/seedance-2.0', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0' }, description: { en: 'Flagship video model', 'zh-CN': '旗舰视频模型' } },
-  { name: 'Seedance 2.0 Fast', provider: 'openai', model: 'amux/seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Fast video model', 'zh-CN': '快速视频模型' } },
-  { name: 'Seedance 2.0 Mini', provider: 'openai', model: 'amux/seedance-2.0-mini', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-mini' }, description: { en: 'Lightweight video model', 'zh-CN': '轻量视频模型' } },
-  { name: 'Seedance 1.5 Pro', provider: 'openai', model: 'amux/seedance-1.5-pro', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-1.5-pro' }, description: { en: 'Video model', 'zh-CN': '视频模型' } },
-  { name: 'Seedance 1.0 Pro', provider: 'openai', model: 'amux/seedance-1.0-pro', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-1.0-pro' }, description: { en: 'Video model', 'zh-CN': '视频模型' } },
+  // —— 视频（video preset）—— 线上 model-id 前缀 doubao-seedance-*；metadata.videoModelKind 定档
+  { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0-pro', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0' }, description: { en: 'Flagship video model', 'zh-CN': '旗舰视频模型' } },
+  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Fast video model', 'zh-CN': '快速视频模型' } },
+  { name: 'Seedance 2.0 Mini', provider: 'amux', model: 'doubao-seedance-2.0-mini', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-mini' }, description: { en: 'Lightweight video model', 'zh-CN': '轻量视频模型' } },
+  { name: 'Seedance 1.5 Pro', provider: 'amux', model: 'doubao-seedance-1.5-pro', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-1.5-pro' }, description: { en: 'Video model', 'zh-CN': '视频模型' } },
+  { name: 'Seedance 1.0 Pro', provider: 'amux', model: 'doubao-seedance-1.0-pro', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-1.0-pro' }, description: { en: 'Video model', 'zh-CN': '视频模型' } },
 ];
 
 /**
