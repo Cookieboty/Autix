@@ -172,9 +172,73 @@ async function seedTasks() {
   console.log(`seeded ${TASK_PRESETS.length} task definitions`);
 }
 
+/**
+ * 各图像/视频模型按官方定价折算的 pricingSchema（1 美元 = 500 积分，向上取整，2026-07 官网核对）。
+ * 图像：单张积分(quality 或 resolution 查表) × quantity；视频：每秒积分(resolution 查表) × seconds。
+ * 未列出的模型沿用 MODEL_PRESETS 的通用 pricingSchema。
+ */
+const MODEL_PRICING: Record<string, PricingSchema> = {
+  // —— 图像：单张积分 × quantity ——
+  'gpt-image-2': {
+    terms: [
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'quality', op: 'add', table: { param: 'quality', values: { low: 3, medium: 27, high: 106 } } },
+      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
+    ],
+  },
+  'gemini-3.1-flash-image-preview': {
+    terms: [
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 23, '1K': 34, '2K': 51, '4K': 75 } } },
+      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
+    ],
+  },
+  'gemini-3.1-flash-lite-image': {
+    terms: [
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 12, '1K': 17, '2K': 26, '4K': 38 } } },
+      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
+    ],
+  },
+  'doubao-seedream-5-0-260128': {
+    terms: [
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 23, '1K': 23, '2K': 23, '4K': 45 } } },
+      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
+    ],
+  },
+  'qwen-image-2.0': {
+    terms: [
+      { id: 'perImage', op: 'add', const: 20 },
+      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
+    ],
+  },
+  'MiniMax-Image-01': {
+    terms: [
+      { id: 'perImage', op: 'add', const: 15 },
+      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
+    ],
+  },
+  // —— 视频：每秒积分 × seconds ——
+  'doubao-seedance-2.0': {
+    terms: [
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '480p': 46, '720p': 100, '1080p': 255, '4k': 510 } } },
+      { id: 'seconds', op: 'mul', perUnit: { param: 'seconds', unitCost: 1 } },
+    ],
+  },
+  'doubao-seedance-2.0-fast': {
+    terms: [
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '480p': 37, '720p': 81, '1080p': 205, '4k': 410 } } },
+      { id: 'seconds', op: 'mul', perUnit: { param: 'seconds', unitCost: 1 } },
+    ],
+  },
+};
+
 async function seedModelSchemas() {
   const models = await prisma.model_configs.findMany({
-    select: { id: true, name: true, type: true, capabilities: true, metadata: true },
+    select: { id: true, name: true, model: true, type: true, capabilities: true, metadata: true },
   });
 
   const assigned = new Map<string, ModelPresetKey>();
@@ -189,16 +253,17 @@ async function seedModelSchemas() {
       continue;
     }
     const preset = MODEL_PRESETS[key];
+    const pricingOverride = MODEL_PRICING[model.model];
     await prisma.model_configs.update({
       where: { id: model.id },
       data: {
         paramsSchema: preset.paramsSchema as object,
-        pricingSchema: preset.pricingSchema as object,
+        pricingSchema: pricingOverride ? toInputJson(pricingOverride) : (preset.pricingSchema as object),
         schemaVersion: 1,
       },
     });
     assigned.set(model.id, key);
-    console.log(`${model.name} -> ${key}`);
+    console.log(`${model.name} -> ${key}${pricingOverride ? ' [per-model pricing]' : ''}`);
   }
 
   return { assigned, skipped };
