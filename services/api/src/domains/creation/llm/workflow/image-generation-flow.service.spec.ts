@@ -497,7 +497,7 @@ describe('ImageGenerationFlowService', () => {
   it('rejects prompt optimization when dynamic pricing is unavailable', async () => {
     const { service, modelConfigService, pointsService } = createService();
     pointsService.estimateCost.mockRejectedValueOnce(
-      new Error('The table `public.generation_pricing_rules` does not exist'),
+      new Error('No active pricing configuration for this task'),
     );
     modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
       if (id === 'image-model-1') {
@@ -530,7 +530,7 @@ describe('ImageGenerationFlowService', () => {
         prompt: '手机海报',
         settings: { promptTuning: '自动优化' },
       }),
-    ).rejects.toThrow('generation_pricing_rules');
+    ).rejects.toThrow('pricing configuration');
 
     expect(pointsService.createHold).not.toHaveBeenCalled();
     expect(pointsService.confirmHold).not.toHaveBeenCalled();

@@ -31,8 +31,8 @@ import {
  * Admin-only: model schema/description editing + a pricing dry-run. Shares the `admin` route
  * prefix with `AdminController` (Nest allows multiple controllers on one prefix as long as the
  * concrete paths don't collide) and reuses the same class-level guard stack as the rest of
- * `admin.controller.ts` — no `@Permissions(...)`, matching the existing
- * `points/pricing-rules*` endpoints which also rely on `AdminGuard` alone.
+ * `admin.controller.ts` — no `@Permissions(...)`, relying on `AdminGuard` alone like the
+ * other admin routes.
  */
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard, PermissionsGuard)

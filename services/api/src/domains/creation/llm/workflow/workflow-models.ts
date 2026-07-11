@@ -26,11 +26,10 @@ export interface WorkflowModelFactories {
   ) => BaseChatModel;
 }
 
-// model_configs.pointCostWeight 列本身不删（第四期与旧表一起处理），但已经没有
-// 任何代码读取它了：这个函数以前会把 pointCostWeight 从 DB JSON 转成 number 并
-// 冻结进 RuntimeModelConfig，现在只是把入参原样传回——保留这个函数是为了不改
-// 所有调用点的调用形态（toRuntimeModelConfig(config) 仍然是把任意 DB 配置对象
-// 收窄成 RuntimeModelConfig 的唯一入口）。
+// 这个函数以前会把旧的 model_configs.pointCostWeight 从 DB JSON 转成 number 并
+// 冻结进 RuntimeModelConfig；该列已在第四期随旧计费引擎一起删除，现在这里只是把
+// 入参原样传回——保留这个函数是为了不改所有调用点的调用形态
+// （toRuntimeModelConfig(config) 仍然是把任意 DB 配置对象收窄成 RuntimeModelConfig 的唯一入口）。
 export function toRuntimeModelConfig(config: RuntimeModelConfigInput): RuntimeModelConfig {
   return config;
 }

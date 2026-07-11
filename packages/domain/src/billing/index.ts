@@ -68,69 +68,6 @@ export interface PointsPackage {
   sort?: number;
 }
 
-export type PricingRuleComponentType =
-  | 'base'
-  | 'fixed_extra'
-  | 'per_image'
-  | 'per_second'
-  | 'input_token_per_1k'
-  | 'output_token_per_1k'
-  | 'context_token_per_1k'
-  | 'per_tool_call'
-  | 'per_mcp_call'
-  | 'per_skill_call'
-  | 'per_batch'
-  | 'per_reference_image'
-  | 'reasoning_multiplier'
-  | 'reference_image_multiplier'
-  | 'video_input_multiplier'
-  | 'audio_input_multiplier'
-  | 'priority_multiplier';
-
-export interface PricingRuleComponent {
-  id?: string;
-  ruleId?: string;
-  componentType: PricingRuleComponentType;
-  unitCost?: string | number | null;
-  multiplier?: string | number | null;
-  config?: Record<string, unknown> | null;
-  sort?: number;
-  isActive?: boolean;
-}
-
-export interface GenerationPricingRule {
-  id: string;
-  taskType: string;
-  name: string;
-  baseUnit: string;
-  priority?: number;
-  conditions?: Record<string, unknown> | null;
-  refundPolicy?: Record<string, unknown> | null;
-  metadata?: Record<string, unknown> | null;
-  components?: PricingRuleComponent[];
-  isActive: boolean;
-  effectiveFrom?: string | null;
-  effectiveTo?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface PricingRulePreviewResult {
-  estimate: {
-    estimatedCost: number;
-    breakdown: Array<{ label: string; amount: number }>;
-    ruleId: string;
-    [key: string]: unknown;
-  } | null;
-  estimateError: string | null;
-  matchedRule: GenerationPricingRule | null;
-  warnings: Array<{
-    code: string;
-    message: string;
-    field?: string;
-  }>;
-}
-
 export interface AdminMembershipUser {
   id: string;
   username: string;
