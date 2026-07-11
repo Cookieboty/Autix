@@ -1,7 +1,7 @@
 'use client';
 
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
-import { affectedParams, priceOptions } from '@autix/domain/pricing';
+import { priceOptions } from '@autix/domain/pricing';
 import { layoutProperties } from './schema-layout';
 import { useSchemaForm, type UseSchemaFormResult } from './useSchemaForm';
 import { CONTROL_REGISTRY, type RegisteredControl } from './controlRegistry';
