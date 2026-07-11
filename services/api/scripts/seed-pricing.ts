@@ -63,9 +63,29 @@ interface SeedModelRow {
 
 const SEED_MODELS: SeedModelRow[] = [
   // —— 对话 / 文本（text preset）——
-  { name: 'GPT-5.5', provider: 'amux', model: 'gpt-5.5', type: 'general', capabilities: ['text', 'vision'], isDefault: true, metadata: {}, description: { en: 'General chat / text model', 'zh-CN': '通用对话 / 文本模型' } },
-  { name: 'GPT-5', provider: 'amux', model: 'gpt-5', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'General chat / text model', 'zh-CN': '通用对话 / 文本模型' } },
-  { name: 'GPT-4o mini', provider: 'amux', model: 'gpt-4o-mini', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Lightweight chat model', 'zh-CN': '轻量对话模型' } },
+  // 覆盖各家主流对话模型系列。model-id 按当前主流命名给出，运营需按 amux 网关真实
+  // model-id 核对/调整（网关命名可能带日期或厂商前缀）。全部走 text preset（token 计价）。
+  // OpenAI GPT 系列
+  { name: 'GPT-5.6', provider: 'amux', model: 'gpt-5.6', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'OpenAI flagship chat model', 'zh-CN': 'OpenAI 旗舰对话模型' } },
+  { name: 'GPT-5.5', provider: 'amux', model: 'gpt-5.5', type: 'general', capabilities: ['text', 'vision'], isDefault: true, metadata: {}, description: { en: 'OpenAI chat model', 'zh-CN': 'OpenAI 对话模型' } },
+  { name: 'GPT-5', provider: 'amux', model: 'gpt-5', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'OpenAI chat model', 'zh-CN': 'OpenAI 对话模型' } },
+  { name: 'GPT-4o', provider: 'amux', model: 'gpt-4o', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'OpenAI multimodal chat model', 'zh-CN': 'OpenAI 多模态对话模型' } },
+  { name: 'GPT-4o mini', provider: 'amux', model: 'gpt-4o-mini', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'OpenAI lightweight chat model', 'zh-CN': 'OpenAI 轻量对话模型' } },
+  // Anthropic Claude 系列
+  { name: 'Claude Opus 4.8', provider: 'amux', model: 'claude-opus-4.8', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'Anthropic flagship model', 'zh-CN': 'Anthropic 旗舰模型' } },
+  { name: 'Claude Sonnet 5', provider: 'amux', model: 'claude-sonnet-5', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Anthropic balanced model', 'zh-CN': 'Anthropic 均衡模型' } },
+  { name: 'Claude Haiku 4.5', provider: 'amux', model: 'claude-haiku-4.5', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Anthropic fast model', 'zh-CN': 'Anthropic 快速模型' } },
+  // DeepSeek 系列
+  { name: 'DeepSeek V3', provider: 'amux', model: 'deepseek-chat', type: 'general', capabilities: ['text'], isDefault: false, metadata: {}, description: { en: 'DeepSeek chat model', 'zh-CN': 'DeepSeek 对话模型' } },
+  { name: 'DeepSeek R1', provider: 'amux', model: 'deepseek-reasoner', type: 'general', capabilities: ['text', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'DeepSeek reasoning model', 'zh-CN': 'DeepSeek 推理模型' } },
+  // 智谱 GLM 系列
+  { name: 'GLM-4.6', provider: 'amux', model: 'glm-4.6', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Zhipu GLM model', 'zh-CN': '智谱 GLM 模型' } },
+  { name: 'GLM-4.5 Air', provider: 'amux', model: 'glm-4.5-air', type: 'general', capabilities: ['text'], isDefault: false, metadata: {}, description: { en: 'Zhipu GLM lightweight model', 'zh-CN': '智谱 GLM 轻量模型' } },
+  // 其它主流系列
+  { name: 'Gemini 3 Pro', provider: 'amux', model: 'gemini-3-pro', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Google Gemini model', 'zh-CN': 'Google Gemini 模型' } },
+  { name: 'Qwen3 Max', provider: 'amux', model: 'qwen3-max', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Alibaba Qwen model', 'zh-CN': '阿里通义千问模型' } },
+  { name: 'Grok 4', provider: 'amux', model: 'grok-4', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'xAI Grok model', 'zh-CN': 'xAI Grok 模型' } },
+  { name: 'Kimi K2', provider: 'amux', model: 'kimi-k2', type: 'general', capabilities: ['text'], isDefault: false, metadata: {}, description: { en: 'Moonshot Kimi model', 'zh-CN': '月之暗面 Kimi 模型' } },
 
   // —— 图像（image preset）—— model-id 与线上一致；metadata.imageModelKind 给能力面板确定性识别
   { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2', type: 'general', capabilities: ['image'], isDefault: true, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'GPT image model', 'zh-CN': 'GPT 图像模型' } },
