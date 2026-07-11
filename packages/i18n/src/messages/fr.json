@@ -4367,6 +4367,8 @@
     "editModel": "Modifier le modèle système",
     "createDescription": "Créer une configuration de modèle système public",
     "editDescription": "Modifier la configuration du modèle système public",
+    "tabBasicConfig": "Configuration de base",
+    "tabModelPricing": "Tarification du modèle",
     "loadFailed": "Échec du chargement des modèles système",
     "saveFailed": "Échec de l'enregistrement du modèle système",
     "deleteFailed": "Échec de la suppression du modèle système",

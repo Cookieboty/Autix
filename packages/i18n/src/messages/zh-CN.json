@@ -4367,6 +4367,8 @@
     "editModel": "编辑系统模型",
     "createDescription": "新增公开系统模型配置",
     "editDescription": "编辑公开系统模型配置",
+    "tabBasicConfig": "基础配置",
+    "tabModelPricing": "模型定价",
     "loadFailed": "系统模型加载失败",
     "saveFailed": "系统模型保存失败",
     "deleteFailed": "系统模型删除失败",

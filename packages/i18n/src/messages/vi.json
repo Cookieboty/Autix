@@ -4033,6 +4033,8 @@
     "editModel": "Chỉnh sửa mô hình hệ thống",
     "createDescription": "Tạo cấu hình mô hình hệ thống công khai",
     "editDescription": "Chỉnh sửa cấu hình mô hình hệ thống công khai",
+    "tabBasicConfig": "Cấu hình cơ bản",
+    "tabModelPricing": "Định giá mô hình",
     "loadFailed": "Không tải được mô hình hệ thống",
     "saveFailed": "Không lưu được mô hình hệ thống",
     "deleteFailed": "Không xóa được mô hình hệ thống",

@@ -4033,6 +4033,8 @@
     "editModel": "システムモデルを編集",
     "createDescription": "公開システムモデル設定を追加",
     "editDescription": "公開システムモデル設定を編集",
+    "tabBasicConfig": "基本設定",
+    "tabModelPricing": "モデル料金",
     "loadFailed": "システムモデルの読み込みに失敗しました",
     "saveFailed": "システムモデルの保存に失敗しました",
     "deleteFailed": "システムモデルの削除に失敗しました",

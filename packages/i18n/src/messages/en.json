@@ -4367,6 +4367,8 @@
     "editModel": "Edit system model",
     "createDescription": "Create a public system model configuration",
     "editDescription": "Edit public system model configuration",
+    "tabBasicConfig": "Basic config",
+    "tabModelPricing": "Model pricing",
     "loadFailed": "Failed to load system models",
     "saveFailed": "Failed to save system model",
     "deleteFailed": "Failed to delete system model",

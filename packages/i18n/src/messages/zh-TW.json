@@ -4033,6 +4033,8 @@
     "editModel": "編輯系統模型",
     "createDescription": "新增公開系統模型配置",
     "editDescription": "編輯公開系統模型配置",
+    "tabBasicConfig": "基礎配置",
+    "tabModelPricing": "模型定價",
     "loadFailed": "系統模型載入失敗",
     "saveFailed": "系統模型儲存失敗",
     "deleteFailed": "系統模型刪除失敗",
