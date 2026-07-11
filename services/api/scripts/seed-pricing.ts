@@ -61,6 +61,9 @@ interface SeedModelRow {
   description: Record<string, string>;
 }
 
+/** 任务-模型绑定的默认加价倍率（2 = 原始成本上加 100% 毛利）。运营可逐条调整。 */
+const DEFAULT_MULTIPLIER = 2;
+
 const SEED_MODELS: SeedModelRow[] = [
   // —— 对话 / 文本（text preset）——
   // 各家主流对话模型系列。model-id 按 2026-07 官网核对的当前版本给出（见提交说明的来源），
@@ -294,7 +297,9 @@ async function seedBindings(assigned: Map<string, ModelPresetKey>) {
         create: {
           taskType: task.taskType,
           modelConfigId,
-          multiplier: 1.0,
+          // 默认加价倍率：cost = ceil(modelPrice × multiplier × discountFactor) + taskFixedCost。
+          // 2 = 在原始供应商成本上加 100% 毛利；运营可在 admin 按任务/模型逐条调整或后期打折。
+          multiplier: DEFAULT_MULTIPLIER,
           isDefault: makeDefault,
           sort: index * 10,
         },
