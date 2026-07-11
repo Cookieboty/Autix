@@ -5028,6 +5028,11 @@
       "edit": "编辑折扣",
       "empty": "暂无折扣",
       "scopeAll": "所有任务和模型",
+      "scopeSummary": {
+        "levels": "等级：{values}",
+        "tasks": "任务：{values}",
+        "models": "模型：{values}"
+      },
       "columns": {
         "code": "代码",
         "name": "名称",

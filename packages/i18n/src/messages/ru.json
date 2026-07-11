@@ -5028,6 +5028,11 @@
       "edit": "Изменить скидку",
       "empty": "Скидок пока нет",
       "scopeAll": "Все задачи и модели",
+      "scopeSummary": {
+        "levels": "Уровни: {values}",
+        "tasks": "Задачи: {values}",
+        "models": "Модели: {values}"
+      },
       "columns": {
         "code": "Код",
         "name": "Название",

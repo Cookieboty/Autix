@@ -100,11 +100,19 @@ function scopeFromForm(form: DiscountForm): PricingDiscountScope {
   return scope;
 }
 
-function scopeSummary(scope: PricingDiscountScope): string[] {
+/** `t` is `useTranslations('adminPricing.discounts')` — the same namespace `DiscountsView`
+ * already scopes `t` to below. */
+function scopeSummary(scope: PricingDiscountScope, t: ReturnType<typeof useTranslations>): string[] {
   const parts: string[] = [];
-  if (scope.membershipLevelNumbers?.length) parts.push(`levels: ${scope.membershipLevelNumbers.join(',')}`);
-  if (scope.taskTypes?.length) parts.push(`tasks: ${scope.taskTypes.join(',')}`);
-  if (scope.modelConfigIds?.length) parts.push(`models: ${scope.modelConfigIds.join(',')}`);
+  if (scope.membershipLevelNumbers?.length) {
+    parts.push(t('scopeSummary.levels', { values: scope.membershipLevelNumbers.join(',') }));
+  }
+  if (scope.taskTypes?.length) {
+    parts.push(t('scopeSummary.tasks', { values: scope.taskTypes.join(',') }));
+  }
+  if (scope.modelConfigIds?.length) {
+    parts.push(t('scopeSummary.models', { values: scope.modelConfigIds.join(',') }));
+  }
   return parts;
 }
 
@@ -265,9 +273,9 @@ export function DiscountsView({ discounts, saving, error, onCreate, onUpdate, on
                   <TableCell>{Number(discount.factor)}</TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                      {scopeSummary(discount.scope).length === 0
+                      {scopeSummary(discount.scope, t).length === 0
                         ? t('scopeAll')
-                        : scopeSummary(discount.scope).map((line) => <span key={line}>{line}</span>)}
+                        : scopeSummary(discount.scope, t).map((line) => <span key={line}>{line}</span>)}
                     </div>
                   </TableCell>
                   <TableCell>{discount.stackable ? tCommon('yes') : tCommon('no')}</TableCell>

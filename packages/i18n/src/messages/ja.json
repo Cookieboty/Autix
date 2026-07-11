@@ -5028,6 +5028,11 @@
       "edit": "割引を編集",
       "empty": "割引はまだありません",
       "scopeAll": "すべてのタスクとモデル",
+      "scopeSummary": {
+        "levels": "レベル: {values}",
+        "tasks": "タスク: {values}",
+        "models": "モデル: {values}"
+      },
       "columns": {
         "code": "コード",
         "name": "名前",

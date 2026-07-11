@@ -205,7 +205,13 @@ export function useImageStudioWorkspaceController({
     [prompt, settings.stylePreset, settings.negativePrompt, capability],
   );
   const finalPrompt = originalPromptForImage.trim();
-  const canGenerate = finalPrompt.length > 0;
+  // phase-3 review Finding 2: ImageStudioSettingsPanel already shows a "generation disabled"
+  // banner when the selected task-model's schema hasn't loaded (`!paramsSchema || !pricingSchema`),
+  // but this gate previously ignored schema state entirely, so Generate stayed clickable.
+  const hasImagePricingSchema = Boolean(
+    selectedImageTaskModel?.paramsSchema && selectedImageTaskModel?.pricingSchema,
+  );
+  const canGenerate = finalPrompt.length > 0 && hasImagePricingSchema;
   const canRefine = Boolean(onRefinePrompt && prompt.trim() && !isRefining && !isGenerating);
   const displayedTemplateName = activeTemplateName ?? appliedTemplateName;
 

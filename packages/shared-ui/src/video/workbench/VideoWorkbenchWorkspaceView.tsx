@@ -332,6 +332,7 @@ export function VideoWorkbenchWorkspaceView({
             open={paramsOpen}
             taskType="video_generation"
             modelConfigId={videoModelId || undefined}
+            mode={mode}
             paramsSchema={paramsSchema}
             pricingSchema={pricingSchema}
             pricingContext={pricingContext}

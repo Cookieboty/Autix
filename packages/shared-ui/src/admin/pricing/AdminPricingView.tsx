@@ -45,6 +45,7 @@ function modelLabel(model: ModelConfigItem) {
  */
 export function AdminPricingView() {
   const t = useTranslations('adminPricing');
+  const tCommon = useTranslations('common');
 
   const { data: systemModels = [] } = useAdminSystemModelsQuery();
   const { data: bindings = [] } = useAdminTaskModelBindingsQuery();
@@ -91,15 +92,26 @@ export function AdminPricingView() {
             </SelectContent>
           </Select>
         </div>
-        {selectedModel && (
+        {selectedModel && !modelDetail && (
+          <p className="text-xs text-muted-foreground">{tCommon('loading')}</p>
+        )}
+        {selectedModel && modelDetail && (
           <ModelSchemaEditor
-            // Remount on model switch — ModelSchemaEditor seeds its Monaco text buffers from
-            // `initial*Schema` only once via useState; without a key change the editor would keep
-            // showing the previously selected model's schema text after switching models.
-            key={selectedModel.id}
+            // Remount once `modelDetail` finishes loading, and again on every subsequent save
+            // (phase-3 review Finding 3) — ModelSchemaEditor seeds its Monaco text buffers from
+            // `initial*Schema` only once via useState, and `modelDetail` (from `useAdminModelQuery`,
+            // a plain react-query fetch with no `keepPreviousData`) resolves asynchronously after
+            // mount and goes back to `undefined` while switching models. Keying on
+            // `selectedModel.id` alone remounts on model switch, but without also gating the render
+            // on `modelDetail` being loaded (above) the editor would mount with `modelDetail` still
+            // `undefined` -> seed from `null` -> empty schema, and never re-seed once the real
+            // schema arrived — an admin could Save that empty state and clobber the real schemas.
+            // `schemaVersion` changes whenever a save succeeds, so folding it into the key also
+            // forces a fresh mount (re-seeded from the freshly saved schema) after Save.
+            key={`${selectedModel.id}:${modelDetail.schemaVersion}`}
             modelConfigId={selectedModel.id}
-            initialParamsSchema={modelDetail?.paramsSchema ?? null}
-            initialPricingSchema={modelDetail?.pricingSchema ?? null}
+            initialParamsSchema={modelDetail.paramsSchema}
+            initialPricingSchema={modelDetail.pricingSchema}
             onSave={async (paramsSchema, pricingSchema) => {
               await saveSchemas.mutateAsync({
                 id: selectedModel.id,

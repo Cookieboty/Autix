@@ -5028,6 +5028,11 @@
       "edit": "Sửa giảm giá",
       "empty": "Chưa có giảm giá nào",
       "scopeAll": "Tất cả tác vụ và mô hình",
+      "scopeSummary": {
+        "levels": "Cấp độ: {values}",
+        "tasks": "Tác vụ: {values}",
+        "models": "Mô hình: {values}"
+      },
       "columns": {
         "code": "Mã",
         "name": "Tên",

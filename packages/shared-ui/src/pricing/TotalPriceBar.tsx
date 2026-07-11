@@ -19,14 +19,32 @@ export function TotalPriceBar({ taskType, modelConfigId, params, usage, onQuote,
   const [total, setTotal] = useState<number | null>(null);
   const [stale, setStale] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  // phase-3 review Finding 1: the debounced quoter below is created once via useRef so the
+  // pending-call timer survives re-renders (recreating it on every render would drop pending
+  // calls / reset the debounce window). But that means its closure would otherwise only ever see
+  // the FIRST render's `taskType`/`modelConfigId`/`usage`/`onQuote` — e.g. after a model switch it
+  // would keep quoting the stale `modelConfigId` (permanently `undefined` if the model list hadn't
+  // resolved yet at mount). Mirror them into a ref on every render instead, and have the debounced
+  // body read `latestRef.current` when it actually fires, so it always sees the current values
+  // while keeping ONE stable timer.
+  const latestRef = useRef({ taskType, modelConfigId, usage, onQuote });
+  latestRef.current = { taskType, modelConfigId, usage, onQuote };
+
   const debouncedRef = useRef(
     debounce(async (nextParams: Record<string, unknown>) => {
+      const { taskType: currentTaskType, modelConfigId: currentModelConfigId, usage: currentUsage, onQuote: currentOnQuote } =
+        latestRef.current;
       try {
-        const result = await pricingActions.quoteTask(taskType, { modelConfigId, params: nextParams, usage });
+        const result = await pricingActions.quoteTask(currentTaskType, {
+          modelConfigId: currentModelConfigId,
+          params: nextParams,
+          usage: currentUsage,
+        });
         setTotal(result.total);
         setStale(false);
         setFailed(false);
-        onQuote?.(result);
+        currentOnQuote?.(result);
       } catch {
         // spec §6.8: quote 失败不阻塞生成，总价显示 — ，之前的值不保留
         // （保留旧值会让用户以为那是当前参数的价格，比显示 — 更误导）。

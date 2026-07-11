@@ -5028,6 +5028,11 @@
       "edit": "Edit discount",
       "empty": "No discounts yet",
       "scopeAll": "All tasks and models",
+      "scopeSummary": {
+        "levels": "Levels: {values}",
+        "tasks": "Tasks: {values}",
+        "models": "Models: {values}"
+      },
       "columns": {
         "code": "Code",
         "name": "Name",

@@ -3,15 +3,22 @@
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
-import { SchemaForm, TotalPriceBar, useSchemaForm } from '../../../pricing';
+import { SchemaForm, TotalPriceBar, translateSchemaKey, useSchemaForm } from '../../../pricing';
 import { cn } from '../../../ui/utils';
 import { ParamCardGroup } from '../shared/ParamCardGroup';
 import { PanelLabel } from '../shared/PanelLabel';
+import type { VideoWorkspaceMode } from '../constants';
+
+// The `videoPreset.paramsSchema` duration field is keyed `seconds` (see
+// packages/domain/src/pricing/presets.ts), independent of its `pricing.params.duration` labelKey
+// and of the `clipParams.duration` name `schema-params-mapping.ts` renames it to post-quote.
+const STORYBOARD_HIDDEN_FIELDS = ['seconds'] as const;
 
 export function VideoParameterPanel({
   open,
   taskType,
   modelConfigId,
+  mode,
   paramsSchema,
   pricingSchema,
   pricingContext,
@@ -24,6 +31,13 @@ export function VideoParameterPanel({
   open: boolean;
   taskType: string;
   modelConfigId: string | undefined;
+  /**
+   * storyboard/first_last_frame/standard — not a pricing param (lives outside paramsSchema), only
+   * needed here to restore the pre-refactor behavior of hiding the duration/seconds stepper in
+   * storyboard mode (each storyboard clip has its own duration, so a single global stepper doesn't
+   * apply — phase-3 review Minor 6).
+   */
+  mode: VideoWorkspaceMode;
   paramsSchema: ParamsSchema | undefined;
   pricingSchema: PricingSchema | undefined;
   pricingContext: { multiplier: number; discountFactor: number };
@@ -89,10 +103,11 @@ export function VideoParameterPanel({
             pricingSchema={pricingSchema}
             pricingContext={pricingContext}
             form={form}
-            translateLabel={(labelKey, fallback) => (labelKey ? tParams(labelKey.replace('pricing.params.', '')) : fallback)}
+            translateLabel={(labelKey, fallback) => translateSchemaKey(tParams, 'pricing.params.', labelKey, fallback)}
             translateOption={(optionLabelKey, fallback) =>
-              optionLabelKey ? tOptions(optionLabelKey.replace('pricing.options.', '')) : fallback
+              translateSchemaKey(tOptions, 'pricing.options.', optionLabelKey, fallback)
             }
+            hiddenFields={mode === 'storyboard' ? STORYBOARD_HIDDEN_FIELDS : undefined}
           />
 
           {/* 音频开关 + seed 不是计价参数（不在 videoPreset.paramsSchema 里），

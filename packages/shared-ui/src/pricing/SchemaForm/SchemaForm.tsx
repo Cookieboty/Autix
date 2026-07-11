@@ -19,6 +19,13 @@ export interface SchemaFormProps {
   /** x-ui.labelKey → 翻译后的文案。缺失时回退到裸 key（spec §6.9）。 */
   translateLabel: (labelKey: string | undefined, fallback: string) => string;
   translateOption: (optionLabelKey: string | undefined, fallback: string) => string;
+  /**
+   * Property names to skip rendering even though the schema doesn't mark them
+   * `x-ui.control: 'hidden'` — e.g. a UI-level mode toggle (not part of the schema itself)
+   * that should suppress a normally-visible field for the current mode. Kept separate from the
+   * schema's own `hidden` control so callers don't have to fork/rewrite the schema per mode.
+   */
+  hiddenFields?: readonly string[];
 }
 
 /**
@@ -43,6 +50,7 @@ export function SchemaForm({
   disabled,
   translateLabel,
   translateOption,
+  hiddenFields,
 }: SchemaFormProps) {
   const internalForm = useSchemaForm(externalForm ? undefined : paramsSchema);
   const form = externalForm ?? internalForm;
@@ -55,6 +63,7 @@ export function SchemaForm({
       {groups.map((group) => (
         <section key={group.group ?? '__ungrouped'} className="space-y-3">
           {group.entries.map(({ name, property }) => {
+            if (hiddenFields?.includes(name)) return null;
             const control = property['x-ui']?.control;
             if (!control || control === 'hidden') return null;
             const Control = CONTROL_REGISTRY[control as RegisteredControl];

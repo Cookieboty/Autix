@@ -4,7 +4,7 @@ import { SlidersHorizontal, Wand2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import type { ImageModelCapability } from '@autix/domain/image';
-import { SchemaForm, TotalPriceBar, useSchemaForm } from '../../../pricing';
+import { SchemaForm, TotalPriceBar, translateSchemaKey, useSchemaForm } from '../../../pricing';
 import { cn } from '../../../ui/utils';
 import { STYLE_PRESET_VALUES, type ImageStudioModelSettings } from '../constants';
 import { PanelLabel, SliderRow } from '../shared/PrimitiveControls';
@@ -91,9 +91,9 @@ export function ImageStudioSettingsPanel({
             pricingSchema={pricingSchema}
             pricingContext={pricingContext}
             form={form}
-            translateLabel={(labelKey, fallback) => (labelKey ? tParams(labelKey.replace('pricing.params.', '')) : fallback)}
+            translateLabel={(labelKey, fallback) => translateSchemaKey(tParams, 'pricing.params.', labelKey, fallback)}
             translateOption={(optionLabelKey, fallback) =>
-              optionLabelKey ? tOptions(optionLabelKey.replace('pricing.options.', '')) : fallback
+              translateSchemaKey(tOptions, 'pricing.options.', optionLabelKey, fallback)
             }
           />
 

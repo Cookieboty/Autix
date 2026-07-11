@@ -5028,6 +5028,11 @@
       "edit": "Modifier la remise",
       "empty": "Aucune remise pour le moment",
       "scopeAll": "Toutes les tâches et modèles",
+      "scopeSummary": {
+        "levels": "Niveaux : {values}",
+        "tasks": "Tâches : {values}",
+        "models": "Modèles : {values}"
+      },
       "columns": {
         "code": "Code",
         "name": "Nom",

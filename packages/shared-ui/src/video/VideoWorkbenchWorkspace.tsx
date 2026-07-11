@@ -300,6 +300,19 @@ export function VideoWorkbenchWorkspace({
     () => resolveLatestCompletedVideoGeneration(selectedClip),
     [selectedClip],
   );
+  // Moved up from just above the view-props block (was computed after canGenerateProject)
+  // so the Generate gate can also require a usable schema (phase-3 review Finding 2):
+  // the "generation disabled" banner in VideoParameterPanel already gates on
+  // `!paramsSchema || !pricingSchema`, but canGenerateProject previously ignored schema
+  // state entirely, so a user could still click Generate while the panel showed disabled.
+  const currentVideoModelId =
+    typeof globalVideoParams.modelConfigId === 'string' ? globalVideoParams.modelConfigId : '';
+  const selectedVideoTaskModel = videoTaskModels.find(
+    (model) => model.modelConfigId === currentVideoModelId,
+  );
+  const hasVideoPricingSchema = Boolean(
+    selectedVideoTaskModel?.paramsSchema && selectedVideoTaskModel?.pricingSchema,
+  );
   const generatableClips = useMemo(
     () =>
       clips.filter(
@@ -311,7 +324,7 @@ export function VideoWorkbenchWorkspace({
     [clips, storyboardPrompt, workspaceMode],
   );
   const isGeneratingProject = generatingClipIds.length > 0;
-  const canGenerateProject = generatableClips.length > 0 && !isGeneratingProject;
+  const canGenerateProject = generatableClips.length > 0 && !isGeneratingProject && hasVideoPricingSchema;
   const {
     estimatedCost: projectEstimatedCost,
     loading: projectEstimateLoading,
@@ -505,12 +518,6 @@ export function VideoWorkbenchWorkspace({
   const historyDetailProject = useMemo(
     () => projects.find((item) => item.id === historyDetailProjectId) ?? null,
     [historyDetailProjectId, projects],
-  );
-
-  const currentVideoModelId =
-    typeof globalVideoParams.modelConfigId === 'string' ? globalVideoParams.modelConfigId : '';
-  const selectedVideoTaskModel = videoTaskModels.find(
-    (model) => model.modelConfigId === currentVideoModelId,
   );
 
   return (
