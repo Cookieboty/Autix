@@ -92,17 +92,17 @@ const SEED_MODELS: SeedModelRow[] = [
   { name: 'Kimi K2.6', provider: 'amux', model: 'kimi-k2.6', type: 'general', capabilities: ['text'], isDefault: false, metadata: {}, description: { en: 'Moonshot Kimi model', 'zh-CN': '月之暗面 Kimi 模型' } },
   { name: 'Grok 4.3', provider: 'amux', model: 'grok-4.3', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'xAI Grok model', 'zh-CN': 'xAI Grok 模型' } },
 
-  // —— 图像（image preset）—— model-id 与线上一致；metadata.imageModelKind 给能力面板确定性识别
-  { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2', type: 'general', capabilities: ['image'], isDefault: true, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'GPT image model', 'zh-CN': 'GPT 图像模型' } },
-  { name: 'GPT Image 1', provider: 'amux', model: 'gpt-image-1', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'GPT image model', 'zh-CN': 'GPT 图像模型' } },
-  { name: 'Nano Banana', provider: 'amux', model: 'gemini-3.1-flash-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Gemini flash image model', 'zh-CN': 'Gemini 快速图像模型' } },
+  // —— 图像（image preset）—— 主流图像模型，model-id 按 2026-07 官网核对（见提交说明来源），
+  // amux 网关实际 id 以其 /models 清单为准。metadata.imageModelKind 给能力面板确定性识别。
+  { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2', type: 'general', capabilities: ['image'], isDefault: true, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'OpenAI image model', 'zh-CN': 'OpenAI 图像模型' } },
+  { name: 'GPT Image 1', provider: 'amux', model: 'gpt-image-1', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'OpenAI image model', 'zh-CN': 'OpenAI 图像模型' } },
+  { name: 'Nano Banana', provider: 'amux', model: 'gemini-3.1-flash-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Google Gemini image model', 'zh-CN': 'Google Gemini 图像模型' } },
+  { name: 'Seedream 5.0 Pro', provider: 'amux', model: 'doubao-seedream-5-0-260128', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'compatible' }, description: { en: 'ByteDance Seedream image model', 'zh-CN': '字节 Seedream 图像模型' } },
+  { name: 'Qwen-Image 2.0', provider: 'amux', model: 'qwen-image-2.0', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'compatible' }, description: { en: 'Alibaba Qwen image model', 'zh-CN': '阿里通义万相图像模型' } },
 
-  // —— 视频（video preset）—— 线上 model-id 前缀 doubao-seedance-*；metadata.videoModelKind 定档
-  { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0-pro', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0' }, description: { en: 'Flagship video model', 'zh-CN': '旗舰视频模型' } },
-  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Fast video model', 'zh-CN': '快速视频模型' } },
-  { name: 'Seedance 2.0 Mini', provider: 'amux', model: 'doubao-seedance-2.0-mini', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-mini' }, description: { en: 'Lightweight video model', 'zh-CN': '轻量视频模型' } },
-  { name: 'Seedance 1.5 Pro', provider: 'amux', model: 'doubao-seedance-1.5-pro', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-1.5-pro' }, description: { en: 'Video model', 'zh-CN': '视频模型' } },
-  { name: 'Seedance 1.0 Pro', provider: 'amux', model: 'doubao-seedance-1.0-pro', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-1.0-pro' }, description: { en: 'Video model', 'zh-CN': '视频模型' } },
+  // —— 视频（video preset）—— 只保留 Seedance 2.0 系列（线上真实 id）；metadata.videoModelKind 定档
+  { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0' }, description: { en: 'Seedance video model', 'zh-CN': 'Seedance 视频模型' } },
+  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
 ];
 
 /**
@@ -113,45 +113,38 @@ const SEED_MODELS: SeedModelRow[] = [
  */
 async function seedModels() {
   let created = 0;
-  let updated = 0;
+  const skipped: string[] = [];
   for (const m of SEED_MODELS) {
+    // 严格「只增不改」：以 model-id 去重（不限 provider）。已存在同 model-id 的行一律**跳过**，
+    // 绝不覆盖运营配过的 name/capabilities/apiKey/baseUrl/metadata/description/isDefault。
+    // 起步模型只负责补齐「库里还没有的」，让运营已有配置完全不受影响。
     const existing = await prisma.model_configs.findFirst({
-      where: { provider: m.provider, model: m.model },
+      where: { model: m.model },
       select: { id: true },
     });
     if (existing) {
-      await prisma.model_configs.update({
-        where: { id: existing.id },
-        data: {
-          name: m.name,
-          type: m.type,
-          capabilities: m.capabilities,
-          metadata: toInputJson(m.metadata),
-          description: toInputJson(m.description),
-        },
-      });
-      updated += 1;
-    } else {
-      await prisma.model_configs.create({
-        data: {
-          name: m.name,
-          provider: m.provider,
-          model: m.model,
-          type: m.type,
-          capabilities: m.capabilities,
-          apiKey: null,
-          baseUrl: null,
-          isActive: true,
-          isDefault: m.isDefault,
-          visibility: 'public',
-          metadata: toInputJson(m.metadata),
-          description: toInputJson(m.description),
-        },
-      });
-      created += 1;
+      skipped.push(m.model);
+      continue;
     }
+    await prisma.model_configs.create({
+      data: {
+        name: m.name,
+        provider: m.provider,
+        model: m.model,
+        type: m.type,
+        capabilities: m.capabilities,
+        apiKey: null,
+        baseUrl: null,
+        isActive: true,
+        isDefault: m.isDefault,
+        visibility: 'public',
+        metadata: toInputJson(m.metadata),
+        description: toInputJson(m.description),
+      },
+    });
+    created += 1;
   }
-  console.log(`models: created ${created}, updated ${updated} (apiKey/baseUrl left for ops)`);
+  console.log(`models: created ${created} new, skipped ${skipped.length} existing (untouched): ${skipped.join(', ')}`);
 }
 
 async function seedTasks() {
