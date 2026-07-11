@@ -130,16 +130,18 @@ describe('admin system model helpers', () => {
     });
   });
 
-  test('groups models by type with general fallback', () => {
-    expect(
-      Object.keys(
-        groupSystemModels([
-          model({ id: 'model-1', type: 'general' }),
-          model({ id: 'model-2', type: 'video' }),
-          model({ id: 'model-3', type: '' }),
-        ]),
-      ),
-    ).toEqual(['general', 'video']);
+  test('groups models by capability category (text / image / video), not by type', () => {
+    const grouped = groupSystemModels([
+      model({ id: 'text-1', type: 'general', capabilities: ['text', 'vision'] }),
+      model({ id: 'image-1', type: 'general', capabilities: ['image'] }),
+      model({ id: 'video-type', type: 'video', capabilities: ['video'] }),
+      model({ id: 'video-cap', type: 'general', capabilities: ['video'] }),
+    ]);
+    // image models are type='general' but must land in their own group, not with text
+    expect(Object.keys(grouped)).toEqual(['text', 'image', 'video']);
+    expect(grouped.text.map((m) => m.id)).toEqual(['text-1']);
+    expect(grouped.image.map((m) => m.id)).toEqual(['image-1']);
+    expect(grouped.video.map((m) => m.id)).toEqual(['video-type', 'video-cap']);
   });
 
   test('reads API errors with fallback', () => {

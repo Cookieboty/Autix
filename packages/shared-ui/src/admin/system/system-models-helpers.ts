@@ -185,13 +185,26 @@ export function buildSystemModelPayload(form: SystemModelForm): AdminSystemModel
   return payload;
 }
 
+/**
+ * 按「能力类别」（text / image / video）分组，而不是按 model_configs.type。
+ * ModelType 枚举里没有 image 这一档，图像模型都是 type='general'，若按 type 分组会和
+ * 文本模型挤在 GENERAL 一起。这里与计费引擎的归类口径一致（presetKeyFor）：
+ * 有 video 能力 → video；有 image 且没有 text → image；其余 → text。
+ * 返回时保持 text → image → video 的稳定顺序，空组不返回。
+ */
 export function groupSystemModels(models: ModelConfigItem[]) {
-  return models.reduce<Record<string, ModelConfigItem[]>>((acc, model) => {
-    const key = model.type || 'general';
-    acc[key] = acc[key] ?? [];
-    acc[key].push(model);
-    return acc;
-  }, {});
+  const groups: Record<string, ModelConfigItem[]> = { text: [], image: [], video: [] };
+  for (const model of models) {
+    const caps = model.capabilities ?? [];
+    const key =
+      model.type === 'video' || caps.includes('video')
+        ? 'video'
+        : caps.includes('image') && !caps.includes('text')
+          ? 'image'
+          : 'text';
+    groups[key].push(model);
+  }
+  return Object.fromEntries(Object.entries(groups).filter(([, items]) => items.length > 0));
 }
 
 export function readModelError(error: unknown, fallback: string) {
