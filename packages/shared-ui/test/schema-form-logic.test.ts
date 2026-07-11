@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { clampOnChange, fillDefaults, migrateParams } from '../src/pricing/SchemaForm/schema-form-logic';
+import { MODEL_PRESETS } from '@autix/domain/pricing';
 import type { ParamsSchema } from '@autix/domain/pricing';
 
 const videoSchema: ParamsSchema = {
@@ -9,7 +10,10 @@ const videoSchema: ParamsSchema = {
     resolution: { type: 'string', enum: ['512px', '1K', '2K', '4K'], default: '1K', 'x-ui': { control: 'chips', order: 10 } },
     seconds: { type: 'integer', minimum: 4, maximum: 15, default: 5, 'x-ui': { control: 'stepper', order: 20 } },
     referenceImages: { type: 'integer', minimum: 0, maximum: 4, default: 0, 'x-ui': { control: 'hidden' } },
-    inputTokens: { type: 'integer', minimum: 0, default: 0, 'x-ui': { control: 'hidden' } },
+    // valueSource: 'usage' — 只在结算时由 usage 注入，下单时绝不能被填成 0
+    // 冻进 params（spec §3.1.1.65，真实生产事故：见 fillDefaults/migrateParams
+    // 下面 "usage-sourced" 相关用例）。
+    inputTokens: { type: 'integer', minimum: 0, default: 0, 'x-ui': { control: 'hidden', valueSource: 'usage' } },
   },
   allOf: [
     {
@@ -25,7 +29,6 @@ describe('fillDefaults', () => {
       resolution: '1K',
       seconds: 5,
       referenceImages: 0,
-      inputTokens: 0,
     });
   });
 
@@ -35,6 +38,23 @@ describe('fillDefaults', () => {
       properties: { seed: { type: 'string', 'x-ui': { control: 'text' } } },
     };
     expect(fillDefaults(schema)).toEqual({});
+  });
+
+  // CRITICAL regression (spec §3.1.1.65): a prior implementation filled
+  // `inputTokens: 0` / `outputTokens: 0` into params at order time. Because
+  // model-side evaluation merges `params` with the real `usage` at
+  // settlement, a frozen `0` made every token-priced settlement price at
+  // zero — a real production bug, not hypothetical. This must never regress.
+  test('never fills a valueSource:"usage" property, even though it declares a default', () => {
+    const filled = fillDefaults(videoSchema);
+    expect(filled).not.toHaveProperty('inputTokens');
+  });
+
+  test('against the real text preset — usage-sourced token params are never filled', () => {
+    const filled = fillDefaults(MODEL_PRESETS.text.paramsSchema);
+    expect(filled).toEqual({ temperature: 0.7, maxTokens: 4096 });
+    expect(filled).not.toHaveProperty('inputTokens');
+    expect(filled).not.toHaveProperty('outputTokens');
   });
 });
 
@@ -110,6 +130,34 @@ describe('clampOnChange', () => {
     expect(result.params.seconds).toBe(12);
     expect(result.message).toBeUndefined();
   });
+
+  // Must agree with resolveConstraints' "later allOf entry overrides earlier"
+  // semantics (constraints.ts). Two entries narrow the same field ('seconds')
+  // and both match simultaneously; the actually-applied bound (6, from the
+  // second/'ultra' entry) must be the one clamped to AND the one cited in the
+  // message — not the first-matching ('4K') entry, which was never applied.
+  test('cites the last-matching allOf entry when two entries narrow the same field', () => {
+    const doubleNarrowSchema: ParamsSchema = {
+      type: 'object',
+      properties: {
+        resolution: { type: 'string', enum: ['1K', '4K'], default: '1K', 'x-ui': { control: 'chips' } },
+        quality: { type: 'string', enum: ['standard', 'ultra'], default: 'standard', 'x-ui': { control: 'chips' } },
+        seconds: { type: 'integer', minimum: 4, maximum: 15, default: 5, 'x-ui': { control: 'stepper' } },
+      },
+      allOf: [
+        { if: { properties: { resolution: { const: '4K' } } }, then: { properties: { seconds: { type: 'integer', maximum: 8 } } } },
+        { if: { properties: { quality: { const: 'ultra' } } }, then: { properties: { seconds: { type: 'integer', maximum: 6 } } } },
+      ],
+    };
+    const result = clampOnChange(
+      doubleNarrowSchema,
+      { resolution: '4K', quality: 'ultra', seconds: 5 },
+      'seconds',
+      10,
+    );
+    expect(result.params.seconds).toBe(6); // 6, not 8 — the later entry (quality) wins per resolveConstraints
+    expect(result.message).toEqual({ field: 'seconds', text: 'ultra 最长 6 秒' });
+  });
 });
 
 describe('migrateParams', () => {
@@ -159,6 +207,22 @@ describe('migrateParams', () => {
     };
     const result = migrateParams(withSizeStrings, kSchema, { size: '1024x1024' });
     expect(result.size).toBe('1K'); // falls back to default, NOT translated to '1K' semantically
+  });
+
+  // CRITICAL regression (spec §3.1.1.65): migrating between two models must
+  // not carry over OR re-default a valueSource:"usage" field — either would
+  // freeze a stale/zero token count into the new model's params, and that
+  // frozen value survives into PricingSnapshot and zeroes settlement pricing.
+  test('never carries over or re-defaults a valueSource:"usage" property when migrating', () => {
+    const result = migrateParams(undefined, videoSchema, { inputTokens: 999, resolution: '1K', seconds: 5 });
+    expect(result).not.toHaveProperty('inputTokens');
+  });
+
+  test('against the real text preset — migrating never re-introduces usage-sourced token params', () => {
+    const result = migrateParams(undefined, MODEL_PRESETS.text.paramsSchema, { inputTokens: 999, outputTokens: 999 });
+    expect(result).toEqual({ temperature: 0.7, maxTokens: 4096 });
+    expect(result).not.toHaveProperty('inputTokens');
+    expect(result).not.toHaveProperty('outputTokens');
   });
 
   test('treats an undefined old schema as "no prior model" and fills all defaults', () => {

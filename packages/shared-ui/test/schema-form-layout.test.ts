@@ -14,6 +14,26 @@ const schema: ParamsSchema = {
   },
 };
 
+// Two NAMED groups (neither is the ungrouped bucket), each with a different
+// minimum child `order`, plus an order-less-siblings tie-break inside one
+// bucket — covers layoutProperties' two untested tie-break rules:
+// (a) group-vs-group ordering uses the minimum child order per group;
+// (b) siblings that both lack `order` keep their schema.properties
+//     declaration order (not e.g. alphabetical or reversed).
+const multiGroupSchema: ParamsSchema = {
+  type: 'object',
+  properties: {
+    // group 'lighting': min order is 30
+    exposure: { type: 'number', 'x-ui': { control: 'slider', group: 'lighting', order: 30 } },
+    // group 'camera': min order is 15 -> camera group must be laid out before lighting
+    aperture: { type: 'number', 'x-ui': { control: 'slider', group: 'camera', order: 40 } },
+    focalLength: { type: 'number', 'x-ui': { control: 'slider', group: 'camera', order: 15 } },
+    // order-less siblings within 'camera', declared in this order — must survive as-is
+    lensType: { type: 'string', 'x-ui': { control: 'text', group: 'camera' } },
+    filter: { type: 'string', 'x-ui': { control: 'text', group: 'camera' } },
+  },
+};
+
 describe('layoutProperties', () => {
   test('sorts ungrouped properties by x-ui.order', () => {
     const groups = layoutProperties(schema);
@@ -41,5 +61,20 @@ describe('layoutProperties', () => {
 
   test('is empty-safe', () => {
     expect(layoutProperties({ type: 'object', properties: {} })).toEqual([]);
+  });
+
+  test('orders two named groups by their minimum child order — camera (min 15) before lighting (min 30)', () => {
+    const groups = layoutProperties(multiGroupSchema);
+    const namedGroupNames = groups.filter((g) => g.group !== undefined).map((g) => g.group);
+    expect(namedGroupNames).toEqual(['camera', 'lighting']);
+  });
+
+  test('two order-less siblings in the same group keep their schema.properties declaration order', () => {
+    const groups = layoutProperties(multiGroupSchema);
+    const camera = groups.find((g) => g.group === 'camera')!;
+    // focalLength (order 15) and aperture (order 40) sort first by order;
+    // lensType and filter both lack `order` and must fall back to the order
+    // they were declared in (lensType before filter), not be reordered.
+    expect(camera.entries.map((e) => e.name)).toEqual(['focalLength', 'aperture', 'lensType', 'filter']);
   });
 });
