@@ -28,7 +28,6 @@ import {
 import { publicGeneratorActions, type ModelConfigItem } from '@autix/shared-store';
 import { MagneticButton, SpotlightPanel } from '../../GrowthInteractions';
 import {
-  getImageCountControl,
   getImageReferenceUploadLimit,
 } from '../../generator-image-presenters';
 import { readFilesAsDataUrls } from '../../../image/studio/constants';
@@ -96,7 +95,6 @@ export function ImageComposer({
   const selectedGroup = selectedSize.group;
   const aspectOptions = useMemo(() => getUniqueImageAspectOptions(sizeGroups), [sizeGroups]);
   const modelLabel = selectedModel?.name ?? '';
-  const countControl = getImageCountControl(imageCapability);
   const uploadLimit = getImageReferenceUploadLimit(imageCapability);
   const canUploadReference = uploadLimit > 0;
   const uploadSlotsRemaining = Math.max(0, uploadLimit - uploadedRefs.length);
@@ -393,27 +391,8 @@ export function ImageComposer({
                   onChange={setQuality}
                 />
               ) : null}
-              {countControl.visible ? (
-                <div className="inline-flex min-h-9 items-center rounded-xl border border-border bg-background/22 text-sm font-semibold text-foreground/78">
-                  <button
-                    type="button"
-                    aria-label={t('decreaseCount')}
-                    className="grid size-9 place-items-center rounded-l-xl text-foreground/45 hover:bg-secondary hover:text-foreground"
-                    onClick={() => setCount((current) => Math.max(1, current - 1))}
-                  >
-                    -
-                  </button>
-                  <span className="min-w-14 px-2 text-center">{count}/{imageCapability.maxCount}</span>
-                  <button
-                    type="button"
-                    aria-label={t('increaseCount')}
-                    className="grid size-9 place-items-center rounded-r-xl text-foreground/45 hover:bg-secondary hover:text-foreground"
-                    onClick={() => setCount((current) => Math.min(imageCapability.maxCount, current + 1))}
-                  >
-                    +
-                  </button>
-                </div>
-              ) : null}
+              {/* 生成张数(count)控件已下线：张数由业务逻辑吃掉，不再作为用户可调项。
+                  count 仍保留在 state 里(恒为模型默认值)供估价/生成使用。 */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button

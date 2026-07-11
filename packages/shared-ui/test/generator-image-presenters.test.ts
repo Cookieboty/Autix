@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import {
   findImageModelByHint,
   resolveImageCapabilityFromModelParam,
-  getImageCountControl,
   getImageReferenceUploadLimit,
 } from '../src/growth/generator-image-presenters';
 import type { ModelConfigItem } from '@autix/shared-store';
@@ -24,22 +23,6 @@ describe('resolveImageCapabilityFromModelParam', () => {
 
   test('explicit flux/sdxl maps to compatible', () => {
     expect(resolveImageCapabilityFromModelParam('my-flux-model').kind).toBe('compatible');
-  });
-});
-
-describe('getImageCountControl', () => {
-  // 生成张数已从图像模型配置移除：无论 maxCount 多少，控件都不再暴露（张数由业务逻辑吃掉）。
-  test('always hidden — count is no longer a user-facing config (business logic owns quantity)', () => {
-    expect(getImageCountControl({ maxCount: 1, defaults: { count: 1 } } as never)).toEqual({
-      visible: false,
-      max: 1,
-      default: 1,
-    });
-    expect(getImageCountControl({ maxCount: 4, defaults: { count: 1 } } as never)).toEqual({
-      visible: false,
-      max: 4,
-      default: 1,
-    });
   });
 });
 

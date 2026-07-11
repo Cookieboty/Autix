@@ -161,6 +161,12 @@ export function buildImageGenerationHoldCreateInput(input: {
     estimatedCost: number;
     pricingSnapshot?: unknown;
   };
+  /**
+   * 请求生成张数。计价 schema 只算单张（张数已从 pricingSchema 移除，由业务逻辑吃掉），
+   * 所以冻结额 = 单张价 × 张数，才能覆盖多图；结算时按实际产图数扣、退回未用部分。
+   * pricingSnapshot 保持单张不变（结算 quoteHoldFromSnapshot 返回单张价，再 × 实际张数）。
+   */
+  count: number;
   requestInput: {
     templateId: string;
     modelConfigId: string;
@@ -171,7 +177,7 @@ export function buildImageGenerationHoldCreateInput(input: {
   return {
     taskType: input.estimate.taskType,
     taskId: input.taskId,
-    amount: input.estimate.estimatedCost,
+    amount: input.estimate.estimatedCost * Math.max(1, input.count),
     pricingSnapshot: toImageFlowJsonValue(input.estimate.pricingSnapshot),
     metadata: toImageFlowJsonValue(
       buildImageGenerationHoldMetadata(input.requestInput, input.request),

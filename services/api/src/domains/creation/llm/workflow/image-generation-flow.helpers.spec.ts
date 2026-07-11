@@ -364,6 +364,8 @@ describe('image generation flow helpers', () => {
           estimatedCost: 90,
           pricingSnapshot: { ruleId: 'image-rule-1' },
         },
+        // 冻结额 = 单张估价(90) × 张数(3) = 270（张数由业务逻辑计费，pricingSchema 只算单张）。
+        count: 3,
         requestInput: {
           templateId: 'tpl-1',
           modelConfigId: 'image-model-1',
@@ -374,7 +376,7 @@ describe('image generation flow helpers', () => {
     ).toEqual({
       taskType: 'image_generation',
       taskId: 'image:user-1:1:abc',
-      amount: 90,
+      amount: 270,
       pricingSnapshot: { ruleId: 'image-rule-1' },
       metadata: {
         templateId: 'tpl-1',

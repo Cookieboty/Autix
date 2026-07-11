@@ -994,18 +994,19 @@ describe('ImageGenerationFlowService', () => {
       }),
       membershipLevel: 2,
     });
+    // 张数由业务逻辑计费：pricingSchema 只算单张，冻结额 = 单张估价(90) × 请求张数(2) = 180。
     expect(pointsService.createHold).toHaveBeenCalledWith(
       'user-1',
       expect.objectContaining({
-        amount: 90,
+        amount: 180,
         taskType: 'image_generation',
         pricingSnapshot: { ruleId: 'rule-2' },
       }),
     );
-    // Settlement re-prices from the frozen hold snapshot via quoteHoldFromSnapshot,
-    // never by calling estimateCost() again. Usage is EMPTY: `quantity` is a frozen
-    // order-time param already in the snapshot; passing it as usage would collide
-    // (quoteTaskFromSnapshot rejects same-name keys) and throw after generation.
+    // Settlement re-prices from the frozen hold snapshot via quoteHoldFromSnapshot
+    // (per-image = 45), never by calling estimateCost() again. Empty usage: image has
+    // no usage-source params. 实扣 = 单张价(45) × 实际产图数(min(1, 2)=1) = 45；未产出
+    // 的第 2 张在 confirm 时按差额(135)退回。
     expect(pointsService.quoteHoldFromSnapshot).toHaveBeenCalledWith('hold-1', {});
     expect(pointsService.confirmHoldWithinTx).toHaveBeenCalledWith(
       expect.any(Object),
@@ -1015,6 +1016,60 @@ describe('ImageGenerationFlowService', () => {
     expect(pointsService.refundHold).not.toHaveBeenCalled();
     expect(order).toEqual(['hold', 'provider', 'upload', 'persist', 'quote', 'confirm', 'image_record']);
     expect(result.prompt).toBe('A scene');
+  });
+
+  it('bills per-image × actual image count when the provider returns multiple images (count eaten by business logic)', async () => {
+    const { service, prisma, pointsService } = createService();
+    pointsService.estimateCost.mockResolvedValueOnce({
+      estimatedCost: 40, // 单张估价
+      taskType: 'image_generation',
+      pricingSnapshot: { ruleId: 'rule-multi' },
+    });
+    // snapshot 每次返回单张价 40（quoteHoldFromSnapshot 内部会 cap 到冻结额，这里不触发）。
+    pointsService.quoteHoldFromSnapshot.mockResolvedValue(40);
+    pointsService.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 1000 });
+    prisma.image_generations.create.mockImplementation(async (args: any) => ({ id: 'gen-1', ...args.data }));
+    jest.spyOn(service, 'callImageApi').mockResolvedValue({
+      images: ['data:image/png;base64,A', 'data:image/png;base64,B', 'data:image/png;base64,C'],
+      appliedSettings: { size: '1024x1024', quality: 'standard', count: 3, coerced: false, notes: [], kind: 'compatible' },
+    });
+    jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue([
+      'https://cdn.test/a.png',
+      'https://cdn.test/b.png',
+      'https://cdn.test/c.png',
+    ]);
+
+    await service.generateAndPersistImage(
+      {
+        userId: 'user-1',
+        templateId: 'tpl-1',
+        modelConfigId: 'image-model-1',
+        settings: { quality: 'standard', size: '1024x1024' },
+      },
+      {
+        mode: 'generate',
+        prompt: 'A scene',
+        modelConfig: {
+          id: 'image-model-1',
+          model: 'doubao-seedream-5-0-260128',
+          provider: 'amux',
+          baseUrl: 'https://api.example.com/v1',
+          apiKey: 'key',
+        },
+        template: {},
+        variables: {},
+        settings: { quality: 'standard', size: '1024x1024' },
+      },
+      3,
+    );
+
+    // 冻结额 = 单张估价(40) × 请求张数(3) = 120。
+    expect(pointsService.createHold).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ amount: 120, taskType: 'image_generation' }),
+    );
+    // 实扣 = 单张价(40) × 实际产图数(3) = 120（全部产出，无退款）。
+    expect(pointsService.confirmHoldWithinTx).toHaveBeenCalledWith(expect.any(Object), 'hold-1', 120);
   });
 
   it('FIX-4: rejects an over-ceiling resolution before creating a hold', async () => {

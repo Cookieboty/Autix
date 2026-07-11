@@ -589,6 +589,8 @@ export class ImageGenerationFlowService {
       buildImageGenerationHoldCreateInput({
         taskId: billingTaskId,
         estimate,
+        // 冻结额 = 单张价 × 张数（张数由业务逻辑计费，见 holds.ts 注释）。
+        count: normalizedCount,
         requestInput: input,
         request,
       }),
@@ -606,7 +608,7 @@ export class ImageGenerationFlowService {
         persistedRequest,
         uploadedImages,
         Date.now() - startedAt,
-        { confirmHoldId: holdId, membershipLevel },
+        { confirmHoldId: holdId, membershipLevel, heldImageCount: normalizedCount },
       );
 
       const generationId = resolvePersistedGenerationId(
@@ -667,26 +669,31 @@ export class ImageGenerationFlowService {
     request: ResolvedImageRequest,
     images: string[],
     durationMs: number,
-    options?: { confirmHoldId?: string | null; membershipLevel?: number },
+    options?: { confirmHoldId?: string | null; membershipLevel?: number; heldImageCount?: number },
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
     // Settlement re-prices from the hold's frozen pricingSnapshot, never a live
     // estimateCost() re-query — an admin price change must not re-price a task
-    // already in flight. `quantity` is an order-time `params` term already frozen
-    // in the snapshot, so settlement passes EMPTY usage: passing `{ quantity }`
-    // would collide with the frozen `quantity` in snapshot.params and
-    // quoteTaskFromSnapshot rejects same-name keys (spec §3.1.1.65), throwing
-    // after the provider already generated. The real image count is logged
-    // separately below for observability; the snapshot cap-at-frozen logic still
-    // runs with empty usage.
-    const actualAmount =
+    // already in flight. Empty usage: there are no usage-source params for image
+    // (quoteHoldFromSnapshot caps the per-image quote at the frozen amount).
+    //
+    // 张数由业务逻辑计费：snapshot 只算「单张」价，实际扣费 = 单张价 × 实际产图数。
+    // billedImages 夹在 heldImageCount 内(冻结额 = 单张 × 张数),保证 confirm 金额
+    // 绝不超过冻结额——否则 buildHoldConfirmationPlan 会「确认扣费不能超过冻结金额」抛错，
+    // 而那时图已经生成。未产出的张数在 confirm 时按差额退回。
+    const perImageAmount =
       options?.confirmHoldId && images.length > 0
         ? await this.pointsService.quoteHoldFromSnapshot(options.confirmHoldId, {})
         : null;
+    const billedImages =
+      options?.heldImageCount != null
+        ? Math.min(images.length, Math.max(0, options.heldImageCount))
+        : images.length;
+    const actualAmount = perImageAmount === null ? null : perImageAmount * billedImages;
     if (options?.confirmHoldId && actualAmount !== null) {
       this.logger.log(
-        `image generation hold actual cost: hold=${options.confirmHoldId} actualImages=${images.length} actualAmount=${actualAmount}`,
+        `image generation hold actual cost: hold=${options.confirmHoldId} actualImages=${images.length} billedImages=${billedImages} perImage=${perImageAmount} actualAmount=${actualAmount}`,
       );
     }
 

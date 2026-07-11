@@ -402,9 +402,13 @@ async function seedModelSchemas() {
     // 非破坏性：只为「schema 尚未配置(任一为 null)」的模型补默认值。已有 schema
     // (运营在 admin 改过价 / 上一次 seed 填过)一律不覆盖——seed 每次启动都跑，绝不能
     // 把后台改价回退成 preset、把 schemaVersion 重置成 1。
-    // 例外：SEED_FORCE_MODEL_SCHEMAS=1 时强制刷新（纠正历史通用 schema，见常量注释）。
+    // 例外：SEED_FORCE_MODEL_SCHEMAS=1 时强制刷新（纠正历史通用 schema，见常量注释），
+    // 但**只作用于 image/video**：受历史通用 schema bug 影响的就是这两类(quality 档位/
+    // 分辨率不匹配)；text 模型走统一 text preset、无 per-model 差异，且更可能被运营调过
+    // token 计价，故即使 force 也不动它们，避免误伤。
     const alreadyConfigured = model.paramsSchema !== null && model.pricingSchema !== null;
-    if (alreadyConfigured && !FORCE_MODEL_SCHEMAS) {
+    const forceThis = FORCE_MODEL_SCHEMAS && key !== 'text';
+    if (alreadyConfigured && !forceThis) {
       continue;
     }
     const preset = MODEL_PRESETS[key];
