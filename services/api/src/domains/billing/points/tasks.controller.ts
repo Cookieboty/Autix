@@ -61,10 +61,11 @@ export class TasksController {
       usage: body.usage,
       membershipLevel,
     });
+    // 只返回展示所需的总价与明细。不对外暴露冻结快照(含 taskFixedSchema 等任务成本结构)——
+    // 这是纯展示接口,真实扣费在 createHold 时由服务端按冻结快照重新求值,前端无需拿到快照。
     return {
       total: estimate.estimatedCost,
       breakdown: estimate.breakdown,
-      snapshot: estimate.pricingSnapshot,
     };
   }
 }

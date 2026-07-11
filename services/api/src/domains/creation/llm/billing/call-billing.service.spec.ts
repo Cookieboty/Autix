@@ -16,6 +16,7 @@ function createPointsService() {
     createHold: jest.fn(),
     confirmHold: jest.fn(),
     refundHold: jest.fn(),
+    quoteHoldFromSnapshot: jest.fn(),
   };
 }
 
@@ -147,15 +148,12 @@ describe('CallBillingService', () => {
     expect(points.refundHold).toHaveBeenCalledWith('hold-1', 'agent call failed');
   });
 
-  it('confirms with actual chat token cost when usage metadata is available', async () => {
+  it('settles from the frozen snapshot with real token usage, never a live re-estimate', async () => {
     const repository = createRepository();
     const points = createPointsService();
     const membership = createMembershipService();
-    points.estimateCost.mockResolvedValue({
-      estimatedCost: 5,
-      taskType: 'chat_message_standard',
-      pricingSnapshot: { ruleId: 'rule-fast' },
-    });
+    // 结算走冻结快照 + 真实 token，不再调用 estimateCost 重估实时配置。
+    points.quoteHoldFromSnapshot.mockResolvedValue(5);
     repository.findPointHold.mockResolvedValue({ estimatedAmount: 10 });
     const service = new CallBillingService(repository as never, points as never, membership as never);
 
@@ -165,37 +163,23 @@ describe('CallBillingService', () => {
       outputTokens: 300,
     });
 
-    expect(points.estimateCost).toHaveBeenCalledWith(
-      expect.objectContaining({
-        taskType: 'chat_message_standard',
-        usage: expect.objectContaining({ inputTokens: 400, outputTokens: 300 }),
-      }),
+    expect(points.quoteHoldFromSnapshot).toHaveBeenCalledWith(
+      'hold-1',
+      expect.objectContaining({ inputTokens: 400, outputTokens: 300 }),
     );
+    expect(points.estimateCost).not.toHaveBeenCalled();
     expect(points.confirmHold).toHaveBeenCalledWith('hold-1', 5);
   });
 
-  it('caps actual confirmation at the frozen estimate', async () => {
+  it('confirms at the amount quoteHoldFromSnapshot returns (cap-at-frozen lives inside it)', async () => {
     const repository = createRepository();
     const points = createPointsService();
     const membership = createMembershipService();
-    points.estimateCost
-      .mockResolvedValueOnce({
-        estimatedCost: 8,
-        taskType: 'chat_message_standard',
-        pricingSnapshot: { ruleId: 'estimate' },
-      })
-      .mockResolvedValueOnce({
-        estimatedCost: 20,
-        taskType: 'chat_message_standard',
-        pricingSnapshot: { ruleId: 'actual' },
-      });
-    points.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 92 });
+    // quoteHoldFromSnapshot 内部已把 raw 封顶到冻结额 8 并返回 8。
+    points.quoteHoldFromSnapshot.mockResolvedValue(8);
     repository.findPointHold.mockResolvedValue({ estimatedAmount: 8 });
     const service = new CallBillingService(repository as never, points as never, membership as never);
 
-    await service.hold('u1', 70, {
-      pricing: { taskType: 'chat_message_standard' },
-    });
     await service.confirm('hold-1', {
       taskType: 'chat_message_standard',
       inputTokens: 10_000,
@@ -205,31 +189,25 @@ describe('CallBillingService', () => {
     expect(points.confirmHold).toHaveBeenCalledWith('hold-1', 8);
   });
 
-  it('confirms the frozen estimate when actual usage pricing is temporarily unavailable', async () => {
+  it('hard-fails (propagates) when the snapshot re-quote throws — never silently confirms full frozen', async () => {
     const repository = createRepository();
     const points = createPointsService();
     const membership = createMembershipService();
-    points.estimateCost
-      .mockResolvedValueOnce({
-        estimatedCost: 8,
-        taskType: 'chat_message_standard',
-        pricingSnapshot: { ruleId: 'estimate' },
-      })
-      .mockRejectedValueOnce(new BadRequestException('未配置计费规则'));
-    points.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 92 });
+    // 损坏/缺失快照必须硬失败：错误向上传播，不能 catch-all 后按全额冻结确认(会多扣)。
+    points.quoteHoldFromSnapshot.mockRejectedValue(new BadRequestException('积分冻结不存在'));
     repository.findPointHold.mockResolvedValue({ estimatedAmount: 8 });
     const service = new CallBillingService(repository as never, points as never, membership as never);
 
-    await service.hold('u1', 70, {
-      pricing: { taskType: 'chat_message_standard' },
-    });
-    await service.confirm('hold-1', {
-      taskType: 'chat_message_standard',
-      inputTokens: 400,
-      outputTokens: 300,
-    });
+    await expect(
+      service.confirm('hold-1', {
+        taskType: 'chat_message_standard',
+        inputTokens: 400,
+        outputTokens: 300,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(points.confirmHold).toHaveBeenCalledWith('hold-1');
+    expect(points.estimateCost).not.toHaveBeenCalled();
+    expect(points.confirmHold).not.toHaveBeenCalled();
   });
 
   describe('hold — no pointCostWeight fallback (Task 11)', () => {

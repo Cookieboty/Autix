@@ -61,9 +61,10 @@ const imagePreset: ModelPreset = {
     type: 'object',
     required: ['quality', 'resolution'],
     properties: {
-      quality: { type: 'string', enum: ['low', 'medium', 'high'], default: 'medium', 'x-ui': { control: 'chips', labelKey: 'pricing.params.quality', order: 10 } },
+      quality: { type: 'string', enum: ['low', 'medium', 'high'], default: 'medium', 'x-ui': { control: 'chips', labelKey: 'pricing.params.quality', optionLabelKeys: { low: 'pricing.options.low', medium: 'pricing.options.medium', high: 'pricing.options.high' }, order: 10 } },
       resolution: { type: 'string', enum: ['512px', '1K', '2K', '4K'], default: '1K', 'x-ui': { control: 'chips', labelKey: 'pricing.params.resolution', order: 20 } },
-      quantity: { type: 'integer', minimum: 1, maximum: 4, default: 1, 'x-ui': { control: 'stepper', labelKey: 'pricing.params.quantity', order: 30 } },
+      // 生成张数(quantity)不再是图像计价参数——张数由业务逻辑在下单时按张乘算，
+      // 这套 preset 只描述「一张」的参数与价格。
       referenceImages: { type: 'integer', minimum: 0, maximum: 4, default: 0, 'x-ui': { control: 'hidden' } },
     },
   },
@@ -72,7 +73,7 @@ const imagePreset: ModelPreset = {
       { id: 'base', op: 'add', const: 1 },
       { id: 'quality', op: 'mul', table: { param: 'quality', values: { low: 15, medium: 90, high: 350 } } },
       { id: 'resolution', op: 'mul', table: { param: 'resolution', values: { '512px': 0.5, '1K': 1, '2K': 2, '4K': 4 } } },
-      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
+      // 无 quantity 项：单张价格；张数由业务逻辑吃掉（见 paramsSchema 注释）。
       { id: 'referenceImages', op: 'add', perUnit: { param: 'referenceImages', unitCost: 5 } },
     ],
   },

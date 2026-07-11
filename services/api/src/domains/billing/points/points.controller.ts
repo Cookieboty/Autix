@@ -1,9 +1,8 @@
-import { Body, Controller, Get, Post, Query, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import { PointsService } from './points.service';
-import { EstimateTaskDto } from './dto/estimate-task.dto';
 import { PointsSource } from '../../platform/prisma/generated';
 import type { AuthUser } from '@autix/domain';
 
@@ -47,10 +46,7 @@ export class PointsController {
     return this.pointsService.getPackages();
   }
 
-  @Post('estimate')
-  @Public()
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async estimateCost(@Body() body: EstimateTaskDto) {
-    return this.pointsService.estimateCost(body);
-  }
+  // POST /points/estimate 已移到 PointsEstimateController(在 TasksModule 里),
+  // 因为它需要 MembershipService 解析会员等级,而 PointsModule 不能 import
+  // MembershipModule(5 模块 DI 环)。见 points-estimate.controller.ts。
 }

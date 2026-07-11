@@ -13,6 +13,31 @@ export function fillDefaults(schema: ParamsSchema): Record<string, unknown> {
   return applyParamDefaults(schema, {});
 }
 
+/**
+ * 决定「schema 引用变化」这一帧 form.params 应该变成什么。抽成纯函数是为了能
+ * 直接单测 hook 生命周期（尤其「先以 undefined schema 挂载、schema 异步到达」这条
+ * 路径），而不需要 DOM 渲染器。
+ *
+ * 三条分支：
+ * 1. schema 变 undefined（极少见，模型清单被清空）→ 清空。
+ * 2. schema 首次到达（previousSchema 为 undefined，即挂载时还没拉到 schema）→
+ *    **等价于「带 schema 挂载」**：用 defaults + initialParams 播种。若这里改成
+ *    `migrateParams(undefined, schema, {})`，等于把挂载时的空 {} 迁移成纯 defaults，
+ *    initialParams（= 当前生成设置）会被彻底丢掉；随后同步逻辑再把这套 defaults
+ *    上抛，就会覆盖用户已有的图片/视频设置——这正是异步 schema 到达的覆盖 bug。
+ * 3. 模型切换（两个都是真 schema）→ 正常 migrateParams。
+ */
+export function resolveSchemaTransition(
+  previousSchema: ParamsSchema | undefined,
+  schema: ParamsSchema | undefined,
+  currentParams: Record<string, unknown>,
+  initialParams?: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!schema) return {};
+  if (!previousSchema) return { ...fillDefaults(schema), ...(initialParams ?? {}) };
+  return migrateParams(previousSchema, schema, currentParams);
+}
+
 export interface ClampMessage {
   field: string;
   text: string;

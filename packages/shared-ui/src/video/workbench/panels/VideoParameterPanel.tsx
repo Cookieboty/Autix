@@ -1,12 +1,20 @@
 'use client';
 
+import { useMemo } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
-import { SchemaForm, TotalPriceBar, translateSchemaKey, useSchemaForm } from '../../../pricing';
+import {
+  SchemaForm,
+  TotalPriceBar,
+  translateSchemaKey,
+  useSchemaForm,
+  useSchemaFormExternalSync,
+} from '../../../pricing';
 import { cn } from '../../../ui/utils';
 import { ParamCardGroup } from '../shared/ParamCardGroup';
 import { PanelLabel } from '../shared/PanelLabel';
+import { videoClipParamsToSchemaParams } from '../schema-params-mapping';
 import type { VideoWorkspaceMode } from '../constants';
 
 // The `videoPreset.paramsSchema` duration field is keyed `seconds` (see
@@ -53,7 +61,17 @@ export function VideoParameterPanel({
   const tOptions = useTranslations('pricing.options');
   const tTotal = useTranslations('pricing');
 
-  const form = useSchemaForm(paramsSchema);
+  // 用当前 clip 参数(反向映射，seconds←duration 等)作为表单初始值，并在 clipParams 被外部
+  // 改动(切换 clip/历史恢复)时同步进表单——否则表单会用 schema 默认值覆盖已有 clip 设置(P1-3)。
+  const externalParams = useMemo(
+    () => videoClipParamsToSchemaParams(clipParams),
+    [clipParams.duration, clipParams.resolution, clipParams.ratio],
+  );
+  const form = useSchemaForm(paramsSchema, externalParams);
+
+  // 双向同步：外部 clipParams 变化 -> 表单；用户改表单 -> 上抛给父组件正向映射回 clip 参数。
+  // 跳过挂载与外部同步的回声，避免默认值覆盖设置或 clipParams->form->clipParams 死循环。
+  useSchemaFormExternalSync(form, externalParams, onParamsChange);
 
   // spec §6.8: schema 拉取失败 -> 禁用生成，不 fallback 到硬编码默认值。
   const schemaMissing = !paramsSchema || !pricingSchema;
@@ -150,7 +168,6 @@ export function VideoParameterPanel({
           taskType={taskType}
           modelConfigId={modelConfigId}
           params={form.params}
-          onQuote={(result) => onParamsChange(result.snapshot)}
           translateTotal={(total) => (total === null ? '' : tTotal('totalPoints', { count: total }))}
         />
       </div>

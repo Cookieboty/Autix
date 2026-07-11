@@ -32,8 +32,10 @@ function toLocalizedText(value: Prisma.JsonValue): LocalizedText {
   return value as LocalizedText;
 }
 
-type BindingWithPricedModel<T extends { modelConfig: { pricingSchema: Prisma.JsonValue | null } }> = T & {
-  modelConfig: T['modelConfig'] & { pricingSchema: Prisma.JsonValue };
+type BindingWithPricedModel<
+  T extends { modelConfig: { pricingSchema: Prisma.JsonValue | null; paramsSchema: Prisma.JsonValue | null } },
+> = T & {
+  modelConfig: T['modelConfig'] & { pricingSchema: Prisma.JsonValue; paramsSchema: Prisma.JsonValue };
 };
 
 /**
@@ -44,10 +46,12 @@ type BindingWithPricedModel<T extends { modelConfig: { pricingSchema: Prisma.Jso
  * price tag from that, and a `?? {}` fallback would make `evaluatePricing`
  * silently compute a price of 0 — free generation, invented out of thin air.
  */
-function hasPricingSchema<T extends { modelConfig: { pricingSchema: Prisma.JsonValue | null } }>(
-  binding: T,
-): binding is BindingWithPricedModel<T> {
-  return binding.modelConfig.pricingSchema !== null;
+function hasPricingSchema<
+  T extends { modelConfig: { pricingSchema: Prisma.JsonValue | null; paramsSchema: Prisma.JsonValue | null } },
+>(binding: T): binding is BindingWithPricedModel<T> {
+  // 两者缺一不可：pricingSchema 为 null → estimateCost 会 400；paramsSchema 为 null →
+  // 前端无法渲染控件，是个不可用模型。任一为 null 都从列表里剔除，而不是下发一个残缺模型。
+  return binding.modelConfig.pricingSchema !== null && binding.modelConfig.paramsSchema !== null;
 }
 
 @Injectable()

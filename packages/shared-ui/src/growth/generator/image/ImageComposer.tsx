@@ -77,6 +77,8 @@ export function ImageComposer({
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const tImagePrompt = useTranslations('imageStudio.prompt');
+  // 画质档位显示名走 i18n(pricing.options.<value>)；capability.qualities 只存 value token。
+  const tOptions = useTranslations('pricing.options');
   const [prompt, setPrompt] = useState('');
   const [size, setSize] = useState(imageCapability.defaults.size);
   const [quality, setQuality] = useState(imageCapability.defaults.quality);
@@ -135,7 +137,7 @@ export function ImageComposer({
     );
     setQuality((current) =>
       !imageCapability.qualities.length ||
-        imageCapability.qualities.some((option) => option.value === current)
+        imageCapability.qualities.includes(current)
         ? current
         : imageCapability.defaults.quality,
     );
@@ -381,12 +383,12 @@ export function ImageComposer({
               {imageCapability.qualities.length > 0 ? (
                 <ImageOptionParamMenu
                   icon={<Gauge className="size-4" />}
-                  label={
-                    imageCapability.qualities.find((option) => option.value === quality)?.label ??
-                    quality
-                  }
+                  label={tOptions.has(quality) ? tOptions(quality) : quality}
                   title={t('selectQuality')}
-                  options={imageCapability.qualities}
+                  options={imageCapability.qualities.map((value) => ({
+                    value,
+                    label: tOptions.has(value) ? tOptions(value) : value,
+                  }))}
                   value={quality}
                   onChange={setQuality}
                 />

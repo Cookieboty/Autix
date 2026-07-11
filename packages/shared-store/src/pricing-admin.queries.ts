@@ -8,6 +8,7 @@ import {
   pricingAdminActions,
   type AdminModelDescription,
   type AdminModelSchemas,
+  type CreateTaskModelBindingInput,
   type CreateDiscountInput,
   type DryRunPricingInput,
   type DryRunResult,
@@ -27,6 +28,7 @@ type MutationCallbacks = {
 export const pricingAdminQueryKeys = {
   root: () => ['pricingAdmin'] as const,
   model: (id: string) => ['pricingAdmin', 'model', id] as const,
+  taskDefinitions: () => ['pricingAdmin', 'task-definitions'] as const,
   taskModelBindingsRoot: () => ['pricingAdmin', 'task-model-bindings'] as const,
   taskModelBindings: (taskType?: string) =>
     [...pricingAdminQueryKeys.taskModelBindingsRoot(), taskType ?? ''] as const,
@@ -111,10 +113,30 @@ export function useDryRunAdminPricingMutation(callbacks?: MutationCallbacks) {
 
 // -- task-model bindings --
 
+export function useAdminTaskDefinitionsQuery() {
+  return useQuery({
+    queryKey: pricingAdminQueryKeys.taskDefinitions(),
+    queryFn: pricingAdminActions.listTaskDefinitions,
+  });
+}
+
 export function useAdminTaskModelBindingsQuery(taskType?: string) {
   return useQuery({
     queryKey: pricingAdminQueryKeys.taskModelBindings(taskType),
     queryFn: () => pricingAdminActions.listTaskModelBindings(taskType),
+  });
+}
+
+export function useCreateAdminTaskModelBindingMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateTaskModelBindingInput): Promise<TaskModelBinding> =>
+      pricingAdminActions.createTaskModelBinding(data),
+    onSuccess: async () => {
+      await invalidateTaskModelBindings(queryClient);
+      await callOnSuccess(callbacks);
+    },
+    onError: (error) => callOnError(error, callbacks),
   });
 }
 

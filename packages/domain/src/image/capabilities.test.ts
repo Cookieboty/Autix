@@ -79,7 +79,7 @@ describe('IMAGE_MODEL_CAPABILITIES', () => {
   });
 
   it('gpt-image lists only officially supported qualities', () => {
-    const q = IMAGE_MODEL_CAPABILITIES['gpt-image'].qualities.map((s) => s.value);
+    const q = IMAGE_MODEL_CAPABILITIES['gpt-image'].qualities;
     expect(q).toEqual(['low', 'medium', 'high']);
   });
 
@@ -111,8 +111,7 @@ describe('IMAGE_MODEL_CAPABILITIES', () => {
       const sizeValues = cap.sizes.map((s) => s.value);
       expect(sizeValues).toContain(cap.defaults.size);
       if (cap.qualities.length > 0) {
-        const qualityValues = cap.qualities.map((q) => q.value);
-        expect(qualityValues).toContain(cap.defaults.quality);
+        expect(cap.qualities).toContain(cap.defaults.quality);
       } else {
         expect(cap.defaults.quality).toBe('');
       }

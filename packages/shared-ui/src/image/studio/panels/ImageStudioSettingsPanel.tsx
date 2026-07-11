@@ -1,12 +1,20 @@
 'use client';
 
+import { useMemo } from 'react';
 import { SlidersHorizontal, Wand2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import type { ImageModelCapability } from '@autix/domain/image';
-import { SchemaForm, TotalPriceBar, translateSchemaKey, useSchemaForm } from '../../../pricing';
+import {
+  SchemaForm,
+  TotalPriceBar,
+  translateSchemaKey,
+  useSchemaForm,
+  useSchemaFormExternalSync,
+} from '../../../pricing';
 import { cn } from '../../../ui/utils';
 import { STYLE_PRESET_VALUES, type ImageStudioModelSettings } from '../constants';
+import { imageSettingsToSchemaParams } from '../schema-params-mapping';
 import { PanelLabel, SliderRow } from '../shared/PrimitiveControls';
 import { SelectLike } from '../shared/SelectLike';
 
@@ -19,6 +27,7 @@ export function ImageStudioSettingsPanel({
   pricingContext,
   settings,
   capability,
+  referenceImageCount,
   onClose,
   onParamsChange,
   onSettingsChange,
@@ -31,6 +40,12 @@ export function ImageStudioSettingsPanel({
   pricingContext: { multiplier: number; discountFactor: number };
   settings: ImageStudioModelSettings;
   capability: ImageModelCapability;
+  /**
+   * 当前已选的源图/参考图张数。referenceImages 是隐藏计价参数（perUnit 收费），
+   * 权威 hold 按 source+reference 实际数量扣费（image-generation-flow.holds.ts）；
+   * 面板报价必须带上它，否则显示总价会低于真实 hold。
+   */
+  referenceImageCount: number;
   onClose: () => void;
   onParamsChange: (params: Record<string, unknown>) => void;
   onSettingsChange: (partial: Partial<ImageStudioModelSettings>) => void;
@@ -41,7 +56,25 @@ export function ImageStudioSettingsPanel({
   const tOptions = useTranslations('pricing.options');
   const tTotal = useTranslations('pricing');
 
-  const form = useSchemaForm(paramsSchema);
+  // 用当前设置(反向映射)作为表单初始值，并在 settings 被外部改动(模板应用/历史恢复)时
+  // 同步进表单——否则表单会用 schema 默认值覆盖已有设置(P1-3)。
+  const externalParams = useMemo(
+    () => imageSettingsToSchemaParams(settings),
+    // count 已不再是计价参数(生成张数由业务逻辑吃掉)，映射不读它，故不入依赖。
+    [settings.size, settings.quality],
+  );
+  const form = useSchemaForm(paramsSchema, externalParams);
+
+  // 双向同步：外部 settings 变化 -> 表单；用户改表单 -> 上抛给父组件正向映射回 settings。
+  // 跳过挂载与外部同步的回声，避免默认值覆盖设置或 settings->form->settings 死循环。
+  useSchemaFormExternalSync(form, externalParams, onParamsChange);
+
+  // 报价参数 = 表单参数 + 真实参考图张数（referenceImages 是隐藏计价参数，表单里恒为
+  // 默认 0，必须用实际张数覆盖，才能和后端 hold 的收费口径一致）。
+  const quoteParams = useMemo(
+    () => ({ ...form.params, referenceImages: referenceImageCount }),
+    [form.params, referenceImageCount],
+  );
 
   // spec §6.8: schema 拉取失败 -> 禁用生成，不 fallback 到硬编码默认值。
   const schemaMissing = !paramsSchema || !pricingSchema;
@@ -160,8 +193,7 @@ export function ImageStudioSettingsPanel({
         <TotalPriceBar
           taskType={taskType}
           modelConfigId={modelConfigId}
-          params={form.params}
-          onQuote={(result) => onParamsChange(result.snapshot)}
+          params={quoteParams}
           translateTotal={(total) => (total === null ? '' : tTotal('totalPoints', { count: total }))}
         />
       </div>

@@ -169,7 +169,12 @@ describe('TaskPricingRepository', () => {
     await repo.findBindingsForTask('image_generation');
 
     expect(prisma.task_model_bindings.findMany).toHaveBeenCalledWith({
-      where: { taskType: 'image_generation', isActive: true },
+      // 除了绑定活跃，模型本身也必须公开且活跃(匿名公开接口不能泄露 private/inactive 模型)。
+      where: {
+        taskType: 'image_generation',
+        isActive: true,
+        modelConfig: { is: { visibility: 'public', isActive: true } },
+      },
       orderBy: { sort: 'asc' },
       include: {
         modelConfig: {

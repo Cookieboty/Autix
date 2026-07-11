@@ -77,10 +77,9 @@ describe('applyParamDefaults', () => {
 
   describe('against the real image preset — the reproduction of the production bug', () => {
     it('fills the required quality/resolution that canvas never sends, and the result passes validation', () => {
-      const filled = applyParamDefaults(MODEL_PRESETS.image.paramsSchema, { quantity: 1 });
+      const filled = applyParamDefaults(MODEL_PRESETS.image.paramsSchema, { referenceImages: 0 });
       expect(filled.quality).toBe('medium');
       expect(filled.resolution).toBe('1K');
-      expect(filled.quantity).toBe(1);
       expect(validateParams(MODEL_PRESETS.image.paramsSchema, filled)).toEqual([]);
     });
 

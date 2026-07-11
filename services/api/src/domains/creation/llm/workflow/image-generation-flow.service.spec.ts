@@ -1002,9 +1002,11 @@ describe('ImageGenerationFlowService', () => {
         pricingSnapshot: { ruleId: 'rule-2' },
       }),
     );
-    // Task 13: settlement re-prices from the frozen hold snapshot via
-    // quoteHoldFromSnapshot, never by calling estimateCost() a second time.
-    expect(pointsService.quoteHoldFromSnapshot).toHaveBeenCalledWith('hold-1', { quantity: 1 });
+    // Settlement re-prices from the frozen hold snapshot via quoteHoldFromSnapshot,
+    // never by calling estimateCost() again. Usage is EMPTY: `quantity` is a frozen
+    // order-time param already in the snapshot; passing it as usage would collide
+    // (quoteTaskFromSnapshot rejects same-name keys) and throw after generation.
+    expect(pointsService.quoteHoldFromSnapshot).toHaveBeenCalledWith('hold-1', {});
     expect(pointsService.confirmHoldWithinTx).toHaveBeenCalledWith(
       expect.any(Object),
       'hold-1',

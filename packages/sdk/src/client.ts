@@ -1697,7 +1697,6 @@ export interface TaskModel {
 export interface QuoteTaskResult {
   total: number;
   breakdown: Breakdown[];
-  snapshot: Record<string, unknown>;
 }
 
 export interface PointGrantBatch {

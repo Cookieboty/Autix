@@ -3,6 +3,7 @@ import { MembershipModule } from '../membership/membership.module';
 import { PointsModule } from './points.module';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
+import { PointsEstimateController } from './points-estimate.controller';
 
 /**
  * Deliberately a sibling of PointsModule, not a member of it. TasksController
@@ -18,7 +19,8 @@ import { TasksController } from './tasks.controller';
  */
 @Module({
   imports: [PointsModule, MembershipModule],
-  controllers: [TasksController],
+  // PointsEstimateController 用 @Controller('points') 但住在这里,因为它需要 MembershipService。
+  controllers: [TasksController, PointsEstimateController],
   providers: [TasksService],
 })
 export class TasksModule {}

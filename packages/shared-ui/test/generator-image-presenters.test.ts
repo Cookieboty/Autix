@@ -28,17 +28,15 @@ describe('resolveImageCapabilityFromModelParam', () => {
 });
 
 describe('getImageCountControl', () => {
-  test('hidden for maxCount 1', () => {
+  // 生成张数已从图像模型配置移除：无论 maxCount 多少，控件都不再暴露（张数由业务逻辑吃掉）。
+  test('always hidden — count is no longer a user-facing config (business logic owns quantity)', () => {
     expect(getImageCountControl({ maxCount: 1, defaults: { count: 1 } } as never)).toEqual({
       visible: false,
       max: 1,
       default: 1,
     });
-  });
-
-  test('visible for maxCount 4', () => {
     expect(getImageCountControl({ maxCount: 4, defaults: { count: 1 } } as never)).toEqual({
-      visible: true,
+      visible: false,
       max: 4,
       default: 1,
     });

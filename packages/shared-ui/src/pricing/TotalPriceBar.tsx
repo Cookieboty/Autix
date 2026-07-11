@@ -31,8 +31,15 @@ export function TotalPriceBar({ taskType, modelConfigId, params, usage, onQuote,
   const latestRef = useRef({ taskType, modelConfigId, usage, onQuote });
   latestRef.current = { taskType, modelConfigId, usage, onQuote };
 
+  // 请求序号：防止过期的异步报价覆盖当前值。每次调度（依赖变化）自增，串进这次
+  // 请求；异步返回后只有 seq 仍是最新的才应用结果。否则「旧模型的请求 A 晚于新
+  // 请求 B 返回」会用 A 的过期总价/失败态/onQuote 覆盖 B——模型切换后报价错乱。
+  // debounce 只能取消「还没触发的」定时器，取消不了「已经发出的」请求，所以必须
+  // 有独立的序号守卫。
+  const requestSeqRef = useRef(0);
+
   const debouncedRef = useRef(
-    debounce(async (nextParams: Record<string, unknown>) => {
+    debounce(async (nextParams: Record<string, unknown>, seq: number) => {
       const { taskType: currentTaskType, modelConfigId: currentModelConfigId, usage: currentUsage, onQuote: currentOnQuote } =
         latestRef.current;
       try {
@@ -41,11 +48,13 @@ export function TotalPriceBar({ taskType, modelConfigId, params, usage, onQuote,
           params: nextParams,
           usage: currentUsage,
         });
+        if (seq !== requestSeqRef.current) return; // 有更新的请求已发出，丢弃这次过期结果
         setTotal(result.total);
         setStale(false);
         setFailed(false);
         currentOnQuote?.(result);
       } catch {
+        if (seq !== requestSeqRef.current) return; // 过期请求的失败也不能覆盖当前态
         // spec §6.8: quote 失败不阻塞生成，总价显示 — ，之前的值不保留
         // （保留旧值会让用户以为那是当前参数的价格，比显示 — 更误导）。
         setFailed(true);
@@ -55,10 +64,13 @@ export function TotalPriceBar({ taskType, modelConfigId, params, usage, onQuote,
   );
 
   useEffect(() => {
+    // 同步自增序号：任何在途的旧请求立刻作废（其捕获的 seq 已小于当前）。
+    requestSeqRef.current += 1;
+    const seq = requestSeqRef.current;
     setStale(total !== null);
-    debouncedRef.current(params);
+    debouncedRef.current(params, seq);
     return () => debouncedRef.current.cancel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // total 刻意不入依赖（只读快照用于 stale 判断）；依赖用序列化值做深比较。
   }, [taskType, modelConfigId, JSON.stringify(params), JSON.stringify(usage)]);
 
   return (

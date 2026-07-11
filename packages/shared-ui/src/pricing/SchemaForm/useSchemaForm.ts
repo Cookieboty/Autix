@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import type { ParamsSchema } from '@autix/domain/pricing';
-import { clampOnChange, fillDefaults, migrateParams, type ClampMessage } from './schema-form-logic';
+import { clampOnChange, fillDefaults, resolveSchemaTransition, type ClampMessage } from './schema-form-logic';
 
 export interface UseSchemaFormResult {
   params: Record<string, unknown>;
@@ -16,9 +16,16 @@ export interface UseSchemaFormResult {
  * schema 为 undefined 表示尚未拉到（见 SchemaForm 的错误处理，spec §6.8：
  * schema 拉取失败时禁用生成，不 fallback 到硬编码默认值）。
  */
-export function useSchemaForm(schema: ParamsSchema | undefined): UseSchemaFormResult {
+export function useSchemaForm(
+  schema: ParamsSchema | undefined,
+  /**
+   * 初始值(仅挂载时读取一次)。用于用当前生成设置初始化表单，而不是从纯 schema 默认值
+   * 起步——否则挂载时的同步会用默认值覆盖已有设置。缺省的键回退到 fillDefaults。
+   */
+  initialParams?: Record<string, unknown>,
+): UseSchemaFormResult {
   const [params, setParams] = useState<Record<string, unknown>>(() =>
-    schema ? fillDefaults(schema) : {},
+    schema ? { ...fillDefaults(schema), ...(initialParams ?? {}) } : {},
   );
   const [message, setMessage] = useState<ClampMessage | undefined>(undefined);
 
@@ -36,7 +43,9 @@ export function useSchemaForm(schema: ParamsSchema | undefined): UseSchemaFormRe
   const [previousSchema, setPreviousSchema] = useState<ParamsSchema | undefined>(schema);
   if (schema !== previousSchema) {
     setPreviousSchema(schema);
-    setParams(schema ? migrateParams(previousSchema, schema, params) : {});
+    // schema 首次到达（挂载时 schema 还没拉到）时，用 initialParams 播种而不是把空
+    // {} 迁移成纯 defaults——否则会丢掉已有生成设置并把 defaults 上抛覆盖它们。
+    setParams(resolveSchemaTransition(previousSchema, schema, params, initialParams));
   }
 
   const setParam = useCallback(

@@ -41,3 +41,26 @@ export function schemaParamsToVideoClipParams(
 
   return next;
 }
+
+/**
+ * 反向映射：把 clip.params 换算回 SchemaForm 用的计价参数(videoPreset.paramsSchema 的
+ * resolution/seconds/ratio)。用于用当前 clip 参数初始化/同步表单，避免表单用 schema 默认值
+ * 覆盖已有 clip 设置。是 schemaParamsToVideoClipParams 的逆(duration↔seconds 改名，其余恒等)。
+ */
+export function videoClipParamsToSchemaParams(
+  clipParams: Record<string, unknown>,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = {};
+
+  if ('duration' in clipParams) {
+    next.seconds = clipParams.duration;
+  }
+  if ('resolution' in clipParams) {
+    next.resolution = clipParams.resolution;
+  }
+  if ('ratio' in clipParams) {
+    next.ratio = clipParams.ratio;
+  }
+
+  return next;
+}

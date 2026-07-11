@@ -181,6 +181,8 @@ export function ArenaModelParamsDrawer({
 }: ArenaModelParamsDrawerProps) {
   const t = useTranslations('arenaParams');
   const tImage = useTranslations('chat.imageParams');
+  // 画质档位显示名走 i18n(pricing.options.<value>)；capability.qualities 只存 value token。
+  const tOptions = useTranslations('pricing.options');
   const { modelParamsMap, setModelParams, resetModelParams } = useArenaStore();
 
   const showChat = hasChatCapability(capabilities);
@@ -373,7 +375,10 @@ export function ArenaModelParamsDrawer({
                       (config.params.quality as string | undefined) ??
                       imageCapability.defaults.quality
                     }
-                    options={imageCapability.qualities}
+                    options={imageCapability.qualities.map((value) => ({
+                      value,
+                      label: tOptions.has(value) ? tOptions(value) : value,
+                    }))}
                     enabled={config.enabled['quality'] ?? true}
                     onToggle={() => toggleEnabled('quality')}
                     onChange={(v) => updateParam('quality', v)}

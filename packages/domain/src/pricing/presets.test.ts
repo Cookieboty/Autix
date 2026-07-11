@@ -102,9 +102,9 @@ describe('presets — golden prices (text)', () => {
   });
 });
 
-describe('presets — golden prices (image, unchanged)', () => {
-  it('prices quality tiers at 1K with one image and no references', () => {
-    const at = (quality: string) => quote('image', { quality, resolution: '1K', quantity: 1, referenceImages: 0 });
+describe('presets — golden prices (image, single-image; quantity removed)', () => {
+  it('prices quality tiers at 1K for a single image with no references', () => {
+    const at = (quality: string) => quote('image', { quality, resolution: '1K', referenceImages: 0 });
     expect(at('low')).toBe(15);
     expect(at('medium')).toBe(90);
     expect(at('high')).toBe(350);
@@ -112,7 +112,7 @@ describe('presets — golden prices (image, unchanged)', () => {
 
   it('scales by resolution multiplier', () => {
     const at = (resolution: string) =>
-      quote('image', { quality: 'medium', resolution, quantity: 1, referenceImages: 0 });
+      quote('image', { quality: 'medium', resolution, referenceImages: 0 });
     expect(at('512px')).toBe(45);
     expect(at('1K')).toBe(90);
     expect(at('2K')).toBe(180);
@@ -121,17 +121,17 @@ describe('presets — golden prices (image, unchanged)', () => {
 
   it('rounds a fractional subtotal up exactly once', () => {
     // low(15) * 512px(0.5) = 7.5 -> ceil 8
-    expect(quote('image', { quality: 'low', resolution: '512px', quantity: 1, referenceImages: 0 })).toBe(8);
+    expect(quote('image', { quality: 'low', resolution: '512px', referenceImages: 0 })).toBe(8);
   });
 
-  it('multiplies by quantity before adding reference images', () => {
-    // 90 * 2 = 180, + 5*1 = 185
-    expect(quote('image', { quality: 'medium', resolution: '1K', quantity: 2, referenceImages: 1 })).toBe(185);
+  it('adds reference images on top of the single-image price (quantity no longer multiplies)', () => {
+    // 生成张数已从图像计价移除：schema 只算一张。90(单张) + 5*1(参考图) = 95。
+    expect(quote('image', { quality: 'medium', resolution: '1K', referenceImages: 1 })).toBe(95);
   });
 
   it('charges 5 per reference image, unscaled by resolution', () => {
-    // (1 * 90 * 4) * 1 = 360, + 5*3 = 375
-    expect(quote('image', { quality: 'medium', resolution: '4K', quantity: 1, referenceImages: 3 })).toBe(375);
+    // (1 * 90 * 4) = 360, + 5*3 = 375
+    expect(quote('image', { quality: 'medium', resolution: '4K', referenceImages: 3 })).toBe(375);
   });
 });
 

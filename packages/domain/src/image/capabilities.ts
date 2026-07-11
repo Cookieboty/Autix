@@ -24,7 +24,10 @@ export interface ImageModelCapability {
   kind: ImageModelKind;
   displayName: string;
   sizes: Array<{ label: string; value: string }>;
-  qualities: Array<{ label: string; value: string }>;
+  // 只存稳定的 value token（'low' | 'standard' | ...），不放显示文案。这是 zero-dep 领域层，
+  // 无法本地化；显示名由 UI 层用 i18n(pricing.options.<value>) 翻译。放中文/任何自然语言
+  // label 在这里，就会出现「英文界面显示中文档位」的架构问题。
+  qualities: string[];
   maxCount: number;
   defaults: { size: string; quality: string; count: number };
   supportsReferenceImage: boolean;
@@ -141,11 +144,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
       { label: '16:9 4K', value: '3840x2160' },    // OpenAI Images API · size
       { label: '9:16 4K', value: '2160x3840' },    // OpenAI Images API · size
     ],
-    qualities: [
-      { label: '低', value: 'low' },
-      { label: '中', value: 'medium' },
-      { label: '高', value: 'high' },
-    ],
+    qualities: ['low', 'medium', 'high'],
     maxCount: 1,
     // 不再提供「自动」：sizes / qualities 里都已移除 auto，默认选中 1:1。
     defaults: { size: '1024x1024', quality: 'medium', count: 1 },
@@ -221,7 +220,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
   // inject `metadata.extraParams` as needed when integrating new providers.
   compatible: {
     kind: 'compatible',
-    displayName: '兼容模型',
+    displayName: 'Compatible',
     sizes: [
       { label: '1:1', value: '1024x1024' },        // empirical, not official
       { label: '16:9', value: '1792x1024' },
@@ -229,10 +228,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
       { label: '4:3', value: '1024x768' },
       { label: '3:4', value: '768x1024' },
     ],
-    qualities: [
-      { label: '标准', value: 'standard' },         // OpenAI protocol naming
-      { label: '高清', value: 'hd' },
-    ],
+    qualities: ['standard', 'hd'], // OpenAI protocol naming; 显示名走 i18n(pricing.options.*)
     maxCount: 4,
     defaults: { size: '1024x1024', quality: 'standard', count: 1 },
     supportsReferenceImage: true,

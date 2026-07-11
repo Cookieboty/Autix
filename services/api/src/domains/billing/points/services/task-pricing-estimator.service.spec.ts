@@ -543,10 +543,10 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
         params: { referenceImages: 2 },
       });
 
+      // quantity 已从图像 schema 移除（张数由业务逻辑吃掉），故不再填 quantity 默认值。
       expect(result.pricingSnapshot.params).toEqual({
         quality: 'medium',
         resolution: '1K',
-        quantity: 1,
         referenceImages: 2,
       });
       const settled = quoteTaskFromSnapshot(result.pricingSnapshot, {});

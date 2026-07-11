@@ -60,6 +60,7 @@ export function ChatToolbar({
     fetchAvailableModels,
   } = useChatStore();
   const t = useTranslations('chat');
+  const tOptions = useTranslations('pricing.options');
 
   useEffect(() => {
     fetchAvailableModels();
@@ -87,11 +88,12 @@ export function ChatToolbar({
     : null;
   const imageCapability = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(selectedImageModel)];
   const imageQualityOptions = useMemo(
-    () => imageCapability.qualities.map((option) => ({
-      value: option.value,
-      label: t(`imageParams.qualityValue.${option.value}` as any),
+    () => imageCapability.qualities.map((value) => ({
+      value,
+      // 显示名走 i18n(pricing.options.<value>)；domain 只存 value token，绝不放显示文案。
+      label: tOptions.has(value) ? tOptions(value) : value,
     })),
-    [imageCapability, t],
+    [imageCapability, tOptions],
   );
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export function ChatToolbar({
       if (imageQuality !== '') onImageQualityChange('');
       return;
     }
-    if (!imageCapability.qualities.some((option) => option.value === imageQuality)) {
+    if (!imageCapability.qualities.includes(imageQuality)) {
       onImageQualityChange(imageCapability.defaults.quality);
     }
   }, [

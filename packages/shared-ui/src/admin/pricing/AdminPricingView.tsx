@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   useAdminDiscountsQuery,
+  useAdminSystemModelsQuery,
+  useAdminTaskDefinitionsQuery,
   useAdminTaskModelBindingsQuery,
+  useCreateAdminTaskModelBindingMutation,
   useCreateAdminDiscountMutation,
   useDeleteAdminDiscountMutation,
   useUpdateAdminDiscountMutation,
@@ -13,6 +16,8 @@ import {
 import { TaskBindingsView } from './task-bindings-view';
 import { DiscountsView } from './discounts-view';
 import { PricingExcelScalars } from './pricing-excel-scalars';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import type { TaskBindingPatch } from './task-bindings-helpers';
 
 /** Mirrors `mutationErrorMessage` in `task-costs-view.tsx` — axios errors surface a backend
  * `{ message }` body; fall back to the generic Error#message, then to the i18n fallback. */
@@ -36,12 +41,21 @@ function mutationErrorMessage(error: unknown, fallback: string) {
 export function AdminPricingView() {
   const t = useTranslations('adminPricing');
 
-  const { data: bindings = [] } = useAdminTaskModelBindingsQuery();
+  const { data: bindings = [], isLoading: bindingsLoading } = useAdminTaskModelBindingsQuery();
+  const { data: taskDefinitions = [], isLoading: taskDefinitionsLoading } = useAdminTaskDefinitionsQuery();
   const { data: discounts = [] } = useAdminDiscountsQuery();
+  const { data: systemModels = [], isLoading: systemModelsLoading } = useAdminSystemModelsQuery();
 
   const [discountError, setDiscountError] = useState<string | null>(null);
+  const [bindingError, setBindingError] = useState<string | null>(null);
+  const [addBindingError, setAddBindingError] = useState<string | null>(null);
 
-  const updateBinding = useUpdateAdminTaskModelBindingMutation();
+  const updateBinding = useUpdateAdminTaskModelBindingMutation({
+    onError: (error) => setBindingError(mutationErrorMessage(error, t('bindings.saveFailed'))),
+  });
+  const createBinding = useCreateAdminTaskModelBindingMutation({
+    onError: (error) => setAddBindingError(mutationErrorMessage(error, t('bindings.addFailed'))),
+  });
   const createDiscount = useCreateAdminDiscountMutation({
     onError: (error) => setDiscountError(mutationErrorMessage(error, t('discounts.saveFailed'))),
   });
@@ -54,20 +68,59 @@ export function AdminPricingView() {
 
   const discountsSaving = createDiscount.isPending || updateDiscount.isPending || deleteDiscount.isPending;
 
+  const saveBindingPatches = async (patches: TaskBindingPatch[]) => {
+    setBindingError(null);
+    for (const patch of patches) {
+      await updateBinding.mutateAsync({
+        taskType: patch.taskType,
+        modelConfigId: patch.modelConfigId,
+        data: patch.data,
+      });
+    }
+  };
+
+  const addTaskModel = async (
+    taskType: string,
+    modelConfigId: string,
+    multiplier: number,
+    isDefault: boolean,
+  ) => {
+    await createBinding.mutateAsync({ taskType, modelConfigId, multiplier, isDefault });
+  };
+
   return (
-    <div className="flex h-full flex-col gap-8 overflow-y-auto p-4">
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">{t('bindingsHeading')}</h2>
+    <Tabs defaultValue="bindings" className="h-full min-h-0 gap-0 overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+        <div className="min-w-0">
+          <h1 className="text-base font-semibold">{t('pageTitle')}</h1>
+          <p className="text-xs text-muted-foreground">{t('pageDescription')}</p>
+        </div>
+        <TabsList className="h-9 rounded-md bg-muted/60">
+          <TabsTrigger value="bindings">{t('bindingsHeading')}</TabsTrigger>
+          <TabsTrigger value="discounts">{t('discountsHeading')}</TabsTrigger>
+          <TabsTrigger value="excel">{t('excelHeading')}</TabsTrigger>
+        </TabsList>
+      </div>
+
+      <TabsContent value="bindings" forceMount className="min-h-0 flex-1 data-[state=inactive]:hidden">
         <TaskBindingsView
           bindings={bindings}
-          onUpdate={(taskType, modelConfigId, patch) =>
-            updateBinding.mutate({ taskType, modelConfigId, data: patch })
-          }
+          taskDefinitions={taskDefinitions}
+          loading={taskDefinitionsLoading || bindingsLoading}
+          saving={updateBinding.isPending}
+          error={bindingError}
+          availableModels={systemModels}
+          modelsLoading={systemModelsLoading}
+          adding={createBinding.isPending}
+          addError={addBindingError}
+          onSave={saveBindingPatches}
+          onAddModel={addTaskModel}
+          onClearError={() => setBindingError(null)}
+          onClearAddError={() => setAddBindingError(null)}
         />
-      </section>
+      </TabsContent>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">{t('discountsHeading')}</h2>
+      <TabsContent value="discounts" forceMount className="min-h-0 flex-1 overflow-y-auto p-4 data-[state=inactive]:hidden">
         <DiscountsView
           discounts={discounts}
           saving={discountsSaving}
@@ -85,10 +138,9 @@ export function AdminPricingView() {
             deleteDiscount.mutate(id);
           }}
         />
-      </section>
+      </TabsContent>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">{t('excelHeading')}</h2>
+      <TabsContent value="excel" forceMount className="min-h-0 flex-1 overflow-y-auto py-3 data-[state=inactive]:hidden">
         <PricingExcelScalars
           bindings={bindings}
           discounts={discounts}
@@ -97,7 +149,7 @@ export function AdminPricingView() {
           }
           onUpdateDiscount={(id, patch) => updateDiscount.mutateAsync({ id, data: patch })}
         />
-      </section>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

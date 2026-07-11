@@ -48,7 +48,7 @@ export default function ImageWorkbenchPage() {
     parseImageDraftQuery((k) => searchParams.get(k)),
     {
       sizes: capability.sizes.map((s) => s.value),
-      qualities: capability.qualities.map((q) => q.value),
+      qualities: capability.qualities,
       maxCount: capability.maxCount,
     },
   );

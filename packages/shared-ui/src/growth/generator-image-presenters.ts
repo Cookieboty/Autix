@@ -23,7 +23,10 @@ export function getImageCountControl(
   capability: Pick<ImageModelCapability, 'maxCount' | 'defaults'>,
 ): { visible: boolean; max: number; default: number } {
   return {
-    visible: capability.maxCount > 1,
+    // 生成张数(count)已从图像模型配置里移除，不再作为用户可调项暴露——张数由业务逻辑
+    // 在下单时决定并计价（计价 schema 只算单张）。故永远隐藏该控件；max/default 仍返回
+    // 供调用方把 count 归一到合法单张默认值。
+    visible: false,
     max: capability.maxCount,
     default: capability.defaults.count,
   };

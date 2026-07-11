@@ -19,7 +19,8 @@
     "db:migrate-legacy": "bun run scripts/migrate-legacy-data.ts",
     "db:backfill-metrics": "dotenv -e ../../.env -- bun run scripts/backfill-resource-metrics.ts",
     "db:reconcile": "dotenv -e ../../.env -- bunx prisma db push --schema prisma/schema.prisma",
-    "db:prepare-cutover": "bun run db:flat-migrate && bun run db:deploy && bun run db:reconcile && bun run db:seed:prod && bun run db:init-membership",
+    "db:prepare-cutover": "bun run db:flat-migrate && bun run db:deploy && bun run db:reconcile && bun run db:seed:prod && bun run db:init-membership && bun run db:seed:pricing",
+    "db:seed:pricing": "bun run --cwd ../../services/api seed:pricing",
     "db:seed": "bun run build && dotenv -e ../../.env -- bun run prisma/seed.ts",
     "db:seed:prod": "bun run prisma/seed-prod.ts"
   },

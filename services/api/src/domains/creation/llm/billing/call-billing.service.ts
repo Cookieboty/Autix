@@ -98,23 +98,34 @@ export class CallBillingService {
   }
 
   async confirm(holdId: string, actual?: CallBillingEstimateMeta): Promise<void> {
-    const hold = await this.repository.findPointHold(holdId);
-    const frozenAmount = hold?.estimatedAmount;
-    const estimate = actual
-      ? await this.estimateCallCost(actual, {
-          suppressErrors: frozenAmount !== undefined,
-          userId: hold?.userId,
-        })
-      : null;
-    const actualAmount =
-      estimate?.estimatedCost !== undefined && frozenAmount !== undefined
-        ? Math.min(estimate.estimatedCost, frozenAmount)
-        : estimate?.estimatedCost;
-    if (actualAmount === undefined) {
+    // 结算按 hold 冻结的 pricingSnapshot 重新求值，只把真实 token 用量作为 usage 传入——
+    // 绝不在结算时重读实时计价配置(estimateCost)。任务执行期间管理员改 schema/倍率/折扣
+    // 都不应改变本次账单(spec: 冻结快照结算)。token 是 usage-source，不在快照 params 里，
+    // 不会与冻结参数撞名。quoteHoldFromSnapshot 内部已封顶到冻结额并在超出时告警。
+    if (!actual) {
       await this.pointsService.confirmHold(holdId);
-    } else {
-      await this.pointsService.confirmHold(holdId, actualAmount);
+      return;
     }
+    // 传入完整真实用量的全部维度——admin 可基于任意维度配置 fixedCostSchema，只传
+    // input/outputTokens 会在配置了 context/tool/mcp/skill 计费时静默少扣。
+    const usage: Record<string, unknown> = {};
+    for (const dim of [
+      'inputTokens',
+      'outputTokens',
+      'contextTokens',
+      'toolCalls',
+      'mcpCalls',
+      'skillCalls',
+    ] as const) {
+      const value = actual[dim];
+      if (typeof value === 'number') usage[dim] = value;
+    }
+    // 快照缺失/损坏时 quoteHoldFromSnapshot 会抛错——让它硬失败向上传播，绝不 catch-all
+    // 后按全额冻结确认。catch-all 会把损坏快照/DB 错误/编程错误统统静默转成全额扣费
+    // (真实用量远低于预估时会多扣)，与 parsePricingSnapshot「损坏快照必须硬失败」相冲突。
+    // 结算失败让 hold 保持 PENDING，交由孤儿 hold 回收 / 人工介入，而不是悄悄全额扣。
+    const actualAmount = await this.pointsService.quoteHoldFromSnapshot(holdId, usage);
+    await this.pointsService.confirmHold(holdId, actualAmount);
   }
 
   async refund(holdId: string): Promise<void> {

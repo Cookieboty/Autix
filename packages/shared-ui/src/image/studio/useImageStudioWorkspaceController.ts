@@ -491,6 +491,9 @@ export function useImageStudioWorkspaceController({
       },
       settings,
       capability,
+      // 参考图张数 = 已选源图数。referenceImages 是隐藏计价参数，面板报价要带上它才能
+      // 和后端 hold（按 source+reference 实际数量收费）口径一致。
+      referenceImageCount: selectedSourceImages.length,
       onClose: () => setSettingsOpen(false),
       // 显式的 schema<->settings 映射层（task 7 review CRITICAL 2）：resolution/
       // quantity 改名到 size/count 且 resolution 还要做真实取值换算，quality 原样

@@ -673,16 +673,16 @@ export class ImageGenerationFlowService {
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
     // Settlement re-prices from the hold's frozen pricingSnapshot, never a live
     // estimateCost() re-query — an admin price change must not re-price a task
-    // already in flight. `quantity` in the image preset's pricingSchema is a
-    // `params` term (frozen at hold time), not a `usage` term, so passing
-    // images.length here does not change the priced quantity; it is kept as an
-    // informational usage payload for observability, and to let
-    // quoteHoldFromSnapshot's cap-at-frozen-amount logic run and warn on cap.
+    // already in flight. `quantity` is an order-time `params` term already frozen
+    // in the snapshot, so settlement passes EMPTY usage: passing `{ quantity }`
+    // would collide with the frozen `quantity` in snapshot.params and
+    // quoteTaskFromSnapshot rejects same-name keys (spec §3.1.1.65), throwing
+    // after the provider already generated. The real image count is logged
+    // separately below for observability; the snapshot cap-at-frozen logic still
+    // runs with empty usage.
     const actualAmount =
       options?.confirmHoldId && images.length > 0
-        ? await this.pointsService.quoteHoldFromSnapshot(options.confirmHoldId, {
-            quantity: images.length,
-          })
+        ? await this.pointsService.quoteHoldFromSnapshot(options.confirmHoldId, {})
         : null;
     if (options?.confirmHoldId && actualAmount !== null) {
       this.logger.log(

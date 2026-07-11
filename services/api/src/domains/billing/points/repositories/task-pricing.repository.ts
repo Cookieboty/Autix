@@ -69,7 +69,14 @@ export class TaskPricingRepository {
 
   async findBindingsForTask(taskType: string) {
     return this.prisma.task_model_bindings.findMany({
-      where: { taskType, isActive: true },
+      // 这是匿名公开的 /tasks/:taskType/models 数据源：除了绑定活跃，模型本身也必须
+      // 公开且活跃——否则会把 private / inactive 模型泄露给未登录用户。会员等级门禁由
+      // isModelVisibleToUser 在此之上再做一层。
+      where: {
+        taskType,
+        isActive: true,
+        modelConfig: { is: { visibility: 'public', isActive: true } },
+      },
       orderBy: { sort: 'asc' },
       include: {
         modelConfig: {

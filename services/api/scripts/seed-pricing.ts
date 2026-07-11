@@ -8,7 +8,21 @@ import {
   type ParamsSchema,
   type PricingSchema,
 } from '@autix/domain/pricing';
+import {
+  IMAGE_MODEL_CAPABILITIES,
+  detectImageModelKind,
+  resolveImagePricingResolution,
+  type ImageModelHint,
+  type ImagePricingResolution,
+} from '@autix/domain/image';
+import {
+  VIDEO_MODEL_CAPABILITIES,
+  detectVideoModelKind,
+  type VideoModelHint,
+} from '@autix/domain/video';
 import { createPrismaClient } from './db';
+
+const JSON_SCHEMA_DRAFT = 'https://json-schema.org/draft/2020-12/schema';
 
 // Prisma 7 要求显式传 driver adapter。项目已有的 createPrismaClient()
 // 封装了 PrismaPg + getDatabaseUrl()，裸 new PrismaClient() 跑不起来。
@@ -63,6 +77,15 @@ interface SeedModelRow {
 
 /** 任务-模型绑定的默认加价倍率（2 = 原始成本上加 100% 毛利）。运营可逐条调整。 */
 const DEFAULT_MULTIPLIER = 2;
+
+/**
+ * 一次性强制刷新模型 schema（opt-in，默认关闭以保持非破坏性）。
+ * 用于纠正「用旧的通用 paramsSchema 初始化过」的历史数据——那套 schema 把 quality 写死成
+ * low/medium/high 且 required，导致 compatible(standard/hd)、gemini(无 quality) 模型在报价时
+ * 被 ajv 拒、前端不显示积分。设 SEED_FORCE_MODEL_SCHEMAS=1 跑一次即可覆盖回 model 专属 schema。
+ * ⚠ 会覆盖运营在 admin 手改过的 paramsSchema/pricingSchema，仅在明确需要纠正时用。
+ */
+const FORCE_MODEL_SCHEMAS = process.env.SEED_FORCE_MODEL_SCHEMAS === '1';
 
 const SEED_MODELS: SeedModelRow[] = [
   // —— 对话 / 文本（text preset）——
@@ -155,13 +178,10 @@ async function seedTasks() {
     const fixedCostSchema = task.fixedCostSchema ? toInputJson(task.fixedCostSchema) : Prisma.JsonNull;
     await prisma.task_definitions.upsert({
       where: { taskType: task.taskType },
-      update: {
-        name: task.name,
-        category: task.category,
-        fixedCostSchema,
-        isActive: task.isActive,
-        sort: index * 10,
-      },
+      // 幂等且非破坏性：已存在的任务定义一律不覆盖——运营可能在 admin 调过
+      // fixedCostSchema / isActive，seed 在每次启动都跑，绝不能把这些改动回退成 preset。
+      // 只为「库里还没有的」任务补默认值(走 create)。
+      update: {},
       create: {
         taskType: task.taskType,
         name: task.name,
@@ -177,7 +197,8 @@ async function seedTasks() {
 
 /**
  * 各图像/视频模型按官方定价折算的 pricingSchema（1 美元 = 500 积分，向上取整，2026-07 官网核对）。
- * 图像：单张积分(quality 或 resolution 查表) × quantity；视频：每秒积分(resolution 查表) × seconds。
+ * 图像：**单张**积分(quality 或 resolution 查表)——生成张数(quantity)已从图像计价里移除，
+ * 由业务逻辑在下单时按张数自行乘算，schema 只算一张的价；视频：每秒积分(resolution 查表) × seconds。
  * 未列出的模型沿用 MODEL_PRESETS 的通用 pricingSchema。
  */
 const MODEL_PRICING: Record<string, PricingSchema> = {
@@ -185,42 +206,30 @@ const MODEL_PRICING: Record<string, PricingSchema> = {
   'gpt-image-2': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
-      { id: 'quality', op: 'add', table: { param: 'quality', values: { low: 3, medium: 27, high: 106 } } },
-      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
-    ],
+      { id: 'quality', op: 'add', table: { param: 'quality', values: { low: 3, medium: 27, high: 106 } } },    ],
   },
   'gemini-3.1-flash-image-preview': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 23, '1K': 34, '2K': 51, '4K': 75 } } },
-      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
-    ],
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 23, '1K': 34, '2K': 51, '4K': 75 } } },    ],
   },
   'gemini-3.1-flash-lite-image': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 12, '1K': 17, '2K': 26, '4K': 38 } } },
-      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
-    ],
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 12, '1K': 17, '2K': 26, '4K': 38 } } },    ],
   },
   'doubao-seedream-5-0-260128': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 23, '1K': 23, '2K': 23, '4K': 45 } } },
-      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
-    ],
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 23, '1K': 23, '2K': 23, '4K': 45 } } },    ],
   },
   'qwen-image-2.0': {
     terms: [
-      { id: 'perImage', op: 'add', const: 20 },
-      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
-    ],
+      { id: 'perImage', op: 'add', const: 20 },    ],
   },
   'MiniMax-Image-01': {
     terms: [
-      { id: 'perImage', op: 'add', const: 15 },
-      { id: 'quantity', op: 'mul', perUnit: { param: 'quantity', unitCost: 1 } },
-    ],
+      { id: 'perImage', op: 'add', const: 15 },    ],
   },
   // —— 视频：每秒积分 × seconds ——
   'doubao-seedance-2.0': {
@@ -239,12 +248,146 @@ const MODEL_PRICING: Record<string, PricingSchema> = {
   },
 };
 
+const IMAGE_RESOLUTION_ORDER: ImagePricingResolution[] = ['512px', '1K', '2K', '4K'];
+
+/**
+ * 按图像模型的真实能力（IMAGE_MODEL_CAPABILITIES）生成 model 专属 paramsSchema，
+ * 而不是所有图像模型共用一套通用 preset —— 通用 schema 与实际能力有多处冲突：
+ *  - gemini flash/pro 无质量轴，通用 schema 却 required quality；
+ *  - compatible 的质量是 standard/hd，通用 schema 只收 low/medium/high（运行时 ajv 拒绝）；
+ *  - gpt-image / gemini 单张封顶，通用 schema 却允许 4（hold 冻结 4 张、实际出 1 张 → 多扣费）；
+ *  - 参考图张数由服务端真实计数决定，通用 schema 的 max 4 会在超过时 400。
+ * pricingSchema（MODEL_PRICING 或 preset）引用的参数都被这里生成的属性覆盖，
+ * 最后由 assertAllActiveModelsValid 兜底校验。
+ */
+function buildImageParamsSchema(model: {
+  provider?: string | null;
+  model: string;
+  metadata: unknown;
+}): ParamsSchema {
+  const kind = detectImageModelKind({
+    provider: model.provider,
+    model: model.model,
+    metadata: model.metadata as ImageModelHint['metadata'],
+  });
+  const cap = IMAGE_MODEL_CAPABILITIES[kind];
+  const properties: ParamsSchema['properties'] = {};
+  const required: string[] = [];
+
+  // quality：仅当模型确有质量档位时给（gemini flash/pro 无质量轴 → 不给该属性，
+  // 运行时发来的空 quality 会被 normalizeImageQuality 归一成 undefined 而丢弃）。
+  if (cap.qualities.length > 0) {
+    const values = cap.qualities;
+    const fallback = values.includes(cap.defaults.quality) ? cap.defaults.quality : values[0];
+    properties.quality = {
+      type: 'string',
+      enum: values,
+      default: fallback,
+      'x-ui': {
+        control: 'chips',
+        labelKey: 'pricing.params.quality',
+        // 每个档位的显示名走 i18n(pricing.options.<value>)，SchemaForm 才不会显示裸 value token。
+        optionLabelKeys: Object.fromEntries(values.map((v) => [v, `pricing.options.${v}`])),
+        order: 10,
+      },
+    };
+    required.push('quality');
+  }
+
+  // resolution：模型真实可达的档位（对每个 size 求 resolveImagePricingResolution 去重）。
+  // compatible 的所有尺寸都落在 1K，所以只有 1K 一档。
+  const tiers = IMAGE_RESOLUTION_ORDER.filter((tier) =>
+    cap.sizes.some((size) => resolveImagePricingResolution(size.value) === tier),
+  );
+  if (tiers.length > 0) {
+    const defaultTier = resolveImagePricingResolution(cap.defaults.size);
+    const resolutionDefault = defaultTier && tiers.includes(defaultTier) ? defaultTier : tiers[0];
+    properties.resolution = {
+      type: 'string',
+      enum: [...tiers],
+      default: resolutionDefault,
+      'x-ui': { control: 'chips', labelKey: 'pricing.params.resolution', order: 20 },
+    };
+    required.push('resolution');
+  }
+
+  // 生成张数(quantity)不进图像 schema：按业务要求，张数由业务逻辑在下单时吃掉，
+  // schema 只描述「一张」的参数与价格。故这里不再生成 quantity 属性/控件。
+
+  // 隐藏计价参数：按真实上传张数收费。刻意不设 maximum —— 张数来自服务端计数而非
+  // 用户任填，设上限只会在参考图偏多时 ajv 400；hold 本就按真实数量扣费。
+  properties.referenceImages = {
+    type: 'integer',
+    minimum: 0,
+    default: 0,
+    'x-ui': { control: 'hidden' },
+  };
+
+  return { $schema: JSON_SCHEMA_DRAFT, type: 'object', required, properties };
+}
+
+/**
+ * 按视频模型的真实能力（VIDEO_MODEL_CAPABILITIES）生成 model 专属 paramsSchema。
+ * 只覆盖 resolution 的可选集合与默认值（如 Seedance 2.0 Fast 只有 480p/720p，通用
+ * schema 却显示 1080p/4K，导致前端报价与后端钳制后的实际价格不一致），seconds/ratio
+ * 沿用通用 preset。allOf（4k 时最长秒数约束）只在支持 4k 的模型上保留。
+ */
+function buildVideoParamsSchema(model: {
+  provider?: string | null;
+  model: string;
+  metadata: unknown;
+}): ParamsSchema {
+  const kind = detectVideoModelKind({
+    provider: model.provider,
+    model: model.model,
+    metadata: model.metadata as VideoModelHint['metadata'],
+  });
+  const cap = VIDEO_MODEL_CAPABILITIES[kind];
+  const base = MODEL_PRESETS.video.paramsSchema;
+  const resolutions = [...cap.resolutions];
+  const defaultResolution = resolutions.includes(cap.defaultResolution)
+    ? cap.defaultResolution
+    : resolutions[0];
+  const has4k = resolutions.includes('4k');
+
+  const schema: ParamsSchema = {
+    $schema: base.$schema,
+    type: 'object',
+    required: [...(base.required ?? [])],
+    properties: {
+      ...base.properties,
+      resolution: { ...base.properties.resolution, enum: resolutions, default: defaultResolution },
+    },
+  };
+  if (has4k && base.allOf) schema.allOf = base.allOf;
+  return schema;
+}
+
+/** 按 preset 归类为对应 model 生成 paramsSchema（text 无能力差异，沿用通用 preset）。 */
+function paramsSchemaFor(
+  key: ModelPresetKey,
+  model: { provider?: string | null; model: string; metadata: unknown },
+): ParamsSchema {
+  if (key === 'image') return buildImageParamsSchema(model);
+  if (key === 'video') return buildVideoParamsSchema(model);
+  return MODEL_PRESETS[key].paramsSchema;
+}
+
 async function seedModelSchemas() {
   const models = await prisma.model_configs.findMany({
-    select: { id: true, name: true, model: true, type: true, capabilities: true, metadata: true },
+    select: {
+      id: true,
+      name: true,
+      provider: true,
+      model: true,
+      type: true,
+      capabilities: true,
+      metadata: true,
+      paramsSchema: true,
+      pricingSchema: true,
+    },
   });
 
-  const assigned = new Map<string, ModelPresetKey>();
   /** 不参与计费的模型（embedding 等）。显式登记，不靠「恰好没人给它估价」来保证安全。 */
   const skipped = new Set<string>();
 
@@ -255,31 +398,66 @@ async function seedModelSchemas() {
       console.log(`skip ${model.name} (no pricing preset)`);
       continue;
     }
+
+    // 非破坏性：只为「schema 尚未配置(任一为 null)」的模型补默认值。已有 schema
+    // (运营在 admin 改过价 / 上一次 seed 填过)一律不覆盖——seed 每次启动都跑，绝不能
+    // 把后台改价回退成 preset、把 schemaVersion 重置成 1。
+    // 例外：SEED_FORCE_MODEL_SCHEMAS=1 时强制刷新（纠正历史通用 schema，见常量注释）。
+    const alreadyConfigured = model.paramsSchema !== null && model.pricingSchema !== null;
+    if (alreadyConfigured && !FORCE_MODEL_SCHEMAS) {
+      continue;
+    }
     const preset = MODEL_PRESETS[key];
     const pricingOverride = MODEL_PRICING[model.model];
+    // paramsSchema 按模型真实能力生成（quality 轴/分辨率档位/单张上限各不相同），
+    // 不再对所有 image/video 模型写同一套通用 schema。
+    const paramsSchema = paramsSchemaFor(key, model);
     await prisma.model_configs.update({
       where: { id: model.id },
       data: {
-        paramsSchema: preset.paramsSchema as object,
+        paramsSchema: toInputJson(paramsSchema),
         pricingSchema: pricingOverride ? toInputJson(pricingOverride) : (preset.pricingSchema as object),
-        schemaVersion: 1,
       },
     });
-    assigned.set(model.id, key);
-    console.log(`${model.name} -> ${key}${pricingOverride ? ' [per-model pricing]' : ''}`);
+    const action = alreadyConfigured ? 'force-refreshed schema' : 'filled empty schema';
+    console.log(`${model.name} -> ${key}${pricingOverride ? ' [per-model pricing]' : ''} [${action}]`);
   }
 
-  return { assigned, skipped };
+  return { skipped };
 }
 
-async function seedBindings(assigned: Map<string, ModelPresetKey>) {
+async function seedBindings() {
+  // 绑定候选**只取 active + public 的模型**，且按确定性顺序排列：
+  //  - 匿名公开接口会过滤 private/inactive 模型，但「无 model-id 的估价」会落到任务的
+  //    默认绑定——若默认是隐藏模型，公开报价就会用一个用户根本选不到的模型算价。
+  //  - findMany 不带 orderBy 时行序不稳定，"第一个即默认" 会让默认模型随机漂移。
+  // isDefault desc 让运营标记的旗舰模型优先当默认，createdAt asc 兜底稳定复现。
+  // 只保留 schema 已配好的模型（paramsSchema / pricingSchema 均非 null），避免把没法
+  // 计价的模型绑上去。
+  const candidates = await prisma.model_configs.findMany({
+    where: { isActive: true, visibility: 'public' },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+    select: {
+      id: true,
+      type: true,
+      capabilities: true,
+      paramsSchema: true,
+      pricingSchema: true,
+    },
+  });
+
+  const priced = candidates
+    .filter((m) => m.paramsSchema !== null && m.pricingSchema !== null)
+    .map((m) => ({ id: m.id, key: presetKeyFor(m) }))
+    .filter((m): m is { id: string; key: ModelPresetKey } => m.key !== null);
+
   let count = 0;
   for (const task of TASK_PRESETS) {
     // 非活跃任务（无可用模型档位，如 chat_message_fast / chat_message_reasoning）
     // 不建绑定——spec §3.1.1.7：它们本就没有模型可绑。
     if (!task.isActive) continue;
 
-    const eligible = [...assigned.entries()].filter(([, key]) => task.modelPresets.includes(key));
+    const eligible = priced.filter((m) => task.modelPresets.includes(m.key));
 
     // 该任务是否已经有默认绑定？有则本次不再设默认，避免与 one-default-per-task 的
     // 局部唯一索引冲突（P2002）——运营/上一次 seed 已选的默认模型保持不变。
@@ -289,14 +467,15 @@ async function seedBindings(assigned: Map<string, ModelPresetKey>) {
     });
     let defaultAssigned = existingDefault !== null;
 
-    for (const [index, [modelConfigId]] of eligible.entries()) {
+    for (const [index, model] of eligible.entries()) {
+      // eligible 已按 isDefault desc / createdAt asc 排好序，index === 0 即优先级最高者。
       const makeDefault = !defaultAssigned && index === 0;
       await prisma.task_model_bindings.upsert({
-        where: { taskType_modelConfigId: { taskType: task.taskType, modelConfigId } },
+        where: { taskType_modelConfigId: { taskType: task.taskType, modelConfigId: model.id } },
         update: {}, // 幂等：已存在的绑定不覆盖运营调过的 multiplier / isDefault
         create: {
           taskType: task.taskType,
-          modelConfigId,
+          modelConfigId: model.id,
           // 默认加价倍率：cost = ceil(modelPrice × multiplier × discountFactor) + taskFixedCost。
           // 2 = 在原始供应商成本上加 100% 毛利；运营可在 admin 按任务/模型逐条调整或后期打折。
           multiplier: DEFAULT_MULTIPLIER,
@@ -385,8 +564,10 @@ async function assertActiveTasksHaveDefaultBinding() {
 async function main() {
   await seedModels();
   await seedTasks();
-  const { assigned, skipped } = await seedModelSchemas();
-  await seedBindings(assigned);
+  const { skipped } = await seedModelSchemas();
+  // seedBindings 自行按 active/public + 确定性排序查候选，不再依赖 seedModelSchemas
+  // 的（无序）assigned 集合来选默认模型。
+  await seedBindings();
   await assertAllActiveModelsValid(skipped);
   await assertActiveTasksHaveDefaultBinding();
 }

@@ -54,7 +54,9 @@ export const IMAGE_SIZE_OPTIONS: SelectParamDef = {
 export const IMAGE_QUALITY_OPTIONS: SelectParamDef = {
   key: 'quality',
   label: '图片质量 Quality',
-  options: IMAGE_MODEL_CAPABILITIES['gpt-image'].qualities,
+  // capability.qualities 现在只存 value token；这里补上 label=value 作为中性占位，
+  // 真正的本地化显示名由 UI 层用 i18n(pricing.options.<value>) 翻译。
+  options: IMAGE_MODEL_CAPABILITIES['gpt-image'].qualities.map((value) => ({ value, label: value })),
   defaultValue: IMAGE_MODEL_CAPABILITIES['gpt-image'].defaults.quality,
 };
 

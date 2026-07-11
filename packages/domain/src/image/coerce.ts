@@ -60,7 +60,7 @@ export function coerceClientSettings<S extends ImageStudioSettingsShape>(
       quality = '';
       // Gemini hides the quality control entirely; treat reset as silent.
     }
-  } else if (!cap.qualities.some((o) => o.value === quality)) {
+  } else if (!cap.qualities.includes(quality)) {
     quality = cap.defaults.quality;
     changed.push('质量');
   }
@@ -202,7 +202,7 @@ export function coerceImageParams(input: CoerceInput): CoerceOutput {
   } else {
     if (quality === undefined || quality === '') {
       quality = cap.defaults.quality;
-    } else if (!cap.qualities.some((o) => o.value === quality)) {
+    } else if (!cap.qualities.includes(quality)) {
       notes.push(`quality ${quality} → ${cap.defaults.quality} (fallback to default)`);
       quality = cap.defaults.quality;
     }

@@ -65,7 +65,7 @@ describe('TasksController.quote', () => {
     expect(estimateCost).toHaveBeenCalledWith(expect.objectContaining({ membershipLevel: 0 }));
   });
 
-  it('returns total/breakdown/snapshot mapped from PointsService.estimateCost, and forwards modelConfigId/params/usage', async () => {
+  it('returns total/breakdown (NOT the frozen snapshot) mapped from PointsService.estimateCost, and forwards modelConfigId/params/usage', async () => {
     const snapshot = { schemaVersion: 1, modelConfigId: 'model-1' };
     const estimateCost = jest.fn().mockResolvedValue({
       estimatedCost: 42,
@@ -92,7 +92,9 @@ describe('TasksController.quote', () => {
       usage: { inputTokens: 10 },
       membershipLevel: 0,
     });
-    expect(result).toEqual({ total: 42, breakdown: [{ id: 'base', amount: 42 }], snapshot });
+    // 公共 quote 只对外暴露展示所需的总价/明细,不返回冻结快照(P2-2)。
+    expect(result).toEqual({ total: 42, breakdown: [{ id: 'base', amount: 42 }] });
+    expect(result).not.toHaveProperty('snapshot');
   });
 
   it('never creates a hold — quote is display-only pricing, not a real charge', async () => {

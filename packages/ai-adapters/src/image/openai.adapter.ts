@@ -62,7 +62,7 @@ function clampAgainstCapability(
   if (cap.qualities.length === 0) {
     quality = undefined;
   } else if (quality != null) {
-    const ok = cap.qualities.some((o) => o.value === quality);
+    const ok = cap.qualities.includes(quality);
     if (!ok) quality = cap.defaults.quality;
   }
 
