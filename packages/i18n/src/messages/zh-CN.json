@@ -44,7 +44,9 @@
     "backend": "后端",
     "register": "注册",
     "actions": "操作",
-    "none": "无"
+    "none": "无",
+    "yes": "是",
+    "no": "否"
   },
   "aiUi": {
     "selected": "已选择",
@@ -2683,7 +2685,8 @@
         "editSourceLabel": "编辑源",
         "editSourceAnnotation": "编辑源标注",
         "uploadedAnnotationSuffix": "标注"
-      }
+      },
+      "schemaUnavailable": "计价 Schema 不可用——加载完成前无法生成。"
     },
     "header": {
       "title": "图片工作台",
@@ -2977,7 +2980,8 @@
       "audioOn": "有声",
       "audioOff": "无声",
       "seedLabel": "Seed",
-      "seedPlaceholder": "留空随机"
+      "seedPlaceholder": "留空随机",
+      "schemaUnavailable": "计价 Schema 不可用——加载完成前无法生成。"
     },
     "generationDock": {
       "modelPlaceholder": "选择视频模型",
@@ -4987,6 +4991,89 @@
       "save": "保存",
       "saveFailed": "保存失败",
       "saving": "保存中..."
+    }
+  },
+  "pricing": {
+    "params": {
+      "duration": "时长",
+      "maxTokens": "最大 Token 数",
+      "quality": "质量",
+      "quantity": "数量",
+      "ratio": "宽高比",
+      "resolution": "分辨率",
+      "temperature": "随机度"
+    },
+    "options": {},
+    "totalPoints": "{count} 积分",
+    "clampHint": "{field} 已限制在 {max}"
+  },
+  "adminPricing": {
+    "modelsHeading": "模型",
+    "selectModel": "选择模型",
+    "bindingsHeading": "任务-模型绑定",
+    "discountsHeading": "折扣",
+    "excelHeading": "批量 CSV",
+    "bindings": {
+      "model": "模型",
+      "multiplier": "倍率",
+      "isDefault": "默认",
+      "isActive": "启用"
+    },
+    "discounts": {
+      "saveFailed": "保存折扣失败",
+      "deleteFailed": "删除折扣失败",
+      "title": "折扣",
+      "description": "管理定价折扣规则。",
+      "add": "新增折扣",
+      "edit": "编辑折扣",
+      "empty": "暂无折扣",
+      "scopeAll": "所有任务和模型",
+      "columns": {
+        "code": "代码",
+        "name": "名称",
+        "factor": "系数",
+        "scope": "作用范围",
+        "stackable": "可叠加",
+        "priority": "优先级",
+        "effectiveWindow": "生效时段",
+        "isActive": "启用"
+      },
+      "fields": {
+        "code": "代码",
+        "name": "名称",
+        "factor": "系数",
+        "priority": "优先级",
+        "effectiveFrom": "生效开始时间",
+        "effectiveTo": "生效结束时间",
+        "scope": "作用范围",
+        "membershipLevelNumbers": "会员等级",
+        "taskTypes": "任务类型",
+        "modelConfigIds": "模型配置",
+        "stackable": "可叠加",
+        "isActive": "启用"
+      },
+      "scopePlaceholders": {
+        "membershipLevelNumbers": "输入等级编号后按回车",
+        "taskTypes": "输入任务类型后按回车",
+        "modelConfigIds": "输入模型配置 ID 后按回车"
+      }
+    },
+    "excelScalars": {
+      "bindingsTitle": "任务-模型绑定倍率",
+      "discountsTitle": "折扣系数"
+    },
+    "schemaEditor": {
+      "invalidJson": "JSON 格式无效",
+      "dryRunFailed": "试算失败",
+      "saveFailed": "保存失败",
+      "paramsSchemaLabel": "参数 Schema",
+      "pricingSchemaLabel": "计价 Schema",
+      "sampleParamsLabel": "示例参数",
+      "dryRunning": "试算中…",
+      "dryRun": "试算",
+      "saving": "保存中…",
+      "save": "保存",
+      "dryRunTotal": "总计：{total}"
     }
   }
 }

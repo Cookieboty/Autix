@@ -44,7 +44,9 @@
     "backend": "後端",
     "register": "註冊",
     "actions": "操作",
-    "none": "無"
+    "none": "無",
+    "yes": "是",
+    "no": "否"
   },
   "aiUi": {
     "selected": "已選擇",
@@ -2051,7 +2053,8 @@
         "editSourceLabel": "編輯來源",
         "editSourceAnnotation": "編輯來源標註",
         "uploadedAnnotationSuffix": "標註"
-      }
+      },
+      "schemaUnavailable": "計價 Schema 不可用——載入完成前無法生成。"
     },
     "header": {
       "title": "圖片工作台",
@@ -2337,7 +2340,8 @@
       "audioOn": "有聲",
       "audioOff": "靜音",
       "seedLabel": "Seed",
-      "seedPlaceholder": "留空隨機"
+      "seedPlaceholder": "留空隨機",
+      "schemaUnavailable": "計價 Schema 不可用——載入完成前無法生成。"
     },
     "generationDock": {
       "modelPlaceholder": "選擇影片模型",
@@ -4987,6 +4991,89 @@
       "save": "儲存",
       "saveFailed": "儲存失敗",
       "saving": "儲存中..."
+    }
+  },
+  "pricing": {
+    "params": {
+      "duration": "時長",
+      "maxTokens": "最大 Token 數",
+      "quality": "品質",
+      "quantity": "數量",
+      "ratio": "長寬比",
+      "resolution": "解析度",
+      "temperature": "隨機度"
+    },
+    "options": {},
+    "totalPoints": "{count} 點數",
+    "clampHint": "{field} 已限制在 {max}"
+  },
+  "adminPricing": {
+    "modelsHeading": "模型",
+    "selectModel": "選擇模型",
+    "bindingsHeading": "任務-模型綁定",
+    "discountsHeading": "折扣",
+    "excelHeading": "批量 CSV",
+    "bindings": {
+      "model": "模型",
+      "multiplier": "倍率",
+      "isDefault": "預設",
+      "isActive": "啟用"
+    },
+    "discounts": {
+      "saveFailed": "儲存折扣失敗",
+      "deleteFailed": "刪除折扣失敗",
+      "title": "折扣",
+      "description": "管理定價折扣規則。",
+      "add": "新增折扣",
+      "edit": "編輯折扣",
+      "empty": "尚無折扣",
+      "scopeAll": "所有任務和模型",
+      "columns": {
+        "code": "代碼",
+        "name": "名稱",
+        "factor": "係數",
+        "scope": "作用範圍",
+        "stackable": "可疊加",
+        "priority": "優先權",
+        "effectiveWindow": "生效時段",
+        "isActive": "啟用"
+      },
+      "fields": {
+        "code": "代碼",
+        "name": "名稱",
+        "factor": "係數",
+        "priority": "優先權",
+        "effectiveFrom": "生效開始時間",
+        "effectiveTo": "生效結束時間",
+        "scope": "作用範圍",
+        "membershipLevelNumbers": "會員等級",
+        "taskTypes": "任務類型",
+        "modelConfigIds": "模型配置",
+        "stackable": "可疊加",
+        "isActive": "啟用"
+      },
+      "scopePlaceholders": {
+        "membershipLevelNumbers": "輸入等級編號後按 Enter",
+        "taskTypes": "輸入任務類型後按 Enter",
+        "modelConfigIds": "輸入模型配置 ID 後按 Enter"
+      }
+    },
+    "excelScalars": {
+      "bindingsTitle": "任務-模型綁定倍率",
+      "discountsTitle": "折扣係數"
+    },
+    "schemaEditor": {
+      "invalidJson": "JSON 格式無效",
+      "dryRunFailed": "試算失敗",
+      "saveFailed": "儲存失敗",
+      "paramsSchemaLabel": "參數 Schema",
+      "pricingSchemaLabel": "計價 Schema",
+      "sampleParamsLabel": "範例參數",
+      "dryRunning": "試算中…",
+      "dryRun": "試算",
+      "saving": "儲存中…",
+      "save": "儲存",
+      "dryRunTotal": "總計：{total}"
     }
   }
 }

@@ -44,7 +44,9 @@
     "backend": "Backend",
     "register": "S'inscrire",
     "actions": "Actions",
-    "none": "Aucun"
+    "none": "Aucun",
+    "yes": "Oui",
+    "no": "Non"
   },
   "aiUi": {
     "selected": "Sélectionné",
@@ -2051,7 +2053,8 @@
         "editSourceLabel": "Source d’édition",
         "editSourceAnnotation": "Annotation de la source",
         "uploadedAnnotationSuffix": " annotation"
-      }
+      },
+      "schemaUnavailable": "Schéma de tarification indisponible — la génération est désactivée jusqu’à son chargement."
     },
     "header": {
       "title": "Studio d’images",
@@ -2337,7 +2340,8 @@
       "audioOn": "Activé",
       "audioOff": "Désactivé",
       "seedLabel": "Seed",
-      "seedPlaceholder": "Laisser vide pour aléatoire"
+      "seedPlaceholder": "Laisser vide pour aléatoire",
+      "schemaUnavailable": "Schéma de tarification indisponible — la génération est désactivée jusqu’à son chargement."
     },
     "generationDock": {
       "modelPlaceholder": "Sélectionner un modèle vidéo",
@@ -4987,6 +4991,89 @@
       "save": "Enregistrer",
       "saveFailed": "Échec de l'enregistrement",
       "saving": "Enregistrement..."
+    }
+  },
+  "pricing": {
+    "params": {
+      "duration": "Durée",
+      "maxTokens": "Nombre max de tokens",
+      "quality": "Qualité",
+      "quantity": "Quantité",
+      "ratio": "Format d'image",
+      "resolution": "Résolution",
+      "temperature": "Température"
+    },
+    "options": {},
+    "totalPoints": "{count} points",
+    "clampHint": "{field} plafonné à {max}"
+  },
+  "adminPricing": {
+    "modelsHeading": "Modèles",
+    "selectModel": "Sélectionner un modèle",
+    "bindingsHeading": "Liaisons tâche-modèle",
+    "discountsHeading": "Remises",
+    "excelHeading": "CSV en masse",
+    "bindings": {
+      "model": "Modèle",
+      "multiplier": "Multiplicateur",
+      "isDefault": "Par défaut",
+      "isActive": "Actif"
+    },
+    "discounts": {
+      "saveFailed": "Échec de l'enregistrement de la remise",
+      "deleteFailed": "Échec de la suppression de la remise",
+      "title": "Remises",
+      "description": "Gérez les règles de remise tarifaire.",
+      "add": "Ajouter une remise",
+      "edit": "Modifier la remise",
+      "empty": "Aucune remise pour le moment",
+      "scopeAll": "Toutes les tâches et modèles",
+      "columns": {
+        "code": "Code",
+        "name": "Nom",
+        "factor": "Facteur",
+        "scope": "Portée",
+        "stackable": "Cumulable",
+        "priority": "Priorité",
+        "effectiveWindow": "Fenêtre de validité",
+        "isActive": "Actif"
+      },
+      "fields": {
+        "code": "Code",
+        "name": "Nom",
+        "factor": "Facteur",
+        "priority": "Priorité",
+        "effectiveFrom": "Début de validité",
+        "effectiveTo": "Fin de validité",
+        "scope": "Portée",
+        "membershipLevelNumbers": "Niveaux d'adhésion",
+        "taskTypes": "Types de tâche",
+        "modelConfigIds": "Configurations de modèle",
+        "stackable": "Cumulable",
+        "isActive": "Actif"
+      },
+      "scopePlaceholders": {
+        "membershipLevelNumbers": "Ajoutez un niveau puis appuyez sur Entrée",
+        "taskTypes": "Ajoutez un type de tâche puis appuyez sur Entrée",
+        "modelConfigIds": "Ajoutez un ID de configuration de modèle puis appuyez sur Entrée"
+      }
+    },
+    "excelScalars": {
+      "bindingsTitle": "Multiplicateurs des liaisons tâche-modèle",
+      "discountsTitle": "Facteurs de remise"
+    },
+    "schemaEditor": {
+      "invalidJson": "JSON invalide",
+      "dryRunFailed": "Échec de la simulation",
+      "saveFailed": "Échec de l'enregistrement",
+      "paramsSchemaLabel": "Schéma des paramètres",
+      "pricingSchemaLabel": "Schéma de tarification",
+      "sampleParamsLabel": "Paramètres d'exemple",
+      "dryRunning": "Simulation en cours…",
+      "dryRun": "Simulation",
+      "saving": "Enregistrement…",
+      "save": "Enregistrer",
+      "dryRunTotal": "Total : {total}"
     }
   }
 }

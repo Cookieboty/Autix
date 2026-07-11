@@ -44,7 +44,9 @@
     "backend": "Backend",
     "register": "Đăng ký",
     "actions": "Thao tác",
-    "none": "Không có"
+    "none": "Không có",
+    "yes": "Có",
+    "no": "Không"
   },
   "aiUi": {
     "selected": "Đã chọn",
@@ -2051,7 +2053,8 @@
         "editSourceLabel": "Nguồn chỉnh sửa",
         "editSourceAnnotation": "Chú thích nguồn chỉnh sửa",
         "uploadedAnnotationSuffix": " chú thích"
-      }
+      },
+      "schemaUnavailable": "Schema định giá không khả dụng — không thể tạo cho đến khi tải xong."
     },
     "header": {
       "title": "Image Studio",
@@ -2337,7 +2340,8 @@
       "audioOn": "Bật",
       "audioOff": "Tắt",
       "seedLabel": "Seed",
-      "seedPlaceholder": "Trống = ngẫu nhiên"
+      "seedPlaceholder": "Trống = ngẫu nhiên",
+      "schemaUnavailable": "Schema định giá không khả dụng — không thể tạo cho đến khi tải xong."
     },
     "generationDock": {
       "modelPlaceholder": "Chọn mô hình video",
@@ -4987,6 +4991,89 @@
       "save": "Lưu",
       "saveFailed": "Lưu thất bại",
       "saving": "Đang lưu..."
+    }
+  },
+  "pricing": {
+    "params": {
+      "duration": "Thời lượng",
+      "maxTokens": "Số token tối đa",
+      "quality": "Chất lượng",
+      "quantity": "Số lượng",
+      "ratio": "Tỷ lệ khung hình",
+      "resolution": "Độ phân giải",
+      "temperature": "Độ ngẫu nhiên (temperature)"
+    },
+    "options": {},
+    "totalPoints": "{count} điểm",
+    "clampHint": "{field} bị giới hạn ở {max}"
+  },
+  "adminPricing": {
+    "modelsHeading": "Mô hình",
+    "selectModel": "Chọn mô hình",
+    "bindingsHeading": "Liên kết tác vụ-mô hình",
+    "discountsHeading": "Giảm giá",
+    "excelHeading": "CSV hàng loạt",
+    "bindings": {
+      "model": "Mô hình",
+      "multiplier": "Hệ số nhân",
+      "isDefault": "Mặc định",
+      "isActive": "Kích hoạt"
+    },
+    "discounts": {
+      "saveFailed": "Lưu giảm giá thất bại",
+      "deleteFailed": "Xóa giảm giá thất bại",
+      "title": "Giảm giá",
+      "description": "Quản lý các quy tắc giảm giá định giá.",
+      "add": "Thêm giảm giá",
+      "edit": "Sửa giảm giá",
+      "empty": "Chưa có giảm giá nào",
+      "scopeAll": "Tất cả tác vụ và mô hình",
+      "columns": {
+        "code": "Mã",
+        "name": "Tên",
+        "factor": "Hệ số",
+        "scope": "Phạm vi",
+        "stackable": "Có thể cộng dồn",
+        "priority": "Mức ưu tiên",
+        "effectiveWindow": "Khoảng thời gian hiệu lực",
+        "isActive": "Kích hoạt"
+      },
+      "fields": {
+        "code": "Mã",
+        "name": "Tên",
+        "factor": "Hệ số",
+        "priority": "Mức ưu tiên",
+        "effectiveFrom": "Bắt đầu hiệu lực",
+        "effectiveTo": "Kết thúc hiệu lực",
+        "scope": "Phạm vi",
+        "membershipLevelNumbers": "Cấp độ thành viên",
+        "taskTypes": "Loại tác vụ",
+        "modelConfigIds": "Cấu hình mô hình",
+        "stackable": "Có thể cộng dồn",
+        "isActive": "Kích hoạt"
+      },
+      "scopePlaceholders": {
+        "membershipLevelNumbers": "Nhập số cấp độ rồi nhấn Enter",
+        "taskTypes": "Nhập loại tác vụ rồi nhấn Enter",
+        "modelConfigIds": "Nhập ID cấu hình mô hình rồi nhấn Enter"
+      }
+    },
+    "excelScalars": {
+      "bindingsTitle": "Hệ số nhân liên kết tác vụ-mô hình",
+      "discountsTitle": "Hệ số giảm giá"
+    },
+    "schemaEditor": {
+      "invalidJson": "JSON không hợp lệ",
+      "dryRunFailed": "Chạy thử thất bại",
+      "saveFailed": "Lưu thất bại",
+      "paramsSchemaLabel": "Schema tham số",
+      "pricingSchemaLabel": "Schema định giá",
+      "sampleParamsLabel": "Tham số mẫu",
+      "dryRunning": "Đang chạy thử…",
+      "dryRun": "Chạy thử",
+      "saving": "Đang lưu…",
+      "save": "Lưu",
+      "dryRunTotal": "Tổng: {total}"
     }
   }
 }

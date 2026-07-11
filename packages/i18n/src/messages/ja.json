@@ -44,7 +44,9 @@
     "backend": "バックエンド",
     "register": "登録",
     "actions": "操作",
-    "none": "なし"
+    "none": "なし",
+    "yes": "はい",
+    "no": "いいえ"
   },
   "aiUi": {
     "selected": "選択済み",
@@ -2051,7 +2053,8 @@
         "editSourceLabel": "編集元",
         "editSourceAnnotation": "編集元の注釈",
         "uploadedAnnotationSuffix": "の注釈"
-      }
+      },
+      "schemaUnavailable": "価格スキーマが利用できません。読み込みが完了するまで生成できません。"
     },
     "header": {
       "title": "画像ワークベンチ",
@@ -2337,7 +2340,8 @@
       "audioOn": "あり",
       "audioOff": "なし",
       "seedLabel": "Seed",
-      "seedPlaceholder": "空欄でランダム"
+      "seedPlaceholder": "空欄でランダム",
+      "schemaUnavailable": "価格スキーマが利用できません。読み込みが完了するまで生成できません。"
     },
     "generationDock": {
       "modelPlaceholder": "ビデオモデルを選択",
@@ -4987,6 +4991,89 @@
       "save": "保存",
       "saveFailed": "保存に失敗しました",
       "saving": "保存中..."
+    }
+  },
+  "pricing": {
+    "params": {
+      "duration": "長さ",
+      "maxTokens": "最大トークン数",
+      "quality": "品質",
+      "quantity": "数量",
+      "ratio": "アスペクト比",
+      "resolution": "解像度",
+      "temperature": "Temperature（多様性）"
+    },
+    "options": {},
+    "totalPoints": "{count} ポイント",
+    "clampHint": "{field} は {max} に制限されました"
+  },
+  "adminPricing": {
+    "modelsHeading": "モデル",
+    "selectModel": "モデルを選択",
+    "bindingsHeading": "タスク–モデル バインディング",
+    "discountsHeading": "割引",
+    "excelHeading": "一括 CSV",
+    "bindings": {
+      "model": "モデル",
+      "multiplier": "倍率",
+      "isDefault": "デフォルト",
+      "isActive": "有効"
+    },
+    "discounts": {
+      "saveFailed": "割引の保存に失敗しました",
+      "deleteFailed": "割引の削除に失敗しました",
+      "title": "割引",
+      "description": "価格の割引ルールを管理します。",
+      "add": "割引を追加",
+      "edit": "割引を編集",
+      "empty": "割引はまだありません",
+      "scopeAll": "すべてのタスクとモデル",
+      "columns": {
+        "code": "コード",
+        "name": "名前",
+        "factor": "係数",
+        "scope": "適用範囲",
+        "stackable": "併用可",
+        "priority": "優先度",
+        "effectiveWindow": "有効期間",
+        "isActive": "有効"
+      },
+      "fields": {
+        "code": "コード",
+        "name": "名前",
+        "factor": "係数",
+        "priority": "優先度",
+        "effectiveFrom": "開始日時",
+        "effectiveTo": "終了日時",
+        "scope": "適用範囲",
+        "membershipLevelNumbers": "会員レベル",
+        "taskTypes": "タスクの種類",
+        "modelConfigIds": "モデル設定",
+        "stackable": "併用可",
+        "isActive": "有効"
+      },
+      "scopePlaceholders": {
+        "membershipLevelNumbers": "レベル番号を入力して Enter",
+        "taskTypes": "タスクタイプを入力して Enter",
+        "modelConfigIds": "モデル設定IDを入力して Enter"
+      }
+    },
+    "excelScalars": {
+      "bindingsTitle": "タスク–モデル バインディング倍率",
+      "discountsTitle": "割引係数"
+    },
+    "schemaEditor": {
+      "invalidJson": "無効な JSON です",
+      "dryRunFailed": "ドライランに失敗しました",
+      "saveFailed": "保存に失敗しました",
+      "paramsSchemaLabel": "パラメータスキーマ",
+      "pricingSchemaLabel": "価格スキーマ",
+      "sampleParamsLabel": "サンプルパラメータ",
+      "dryRunning": "実行中…",
+      "dryRun": "ドライラン",
+      "saving": "保存中…",
+      "save": "保存",
+      "dryRunTotal": "合計: {total}"
     }
   }
 }

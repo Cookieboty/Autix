@@ -44,7 +44,9 @@
     "backend": "Backend",
     "register": "Register",
     "actions": "Actions",
-    "none": "None"
+    "none": "None",
+    "yes": "Yes",
+    "no": "No"
   },
   "aiUi": {
     "selected": "Selected",
@@ -2683,7 +2685,8 @@
         "editSourceLabel": "Edit source",
         "editSourceAnnotation": "Edit source annotation",
         "uploadedAnnotationSuffix": " annotation"
-      }
+      },
+      "schemaUnavailable": "Pricing schema unavailable — generation is disabled until it loads."
     },
     "header": {
       "title": "Image Studio",
@@ -2977,7 +2980,8 @@
       "audioOn": "On",
       "audioOff": "Off",
       "seedLabel": "Seed",
-      "seedPlaceholder": "Leave empty for random"
+      "seedPlaceholder": "Leave empty for random",
+      "schemaUnavailable": "Pricing schema unavailable — generation is disabled until it loads."
     },
     "generationDock": {
       "modelPlaceholder": "Select a video model",
@@ -4987,6 +4991,89 @@
       "save": "Save",
       "saveFailed": "Save failed",
       "saving": "Saving..."
+    }
+  },
+  "pricing": {
+    "params": {
+      "duration": "Duration",
+      "maxTokens": "Max tokens",
+      "quality": "Quality",
+      "quantity": "Quantity",
+      "ratio": "Aspect ratio",
+      "resolution": "Resolution",
+      "temperature": "Temperature"
+    },
+    "options": {},
+    "totalPoints": "{count} points",
+    "clampHint": "{field} capped at {max}"
+  },
+  "adminPricing": {
+    "modelsHeading": "Models",
+    "selectModel": "Select a model",
+    "bindingsHeading": "Task-model bindings",
+    "discountsHeading": "Discounts",
+    "excelHeading": "Bulk CSV",
+    "bindings": {
+      "model": "Model",
+      "multiplier": "Multiplier",
+      "isDefault": "Default",
+      "isActive": "Active"
+    },
+    "discounts": {
+      "saveFailed": "Failed to save discount",
+      "deleteFailed": "Failed to delete discount",
+      "title": "Discounts",
+      "description": "Manage pricing discount rules.",
+      "add": "Add discount",
+      "edit": "Edit discount",
+      "empty": "No discounts yet",
+      "scopeAll": "All tasks and models",
+      "columns": {
+        "code": "Code",
+        "name": "Name",
+        "factor": "Factor",
+        "scope": "Scope",
+        "stackable": "Stackable",
+        "priority": "Priority",
+        "effectiveWindow": "Effective window",
+        "isActive": "Active"
+      },
+      "fields": {
+        "code": "Code",
+        "name": "Name",
+        "factor": "Factor",
+        "priority": "Priority",
+        "effectiveFrom": "Effective from",
+        "effectiveTo": "Effective to",
+        "scope": "Scope",
+        "membershipLevelNumbers": "Membership levels",
+        "taskTypes": "Task types",
+        "modelConfigIds": "Model configs",
+        "stackable": "Stackable",
+        "isActive": "Active"
+      },
+      "scopePlaceholders": {
+        "membershipLevelNumbers": "Add a level number and press Enter",
+        "taskTypes": "Add a task type and press Enter",
+        "modelConfigIds": "Add a model config id and press Enter"
+      }
+    },
+    "excelScalars": {
+      "bindingsTitle": "Task-model binding multipliers",
+      "discountsTitle": "Discount factors"
+    },
+    "schemaEditor": {
+      "invalidJson": "Invalid JSON",
+      "dryRunFailed": "Dry run failed",
+      "saveFailed": "Failed to save",
+      "paramsSchemaLabel": "Params schema",
+      "pricingSchemaLabel": "Pricing schema",
+      "sampleParamsLabel": "Sample params",
+      "dryRunning": "Running…",
+      "dryRun": "Dry run",
+      "saving": "Saving…",
+      "save": "Save",
+      "dryRunTotal": "Total: {total}"
     }
   }
 }

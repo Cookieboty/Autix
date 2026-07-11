@@ -44,7 +44,9 @@
     "backend": "Бэкенд",
     "register": "Регистрация",
     "actions": "Действия",
-    "none": "Нет"
+    "none": "Нет",
+    "yes": "Да",
+    "no": "Нет"
   },
   "aiUi": {
     "selected": "Выбрано",
@@ -2051,7 +2053,8 @@
         "editSourceLabel": "Источник",
         "editSourceAnnotation": "Аннотация источника",
         "uploadedAnnotationSuffix": " аннотация"
-      }
+      },
+      "schemaUnavailable": "Схема ценообразования недоступна — генерация отключена до её загрузки."
     },
     "header": {
       "title": "Студия изображений",
@@ -2337,7 +2340,8 @@
       "audioOn": "Вкл",
       "audioOff": "Выкл",
       "seedLabel": "Seed",
-      "seedPlaceholder": "Пусто = случайно"
+      "seedPlaceholder": "Пусто = случайно",
+      "schemaUnavailable": "Схема ценообразования недоступна — генерация отключена до её загрузки."
     },
     "generationDock": {
       "modelPlaceholder": "Выберите видеомодель",
@@ -4987,6 +4991,89 @@
       "save": "Сохранить",
       "saveFailed": "Не удалось сохранить",
       "saving": "Сохранение..."
+    }
+  },
+  "pricing": {
+    "params": {
+      "duration": "Длительность",
+      "maxTokens": "Макс. токенов",
+      "quality": "Качество",
+      "quantity": "Количество",
+      "ratio": "Соотношение сторон",
+      "resolution": "Разрешение",
+      "temperature": "Температура"
+    },
+    "options": {},
+    "totalPoints": "{count} баллов",
+    "clampHint": "{field} ограничено до {max}"
+  },
+  "adminPricing": {
+    "modelsHeading": "Модели",
+    "selectModel": "Выберите модель",
+    "bindingsHeading": "Привязки задач к моделям",
+    "discountsHeading": "Скидки",
+    "excelHeading": "Массовый CSV",
+    "bindings": {
+      "model": "Модель",
+      "multiplier": "Множитель",
+      "isDefault": "По умолчанию",
+      "isActive": "Активно"
+    },
+    "discounts": {
+      "saveFailed": "Не удалось сохранить скидку",
+      "deleteFailed": "Не удалось удалить скидку",
+      "title": "Скидки",
+      "description": "Управляйте правилами скидок на тарифы.",
+      "add": "Добавить скидку",
+      "edit": "Изменить скидку",
+      "empty": "Скидок пока нет",
+      "scopeAll": "Все задачи и модели",
+      "columns": {
+        "code": "Код",
+        "name": "Название",
+        "factor": "Коэффициент",
+        "scope": "Область действия",
+        "stackable": "Суммируется",
+        "priority": "Приоритет",
+        "effectiveWindow": "Период действия",
+        "isActive": "Активно"
+      },
+      "fields": {
+        "code": "Код",
+        "name": "Название",
+        "factor": "Коэффициент",
+        "priority": "Приоритет",
+        "effectiveFrom": "Начало действия",
+        "effectiveTo": "Окончание действия",
+        "scope": "Область действия",
+        "membershipLevelNumbers": "Уровни членства",
+        "taskTypes": "Типы задач",
+        "modelConfigIds": "Конфигурации моделей",
+        "stackable": "Суммируется",
+        "isActive": "Активно"
+      },
+      "scopePlaceholders": {
+        "membershipLevelNumbers": "Введите номер уровня и нажмите Enter",
+        "taskTypes": "Введите тип задачи и нажмите Enter",
+        "modelConfigIds": "Введите ID конфигурации модели и нажмите Enter"
+      }
+    },
+    "excelScalars": {
+      "bindingsTitle": "Множители привязок задач к моделям",
+      "discountsTitle": "Коэффициенты скидок"
+    },
+    "schemaEditor": {
+      "invalidJson": "Некорректный JSON",
+      "dryRunFailed": "Пробный запуск не удался",
+      "saveFailed": "Не удалось сохранить",
+      "paramsSchemaLabel": "Схема параметров",
+      "pricingSchemaLabel": "Схема ценообразования",
+      "sampleParamsLabel": "Пример параметров",
+      "dryRunning": "Выполняется…",
+      "dryRun": "Пробный запуск",
+      "saving": "Сохранение…",
+      "save": "Сохранить",
+      "dryRunTotal": "Итого: {total}"
     }
   }
 }
