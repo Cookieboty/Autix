@@ -4073,7 +4073,13 @@
     "membershipAccessEmpty": "No membership levels available.",
     "membershipLevelMeta": "Level {level}",
     "membershipAccessAll": "Available to all users",
-    "membershipAccessLimited": "Limited to: {levels}"
+    "membershipAccessLimited": "Limited to: {levels}",
+    "schemaSectionHeading": "Схема ценообразования",
+    "schemaSectionDescription": "Определите схему параметров (поля формы, видимые администраторам) и схему ценообразования (как использование превращается в цену) для этой модели. Сохраняется вместе с моделью при нажатии «Сохранить».",
+    "invalidSchemaJson": "Схема параметров и схема ценообразования должны быть корректным JSON.",
+    "schemaSaveFailed": "Не удалось сохранить схему ценообразования",
+    "schemaSaveFailedAfterUpdate": "Модель сохранена, но не удалось сохранить схему ценообразования: {error}",
+    "modelCreatedSchemaFailed": "Модель создана, но не удалось сохранить схему ценообразования: {error}. Отредактируйте модель ещё раз, чтобы повторить попытку."
   },
   "adminUserPointsDetail": {
     "overview": {

@@ -4407,7 +4407,13 @@
     "membershipAccessEmpty": "No membership levels available.",
     "membershipLevelMeta": "Level {level}",
     "membershipAccessAll": "Available to all users",
-    "membershipAccessLimited": "Limited to: {levels}"
+    "membershipAccessLimited": "Limited to: {levels}",
+    "schemaSectionHeading": "Pricing schema",
+    "schemaSectionDescription": "Define the params schema (form fields shown to admins) and pricing schema (how usage becomes a price) for this model. Saved together with the model when you click Save.",
+    "invalidSchemaJson": "Params schema and pricing schema must both be valid JSON.",
+    "schemaSaveFailed": "Failed to save pricing schema",
+    "schemaSaveFailedAfterUpdate": "Model saved, but the pricing schema failed to save: {error}",
+    "modelCreatedSchemaFailed": "Model created, but the pricing schema failed to save: {error}. Edit this model again to retry."
   },
   "adminUserPointsDetail": {
     "overview": {

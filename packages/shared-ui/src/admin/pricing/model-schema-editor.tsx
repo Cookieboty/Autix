@@ -11,48 +11,44 @@ import { buildDryRunPayload, parseJsonOrNull } from './pricing-admin-helpers';
 // SSR story, so the import is deferred to the client instead of loaded eagerly at module scope.
 const Editor = lazy(() => import('@monaco-editor/react'));
 
-const DEFAULT_PARAMS_SCHEMA: ParamsSchema = { type: 'object', properties: {} };
-const DEFAULT_PRICING_SCHEMA: PricingSchema = { terms: [] };
-
 export interface ModelSchemaEditorProps {
-  modelConfigId: string;
-  initialParamsSchema: ParamsSchema | null;
-  initialPricingSchema: PricingSchema | null;
-  onSave: (paramsSchema: ParamsSchema, pricingSchema: PricingSchema) => Promise<void>;
+  /** Raw Monaco JSON text for the params schema. Fully controlled — the caller owns the text and
+   * is responsible for seeding/gating it against async load (see SystemModelFormSheet). */
+  paramsSchemaText: string;
+  /** Raw Monaco JSON text for the pricing schema. Same controlled contract as paramsSchemaText. */
+  pricingSchemaText: string;
+  onParamsSchemaTextChange: (text: string) => void;
+  onPricingSchemaTextChange: (text: string) => void;
   /**
    * Injected rather than called internally — mirrors task-costs-view.tsx's `handleSaveRule`
    * split (container orchestrates network + list refresh; the form component only collects
    * data and reports it upward). The container wires this to
-   * `pricingAdminActions.dryRunPricing(buildDryRunPayload(...))` and is responsible for
-   * whatever post-dry-run bookkeeping it needs (result reuse across components, etc).
+   * `pricingAdminActions.dryRunPricing(buildDryRunPayload(...))`.
    *
    * On an invalid schema the backend rejects the dry-run request with a 400
    * (`BadRequestException({ message, violations })`) rather than resolving with an
    * error-shaped body, so `onDryRun` is expected to reject — this component surfaces that via
-   * a caught error message, the same pattern `handleSave` already uses below.
+   * a caught error message.
+   *
+   * Persisting the schemas themselves is NOT this component's job — save is unified into
+   * whichever form embeds this editor (the model config form), so there is deliberately no
+   * `onSave`/save button here.
    */
   onDryRun: (payload: ReturnType<typeof buildDryRunPayload>) => Promise<DryRunResult>;
 }
 
 export function ModelSchemaEditor({
-  initialParamsSchema,
-  initialPricingSchema,
-  onSave,
+  paramsSchemaText,
+  pricingSchemaText,
+  onParamsSchemaTextChange,
+  onPricingSchemaTextChange,
   onDryRun,
 }: ModelSchemaEditorProps) {
   const t = useTranslations('adminPricing.schemaEditor');
-  const [paramsText, setParamsText] = useState(
-    JSON.stringify(initialParamsSchema ?? DEFAULT_PARAMS_SCHEMA, null, 2),
-  );
-  const [pricingText, setPricingText] = useState(
-    JSON.stringify(initialPricingSchema ?? DEFAULT_PRICING_SCHEMA, null, 2),
-  );
   const [sampleParamsText, setSampleParamsText] = useState('{}');
   const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
   const [dryRunError, setDryRunError] = useState<string | null>(null);
   const [dryRunning, setDryRunning] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const theme = useMemo(() => {
     if (typeof document === 'undefined') return 'vs';
@@ -62,8 +58,8 @@ export function ModelSchemaEditor({
   const editorFallback = <Skeleton className="h-full w-full" />;
 
   const handleDryRun = async () => {
-    const paramsSchema = parseJsonOrNull(paramsText) as ParamsSchema | null;
-    const pricingSchema = parseJsonOrNull(pricingText) as PricingSchema | null;
+    const paramsSchema = parseJsonOrNull(paramsSchemaText) as ParamsSchema | null;
+    const pricingSchema = parseJsonOrNull(pricingSchemaText) as PricingSchema | null;
     const sampleParams = parseJsonOrNull(sampleParamsText) as Record<string, unknown> | null;
     if (!paramsSchema || !pricingSchema || !sampleParams) {
       setDryRunError(t('invalidJson'));
@@ -82,37 +78,19 @@ export function ModelSchemaEditor({
     }
   };
 
-  const handleSave = async () => {
-    const paramsSchema = parseJsonOrNull(paramsText) as ParamsSchema | null;
-    const pricingSchema = parseJsonOrNull(pricingText) as PricingSchema | null;
-    if (!paramsSchema || !pricingSchema) {
-      setSaveError(t('invalidJson'));
-      return;
-    }
-    setSaving(true);
-    setSaveError(null);
-    try {
-      await onSave(paramsSchema, pricingSchema);
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : t('saveFailed'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-1.5">
           <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('paramsSchemaLabel')}</span>
-          <div className="h-80 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
+          <div className="h-64 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
             <Suspense fallback={editorFallback}>
               <Editor
                 height="100%"
                 language="json"
                 theme={theme}
-                value={paramsText}
-                onChange={(value) => setParamsText(value ?? '')}
+                value={paramsSchemaText}
+                onChange={(value) => onParamsSchemaTextChange(value ?? '')}
                 options={{ minimap: { enabled: false }, fontSize: 13, automaticLayout: true }}
               />
             </Suspense>
@@ -120,14 +98,14 @@ export function ModelSchemaEditor({
         </div>
         <div className="grid gap-1.5">
           <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('pricingSchemaLabel')}</span>
-          <div className="h-80 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
+          <div className="h-64 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
             <Suspense fallback={editorFallback}>
               <Editor
                 height="100%"
                 language="json"
                 theme={theme}
-                value={pricingText}
-                onChange={(value) => setPricingText(value ?? '')}
+                value={pricingSchemaText}
+                onChange={(value) => onPricingSchemaTextChange(value ?? '')}
                 options={{ minimap: { enabled: false }, fontSize: 13, automaticLayout: true }}
               />
             </Suspense>
@@ -137,7 +115,7 @@ export function ModelSchemaEditor({
 
       <div className="grid gap-1.5">
         <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('sampleParamsLabel')}</span>
-        <div className="h-28 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
+        <div className="h-24 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
           <Suspense fallback={editorFallback}>
             <Editor
               height="100%"
@@ -152,15 +130,18 @@ export function ModelSchemaEditor({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="outline" className="cursor-pointer" disabled={dryRunning} onClick={handleDryRun}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="cursor-pointer"
+          disabled={dryRunning}
+          onClick={() => void handleDryRun()}
+        >
           {dryRunning ? t('dryRunning') : t('dryRun')}
-        </Button>
-        <Button size="sm" className="cursor-pointer" disabled={saving} onClick={handleSave}>
-          {saving ? t('saving') : t('save')}
         </Button>
       </div>
 
-      {saveError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{saveError}</p>}
       {dryRunError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{dryRunError}</p>}
 
       {dryRunResult && (

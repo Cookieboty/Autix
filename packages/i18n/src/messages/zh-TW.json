@@ -4073,7 +4073,13 @@
     "membershipAccessEmpty": "暫無可選會員等級。",
     "membershipLevelMeta": "等級 {level}",
     "membershipAccessAll": "所有使用者可用",
-    "membershipAccessLimited": "僅限會員等級：{levels}"
+    "membershipAccessLimited": "僅限會員等級：{levels}",
+    "schemaSectionHeading": "定價 Schema",
+    "schemaSectionDescription": "定義此模型的參數 schema（管理員看到的表單欄位）和定價 schema（用量如何折算為價格）。點擊儲存時會與模型一起儲存。",
+    "invalidSchemaJson": "參數 schema 和定價 schema 必須都是合法 JSON。",
+    "schemaSaveFailed": "定價 schema 儲存失敗",
+    "schemaSaveFailedAfterUpdate": "模型已儲存，但定價 schema 儲存失敗：{error}",
+    "modelCreatedSchemaFailed": "模型已建立，但定價 schema 儲存失敗：{error}。請重新編輯此模型以重試。"
   },
   "adminUserPointsDetail": {
     "overview": {

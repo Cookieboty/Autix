@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react';
-import type { MembershipLevel } from '@autix/shared-store';
+import type { DryRunResult, MembershipLevel } from '@autix/shared-store';
 import {
   Button,
   Checkbox,
@@ -16,6 +16,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../ui';
+import { ModelSchemaEditor } from '../pricing/model-schema-editor';
+import type { buildDryRunPayload } from '../pricing/pricing-admin-helpers';
 import {
   CAPABILITY_OPTIONS,
   MODEL_TYPES,
@@ -35,6 +37,7 @@ export function SystemModelFormSheet({
   tCommon,
   onClose,
   onFormChange,
+  onDryRun,
   onSave,
 }: {
   form: SystemModelForm;
@@ -46,8 +49,10 @@ export function SystemModelFormSheet({
   tCommon: CommonTranslate;
   onClose: () => void;
   onFormChange: (form: SystemModelForm) => void;
+  onDryRun: (payload: ReturnType<typeof buildDryRunPayload>) => Promise<DryRunResult>;
   onSave: () => void;
 }) {
+  const schemaEditorsLoading = Boolean(form.id) && !form.schemaLoaded;
   const credentialInteractionRef = useRef({
     baseUrl: false,
     apiKey: false,
@@ -85,7 +90,7 @@ export function SystemModelFormSheet({
         if (!nextOpen) onClose();
       }}
     >
-      <SheetContent side="right" className="flex w-[460px] flex-col gap-0 p-0 sm:max-w-[460px]">
+      <SheetContent side="right" className="flex w-[min(94vw,760px)] flex-col gap-0 p-0 sm:max-w-none">
         <SheetHeader className="border-border h-14 flex-row items-center border-b px-6 py-0">
           <SheetTitle className="text-sm">{form.id ? t('editModel') : t('addModel')}</SheetTitle>
           <SheetDescription className="sr-only">
@@ -257,13 +262,36 @@ export function SystemModelFormSheet({
               onChange={(checked) => setFormField('isActive', checked)}
             />
           </div>
+
+          <div className="border-border space-y-3 border-t pt-4">
+            <div>
+              <h3 className="text-foreground text-sm font-semibold">{t('schemaSectionHeading')}</h3>
+              <p className="text-muted-foreground mt-1 text-xs">{t('schemaSectionDescription')}</p>
+            </div>
+            {schemaEditorsLoading ? (
+              <div className="bg-muted h-64 animate-pulse rounded-md" />
+            ) : (
+              <ModelSchemaEditor
+                paramsSchemaText={form.paramsSchemaText}
+                pricingSchemaText={form.pricingSchemaText}
+                onParamsSchemaTextChange={(text) => setFormField('paramsSchemaText', text)}
+                onPricingSchemaTextChange={(text) => setFormField('pricingSchemaText', text)}
+                onDryRun={onDryRun}
+              />
+            )}
+          </div>
         </div>
 
         <SheetFooter className="border-border flex-row items-center justify-end gap-2 border-t px-6 py-4">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             {tCommon('cancel')}
           </Button>
-          <Button type="button" size="sm" disabled={!form.model.trim() || saving} onClick={onSave}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!form.model.trim() || saving || schemaEditorsLoading}
+            onClick={onSave}
+          >
             {saving ? tCommon('saving') : form.id ? tCommon('save') : tCommon('create')}
           </Button>
         </SheetFooter>

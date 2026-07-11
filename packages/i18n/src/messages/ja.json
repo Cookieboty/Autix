@@ -4073,7 +4073,13 @@
     "membershipAccessEmpty": "No membership levels available.",
     "membershipLevelMeta": "Level {level}",
     "membershipAccessAll": "Available to all users",
-    "membershipAccessLimited": "Limited to: {levels}"
+    "membershipAccessLimited": "Limited to: {levels}",
+    "schemaSectionHeading": "料金スキーマ",
+    "schemaSectionDescription": "このモデルのパラメータスキーマ（管理者に表示されるフォーム項目）と料金スキーマ（利用量を価格に変換する方法）を定義します。保存をクリックするとモデルと一緒に保存されます。",
+    "invalidSchemaJson": "パラメータスキーマと料金スキーマはどちらも正しい JSON である必要があります。",
+    "schemaSaveFailed": "料金スキーマの保存に失敗しました",
+    "schemaSaveFailedAfterUpdate": "モデルは保存されましたが、料金スキーマの保存に失敗しました: {error}",
+    "modelCreatedSchemaFailed": "モデルは作成されましたが、料金スキーマの保存に失敗しました: {error}。このモデルを再度編集してやり直してください。"
   },
   "adminUserPointsDetail": {
     "overview": {

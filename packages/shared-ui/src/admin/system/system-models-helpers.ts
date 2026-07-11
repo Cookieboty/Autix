@@ -1,7 +1,18 @@
 import type {
   AdminSystemModelInput,
   ModelConfigItem,
+  ParamsSchema,
+  PricingSchema,
 } from '@autix/shared-store';
+
+/**
+ * Default empty schema shapes for a brand-new model, kept here (not imported from
+ * `pricing/model-schema-editor.tsx`) so this plain helper module — pulled in by
+ * `admin-system-models-helpers.test.ts` under `bun test` — never has to load the schema
+ * editor's React/Monaco module graph just to read two JSON literals.
+ */
+export const DEFAULT_PARAMS_SCHEMA: ParamsSchema = { type: 'object', properties: {} };
+export const DEFAULT_PRICING_SCHEMA: PricingSchema = { terms: [] };
 
 export const CAPABILITY_OPTIONS = [
   { value: 'text', key: 'text' },
@@ -34,6 +45,19 @@ export type SystemModelForm = {
     baseUrl: boolean;
     apiKey: boolean;
   };
+  /** Raw Monaco JSON text for the params/pricing schema editors embedded in the model form
+   * (unified save persists these alongside the model fields — see models-view.tsx `save()`). */
+  paramsSchemaText: string;
+  pricingSchemaText: string;
+  /**
+   * True once the schema editors are safe to render/save. A brand-new model has no server-side
+   * schema to wait on, so this starts `true` from `createEmptySystemModelForm`. An existing
+   * model's schema is fetched asynchronously (`useAdminModelQuery`) — `systemModelFormFromModel`
+   * starts this `false` and the container flips it to `true` only after seeding
+   * `paramsSchemaText`/`pricingSchemaText` from the loaded detail, so an empty editor can never
+   * mount and have its blank text saved over the real schema.
+   */
+  schemaLoaded: boolean;
 };
 
 export function createEmptySystemModelForm(): SystemModelForm {
@@ -53,6 +77,9 @@ export function createEmptySystemModelForm(): SystemModelForm {
       baseUrl: false,
       apiKey: false,
     },
+    paramsSchemaText: JSON.stringify(DEFAULT_PARAMS_SCHEMA, null, 2),
+    pricingSchemaText: JSON.stringify(DEFAULT_PRICING_SCHEMA, null, 2),
+    schemaLoaded: true,
   };
 }
 
@@ -83,6 +110,34 @@ export function systemModelFormFromModel(
       baseUrl: false,
       apiKey: false,
     },
+    // Seeded once the container's useAdminModelQuery(model.id) resolves — see models-view.tsx.
+    paramsSchemaText: '',
+    pricingSchemaText: '',
+    schemaLoaded: false,
+  };
+}
+
+/**
+ * Seeds the schema editors from a loaded `AdminModelDetail` (`useAdminModelQuery`), once. Pulled
+ * out as a pure function so the load-gate logic — never let an empty editor mount and then have a
+ * save clobber the real schema with `{}` — is unit-testable without mounting React/Monaco.
+ *
+ * No-ops (returns `form` unchanged) when:
+ * - the detail belongs to a different model than the form currently represents (stale response
+ *   for a model the admin already navigated away from), or
+ * - the form has already been seeded (`schemaLoaded`) — a background refetch of the same model
+ *   must not stomp on text the admin is actively editing.
+ */
+export function seedSystemModelFormSchemas(
+  form: SystemModelForm,
+  detail: { id: string; paramsSchema: ParamsSchema | null; pricingSchema: PricingSchema | null },
+): SystemModelForm {
+  if (form.id !== detail.id || form.schemaLoaded) return form;
+  return {
+    ...form,
+    paramsSchemaText: JSON.stringify(detail.paramsSchema ?? DEFAULT_PARAMS_SCHEMA, null, 2),
+    pricingSchemaText: JSON.stringify(detail.pricingSchema ?? DEFAULT_PRICING_SCHEMA, null, 2),
+    schemaLoaded: true,
   };
 }
 

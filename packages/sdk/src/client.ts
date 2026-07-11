@@ -288,9 +288,9 @@ export const getAvailableModels = () => chatApi.get<ModelConfigItem[]>('/api/mod
 export const getPublicAvailableModels = () => chatApi.get<ModelConfigItem[]>('/api/models/public/available');
 export const getSystemModels = () => chatApi.get<ModelConfigItem[]>('/api/models/system');
 export const createSystemModel = (data: Record<string, unknown>) =>
-  chatApi.post('/api/models/system', data);
+  chatApi.post<ModelConfigItem>('/api/models/system', data);
 export const updateSystemModel = (id: string, data: Record<string, unknown>) =>
-  chatApi.put(`/api/models/system/${id}`, data);
+  chatApi.put<ModelConfigItem>(`/api/models/system/${id}`, data);
 export const deleteSystemModel = (id: string) => chatApi.delete(`/api/models/system/${id}`);
 
 // ── System Settings ─────────────────────────────────────────────────────

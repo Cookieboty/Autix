@@ -4073,7 +4073,13 @@
     "membershipAccessEmpty": "No membership levels available.",
     "membershipLevelMeta": "Level {level}",
     "membershipAccessAll": "Available to all users",
-    "membershipAccessLimited": "Limited to: {levels}"
+    "membershipAccessLimited": "Limited to: {levels}",
+    "schemaSectionHeading": "Schema định giá",
+    "schemaSectionDescription": "Định nghĩa params schema (các trường biểu mẫu hiển thị cho quản trị viên) và pricing schema (cách mức sử dụng chuyển thành giá) cho mô hình này. Được lưu cùng mô hình khi bạn nhấn Lưu.",
+    "invalidSchemaJson": "Params schema và pricing schema đều phải là JSON hợp lệ.",
+    "schemaSaveFailed": "Không lưu được pricing schema",
+    "schemaSaveFailedAfterUpdate": "Đã lưu mô hình, nhưng không lưu được pricing schema: {error}",
+    "modelCreatedSchemaFailed": "Đã tạo mô hình, nhưng không lưu được pricing schema: {error}. Hãy chỉnh sửa lại mô hình này để thử lại."
   },
   "adminUserPointsDetail": {
     "overview": {

@@ -4407,7 +4407,13 @@
     "membershipAccessEmpty": "No membership levels available.",
     "membershipLevelMeta": "Level {level}",
     "membershipAccessAll": "Available to all users",
-    "membershipAccessLimited": "Limited to: {levels}"
+    "membershipAccessLimited": "Limited to: {levels}",
+    "schemaSectionHeading": "Schéma de tarification",
+    "schemaSectionDescription": "Définissez le schéma des paramètres (champs affichés aux administrateurs) et le schéma de tarification (comment l'utilisation devient un prix) pour ce modèle. Enregistré avec le modèle lors du clic sur Enregistrer.",
+    "invalidSchemaJson": "Le schéma des paramètres et le schéma de tarification doivent tous deux être un JSON valide.",
+    "schemaSaveFailed": "Échec de l'enregistrement du schéma de tarification",
+    "schemaSaveFailedAfterUpdate": "Modèle enregistré, mais l'enregistrement du schéma de tarification a échoué : {error}",
+    "modelCreatedSchemaFailed": "Modèle créé, mais l'enregistrement du schéma de tarification a échoué : {error}. Modifiez à nouveau ce modèle pour réessayer."
   },
   "adminUserPointsDetail": {
     "overview": {

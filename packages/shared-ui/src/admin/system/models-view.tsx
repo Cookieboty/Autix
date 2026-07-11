@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Check,
@@ -14,20 +14,27 @@ import {
   Button,
 } from '../../ui';
 import {
+  useAdminModelQuery,
   useAdminSystemMembershipLevelsQuery,
   useAdminSystemModelsQuery,
   useCreateAdminSystemModelMutation,
   useDeleteAdminSystemModelMutation,
+  useDryRunAdminPricingMutation,
+  useSaveAdminModelSchemasMutation,
   useUpdateAdminSystemModelMutation,
   type ModelConfigItem,
   type MembershipLevel,
+  type ParamsSchema,
+  type PricingSchema,
 } from '@autix/shared-store';
+import { parseJsonOrNull } from '../pricing/pricing-admin-helpers';
 import { SystemModelFormSheet } from './SystemModelFormSheet';
 import {
   buildSystemModelPayload,
   createEmptySystemModelForm,
   groupSystemModels,
   readModelError,
+  seedSystemModelFormSchemas,
   systemModelFormFromModel,
   type SystemModelForm,
 } from './system-models-helpers';
@@ -47,6 +54,13 @@ export function AdminSystemModelsView() {
   const createModelMutation = useCreateAdminSystemModelMutation();
   const updateModelMutation = useUpdateAdminSystemModelMutation();
   const deleteModelMutation = useDeleteAdminSystemModelMutation();
+  // Backs the paramsSchema/pricingSchema editors embedded in the model form (unified save —
+  // product decision: one save button persists the model AND its schemas). Only enabled while
+  // editing an existing model with the drawer open; a brand-new model has no server-side schema
+  // to fetch (createEmptySystemModelForm already seeds `schemaLoaded: true` with defaults).
+  const modelDetailQuery = useAdminModelQuery(form.id ?? '', drawerOpen && Boolean(form.id));
+  const saveSchemasMutation = useSaveAdminModelSchemasMutation();
+  const dryRunMutation = useDryRunAdminPricingMutation();
   const models = modelsQuery.data ?? [];
   const membershipLevels = (membershipLevelsQuery.data ?? [])
     .filter((level) => level.isActive !== false);
@@ -76,17 +90,74 @@ export function AdminSystemModelsView() {
     setForm(createEmptySystemModelForm());
   };
 
+  // Seeds the schema editors from the loaded AdminModelDetail exactly once per edit session.
+  // `seedSystemModelFormSchemas` no-ops if the detail belongs to a different model (stale
+  // response after navigating away) or the form was already seeded (avoids clobbering in-flight
+  // edits on a background refetch) — see its doc comment in system-models-helpers.ts.
+  useEffect(() => {
+    if (!drawerOpen || !form.id || form.schemaLoaded) return;
+    const detail = modelDetailQuery.data;
+    if (!detail) return;
+    setForm((prev) => seedSystemModelFormSchemas(prev, detail));
+  }, [drawerOpen, form.id, form.schemaLoaded, modelDetailQuery.data]);
+
   const save = async () => {
     if (!form.model.trim()) return;
+    const paramsSchema = parseJsonOrNull(form.paramsSchemaText) as ParamsSchema | null;
+    const pricingSchema = parseJsonOrNull(form.pricingSchemaText) as PricingSchema | null;
+    if (!paramsSchema || !pricingSchema) {
+      setError(t('invalidSchemaJson'));
+      return;
+    }
+
     setSaving(true);
     setError(null);
+    // Captured up front — `form.id` in the enclosing closure never mutates during this call
+    // even after the `setForm` promotion below, so this is the one reliable way to tell the
+    // create and edit paths apart for the error message picked in the schema catch block.
+    const wasCreate = !form.id;
     try {
       const payload = buildSystemModelPayload(form);
+      let modelId = form.id;
 
-      if (form.id) {
-        await updateModelMutation.mutateAsync({ id: form.id, data: payload });
+      if (modelId) {
+        // Edit path: the model already has an id, so the update and the schema save are two
+        // independent PUTs against the same resource. Update first — if it fails, bail out
+        // before touching the schema endpoint at all (surfaces the model-field error as-is,
+        // same as before this change).
+        await updateModelMutation.mutateAsync({ id: modelId, data: payload });
       } else {
-        await createModelMutation.mutateAsync(payload);
+        // Create path: there is no id to save schemas against until the model itself exists.
+        // If create fails, throw before ever calling the schemas endpoint.
+        const created = await createModelMutation.mutateAsync(payload);
+        const createdId = created?.data?.id;
+        if (!createdId) {
+          throw new Error(t('saveFailed'));
+        }
+        modelId = createdId;
+        // Promote the form to "editing this model" immediately so that if the schema save below
+        // fails, a retry (or just re-opening this same drawer state) PUTs the schema against the
+        // real id instead of POSTing a duplicate model.
+        setForm((prev) => ({ ...prev, id: createdId }));
+      }
+
+      try {
+        await saveSchemasMutation.mutateAsync({
+          id: modelId,
+          data: { paramsSchema, pricingSchema },
+        });
+      } catch (schemaErr) {
+        // Model create/update already succeeded at this point — report the partial state
+        // explicitly instead of swallowing it, and keep the drawer open (now promoted to "edit"
+        // mode for the create path, since `form.id` was just set to `createdId` above) so the
+        // admin can retry just the schema save without re-entering the model fields.
+        const schemaMessage = readModelError(schemaErr, t('schemaSaveFailed'));
+        setError(
+          wasCreate
+            ? t('modelCreatedSchemaFailed', { error: schemaMessage })
+            : t('schemaSaveFailedAfterUpdate', { error: schemaMessage }),
+        );
+        return;
       }
 
       closeDrawer();
@@ -186,6 +257,7 @@ export function AdminSystemModelsView() {
         tCommon={tCommon}
         onClose={closeDrawer}
         onFormChange={setForm}
+        onDryRun={(dryRunPayload) => dryRunMutation.mutateAsync(dryRunPayload)}
         onSave={() => void save()}
       />
     </div>
