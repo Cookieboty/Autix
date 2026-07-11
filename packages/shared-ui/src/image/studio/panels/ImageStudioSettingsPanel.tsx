@@ -1,45 +1,47 @@
 'use client';
 
-import { Crop, Images, SlidersHorizontal, Wand2, X } from 'lucide-react';
+import { Wand2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  buildImageSizeView,
-  type ImageModelCapability,
-} from '@autix/domain/image';
-import {
-  STYLE_PRESET_VALUES,
-  type ImageStudioModelSettings,
-} from '../constants';
-import {
-  ChipButton,
-  PanelLabel,
-  SliderRow,
-} from '../shared/PrimitiveControls';
-import { SelectLike } from '../shared/SelectLike';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
+import { SchemaForm, TotalPriceBar, useSchemaForm } from '../../../pricing';
 import { cn } from '../../../ui/utils';
 
 export function ImageStudioSettingsPanel({
   open,
-  provider,
-  capability,
-  settings,
+  taskType,
+  modelConfigId,
+  paramsSchema,
+  pricingSchema,
+  pricingContext,
   onClose,
-  onSettingsChange,
+  onParamsChange,
 }: {
   open: boolean;
-  provider: string;
-  capability: ImageModelCapability;
-  settings: ImageStudioModelSettings;
+  taskType: string;
+  modelConfigId: string | undefined;
+  paramsSchema: ParamsSchema | undefined;
+  pricingSchema: PricingSchema | undefined;
+  pricingContext: { multiplier: number; discountFactor: number };
   onClose: () => void;
-  onSettingsChange: (partial: Partial<ImageStudioModelSettings>) => void;
+  onParamsChange: (params: Record<string, unknown>) => void;
 }) {
   const t = useTranslations('imageStudio');
-  const tStyle = useTranslations('imageStudio.stylePresets');
-  const sizeView = buildImageSizeView(capability, settings.size);
-  const sizeGroups = sizeView.groups;
-  const selectedGroup = sizeView.selectedTier;
-  const selectedAspect = sizeView.selectedAspect;
-  const aspectOptions = selectedGroup?.options ?? [];
+  const tParams = useTranslations('pricing.params');
+  const tOptions = useTranslations('pricing.options');
+  const tTotal = useTranslations('pricing');
+
+  const form = useSchemaForm(paramsSchema);
+
+  // spec §6.8: schema 拉取失败 -> 禁用生成，不 fallback 到硬编码默认值。
+  const schemaMissing = !paramsSchema || !pricingSchema;
+
+  if (schemaMissing) {
+    return (
+      <aside className={cn('h-full w-[300px] shrink-0 border-r border-border bg-muted/18 p-4 text-xs text-muted-foreground', open ? 'flex' : 'hidden', 'lg:flex')}>
+        {t('panel.schemaUnavailable')}
+      </aside>
+    );
+  }
 
   return (
     <aside
@@ -58,7 +60,7 @@ export function ImageStudioSettingsPanel({
           </div>
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold">{t('panel.title')}</h2>
-            <p className="truncate text-xs text-muted-foreground">{t('panel.subtitle', { provider })}</p>
+            <p className="truncate text-xs text-muted-foreground">{t('panel.subtitle')}</p>
           </div>
           <button
             type="button"
@@ -72,112 +74,26 @@ export function ImageStudioSettingsPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <div className="space-y-5">
-          {sizeGroups.length > 1 && (
-            <section className="space-y-2">
-              <PanelLabel icon={<Images className="size-3.5" />} label={t('panel.resolution.label')} />
-              <div className={cn('grid gap-2', sizeGroups.length <= 4 ? 'grid-cols-4' : 'grid-cols-2')}>
-                {sizeGroups.map((group) => (
-                  <ChipButton
-                    key={group.value}
-                    active={selectedGroup?.value === group.value}
-                    onClick={() =>
-                      onSettingsChange({
-                        size: sizeView.pickResolution(group.value),
-                      })
-                    }
-                  >
-                    {group.label}
-                  </ChipButton>
-                ))}
-              </div>
-            </section>
-          )}
+        <SchemaForm
+          paramsSchema={paramsSchema}
+          pricingSchema={pricingSchema}
+          pricingContext={pricingContext}
+          form={form}
+          translateLabel={(labelKey, fallback) => (labelKey ? tParams(labelKey.replace('pricing.params.', '')) : fallback)}
+          translateOption={(optionLabelKey, fallback) =>
+            optionLabelKey ? tOptions(optionLabelKey.replace('pricing.options.', '')) : fallback
+          }
+        />
+      </div>
 
-          <section className="space-y-2">
-            <PanelLabel icon={<Crop className="size-3.5" />} label={t('panel.aspectRatio.label')} />
-            <div className={cn('grid gap-2', aspectOptions.length <= 2 ? 'grid-cols-2' : 'grid-cols-3')}>
-              {aspectOptions.map((opt) => (
-                <ChipButton
-                  key={opt.value}
-                  active={selectedAspect?.value === opt.value}
-                  onClick={() => onSettingsChange({ size: opt.value })}
-                >
-                  {opt.label}
-                </ChipButton>
-              ))}
-            </div>
-          </section>
-
-          {capability.qualities.length > 0 && (
-            <section className="space-y-2">
-              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={t('panel.quality.label')} />
-              <div className={cn('grid gap-2', capability.qualities.length <= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
-                {capability.qualities.map((opt) => (
-                  <ChipButton
-                    key={opt.value}
-                    active={settings.quality === opt.value}
-                    onClick={() => onSettingsChange({ quality: opt.value })}
-                  >
-                    {opt.label}
-                  </ChipButton>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {capability.showAdvancedSliders && (
-            <section className="space-y-3">
-              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={t('panel.advanced.label')} />
-              <SliderRow
-                label="CFG"
-                value={settings.guidanceScale}
-                min={1}
-                max={20}
-                step={0.5}
-                onChange={(value) => onSettingsChange({ guidanceScale: value })}
-              />
-              <SliderRow
-                label="Steps"
-                value={settings.steps}
-                min={4}
-                max={60}
-                step={1}
-                onChange={(value) => onSettingsChange({ steps: value })}
-              />
-              <input
-                className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs outline-none focus:border-primary"
-                placeholder={t('panel.advanced.seedPlaceholder')}
-                value={settings.seed}
-                onChange={(e) => onSettingsChange({ seed: e.target.value })}
-              />
-            </section>
-          )}
-
-          <section className="space-y-2">
-            <PanelLabel icon={<Wand2 className="size-3.5" />} label={t('panel.style.label')} />
-            <SelectLike
-              value={settings.stylePreset}
-              options={STYLE_PRESET_VALUES.map((value) => ({ label: tStyle(value), value }))}
-              onChange={(stylePreset) => onSettingsChange({ stylePreset })}
-            />
-            {capability.supportsNegativePrompt !== 'none' && (
-              <div className="space-y-1">
-                <textarea
-                  className="min-h-20 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-xs leading-5 outline-none placeholder:text-muted-foreground focus:border-primary"
-                  placeholder={t('panel.style.negativePlaceholder')}
-                  value={settings.negativePrompt}
-                  onChange={(e) => onSettingsChange({ negativePrompt: e.target.value })}
-                />
-                {capability.supportsNegativePrompt === 'prompt-injected' && settings.negativePrompt.trim() && (
-                  <p className="text-[11px] text-muted-foreground">
-                    {t('panel.style.negativeHint')}
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-        </div>
+      <div className="border-t border-border px-4 py-3">
+        <TotalPriceBar
+          taskType={taskType}
+          modelConfigId={modelConfigId}
+          params={form.params}
+          onQuote={() => onParamsChange(form.params)}
+          translateTotal={(total) => (total === null ? '' : tTotal('totalPoints', { count: total }))}
+        />
       </div>
     </aside>
   );

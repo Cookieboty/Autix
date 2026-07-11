@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import {
   hasChatCapability,
+  pricingActions,
   type ImageTemplate,
   type ImageWorkbenchHistoryItem,
   type MaterialAsset,
   type ModelConfigItem,
+  type TaskModel,
 } from '@autix/shared-store';
 import {
   buildImageWorkbenchPrompt,
@@ -21,7 +24,6 @@ import { useRouter } from '../../navigation';
 import type { ImageResultItem } from '../../chat/MessageBubble';
 import {
   appendEditablePromptNote,
-  modelProviderLabel,
   readFilesAsDataUrls,
   mergeHistorySettings,
   resolveReferenceAnnotationKey,
@@ -123,7 +125,6 @@ export function useImageStudioWorkspaceController({
 }: ImageStudioWorkspaceControllerProps) {
   const t = useTranslations('imageStudio');
   useTranslations('imageStudio.stylePresets');
-  const tProvider = useTranslations('imageStudio.modelProvider');
   const uploadedRefLabel = t('panel.refSection.uploadedLabel');
   // Seed once from the public-generator draft; later user edits are preserved
   // because the useState initializer only runs on first mount.
@@ -162,6 +163,26 @@ export function useImageStudioWorkspaceController({
   const chatModels = availableModels.filter((m) => hasChatCapability(m.capabilities ?? []));
   const selectedChatModel = chatModels.find((m) => m.id === selectedChatModelId);
 
+  // image_generation 的 TaskModel 列表（paramsSchema/pricingSchema/multiplier/
+  // discountFactor，spec §5.1）独立于 imageModels（ModelConfigItem，驱动模型选择器/
+  // capability 检测等既有逻辑）单独拉取，只按 modelConfigId 关联给设置面板用。
+  const [imageTaskModels, setImageTaskModels] = useState<TaskModel[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    pricingActions
+      .getTaskModels('image_generation')
+      .then((models) => {
+        if (!cancelled) setImageTaskModels(models);
+      })
+      .catch(() => {
+        if (!cancelled) setImageTaskModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const selectedImageTaskModel = imageTaskModels.find((m) => m.modelConfigId === selectedModelId);
+
   const capability = useMemo(
     () => IMAGE_MODEL_CAPABILITIES[detectImageModelKind(selectedModel)],
     [selectedModel],
@@ -175,9 +196,6 @@ export function useImageStudioWorkspaceController({
     }
   }, [capability.kind]);
 
-  const provider = modelProviderLabel(selectedModel, {
-    unselected: tProvider('unselected'),
-  });
   const originalPromptForImage = useMemo(
     () =>
       buildImageWorkbenchPrompt(prompt, settings, capability, {
@@ -456,11 +474,17 @@ export function useImageStudioWorkspaceController({
     setInspirationOpen,
     settingsPanelProps: {
       open: settingsOpen,
-      provider,
-      capability,
-      settings,
+      taskType: 'image_generation',
+      modelConfigId: selectedModelId ?? undefined,
+      paramsSchema: selectedImageTaskModel?.paramsSchema as unknown as ParamsSchema | undefined,
+      pricingSchema: selectedImageTaskModel?.pricingSchema as unknown as PricingSchema | undefined,
+      pricingContext: {
+        multiplier: selectedImageTaskModel?.multiplier ?? 1,
+        discountFactor: selectedImageTaskModel?.discountFactor ?? 1,
+      },
       onClose: () => setSettingsOpen(false),
-      onSettingsChange: updateSettings,
+      onParamsChange: (params: Record<string, unknown>) =>
+        updateSettings(params as Partial<ImageStudioModelSettings>),
     },
     headerProps: {
       activeTemplateName,

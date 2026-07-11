@@ -6,6 +6,8 @@ import {
   PanelLeftOpen,
   Plus,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import type {
   MaterialAsset,
   MaterialAssetType,
@@ -14,6 +16,7 @@ import type {
   VideoProject,
 } from '@autix/shared-store';
 import { Button } from '../../ui/button';
+import { cn } from '../../ui/utils';
 import { VideoParameterPanel } from './panels/VideoParameterPanel';
 import { VideoWorkspaceConfigPanel } from './panels/VideoWorkspaceConfigPanel';
 import { VideoProductPanel } from './panels/VideoProductPanel';
@@ -26,6 +29,7 @@ import {
   VideoMembershipUpgradeAlert,
 } from '../VideoMembershipUpgradeAlert';
 import {
+  VIDEO_MODE_VALUES,
   type VideoClipEstimate,
   type VideoInspirationTab,
   type VideoMaterialTarget,
@@ -55,7 +59,6 @@ interface VideoWorkbenchWorkspaceViewProps {
   inspirationOpen: boolean;
   onInspirationOpenChange: (open: boolean) => void;
   mode: VideoWorkspaceMode;
-  params: Record<string, unknown>;
   clips: VideoClip[];
   selectedClip: VideoClip | null;
   projectId: string;
@@ -63,7 +66,10 @@ interface VideoWorkbenchWorkspaceViewProps {
   generatingClipIds: string[];
   storyboardPrompt: string;
   onModeChange: (mode: VideoWorkspaceMode) => void;
-  onParamChange: (partial: Record<string, unknown>, removeKeys?: string[]) => void;
+  paramsSchema: ParamsSchema | undefined;
+  pricingSchema: PricingSchema | undefined;
+  pricingContext: { multiplier: number; discountFactor: number };
+  onParamsChange: (params: Record<string, unknown>) => void;
   onSelectClip: (clipId: string | null) => void;
   onOpenStoryboardTools: () => void;
   onAddStoryboardClip: (duration: number) => void;
@@ -144,7 +150,6 @@ export function VideoWorkbenchWorkspaceView({
   inspirationOpen,
   onInspirationOpenChange,
   mode,
-  params,
   clips,
   selectedClip,
   projectId,
@@ -152,7 +157,10 @@ export function VideoWorkbenchWorkspaceView({
   generatingClipIds,
   storyboardPrompt,
   onModeChange,
-  onParamChange,
+  paramsSchema,
+  pricingSchema,
+  pricingContext,
+  onParamsChange,
   onSelectClip,
   onOpenStoryboardTools,
   onAddStoryboardClip,
@@ -220,7 +228,11 @@ export function VideoWorkbenchWorkspaceView({
   onConfirmVideoGenerate,
   onDismissError,
 }: VideoWorkbenchWorkspaceViewProps) {
-  const selectedVideoModel = videoModels.find((model) => model.id === videoModelId) ?? null;
+  const tModes = useTranslations('videoWorkbench.modes');
+  const modeOptions = VIDEO_MODE_VALUES.map((value) => ({
+    value,
+    label: tModes(`${value}.label`),
+  }));
 
   if (loading) {
     return (
@@ -275,6 +287,27 @@ export function VideoWorkbenchWorkspaceView({
           </div>
         </header>
 
+        {/* mode（storyboard/first_last_frame/standard）不是计价参数，不属于
+            paramsSchema——薄壳化后 VideoParameterPanel 不再渲染它，挪到这里保留
+            切换入口（纯 UI 搬迁，mode/onModeChange 状态位置不变）。 */}
+        <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2">
+          {modeOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={cn(
+                'rounded-md border px-2.5 py-1 text-xs transition-colors',
+                mode === option.value
+                  ? 'border-primary bg-primary/8 text-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground',
+              )}
+              onClick={() => onModeChange(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
         {lastError && (
           isVideoMembershipError(lastErrorCode) ? (
             <VideoMembershipUpgradeAlert message={lastError} onDismiss={onDismissError} />
@@ -290,13 +323,13 @@ export function VideoWorkbenchWorkspaceView({
         <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)]">
           <VideoParameterPanel
             open={paramsOpen}
-            mode={mode}
-            params={params}
-            selectedVideoModel={selectedVideoModel}
-            hasClip={Boolean(selectedClip)}
+            taskType="video_generation"
+            modelConfigId={videoModelId || undefined}
+            paramsSchema={paramsSchema}
+            pricingSchema={pricingSchema}
+            pricingContext={pricingContext}
             onClose={() => onParamsOpenChange(false)}
-            onModeChange={onModeChange}
-            onParamChange={onParamChange}
+            onParamsChange={onParamsChange}
           />
 
           <div className="min-h-0 overflow-y-auto p-4">

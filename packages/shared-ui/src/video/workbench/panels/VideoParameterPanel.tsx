@@ -1,61 +1,47 @@
-import { SlidersHorizontal, Settings2, X } from 'lucide-react';
+'use client';
+
+import { SlidersHorizontal, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  getVideoResolutionOptionsForModel,
-  normalizeVideoResolutionForModel,
-} from '@autix/domain/video';
-import type { ModelConfigItem } from '@autix/shared-store';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
+import { SchemaForm, TotalPriceBar, useSchemaForm } from '../../../pricing';
 import { cn } from '../../../ui/utils';
-import {
-  RATIO_VALUES,
-  VIDEO_MODE_VALUES,
-  type VideoWorkspaceMode,
-} from '../constants';
-import { NumberStepper } from '../shared/NumberStepper';
-import { ParamCardGroup } from '../shared/ParamCardGroup';
-import { PanelLabel } from '../shared/PanelLabel';
 
 export function VideoParameterPanel({
   open,
-  mode,
-  params,
-  selectedVideoModel,
-  hasClip,
+  taskType,
+  modelConfigId,
+  paramsSchema,
+  pricingSchema,
+  pricingContext,
   onClose,
-  onModeChange,
-  onParamChange,
+  onParamsChange,
 }: {
   open: boolean;
-  mode: VideoWorkspaceMode;
-  params: Record<string, unknown>;
-  selectedVideoModel?: ModelConfigItem | null;
-  hasClip: boolean;
+  taskType: string;
+  modelConfigId: string | undefined;
+  paramsSchema: ParamsSchema | undefined;
+  pricingSchema: PricingSchema | undefined;
+  pricingContext: { multiplier: number; discountFactor: number };
   onClose: () => void;
-  onModeChange: (mode: VideoWorkspaceMode) => void;
-  onParamChange: (partial: Record<string, unknown>, removeKeys?: string[]) => void;
+  onParamsChange: (params: Record<string, unknown>) => void;
 }) {
   const t = useTranslations('videoWorkbench.parameterPanel');
-  const tModes = useTranslations('videoWorkbench.modes');
-  const tRatios = useTranslations('videoWorkbench.ratios');
-  const tResolutions = useTranslations('videoWorkbench.resolutions');
-  const disabled = !hasClip;
+  const tParams = useTranslations('pricing.params');
+  const tOptions = useTranslations('pricing.options');
+  const tTotal = useTranslations('pricing');
 
-  const modeOptions = VIDEO_MODE_VALUES.map((value) => ({
-    value,
-    label: tModes(`${value}.label`),
-  }));
-  const resolutionOptions = getVideoResolutionOptionsForModel(selectedVideoModel).map((option) => ({
-    value: option.value,
-    label: tResolutions(option.value),
-  }));
-  const selectedResolution = normalizeVideoResolutionForModel(
-    params.resolution,
-    selectedVideoModel,
-  );
-  const ratioOptions = RATIO_VALUES.map((value) => ({
-    value,
-    label: tRatios(value),
-  }));
+  const form = useSchemaForm(paramsSchema);
+
+  // spec §6.8: schema 拉取失败 -> 禁用生成，不 fallback 到硬编码默认值。
+  const schemaMissing = !paramsSchema || !pricingSchema;
+
+  if (schemaMissing) {
+    return (
+      <aside className={cn('min-h-0 border-r border-border bg-muted/14 p-4 text-xs text-muted-foreground', open ? 'flex' : 'hidden', 'xl:flex')}>
+        {t('schemaUnavailable')}
+      </aside>
+    );
+  }
 
   return (
     <aside
@@ -88,81 +74,26 @@ export function VideoParameterPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <div className="space-y-5">
-          <section className="space-y-2">
-            <PanelLabel icon={<Settings2 className="size-3.5" />} label={t('modeLabel')} />
-            <div className="grid grid-cols-3 gap-2">
-              {modeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={cn(
-                    'rounded-lg border px-3 py-2 text-center text-xs transition-colors',
-                    mode === option.value
-                      ? 'border-primary bg-primary/8 text-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground',
-                  )}
-                  onClick={() => onModeChange(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </section>
+        <SchemaForm
+          paramsSchema={paramsSchema}
+          pricingSchema={pricingSchema}
+          pricingContext={pricingContext}
+          form={form}
+          translateLabel={(labelKey, fallback) => (labelKey ? tParams(labelKey.replace('pricing.params.', '')) : fallback)}
+          translateOption={(optionLabelKey, fallback) =>
+            optionLabelKey ? tOptions(optionLabelKey.replace('pricing.options.', '')) : fallback
+          }
+        />
+      </div>
 
-          <section className="space-y-3">
-            <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={t('basicsLabel')} />
-            {mode !== 'storyboard' && (
-              <NumberStepper
-                label={t('durationLabel')}
-                value={Number(params.duration ?? 5)}
-                min={5}
-                max={15}
-                step={1}
-                suffix="s"
-                onChange={(value) => onParamChange({ duration: value })}
-                disabled={disabled}
-              />
-            )}
-              <ParamCardGroup
-              label={t('resolutionLabel')}
-              value={selectedResolution}
-              options={resolutionOptions}
-              onChange={(value) => onParamChange({ resolution: value })}
-              disabled={disabled}
-            />
-            <ParamCardGroup
-              label={t('ratioLabel')}
-              value={String(params.ratio ?? '16:9')}
-              options={ratioOptions}
-              onChange={(value) => onParamChange({ ratio: value })}
-              disabled={disabled}
-            />
-            <ParamCardGroup
-              label={t('audioLabel')}
-              value={params.generateAudio === false || params.generate_audio === false ? 'off' : 'on'}
-              options={[
-                { label: t('audioOn'), value: 'on' },
-                { label: t('audioOff'), value: 'off' },
-              ]}
-              onChange={(value) => onParamChange({ generateAudio: value === 'on' }, ['generate_audio'])}
-              disabled={disabled}
-            />
-            <label className="grid gap-1.5 text-xs">
-              <span className="text-muted-foreground">{t('seedLabel')}</span>
-              <input
-                className="h-9 rounded-md border border-border bg-background px-3 outline-none focus:border-primary"
-                placeholder={t('seedPlaceholder')}
-                value={params.seed == null ? '' : String(params.seed)}
-                onChange={(event) => {
-                  const value = event.target.value.trim();
-                  onParamChange(value ? { seed: Number(value) } : {}, ['seed']);
-                }}
-                disabled={disabled}
-              />
-            </label>
-          </section>
-        </div>
+      <div className="border-t border-border px-4 py-3">
+        <TotalPriceBar
+          taskType={taskType}
+          modelConfigId={modelConfigId}
+          params={form.params}
+          onQuote={() => onParamsChange(form.params)}
+          translateTotal={(total) => (total === null ? '' : tTotal('totalPoints', { count: total }))}
+        />
       </div>
     </aside>
   );

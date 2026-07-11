@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createLocalVideoProject, useVideoProjectStore, type VideoClip } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import {
   DEFAULT_VIDEO_PARAMS,
   buildTemplateDraft,
@@ -172,6 +173,7 @@ export function VideoWorkbenchWorkspace({
     directorModelsLoading,
     videoModels,
     videoModelsLoading,
+    videoTaskModels,
   } = useVideoWorkbenchModels();
   const [promptOptimizing, setPromptOptimizing] = useState(false);
   const [storyboardPrompt, setStoryboardPrompt] = useState('');
@@ -504,6 +506,12 @@ export function VideoWorkbenchWorkspace({
     [historyDetailProjectId, projects],
   );
 
+  const currentVideoModelId =
+    typeof globalVideoParams.modelConfigId === 'string' ? globalVideoParams.modelConfigId : '';
+  const selectedVideoTaskModel = videoTaskModels.find(
+    (model) => model.modelConfigId === currentVideoModelId,
+  );
+
   return (
     <VideoWorkbenchWorkspaceView
       loading={loading && !project}
@@ -525,7 +533,6 @@ export function VideoWorkbenchWorkspace({
       inspirationOpen={inspirationOpen}
       onInspirationOpenChange={setInspirationOpen}
       mode={workspaceMode}
-      params={globalVideoParams}
       clips={clips}
       selectedClip={selectedClip}
       projectId={project?.id ?? ''}
@@ -533,7 +540,13 @@ export function VideoWorkbenchWorkspace({
       generatingClipIds={generatingClipIds}
       storyboardPrompt={storyboardPrompt}
       onModeChange={(mode) => void handleModeChange(mode)}
-      onParamChange={(partial, removeKeys) => void updateSelectedClipParams(partial, removeKeys)}
+      paramsSchema={selectedVideoTaskModel?.paramsSchema as unknown as ParamsSchema | undefined}
+      pricingSchema={selectedVideoTaskModel?.pricingSchema as unknown as PricingSchema | undefined}
+      pricingContext={{
+        multiplier: selectedVideoTaskModel?.multiplier ?? 1,
+        discountFactor: selectedVideoTaskModel?.discountFactor ?? 1,
+      }}
+      onParamsChange={(params) => void updateSelectedClipParams(params)}
       onSelectClip={selectClip}
       onOpenStoryboardTools={() => openStoryboardTool(storyboardPrompt)}
       onAddStoryboardClip={(duration) => void handleAddStoryboardClip(duration)}
@@ -551,7 +564,7 @@ export function VideoWorkbenchWorkspace({
       textModelId={directorModelId}
       textModels={directorModels}
       textModelsLoading={directorModelsLoading}
-      videoModelId={typeof globalVideoParams.modelConfigId === 'string' ? globalVideoParams.modelConfigId : ''}
+      videoModelId={currentVideoModelId}
       videoModels={videoModels}
       videoModelsLoading={videoModelsLoading}
       estimatedCost={projectEstimatedCost}
