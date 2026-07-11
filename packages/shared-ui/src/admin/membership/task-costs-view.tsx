@@ -36,8 +36,7 @@ import {
   TaskCostsRuleModal,
   type RuleModalState,
 } from './task-costs-presenters';
-import { TaskCostsBulkExcel } from './task-costs-bulk-excel';
-import { TaskCostsRuleList } from './task-costs-rule-list';
+import { AdminPricingView } from '../pricing/AdminPricingView';
 
 const SCOPE_FIELD_FORM_KEYS: Record<ScopeField, 'qualities' | 'resolutions' | 'modelTiers' | 'membershipLevels'> = {
   quality: 'qualities',
@@ -307,21 +306,8 @@ export function AdminTaskCostsView() {
         tAdmin={t}
       />
 
-      <TaskCostsBulkExcel systemModels={systemModels} membershipLevels={membershipLevels} tAdmin={t} />
-
       <div className="flex-1 overflow-hidden">
-        {loading ? (
-          <TaskCostsLoading label={tCommon('loading')} />
-        ) : (
-          <TaskCostsRuleList
-            rules={rules}
-            taskByType={taskByType}
-            onPreview={openPreview}
-            onEditTask={(task) => openRuleModal(task)}
-            onCreate={(task) => openRuleModal(task)}
-            tAdmin={t}
-          />
-        )}
+        {loading ? <TaskCostsLoading label={tCommon('loading')} /> : <AdminPricingView />}
       </div>
 
       {ruleModal && (

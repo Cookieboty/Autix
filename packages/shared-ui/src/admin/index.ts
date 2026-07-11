@@ -38,6 +38,9 @@ export * from './templates';
 // Membership
 export * from './membership';
 
+// Pricing
+export * from './pricing';
+
 // Operations
 export * from './audit';
 export * from './campaigns';
