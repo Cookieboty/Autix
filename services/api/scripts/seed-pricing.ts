@@ -95,8 +95,8 @@ const SEED_MODELS: SeedModelRow[] = [
   // —— 图像（image preset）—— 主流图像模型，model-id 按 2026-07 官网核对（见提交说明来源），
   // amux 网关实际 id 以其 /models 清单为准。metadata.imageModelKind 给能力面板确定性识别。
   { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2', type: 'general', capabilities: ['image'], isDefault: true, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'OpenAI image model', 'zh-CN': 'OpenAI 图像模型' } },
-  { name: 'GPT Image 1', provider: 'amux', model: 'gpt-image-1', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'OpenAI image model', 'zh-CN': 'OpenAI 图像模型' } },
-  { name: 'Nano Banana', provider: 'amux', model: 'gemini-3.1-flash-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Google Gemini image model', 'zh-CN': 'Google Gemini 图像模型' } },
+  { name: 'Nano Banana Fast', provider: 'amux', model: 'gemini-3.1-flash-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Nano Banana Fast', 'zh-CN': 'Nano Banana Fast' } },
+  { name: 'Nano Banana 2 Lite', provider: 'amux', model: 'gemini-3.1-flash-lite-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Nano Banana 2 Lite', 'zh-CN': 'Nano Banana 2 Lite' } },
   { name: 'Seedream 5.0 Pro', provider: 'amux', model: 'doubao-seedream-5-0-260128', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'compatible' }, description: { en: 'ByteDance Seedream image model', 'zh-CN': '字节 Seedream 图像模型' } },
   { name: 'Qwen-Image 2.0', provider: 'amux', model: 'qwen-image-2.0', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'compatible' }, description: { en: 'Alibaba Qwen image model', 'zh-CN': '阿里通义万相图像模型' } },
 
