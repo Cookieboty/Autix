@@ -1,5 +1,6 @@
 import type {
   AdminSystemModelInput,
+  LocalizedText,
   ModelConfigItem,
   ParamsSchema,
   PricingSchema,
@@ -50,12 +51,21 @@ export type SystemModelForm = {
   paramsSchemaText: string;
   pricingSchemaText: string;
   /**
-   * True once the schema editors are safe to render/save. A brand-new model has no server-side
-   * schema to wait on, so this starts `true` from `createEmptySystemModelForm`. An existing
-   * model's schema is fetched asynchronously (`useAdminModelQuery`) — `systemModelFormFromModel`
-   * starts this `false` and the container flips it to `true` only after seeding
-   * `paramsSchemaText`/`pricingSchemaText` from the loaded detail, so an empty editor can never
-   * mount and have its blank text saved over the real schema.
+   * Multi-locale model description (`model_configs.description`), edited via a per-locale field
+   * in the model form. Persisted through its own endpoint (`PUT /admin/models/:id/description`)
+   * as part of the same unified save — see models-view.tsx `save()`. Like the schema fields below,
+   * `ModelConfigItem` (the list-view shape) doesn't carry this, so it's only ever populated from
+   * `AdminModelDetail` (`useAdminModelQuery`), gated by `schemaLoaded`.
+   */
+  description: LocalizedText;
+  /**
+   * True once the schema editors and description fields are safe to render/save. A brand-new
+   * model has no server-side schema/description to wait on, so this starts `true` from
+   * `createEmptySystemModelForm`. An existing model's schema/description is fetched asynchronously
+   * (`useAdminModelQuery`) — `systemModelFormFromModel` starts this `false` and the container
+   * flips it to `true` only after seeding `paramsSchemaText`/`pricingSchemaText`/`description`
+   * from the loaded detail, so an empty editor can never mount and have its blank text saved over
+   * the real schema/description.
    */
   schemaLoaded: boolean;
 };
@@ -79,6 +89,7 @@ export function createEmptySystemModelForm(): SystemModelForm {
     },
     paramsSchemaText: JSON.stringify(DEFAULT_PARAMS_SCHEMA, null, 2),
     pricingSchemaText: JSON.stringify(DEFAULT_PRICING_SCHEMA, null, 2),
+    description: {},
     schemaLoaded: true,
   };
 }
@@ -113,14 +124,16 @@ export function systemModelFormFromModel(
     // Seeded once the container's useAdminModelQuery(model.id) resolves — see models-view.tsx.
     paramsSchemaText: '',
     pricingSchemaText: '',
+    description: {},
     schemaLoaded: false,
   };
 }
 
 /**
- * Seeds the schema editors from a loaded `AdminModelDetail` (`useAdminModelQuery`), once. Pulled
- * out as a pure function so the load-gate logic — never let an empty editor mount and then have a
- * save clobber the real schema with `{}` — is unit-testable without mounting React/Monaco.
+ * Seeds the schema editors and the description fields from a loaded `AdminModelDetail`
+ * (`useAdminModelQuery`), once. Pulled out as a pure function so the load-gate logic — never let
+ * an empty editor mount and then have a save clobber the real schema/description with `{}` — is
+ * unit-testable without mounting React/Monaco.
  *
  * No-ops (returns `form` unchanged) when:
  * - the detail belongs to a different model than the form currently represents (stale response
@@ -130,13 +143,19 @@ export function systemModelFormFromModel(
  */
 export function seedSystemModelFormSchemas(
   form: SystemModelForm,
-  detail: { id: string; paramsSchema: ParamsSchema | null; pricingSchema: PricingSchema | null },
+  detail: {
+    id: string;
+    paramsSchema: ParamsSchema | null;
+    pricingSchema: PricingSchema | null;
+    description: LocalizedText;
+  },
 ): SystemModelForm {
   if (form.id !== detail.id || form.schemaLoaded) return form;
   return {
     ...form,
     paramsSchemaText: JSON.stringify(detail.paramsSchema ?? DEFAULT_PARAMS_SCHEMA, null, 2),
     pricingSchemaText: JSON.stringify(detail.pricingSchema ?? DEFAULT_PRICING_SCHEMA, null, 2),
+    description: detail.description ?? {},
     schemaLoaded: true,
   };
 }

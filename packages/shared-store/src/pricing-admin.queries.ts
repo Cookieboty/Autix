@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 import {
   pricingAdminActions,
+  type AdminModelDescription,
   type AdminModelSchemas,
   type CreateDiscountInput,
   type DryRunPricingInput,
@@ -13,6 +14,7 @@ import {
   type PricingDiscount,
   type TaskModelBinding,
   type UpdateDiscountInput,
+  type UpdateModelDescriptionInput,
   type UpdateModelSchemasInput,
   type UpdateTaskModelBindingInput,
 } from './pricing-admin.actions';
@@ -72,6 +74,24 @@ export function useSaveAdminModelSchemasMutation(callbacks?: MutationCallbacks) 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateModelSchemasInput }): Promise<AdminModelSchemas> =>
       pricingAdminActions.updateModelSchemas(id, data),
+    onSuccess: async (_data, variables) => {
+      await invalidateModel(queryClient, variables.id);
+      await callOnSuccess(callbacks);
+    },
+    onError: (error) => callOnError(error, callbacks),
+  });
+}
+
+export function useSaveAdminModelDescriptionMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateModelDescriptionInput;
+    }): Promise<AdminModelDescription> => pricingAdminActions.updateModelDescription(id, data),
     onSuccess: async (_data, variables) => {
       await invalidateModel(queryClient, variables.id);
       await callOnSuccess(callbacks);

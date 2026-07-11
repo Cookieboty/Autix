@@ -4413,7 +4413,12 @@
     "invalidSchemaJson": "Params schema and pricing schema must both be valid JSON.",
     "schemaSaveFailed": "Failed to save pricing schema",
     "schemaSaveFailedAfterUpdate": "Model saved, but the pricing schema failed to save: {error}",
-    "modelCreatedSchemaFailed": "Model created, but the pricing schema failed to save: {error}. Edit this model again to retry."
+    "modelCreatedSchemaFailed": "Model created, but the pricing schema failed to save: {error}. Edit this model again to retry.",
+    "descriptionSectionHeading": "Description",
+    "descriptionSectionDescription": "Localized descriptions shown to users for this model, one per language. Saved together with the model when you click Save.",
+    "descriptionSaveFailed": "Failed to save description",
+    "descriptionSaveFailedAfterUpdate": "Model saved, but the description failed to save: {error}",
+    "modelCreatedDescriptionFailed": "Model created, but the description failed to save: {error}. Edit this model again to retry."
   },
   "adminUserPointsDetail": {
     "overview": {

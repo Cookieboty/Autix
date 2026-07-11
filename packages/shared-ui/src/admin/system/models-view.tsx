@@ -20,6 +20,7 @@ import {
   useCreateAdminSystemModelMutation,
   useDeleteAdminSystemModelMutation,
   useDryRunAdminPricingMutation,
+  useSaveAdminModelDescriptionMutation,
   useSaveAdminModelSchemasMutation,
   useUpdateAdminSystemModelMutation,
   type ModelConfigItem,
@@ -54,12 +55,14 @@ export function AdminSystemModelsView() {
   const createModelMutation = useCreateAdminSystemModelMutation();
   const updateModelMutation = useUpdateAdminSystemModelMutation();
   const deleteModelMutation = useDeleteAdminSystemModelMutation();
-  // Backs the paramsSchema/pricingSchema editors embedded in the model form (unified save —
-  // product decision: one save button persists the model AND its schemas). Only enabled while
-  // editing an existing model with the drawer open; a brand-new model has no server-side schema
-  // to fetch (createEmptySystemModelForm already seeds `schemaLoaded: true` with defaults).
+  // Backs the paramsSchema/pricingSchema editors and the multi-locale description fields embedded
+  // in the model form (unified save — product decision: one save button persists the model AND
+  // its schemas AND its description). Only enabled while editing an existing model with the
+  // drawer open; a brand-new model has no server-side schema/description to fetch
+  // (createEmptySystemModelForm already seeds `schemaLoaded: true` with defaults).
   const modelDetailQuery = useAdminModelQuery(form.id ?? '', drawerOpen && Boolean(form.id));
   const saveSchemasMutation = useSaveAdminModelSchemasMutation();
+  const saveDescriptionMutation = useSaveAdminModelDescriptionMutation();
   const dryRunMutation = useDryRunAdminPricingMutation();
   const models = modelsQuery.data ?? [];
   const membershipLevels = (membershipLevelsQuery.data ?? [])
@@ -90,10 +93,11 @@ export function AdminSystemModelsView() {
     setForm(createEmptySystemModelForm());
   };
 
-  // Seeds the schema editors from the loaded AdminModelDetail exactly once per edit session.
-  // `seedSystemModelFormSchemas` no-ops if the detail belongs to a different model (stale
-  // response after navigating away) or the form was already seeded (avoids clobbering in-flight
-  // edits on a background refetch) — see its doc comment in system-models-helpers.ts.
+  // Seeds the schema editors and description fields from the loaded AdminModelDetail exactly once
+  // per edit session. `seedSystemModelFormSchemas` no-ops if the detail belongs to a different
+  // model (stale response after navigating away) or the form was already seeded (avoids
+  // clobbering in-flight edits on a background refetch) — see its doc comment in
+  // system-models-helpers.ts.
   useEffect(() => {
     if (!drawerOpen || !form.id || form.schemaLoaded) return;
     const detail = modelDetailQuery.data;
@@ -156,6 +160,24 @@ export function AdminSystemModelsView() {
           wasCreate
             ? t('modelCreatedSchemaFailed', { error: schemaMessage })
             : t('schemaSaveFailedAfterUpdate', { error: schemaMessage }),
+        );
+        return;
+      }
+
+      try {
+        await saveDescriptionMutation.mutateAsync({
+          id: modelId,
+          data: { description: form.description },
+        });
+      } catch (descriptionErr) {
+        // Same partial-failure contract as the schema save above: model + schema already
+        // persisted, only the description PUT failed — surface it distinctly and keep the drawer
+        // open (already promoted to "edit" mode on the create path) so retrying doesn't re-POST.
+        const descriptionMessage = readModelError(descriptionErr, t('descriptionSaveFailed'));
+        setError(
+          wasCreate
+            ? t('modelCreatedDescriptionFailed', { error: descriptionMessage })
+            : t('descriptionSaveFailedAfterUpdate', { error: descriptionMessage }),
         );
         return;
       }

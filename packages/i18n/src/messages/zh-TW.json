@@ -4079,7 +4079,12 @@
     "invalidSchemaJson": "參數 schema 和定價 schema 必須都是合法 JSON。",
     "schemaSaveFailed": "定價 schema 儲存失敗",
     "schemaSaveFailedAfterUpdate": "模型已儲存，但定價 schema 儲存失敗：{error}",
-    "modelCreatedSchemaFailed": "模型已建立，但定價 schema 儲存失敗：{error}。請重新編輯此模型以重試。"
+    "modelCreatedSchemaFailed": "模型已建立，但定價 schema 儲存失敗：{error}。請重新編輯此模型以重試。",
+    "descriptionSectionHeading": "描述",
+    "descriptionSectionDescription": "顯示給使用者的多語言模型描述，依語言分別填寫。點擊儲存時會與模型一起儲存。",
+    "descriptionSaveFailed": "描述儲存失敗",
+    "descriptionSaveFailedAfterUpdate": "模型已儲存，但描述儲存失敗：{error}",
+    "modelCreatedDescriptionFailed": "模型已建立，但描述儲存失敗：{error}。請重新編輯此模型以重試。"
   },
   "adminUserPointsDetail": {
     "overview": {

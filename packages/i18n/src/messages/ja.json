@@ -4079,7 +4079,12 @@
     "invalidSchemaJson": "パラメータスキーマと料金スキーマはどちらも正しい JSON である必要があります。",
     "schemaSaveFailed": "料金スキーマの保存に失敗しました",
     "schemaSaveFailedAfterUpdate": "モデルは保存されましたが、料金スキーマの保存に失敗しました: {error}",
-    "modelCreatedSchemaFailed": "モデルは作成されましたが、料金スキーマの保存に失敗しました: {error}。このモデルを再度編集してやり直してください。"
+    "modelCreatedSchemaFailed": "モデルは作成されましたが、料金スキーマの保存に失敗しました: {error}。このモデルを再度編集してやり直してください。",
+    "descriptionSectionHeading": "説明",
+    "descriptionSectionDescription": "ユーザーに表示されるこのモデルの多言語説明を、言語ごとに入力します。保存をクリックするとモデルと一緒に保存されます。",
+    "descriptionSaveFailed": "説明の保存に失敗しました",
+    "descriptionSaveFailedAfterUpdate": "モデルは保存されましたが、説明の保存に失敗しました: {error}",
+    "modelCreatedDescriptionFailed": "モデルは作成されましたが、説明の保存に失敗しました: {error}。このモデルを再度編集してやり直してください。"
   },
   "adminUserPointsDetail": {
     "overview": {

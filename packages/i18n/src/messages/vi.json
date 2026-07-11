@@ -4079,7 +4079,12 @@
     "invalidSchemaJson": "Params schema và pricing schema đều phải là JSON hợp lệ.",
     "schemaSaveFailed": "Không lưu được pricing schema",
     "schemaSaveFailedAfterUpdate": "Đã lưu mô hình, nhưng không lưu được pricing schema: {error}",
-    "modelCreatedSchemaFailed": "Đã tạo mô hình, nhưng không lưu được pricing schema: {error}. Hãy chỉnh sửa lại mô hình này để thử lại."
+    "modelCreatedSchemaFailed": "Đã tạo mô hình, nhưng không lưu được pricing schema: {error}. Hãy chỉnh sửa lại mô hình này để thử lại.",
+    "descriptionSectionHeading": "Mô tả",
+    "descriptionSectionDescription": "Mô tả đa ngôn ngữ của mô hình này hiển thị cho người dùng, mỗi ngôn ngữ một mục. Được lưu cùng mô hình khi bạn nhấn Lưu.",
+    "descriptionSaveFailed": "Không lưu được mô tả",
+    "descriptionSaveFailedAfterUpdate": "Đã lưu mô hình, nhưng không lưu được mô tả: {error}",
+    "modelCreatedDescriptionFailed": "Đã tạo mô hình, nhưng không lưu được mô tả: {error}. Hãy chỉnh sửa lại mô hình này để thử lại."
   },
   "adminUserPointsDetail": {
     "overview": {

@@ -4413,7 +4413,12 @@
     "invalidSchemaJson": "参数 schema 和定价 schema 必须都是合法 JSON。",
     "schemaSaveFailed": "定价 schema 保存失败",
     "schemaSaveFailedAfterUpdate": "模型已保存，但定价 schema 保存失败：{error}",
-    "modelCreatedSchemaFailed": "模型已创建，但定价 schema 保存失败：{error}。请重新编辑该模型以重试。"
+    "modelCreatedSchemaFailed": "模型已创建，但定价 schema 保存失败：{error}。请重新编辑该模型以重试。",
+    "descriptionSectionHeading": "描述",
+    "descriptionSectionDescription": "面向用户展示的多语言模型描述，按语言分别填写。点击保存时会与模型一起保存。",
+    "descriptionSaveFailed": "描述保存失败",
+    "descriptionSaveFailedAfterUpdate": "模型已保存，但描述保存失败：{error}",
+    "modelCreatedDescriptionFailed": "模型已创建，但描述保存失败：{error}。请重新编辑该模型以重试。"
   },
   "adminUserPointsDetail": {
     "overview": {

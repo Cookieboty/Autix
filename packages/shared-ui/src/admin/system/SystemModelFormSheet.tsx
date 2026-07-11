@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from 'react';
 import type { DryRunResult, MembershipLevel } from '@autix/shared-store';
+import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES } from '@autix/i18n';
 import {
   Button,
   Checkbox,
@@ -257,6 +258,41 @@ export function SystemModelFormSheet({
               description={t('enableModelDescription')}
               onChange={(checked) => setFormField('isActive', checked)}
             />
+          </div>
+
+          <div className="border-border space-y-3 border-t pt-4">
+            <div>
+              <h3 className="text-foreground text-sm font-semibold">
+                {t('descriptionSectionHeading')}
+              </h3>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t('descriptionSectionDescription')}
+              </p>
+            </div>
+            {schemaEditorsLoading ? (
+              <div className="bg-muted h-32 animate-pulse rounded-md" />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {SUPPORTED_LANGUAGES.map((locale) => (
+                  <div key={locale} className="space-y-1.5">
+                    <label className="text-muted-foreground block text-xs font-medium">
+                      {LANGUAGE_LABELS[locale]}
+                    </label>
+                    <Input
+                      aria-label={`${t('descriptionSectionHeading')} — ${LANGUAGE_LABELS[locale]}`}
+                      type="text"
+                      value={form.description[locale] ?? ''}
+                      onChange={(event) =>
+                        setFormField('description', {
+                          ...form.description,
+                          [locale]: event.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="border-border space-y-3 border-t pt-4">

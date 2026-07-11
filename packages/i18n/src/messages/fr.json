@@ -4413,7 +4413,12 @@
     "invalidSchemaJson": "Le schéma des paramètres et le schéma de tarification doivent tous deux être un JSON valide.",
     "schemaSaveFailed": "Échec de l'enregistrement du schéma de tarification",
     "schemaSaveFailedAfterUpdate": "Modèle enregistré, mais l'enregistrement du schéma de tarification a échoué : {error}",
-    "modelCreatedSchemaFailed": "Modèle créé, mais l'enregistrement du schéma de tarification a échoué : {error}. Modifiez à nouveau ce modèle pour réessayer."
+    "modelCreatedSchemaFailed": "Modèle créé, mais l'enregistrement du schéma de tarification a échoué : {error}. Modifiez à nouveau ce modèle pour réessayer.",
+    "descriptionSectionHeading": "Description",
+    "descriptionSectionDescription": "Descriptions localisées de ce modèle affichées aux utilisateurs, une par langue. Enregistrées avec le modèle lors du clic sur Enregistrer.",
+    "descriptionSaveFailed": "Échec de l'enregistrement de la description",
+    "descriptionSaveFailedAfterUpdate": "Modèle enregistré, mais l'enregistrement de la description a échoué : {error}",
+    "modelCreatedDescriptionFailed": "Modèle créé, mais l'enregistrement de la description a échoué : {error}. Modifiez à nouveau ce modèle pour réessayer."
   },
   "adminUserPointsDetail": {
     "overview": {
