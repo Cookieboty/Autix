@@ -11,6 +11,20 @@ import type { ImageCallContext, ImageProviderAdapter } from './types';
 const GPT_IMAGE_RE = /^gpt-image/i;
 // Image generation can be slow on some providers; default 10min, tunable via env.
 const IMAGE_GENERATION_TIMEOUT_MS = Number(process.env.IMAGE_GENERATION_TIMEOUT_MS) || 600_000;
+const OPENAI_DEFAULT_BASE_URL = 'https://api.openai.com';
+
+// `ctx.baseUrl` is normally already resolved (model_configs → metadata → the
+// AMUX_BASE_URL system gateway var — see model-gateway-credentials.ts in
+// services/api) before it reaches this adapter. AMUX_BASE_URL is read again
+// here as a defensive last-resort for any caller that hits this adapter
+// directly without going through that resolution, so the hardcoded
+// OPENAI_DEFAULT_BASE_URL only kicks in when even the gateway env var is unset.
+function resolveAdapterBaseUrl(ctxBaseUrl: string | undefined): string {
+  if (ctxBaseUrl) return ctxBaseUrl;
+  const envBaseUrl = process.env.AMUX_BASE_URL;
+  if (envBaseUrl && envBaseUrl.trim() !== '') return envBaseUrl;
+  return OPENAI_DEFAULT_BASE_URL;
+}
 
 interface ClampedParams {
   size?: string;
@@ -76,7 +90,7 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
     if (size) body.size = size;
     if (quality) body.quality = quality;
 
-    const baseUrl = ctx.baseUrl || 'https://api.openai.com';
+    const baseUrl = resolveAdapterBaseUrl(ctx.baseUrl);
     console.info(
       `[OpenAIImageAdapter] generate request model=${ctx.model} requestedCount=${ctx.count} sentCount=${count} size=${size ?? '-'} quality=${quality ?? '-'} baseUrl=${baseUrl}`,
     );
@@ -143,7 +157,7 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
       form.set('mask', maskBlob, 'mask.png');
     }
 
-    const baseUrl = ctx.baseUrl || 'https://api.openai.com';
+    const baseUrl = resolveAdapterBaseUrl(ctx.baseUrl);
     console.info(
       `[OpenAIImageAdapter] edit request model=${ctx.model} requestedCount=${ctx.count} sentCount=${count} size=${size ?? '-'} quality=${quality ?? '-'} sourceImages=${sources.length} referenceImages=${refs.length} baseUrl=${baseUrl}`,
     );

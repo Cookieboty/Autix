@@ -1,4 +1,5 @@
 import { ChatOpenAI, ChatOpenAIFields } from '@langchain/openai';
+import { resolveApiKey, resolveBaseUrl } from '../model-config/model-gateway-credentials';
 
 /**
  * 模型配置缓存：避免每次请求都重新初始化 ChatOpenAI。
@@ -35,8 +36,8 @@ export function createChatModel(options: ModelFactoryOptions): ChatOpenAI {
   const cached = modelCache.get(modelConfigId);
   if (cached) return cached;
 
-  const finalApiKey = apiKey ?? (metadata?.apiKey as string | undefined);
-  const finalBaseUrl = baseUrl ?? (metadata?.baseUrl as string | undefined);
+  const finalApiKey = resolveApiKey({ apiKey, metadata });
+  const finalBaseUrl = resolveBaseUrl({ baseUrl, metadata });
   const finalTemperature = (metadata?.temperature as number | undefined) ?? temperature;
   const finalMaxTokens = (metadata?.maxTokens as number | undefined) ?? maxTokens;
   const headers = metadata?.headers as Record<string, string> | undefined;
@@ -110,10 +111,8 @@ export function createChatModelWithOverrides(
   overrides: ArenaModelOverrides,
 ): ChatOpenAI {
   const metadata = config.metadata as Record<string, unknown> | null | undefined;
-  const finalApiKey =
-    (config.apiKey ?? (metadata?.apiKey as string | undefined)) || undefined;
-  const finalBaseUrl =
-    (config.baseUrl ?? (metadata?.baseUrl as string | undefined)) || undefined;
+  const finalApiKey = resolveApiKey({ apiKey: config.apiKey, metadata });
+  const finalBaseUrl = resolveBaseUrl({ baseUrl: config.baseUrl, metadata });
   const headers = metadata?.headers as Record<string, string> | undefined;
 
   const dbTemp = (metadata?.temperature as number | undefined) ?? 0.7;

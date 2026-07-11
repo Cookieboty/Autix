@@ -8,6 +8,7 @@ import {
   type ImageModelKind,
 } from '@autix/domain/image';
 import type { Prisma } from '../../../platform/prisma/generated';
+import { resolveApiKey, resolveBaseUrl } from '../../model-config/model-gateway-credentials';
 
 interface SafeDefaults {
   size: string;
@@ -112,11 +113,9 @@ export function resolveImageCallCredentials(
   metadata = asImageCallMetadata(request.modelConfig.metadata),
 ): { baseUrl: string; apiKey: string } {
   const apiKey =
-    request.modelConfig.apiKey ??
-    (typeof metadata?.apiKey === 'string' ? metadata.apiKey : '');
+    resolveApiKey({ apiKey: request.modelConfig.apiKey, metadata }) ?? '';
   const baseUrl =
-    request.modelConfig.baseUrl ??
-    (typeof metadata?.baseUrl === 'string' ? metadata.baseUrl : '');
+    resolveBaseUrl({ baseUrl: request.modelConfig.baseUrl, metadata }) ?? '';
   return { baseUrl, apiKey };
 }
 

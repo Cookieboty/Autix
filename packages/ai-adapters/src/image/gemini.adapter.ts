@@ -95,6 +95,19 @@ const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com';
 const IMAGE_GENERATION_TIMEOUT_MS = Number(process.env.IMAGE_GENERATION_TIMEOUT_MS) || 600_000;
 const GEMINI_IMAGE_SIZES = new Set(['512px', '1K', '2K', '4K']);
 
+// `ctx.baseUrl` is normally already resolved (model_configs → metadata → the
+// AMUX_BASE_URL system gateway var — see model-gateway-credentials.ts in
+// services/api) before it reaches this adapter. AMUX_BASE_URL is read again
+// here as a defensive last-resort for any caller that hits this adapter
+// directly without going through that resolution, so the hardcoded
+// DEFAULT_BASE_URL only kicks in when even the gateway env var is unset.
+function resolveAdapterBaseUrl(ctxBaseUrl: string | undefined): string {
+  if (ctxBaseUrl) return ctxBaseUrl;
+  const envBaseUrl = process.env.AMUX_BASE_URL;
+  if (envBaseUrl && envBaseUrl.trim() !== '') return envBaseUrl;
+  return DEFAULT_BASE_URL;
+}
+
 export function parseGeminiSizeToken(size: string | undefined): {
   aspectRatio?: string;
   imageSize?: string;
@@ -175,7 +188,7 @@ export class GeminiImageAdapter implements ImageProviderAdapter {
     ctx: ImageCallContext,
     body: unknown,
   ): Promise<string[]> {
-    const baseUrl = ctx.baseUrl || DEFAULT_BASE_URL;
+    const baseUrl = resolveAdapterBaseUrl(ctx.baseUrl);
     const version =
       typeof ctx.metadata?.geminiEndpointVersion === 'string'
         ? ctx.metadata.geminiEndpointVersion

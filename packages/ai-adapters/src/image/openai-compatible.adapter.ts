@@ -4,6 +4,18 @@ import type { ImageCallContext, ImageProviderAdapter } from './types';
 // Image generation can be slow on some providers; default 10min, tunable via env.
 const IMAGE_GENERATION_TIMEOUT_MS = Number(process.env.IMAGE_GENERATION_TIMEOUT_MS) || 600_000;
 
+// `ctx.baseUrl` is normally already resolved (model_configs → metadata → the
+// AMUX_BASE_URL system gateway var — see model-gateway-credentials.ts in
+// services/api) before it reaches this adapter, which is the one actually
+// used for the `amux` gateway provider. AMUX_BASE_URL is read again here as a
+// defensive last-resort for any caller that hits this adapter directly
+// without going through that resolution.
+function resolveAdapterBaseUrl(ctxBaseUrl: string | undefined): string {
+  if (ctxBaseUrl) return ctxBaseUrl;
+  const envBaseUrl = process.env.AMUX_BASE_URL;
+  return envBaseUrl && envBaseUrl.trim() !== '' ? envBaseUrl : '';
+}
+
 export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
   readonly provider = 'openai-compatible';
 
@@ -22,7 +34,7 @@ export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
     if (ctx.size && ctx.size !== 'auto') body.size = ctx.size;
     if (ctx.quality && ctx.quality !== 'auto') body.quality = ctx.quality;
 
-    const url = buildEndpoint(ctx.baseUrl ?? '', endpoint);
+    const url = buildEndpoint(resolveAdapterBaseUrl(ctx.baseUrl), endpoint);
     console.info(
       `[OpenAICompatibleImageAdapter] generate request model=${ctx.model} count=${ctx.count} size=${ctx.size ?? '-'} quality=${ctx.quality ?? '-'} endpoint=${endpoint}`,
     );
@@ -89,7 +101,7 @@ export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
     console.info(
       `[OpenAICompatibleImageAdapter] edit request model=${ctx.model} count=${ctx.count} size=${ctx.size ?? '-'} quality=${ctx.quality ?? '-'} sourceImages=${sourceImages.length} referenceImages=${referenceImages.length} endpoint=${endpoint}`,
     );
-    const response = await fetch(buildEndpoint(ctx.baseUrl ?? '', endpoint), {
+    const response = await fetch(buildEndpoint(resolveAdapterBaseUrl(ctx.baseUrl), endpoint), {
       method: 'POST',
       headers: { Authorization: `Bearer ${ctx.apiKey}` },
       body: form,

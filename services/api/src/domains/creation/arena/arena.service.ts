@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ModelConfigService } from '../model-config/model-config.service';
+import { resolveApiKey, resolveBaseUrl } from '../model-config/model-gateway-credentials';
 import {
   createChatModelFromDbConfig,
   createChatModelWithOverrides,
@@ -149,10 +150,8 @@ export class ArenaService {
     const config =
       await this.modelConfigService.getConfigForOrchestrator(modelConfigId, userId);
     const metadata = this.asRecord(config.metadata);
-    const apiKey =
-      config.apiKey ?? this.readString(metadata?.apiKey) ?? '';
-    const baseUrl =
-      config.baseUrl ?? this.readString(metadata?.baseUrl) ?? '';
+    const apiKey = resolveApiKey({ apiKey: config.apiKey, metadata }) ?? '';
+    const baseUrl = resolveBaseUrl({ baseUrl: config.baseUrl, metadata }) ?? '';
 
     if (!baseUrl || !apiKey) {
       return [

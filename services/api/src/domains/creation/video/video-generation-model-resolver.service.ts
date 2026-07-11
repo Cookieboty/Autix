@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ModelType, type Prisma } from '../../platform/prisma/generated';
 import { ModelConfigService } from '../model-config/model-config.service';
+import { resolveApiKey, resolveBaseUrl } from '../model-config/model-gateway-credentials';
 import { VideoProjectRepository } from './video-project.repository';
 
 type ClipModelParams = {
@@ -66,15 +67,17 @@ export class VideoGenerationModelResolverService {
 
     const modelConfig =
       await this.modelConfigService.getConfigForOrchestrator(modelConfigId, userId);
-    if (!modelConfig.apiKey) {
+    const apiKey = resolveApiKey(modelConfig);
+    const baseUrl = resolveBaseUrl(modelConfig);
+    if (!apiKey) {
       throw new BadRequestException('视频模型缺少 API Key 配置');
     }
 
     return {
       modelConfigId,
       modelConfig,
-      apiKey: modelConfig.apiKey,
-      baseUrl: modelConfig.baseUrl,
+      apiKey,
+      baseUrl,
     };
   }
 
@@ -92,11 +95,12 @@ export class VideoGenerationModelResolverService {
 
     const modelConfig =
       await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-    if (!modelConfig.apiKey) return null;
+    const apiKey = resolveApiKey(modelConfig);
+    if (!apiKey) return null;
 
     return {
-      apiKey: modelConfig.apiKey,
-      baseUrl: modelConfig.baseUrl,
+      apiKey,
+      baseUrl: resolveBaseUrl(modelConfig),
       modelConfigId,
       model: modelConfig.model,
     };
@@ -110,13 +114,14 @@ export class VideoGenerationModelResolverService {
 
     const modelConfig =
       await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-    if (!modelConfig.apiKey) {
+    const apiKey = resolveApiKey(modelConfig);
+    if (!apiKey) {
       throw new BadRequestException('视频模型缺少 API Key 配置');
     }
 
     return {
-      apiKey: modelConfig.apiKey,
-      baseUrl: modelConfig.baseUrl,
+      apiKey,
+      baseUrl: resolveBaseUrl(modelConfig),
       modelConfigId,
       model: modelConfig.model,
     };
