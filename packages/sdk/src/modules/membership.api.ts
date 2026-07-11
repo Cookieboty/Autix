@@ -2,7 +2,6 @@ export { campaignApi, inviteApi, membershipApi, orderApi, pointsApi } from '../c
 
 export type {
   Campaign,
-  GenerationPricingRule,
   InviteCode,
   InviteRecord,
   MembershipInfo,
@@ -13,8 +12,6 @@ export type {
   PointsBalance,
   PointsPackage,
   PointsRecord,
-  PricingRuleComponent,
-  PricingRuleComponentType,
   StripeCheckoutSyncResult,
   UserMembership,
 } from '../client';

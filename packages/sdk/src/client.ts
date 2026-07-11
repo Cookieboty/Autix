@@ -1622,10 +1622,6 @@ export type {
   PointsBalance,
   PointsRecord,
   PointsPackage,
-  GenerationPricingRule,
-  PricingRuleComponent,
-  PricingRuleComponentType,
-  PricingRulePreviewResult,
   AdminMembershipUser,
 } from '@autix/domain/billing';
 
@@ -1653,7 +1649,6 @@ import type {
   PointsBalance,
   PointsRecord,
   PointsPackage,
-  GenerationPricingRule,
 } from '@autix/domain/billing';
 
 export interface TaskEstimateInput {
@@ -1741,7 +1736,6 @@ export const pointsApi = {
   getRecords: (params?: { page?: number; pageSize?: number; source?: string }) =>
     chatApi.get<PaginatedResult<PointsRecord>>('/api/points/records', { params }),
   getPackages: () => chatApi.get<PointsPackage[]>('/api/points/packages'),
-  getPricingRules: () => chatApi.get<GenerationPricingRule[]>('/api/points/pricing-rules'),
   estimate: (data: TaskEstimateInput) =>
     chatApi.post<TaskEstimateResult>('/api/points/estimate', data),
 };
@@ -2018,39 +2012,6 @@ export const membershipAdminApi = {
     chatApi.post('/api/admin/points/packages', data),
   updatePackage: (id: string, data: Record<string, unknown>) =>
     chatApi.put(`/api/admin/points/packages/${id}`, data),
-
-  getPricingRules: () => chatApi.get<GenerationPricingRule[]>('/api/admin/points/pricing-rules'),
-  createPricingRule: (data: Record<string, unknown>) =>
-    chatApi.post('/api/admin/points/pricing-rules', data),
-  updatePricingRule: (id: string, data: Record<string, unknown>) =>
-    chatApi.put(`/api/admin/points/pricing-rules/${id}`, data),
-  previewPricingRule: (data: Record<string, unknown>) =>
-    chatApi.post<PricingRulePreviewResult>(
-      '/api/admin/points/pricing-rules/preview',
-      data,
-    ),
-  exportPricingRules: (body: {
-    taskType: string;
-    models: Array<{ provider: string; modelName: string }>;
-    qualities?: string[];
-    resolutions?: string[];
-    modelTiers?: string[];
-  }) =>
-    chatApi.post<Blob>('/api/admin/points/pricing-rules/export', body, {
-      responseType: 'blob',
-    }),
-  importPricingRules: (file: File, taskType: string, dryRun = false) => {
-    const form = new FormData();
-    form.append('file', file);
-    return chatApi.post<{
-      created: number;
-      updated: number;
-      errors: Array<{ row: number; name?: string; reason: string }>;
-      dryRun: boolean;
-    }>('/api/admin/points/pricing-rules/import', form, {
-      params: { taskType, dryRun },
-    });
-  },
 
   getOrders: (params?: {
     page?: number;
@@ -2522,9 +2483,6 @@ export interface AdminUserPointsDetail {
   }>;
   records: PointsRecord[];
 }
-
-// P2-C-1: PricingRulePreviewResult is now defined in @autix/domain/billing
-import type { PricingRulePreviewResult } from '@autix/domain/billing';
 
 // ── Image Generation ────────────────────────────────────────────────────
 export const imageGenApi = {

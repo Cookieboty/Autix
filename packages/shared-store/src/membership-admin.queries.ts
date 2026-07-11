@@ -43,7 +43,6 @@ export const membershipAdminQueryKeys = {
     ] as const,
   levels: () => ['membershipAdmin', 'levels'] as const,
   packages: () => ['membershipAdmin', 'packages'] as const,
-  pricingRules: () => ['membershipAdmin', 'pricing-rules'] as const,
   campaigns: () => ['membershipAdmin', 'campaigns'] as const,
   campaignRewardsRoot: (campaignId: string) =>
     ['membershipAdmin', 'campaigns', campaignId, 'rewards'] as const,
@@ -116,12 +115,6 @@ function invalidateLevels(queryClient: QueryClient) {
 function invalidatePackages(queryClient: QueryClient) {
   return queryClient.invalidateQueries({
     queryKey: membershipAdminQueryKeys.packages(),
-  });
-}
-
-function invalidatePricingRules(queryClient: QueryClient) {
-  return queryClient.invalidateQueries({
-    queryKey: membershipAdminQueryKeys.pricingRules(),
   });
 }
 
@@ -452,75 +445,6 @@ export function useUpdateAdminPointsPackageMutation(callbacks?: MutationCallback
       membershipAdminActions.updatePackage(id, data),
     onSuccess: async () => {
       await invalidatePackages(queryClient);
-      await callOnSuccess(callbacks);
-    },
-    onError: (error) => callOnError(error, callbacks),
-  });
-}
-
-export function useAdminPricingRulesQuery() {
-  return useQuery({
-    queryKey: membershipAdminQueryKeys.pricingRules(),
-    queryFn: membershipAdminActions.listPricingRules,
-  });
-}
-
-export function useCreateAdminPricingRuleMutation(callbacks?: MutationCallbacks) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: membershipAdminActions.createPricingRule,
-    onSuccess: async () => {
-      await invalidatePricingRules(queryClient);
-      await callOnSuccess(callbacks);
-    },
-    onError: (error) => callOnError(error, callbacks),
-  });
-}
-
-export function useUpdateAdminPricingRuleMutation(callbacks?: MutationCallbacks) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
-      membershipAdminActions.updatePricingRule(id, data),
-    onSuccess: async () => {
-      await invalidatePricingRules(queryClient);
-      await callOnSuccess(callbacks);
-    },
-    onError: (error) => callOnError(error, callbacks),
-  });
-}
-
-export function usePreviewAdminPricingRuleMutation(callbacks?: MutationCallbacks) {
-  return useMutation({
-    mutationFn: membershipAdminActions.previewPricingRule,
-    onSuccess: () => callOnSuccess(callbacks),
-    onError: (error) => callOnError(error, callbacks),
-  });
-}
-
-export function useExportAdminPricingRulesMutation(callbacks?: MutationCallbacks) {
-  return useMutation({
-    mutationFn: (input: {
-      taskType: string;
-      models: Array<{ provider: string; modelName: string }>;
-      qualities?: string[];
-      resolutions?: string[];
-      modelTiers?: string[];
-    }) => membershipAdminActions.exportPricingRules(input),
-    onSuccess: () => callOnSuccess(callbacks),
-    onError: (error) => callOnError(error, callbacks),
-  });
-}
-
-export function useImportAdminPricingRulesMutation(callbacks?: MutationCallbacks) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { file: File; taskType: string; dryRun: boolean }) =>
-      membershipAdminActions.importPricingRules(input),
-    onSuccess: async (result) => {
-      if (result && !result.dryRun) {
-        await invalidatePricingRules(queryClient);
-      }
       await callOnSuccess(callbacks);
     },
     onError: (error) => callOnError(error, callbacks),
