@@ -5060,7 +5060,26 @@
     },
     "excelScalars": {
       "bindingsTitle": "Множители привязок задач к моделям",
-      "discountsTitle": "Коэффициенты скидок"
+      "discountsTitle": "Коэффициенты скидок",
+      "exportCsv": "Экспорт CSV",
+      "importCsv": "Импорт CSV",
+      "importPreviewTitle": "{title} — предпросмотр импорта",
+      "columnRow": "Строка",
+      "columnKey": "Ключ",
+      "columnReason": "Причина",
+      "summary": "{valid} допустимо · <bold>{errors}</bold> ошибок",
+      "confirmImport": "Подтвердить импорт",
+      "applying": "Применение…",
+      "readFileFailed": "Не удалось прочитать файл",
+      "importFailed": "Импорт не удался",
+      "unknownDiscountCodes": "Неизвестный код(ы) скидки: {codes}",
+      "reason": {
+        "missingTaskType": "отсутствует taskType",
+        "missingModelConfigId": "отсутствует modelConfigId",
+        "multiplierInvalid": "multiplier должен быть конечным числом",
+        "missingCode": "отсутствует code",
+        "factorInvalid": "factor должен быть конечным числом"
+      }
     },
     "schemaEditor": {
       "invalidJson": "Некорректный JSON",

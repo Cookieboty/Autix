@@ -5060,7 +5060,26 @@
     },
     "excelScalars": {
       "bindingsTitle": "任务-模型绑定倍率",
-      "discountsTitle": "折扣系数"
+      "discountsTitle": "折扣系数",
+      "exportCsv": "导出 CSV",
+      "importCsv": "导入 CSV",
+      "importPreviewTitle": "{title} — 导入预览",
+      "columnRow": "行",
+      "columnKey": "键",
+      "columnReason": "原因",
+      "summary": "{valid} 条有效 · <bold>{errors}</bold> 条错误",
+      "confirmImport": "确认导入",
+      "applying": "正在应用…",
+      "readFileFailed": "读取文件失败",
+      "importFailed": "导入失败",
+      "unknownDiscountCodes": "未知的折扣码：{codes}",
+      "reason": {
+        "missingTaskType": "缺少 taskType",
+        "missingModelConfigId": "缺少 modelConfigId",
+        "multiplierInvalid": "multiplier 必须是有限数字",
+        "missingCode": "缺少 code",
+        "factorInvalid": "factor 必须是有限数字"
+      }
     },
     "schemaEditor": {
       "invalidJson": "JSON 格式无效",

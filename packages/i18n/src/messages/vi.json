@@ -5060,7 +5060,26 @@
     },
     "excelScalars": {
       "bindingsTitle": "Hệ số nhân liên kết tác vụ-mô hình",
-      "discountsTitle": "Hệ số giảm giá"
+      "discountsTitle": "Hệ số giảm giá",
+      "exportCsv": "Xuất CSV",
+      "importCsv": "Nhập CSV",
+      "importPreviewTitle": "{title} — xem trước nhập",
+      "columnRow": "Dòng",
+      "columnKey": "Khóa",
+      "columnReason": "Lý do",
+      "summary": "{valid} hợp lệ · <bold>{errors}</bold> lỗi",
+      "confirmImport": "Xác nhận nhập",
+      "applying": "Đang áp dụng…",
+      "readFileFailed": "Không đọc được tệp",
+      "importFailed": "Nhập thất bại",
+      "unknownDiscountCodes": "Mã giảm giá không xác định: {codes}",
+      "reason": {
+        "missingTaskType": "thiếu taskType",
+        "missingModelConfigId": "thiếu modelConfigId",
+        "multiplierInvalid": "multiplier phải là số hữu hạn",
+        "missingCode": "thiếu code",
+        "factorInvalid": "factor phải là số hữu hạn"
+      }
     },
     "schemaEditor": {
       "invalidJson": "JSON không hợp lệ",

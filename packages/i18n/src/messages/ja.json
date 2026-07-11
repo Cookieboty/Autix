@@ -5060,7 +5060,26 @@
     },
     "excelScalars": {
       "bindingsTitle": "タスク–モデル バインディング倍率",
-      "discountsTitle": "割引係数"
+      "discountsTitle": "割引係数",
+      "exportCsv": "CSV をエクスポート",
+      "importCsv": "CSV をインポート",
+      "importPreviewTitle": "{title} — インポートプレビュー",
+      "columnRow": "行",
+      "columnKey": "キー",
+      "columnReason": "理由",
+      "summary": "{valid} 件有効 · <bold>{errors}</bold> 件エラー",
+      "confirmImport": "インポートを確定",
+      "applying": "適用中…",
+      "readFileFailed": "ファイルの読み込みに失敗しました",
+      "importFailed": "インポートに失敗しました",
+      "unknownDiscountCodes": "不明な割引コード: {codes}",
+      "reason": {
+        "missingTaskType": "taskType がありません",
+        "missingModelConfigId": "modelConfigId がありません",
+        "multiplierInvalid": "multiplier は有限数である必要があります",
+        "missingCode": "code がありません",
+        "factorInvalid": "factor は有限数である必要があります"
+      }
     },
     "schemaEditor": {
       "invalidJson": "無効な JSON です",

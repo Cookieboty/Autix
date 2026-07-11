@@ -5060,7 +5060,26 @@
     },
     "excelScalars": {
       "bindingsTitle": "Task-model binding multipliers",
-      "discountsTitle": "Discount factors"
+      "discountsTitle": "Discount factors",
+      "exportCsv": "Export CSV",
+      "importCsv": "Import CSV",
+      "importPreviewTitle": "{title} — import preview",
+      "columnRow": "Row",
+      "columnKey": "Key",
+      "columnReason": "Reason",
+      "summary": "{valid} valid · <bold>{errors}</bold> errors",
+      "confirmImport": "Confirm import",
+      "applying": "Applying…",
+      "readFileFailed": "Failed to read file",
+      "importFailed": "Import failed",
+      "unknownDiscountCodes": "Unknown discount code(s): {codes}",
+      "reason": {
+        "missingTaskType": "missing taskType",
+        "missingModelConfigId": "missing modelConfigId",
+        "multiplierInvalid": "multiplier must be a finite number",
+        "missingCode": "missing code",
+        "factorInvalid": "factor must be a finite number"
+      }
     },
     "schemaEditor": {
       "invalidJson": "Invalid JSON",

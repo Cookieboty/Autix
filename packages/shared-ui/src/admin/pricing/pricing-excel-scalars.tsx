@@ -110,13 +110,24 @@ function downloadCsv(filename: string, csv: string) {
 interface RowError {
   row: number;
   key: string;
-  reason: string;
+  reason: RowRejectionReason;
 }
 
 interface ImportPreview<TPatch> {
   patches: TPatch[];
   errors: RowError[];
 }
+
+/** Machine-stable codes for rejected-row reasons. `previewBindingRows`/`previewDiscountRows` run
+ * outside React (no `useTranslations` access), so they emit these codes rather than user-facing
+ * text; the dialog resolves each code to a localized string via `t(\`reason.${code}\`)` at render
+ * time (see `ScalarExcelSection`). */
+type RowRejectionReason =
+  | 'missingTaskType'
+  | 'missingModelConfigId'
+  | 'multiplierInvalid'
+  | 'missingCode'
+  | 'factorInvalid';
 
 /** Presentational duplicate of `rowsToBindingPatches`'s validity rules, kept only to surface a
  * human-readable reason per rejected row in the preview dialog. Final gating for what actually
@@ -126,16 +137,16 @@ function previewBindingRows(rawRows: Array<Record<string, string>>): ImportPrevi
   rawRows.forEach((raw, index) => {
     const key = `${raw.taskType ?? '?'} / ${raw.modelConfigId ?? '?'}`;
     if (!raw.taskType?.trim()) {
-      errors.push({ row: index + 2, key, reason: 'missing taskType' });
+      errors.push({ row: index + 2, key, reason: 'missingTaskType' });
       return;
     }
     if (!raw.modelConfigId?.trim()) {
-      errors.push({ row: index + 2, key, reason: 'missing modelConfigId' });
+      errors.push({ row: index + 2, key, reason: 'missingModelConfigId' });
       return;
     }
     const multiplier = Number(raw.multiplier);
     if (!raw.multiplier?.trim() || !Number.isFinite(multiplier)) {
-      errors.push({ row: index + 2, key, reason: 'multiplier must be a finite number' });
+      errors.push({ row: index + 2, key, reason: 'multiplierInvalid' });
     }
   });
   return { patches: rowsToBindingPatches(rawRows), errors };
@@ -146,12 +157,12 @@ function previewDiscountRows(rawRows: Array<Record<string, string>>): ImportPrev
   rawRows.forEach((raw, index) => {
     const key = raw.code ?? '?';
     if (!raw.code?.trim()) {
-      errors.push({ row: index + 2, key, reason: 'missing code' });
+      errors.push({ row: index + 2, key, reason: 'missingCode' });
       return;
     }
     const factor = Number(raw.factor);
     if (!raw.factor?.trim() || !Number.isFinite(factor)) {
-      errors.push({ row: index + 2, key, reason: 'factor must be a finite number' });
+      errors.push({ row: index + 2, key, reason: 'factorInvalid' });
     }
   });
   return { patches: rowsToDiscountPatches(rawRows), errors };
@@ -188,6 +199,8 @@ function ScalarExcelSection<TPatch>({
   applyPatches: (patches: TPatch[]) => Promise<unknown>;
   renderPatchLabel: (patch: TPatch) => string;
 }) {
+  const t = useTranslations('adminPricing.excelScalars');
+  const tCommon = useTranslations('common');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [preview, setPreview] = useState<ImportPreview<TPatch> | null>(null);
   const [applying, setApplying] = useState(false);
@@ -210,7 +223,7 @@ function ScalarExcelSection<TPatch>({
       const text = await file.text();
       setPreview(parsePreview(fromCsv(text)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to read file');
+      setError(err instanceof Error ? err.message : t('readFileFailed'));
     }
   };
 
@@ -223,7 +236,7 @@ function ScalarExcelSection<TPatch>({
       setDialogOpen(false);
       setPreview(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed');
+      setError(err instanceof Error ? err.message : t('importFailed'));
     } finally {
       setApplying(false);
     }
@@ -238,12 +251,12 @@ function ScalarExcelSection<TPatch>({
 
       <Button variant="outline" size="sm" onClick={handleExport}>
         <Download className="mr-1 size-4" />
-        Export CSV
+        {t('exportCsv')}
       </Button>
 
       <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
         <Upload className="mr-1 size-4" />
-        Import CSV
+        {t('importCsv')}
       </Button>
       <input
         ref={fileInputRef}
@@ -256,15 +269,18 @@ function ScalarExcelSection<TPatch>({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{title} — import preview</DialogTitle>
+            <DialogTitle>{t('importPreviewTitle', { title })}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-3">
             {error && <p className="text-sm text-destructive">{error}</p>}
             {preview && (
               <div className="space-y-3">
                 <p className="text-sm">
-                  {preview.patches.length} valid · <span className="font-semibold">{preview.errors.length}</span>{' '}
-                  errors
+                  {t.rich('summary', {
+                    valid: preview.patches.length,
+                    errors: preview.errors.length,
+                    bold: (chunks) => <span className="font-semibold">{chunks}</span>,
+                  })}
                 </p>
                 {preview.patches.length > 0 && !hasErrors && (
                   <ul className="max-h-40 overflow-y-auto rounded border p-2 text-xs text-muted-foreground">
@@ -278,9 +294,9 @@ function ScalarExcelSection<TPatch>({
                     <table className="w-full text-left text-sm">
                       <thead className="bg-muted">
                         <tr>
-                          <th className="px-2 py-1">Row</th>
-                          <th className="px-2 py-1">Key</th>
-                          <th className="px-2 py-1">Reason</th>
+                          <th className="px-2 py-1">{t('columnRow')}</th>
+                          <th className="px-2 py-1">{t('columnKey')}</th>
+                          <th className="px-2 py-1">{t('columnReason')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -288,7 +304,7 @@ function ScalarExcelSection<TPatch>({
                           <tr key={`${item.row}-${index}`} className="border-t">
                             <td className="px-2 py-1">{item.row}</td>
                             <td className="px-2 py-1">{item.key}</td>
-                            <td className="px-2 py-1 text-destructive">{item.reason}</td>
+                            <td className="px-2 py-1 text-destructive">{t(`reason.${item.reason}`)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -300,10 +316,10 @@ function ScalarExcelSection<TPatch>({
           </DialogBody>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-              Close
+              {tCommon('close')}
             </Button>
             <Button onClick={handleConfirmImport} disabled={!canConfirm}>
-              {applying ? 'Applying…' : 'Confirm import'}
+              {applying ? t('applying') : t('confirmImport')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -354,7 +370,7 @@ export function PricingExcelScalars({
           const byCode = new Map(discounts.map((discount) => [discount.code, discount]));
           const missing = patches.filter((patch) => !byCode.has(patch.code));
           if (missing.length > 0) {
-            throw new Error(`Unknown discount code(s): ${missing.map((patch) => patch.code).join(', ')}`);
+            throw new Error(t('unknownDiscountCodes', { codes: missing.map((patch) => patch.code).join(', ') }));
           }
           return Promise.all(
             patches.map((patch) => {

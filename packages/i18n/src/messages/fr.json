@@ -5060,7 +5060,26 @@
     },
     "excelScalars": {
       "bindingsTitle": "Multiplicateurs des liaisons tâche-modèle",
-      "discountsTitle": "Facteurs de remise"
+      "discountsTitle": "Facteurs de remise",
+      "exportCsv": "Exporter en CSV",
+      "importCsv": "Importer un CSV",
+      "importPreviewTitle": "{title} — aperçu de l'import",
+      "columnRow": "Ligne",
+      "columnKey": "Clé",
+      "columnReason": "Motif",
+      "summary": "{valid} valides · <bold>{errors}</bold> erreurs",
+      "confirmImport": "Confirmer l'import",
+      "applying": "Application en cours…",
+      "readFileFailed": "Échec de la lecture du fichier",
+      "importFailed": "Échec de l'import",
+      "unknownDiscountCodes": "Code(s) de remise inconnu(s) : {codes}",
+      "reason": {
+        "missingTaskType": "taskType manquant",
+        "missingModelConfigId": "modelConfigId manquant",
+        "multiplierInvalid": "multiplier doit être un nombre fini",
+        "missingCode": "code manquant",
+        "factorInvalid": "factor doit être un nombre fini"
+      }
     },
     "schemaEditor": {
       "invalidJson": "JSON invalide",
