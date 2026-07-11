@@ -22,7 +22,7 @@ const prisma = createPrismaClient();
  * JSON round-trip：序列化再反解析，产出一个结构上必然满足 InputJsonValue
  * 的裸对象，再声明它就是 InputJsonValue。
  */
-function toInputJson(value: PricingSchema): Prisma.InputJsonValue {
+function toInputJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
@@ -38,6 +38,96 @@ function presetKeyFor(model: {
   if (model.capabilities.includes('image') && !model.capabilities.includes('text')) return 'image';
   if (model.type === 'embedding') return null;
   return 'text';
+}
+
+/**
+ * 起步模型目录。型号取自 domain 的能力表（image/video capabilities.ts 里真实登记的
+ * kind）与 seed-prod 的首页任务（Nano Banana Pro / Seedance 2.0）。**不写 apiKey /
+ * baseUrl**——密钥与网关地址由运营在 admin「模型配置」页手动补充。model-id 的 amux/
+ * 前缀只是占位命名，运营按真实网关改。
+ *
+ * type + capabilities 决定 presetKeyFor 的归类（→ text / image / video preset）；
+ * metadata.imageModelKind / videoModelKind 给能力面板（尺寸/分辨率）做确定性识别，
+ * 避免 model-id 变了之后识别不出档位。
+ */
+interface SeedModelRow {
+  name: string;
+  provider: string;
+  model: string;
+  type: 'general' | 'video';
+  capabilities: string[];
+  isDefault: boolean;
+  metadata: Record<string, unknown>;
+  description: Record<string, string>;
+}
+
+const SEED_MODELS: SeedModelRow[] = [
+  // —— 对话 / 文本（text preset）——
+  { name: 'GPT-5.5', provider: 'openai', model: 'amux/gpt-5.5', type: 'general', capabilities: ['text', 'vision'], isDefault: true, metadata: {}, description: { en: 'General chat / text model', 'zh-CN': '通用对话 / 文本模型' } },
+  { name: 'GPT-5', provider: 'openai', model: 'amux/gpt-5', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'General chat / text model', 'zh-CN': '通用对话 / 文本模型' } },
+  { name: 'GPT-4o mini', provider: 'openai', model: 'amux/gpt-4o-mini', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Lightweight chat model', 'zh-CN': '轻量对话模型' } },
+
+  // —— 图像（image preset）——
+  { name: 'Nano Banana Pro', provider: 'openai', model: 'amux/nano-banana-pro', type: 'general', capabilities: ['image'], isDefault: true, metadata: { imageModelKind: 'gemini-3-pro-image' }, description: { en: 'Flagship image model', 'zh-CN': '旗舰图像模型' } },
+  { name: 'Nano Banana Flash', provider: 'openai', model: 'amux/nano-banana-flash', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Fast image model', 'zh-CN': '快速图像模型' } },
+  { name: 'GPT Image', provider: 'openai', model: 'amux/gpt-image-1', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gpt-image' }, description: { en: 'GPT image model', 'zh-CN': 'GPT 图像模型' } },
+  { name: 'Gemini Flash Image', provider: 'openai', model: 'amux/gemini-flash-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: { imageModelKind: 'gemini-flash-image' }, description: { en: 'Gemini flash image model', 'zh-CN': 'Gemini 快速图像模型' } },
+
+  // —— 视频（video preset）——
+  { name: 'Seedance 2.0', provider: 'openai', model: 'amux/seedance-2.0', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0' }, description: { en: 'Flagship video model', 'zh-CN': '旗舰视频模型' } },
+  { name: 'Seedance 2.0 Fast', provider: 'openai', model: 'amux/seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Fast video model', 'zh-CN': '快速视频模型' } },
+  { name: 'Seedance 2.0 Mini', provider: 'openai', model: 'amux/seedance-2.0-mini', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-mini' }, description: { en: 'Lightweight video model', 'zh-CN': '轻量视频模型' } },
+  { name: 'Seedance 1.5 Pro', provider: 'openai', model: 'amux/seedance-1.5-pro', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-1.5-pro' }, description: { en: 'Video model', 'zh-CN': '视频模型' } },
+  { name: 'Seedance 1.0 Pro', provider: 'openai', model: 'amux/seedance-1.0-pro', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-1.0-pro' }, description: { en: 'Video model', 'zh-CN': '视频模型' } },
+];
+
+/**
+ * 创建起步模型（不含 apiKey / baseUrl，运营手动补）。幂等：以 (provider, model) 为
+ * 逻辑主键——已存在只刷新可安全重播的字段（name/type/capabilities/metadata/description），
+ * **绝不覆盖运营已配的 apiKey / baseUrl / isDefault / isActive / priority**。
+ * schema 不在这里写，交给紧随其后的 seedModelSchemas() 按 preset 统一填。
+ */
+async function seedModels() {
+  let created = 0;
+  let updated = 0;
+  for (const m of SEED_MODELS) {
+    const existing = await prisma.model_configs.findFirst({
+      where: { provider: m.provider, model: m.model },
+      select: { id: true },
+    });
+    if (existing) {
+      await prisma.model_configs.update({
+        where: { id: existing.id },
+        data: {
+          name: m.name,
+          type: m.type,
+          capabilities: m.capabilities,
+          metadata: toInputJson(m.metadata),
+          description: toInputJson(m.description),
+        },
+      });
+      updated += 1;
+    } else {
+      await prisma.model_configs.create({
+        data: {
+          name: m.name,
+          provider: m.provider,
+          model: m.model,
+          type: m.type,
+          capabilities: m.capabilities,
+          apiKey: null,
+          baseUrl: null,
+          isActive: true,
+          isDefault: m.isDefault,
+          visibility: 'public',
+          metadata: toInputJson(m.metadata),
+          description: toInputJson(m.description),
+        },
+      });
+      created += 1;
+    }
+  }
+  console.log(`models: created ${created}, updated ${updated} (apiKey/baseUrl left for ops)`);
 }
 
 async function seedTasks() {
@@ -196,6 +286,7 @@ async function assertActiveTasksHaveDefaultBinding() {
 }
 
 async function main() {
+  await seedModels();
   await seedTasks();
   const { assigned, skipped } = await seedModelSchemas();
   await seedBindings(assigned);

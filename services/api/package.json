@@ -12,7 +12,6 @@
     "seed:templates": "dotenv -e ../../.env -- bun run scripts/seed-templates.ts",
     "seed:resources": "dotenv -e ../../.env -- bun run scripts/seed-resources.ts",
     "seed:membership": "dotenv -e ../../.env -- bun run scripts/seed-membership.ts",
-    "seed:models": "dotenv -e ../../.env -- bun run scripts/seed-models.ts",
     "seed:pricing": "dotenv -e ../../.env -- bun run scripts/seed-pricing.ts",
     "fix:api-key": "dotenv -e ../../.env -- bun run scripts/fix-api-key-simple.ts",
     "fix:model": "dotenv -e ../../.env -- bun run scripts/quick-fix-model.ts",
