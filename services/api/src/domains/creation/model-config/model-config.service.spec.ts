@@ -78,8 +78,8 @@ describe('ModelConfigService public model boundaries', () => {
 
     const models = await service.findSystemModels();
 
+    // admin 系统模型页显示全部模型（含 private），不再按 visibility 过滤
     expect(prisma.model_configs.findMany).toHaveBeenCalledWith({
-      where: { visibility: ModelVisibility.public },
       orderBy: [{ type: 'asc' }, { priority: 'desc' }],
       select: expect.objectContaining({
         allowedMembershipLevels: expect.any(Object),
