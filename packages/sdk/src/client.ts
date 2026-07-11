@@ -2564,5 +2564,215 @@ export const agentRunApi = {
     chatApi.get(`/api/conversations/${conversationId}/step-artifacts`),
 };
 
+// ── Admin Pricing Config (model schemas / task definitions / task-model bindings / discounts) ──
+// Wraps services/api/.../admin/pricing-config/pricing-config-admin.controller.ts (@Controller('admin')).
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
+import type { LocalizedText } from '@autix/domain/model';
+
+export type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
+export type { LocalizedText } from '@autix/domain/model';
+
+/** GET /api/admin/models/:id — full editable view of one model's schema/description state. */
+export interface AdminModelDetail {
+  id: string;
+  description: LocalizedText;
+  paramsSchema: ParamsSchema | null;
+  pricingSchema: PricingSchema | null;
+  schemaVersion: number;
+}
+
+export interface UpdateModelSchemasInput {
+  paramsSchema: ParamsSchema;
+  pricingSchema: PricingSchema;
+}
+
+/** PUT /api/admin/models/:id/schemas response — both schemas are non-null once validated & saved. */
+export interface AdminModelSchemas {
+  id: string;
+  paramsSchema: ParamsSchema;
+  pricingSchema: PricingSchema;
+  schemaVersion: number;
+}
+
+export interface UpdateModelDescriptionInput {
+  description: LocalizedText;
+}
+
+export interface AdminModelDescription {
+  id: string;
+  description: LocalizedText;
+}
+
+export interface DryRunPricingInput {
+  paramsSchema: ParamsSchema;
+  pricingSchema: PricingSchema;
+  sampleParams: Record<string, unknown>;
+  sampleUsage?: Record<string, unknown>;
+}
+
+/**
+ * Mirrors DryRunResult in pricing-config-admin.service.ts. Reuses the `Breakdown` interface
+ * already defined above for the public tasksApi quote result — both are `{ id, op, contribution,
+ * accumulatorAfter }` and `op` is the domain's `TermOp` ('add' | 'mul') either way.
+ */
+export interface DryRunResult {
+  total: number;
+  breakdown: Breakdown[];
+}
+
+export const ADMIN_TASK_CATEGORIES = ['chat', 'image', 'video', 'prompt'] as const;
+export type AdminTaskCategory = (typeof ADMIN_TASK_CATEGORIES)[number];
+
+/** task_definitions row (pricing-config-admin.repository.ts findMany — no `select`, full row). */
+export interface AdminTaskDefinition {
+  id: string;
+  taskType: string;
+  name: string;
+  category: AdminTaskCategory;
+  fixedCostSchema: PricingSchema | null;
+  isActive: boolean;
+  sort: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTaskDefinitionInput {
+  taskType: string;
+  name: string;
+  category: AdminTaskCategory;
+  fixedCostSchema?: PricingSchema | null;
+}
+
+export interface UpdateTaskDefinitionInput {
+  name?: string;
+  category?: AdminTaskCategory;
+  fixedCostSchema?: PricingSchema | null;
+  isActive?: boolean;
+  sort?: number;
+}
+
+/**
+ * task_model_bindings row. `multiplier` is Prisma `Decimal(6, 3)` — decimal.js's `toJSON`
+ * delegates to `toString()` (see node_modules/decimal.js: `P.valueOf = P.toJSON`), so it
+ * serializes over HTTP as a JSON string (e.g. "1.000"), never a bare number. Callers must
+ * `Number(...)` it before doing arithmetic.
+ */
+export interface TaskModelBinding {
+  taskType: string;
+  modelConfigId: string;
+  multiplier: string;
+  isDefault: boolean;
+  isActive: boolean;
+  sort: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTaskModelBindingInput {
+  taskType: string;
+  modelConfigId: string;
+  multiplier?: number;
+  isDefault?: boolean;
+}
+
+export interface UpdateTaskModelBindingInput {
+  multiplier?: number;
+  isDefault?: boolean;
+  isActive?: boolean;
+  sort?: number;
+}
+
+/** Mirrors AdminDiscountScope in pricing-config-admin.service.ts. Unknown extra keys pass through. */
+export interface PricingDiscountScope {
+  membershipLevelNumbers?: number[];
+  taskTypes?: string[];
+  modelConfigIds?: string[];
+  [key: string]: unknown;
+}
+
+/**
+ * pricing_discounts row. `factor` is Prisma `Decimal(6, 3)` — same string-wire-type reasoning as
+ * `TaskModelBinding.multiplier` above.
+ */
+export interface PricingDiscount {
+  id: string;
+  code: string;
+  name: string;
+  factor: string;
+  scope: PricingDiscountScope;
+  stackable: boolean;
+  priority: number;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDiscountInput {
+  code: string;
+  name: string;
+  factor: number;
+  scope: PricingDiscountScope;
+  stackable?: boolean;
+  priority?: number;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+}
+
+export interface UpdateDiscountInput {
+  name?: string;
+  factor?: number;
+  scope?: PricingDiscountScope;
+  stackable?: boolean;
+  priority?: number;
+  isActive?: boolean;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+}
+
+export const adminPricingApi = {
+  getModel: (id: string) => chatApi.get<AdminModelDetail>(`/api/admin/models/${id}`),
+  updateModelSchemas: (id: string, data: UpdateModelSchemasInput) =>
+    chatApi.put<AdminModelSchemas>(`/api/admin/models/${id}/schemas`, data),
+  updateModelDescription: (id: string, data: UpdateModelDescriptionInput) =>
+    chatApi.put<AdminModelDescription>(`/api/admin/models/${id}/description`, data),
+  dryRunPricing: (data: DryRunPricingInput) =>
+    chatApi.post<DryRunResult>('/api/admin/pricing/dry-run', data),
+
+  listTaskDefinitions: () => chatApi.get<AdminTaskDefinition[]>('/api/admin/task-definitions'),
+  createTaskDefinition: (data: CreateTaskDefinitionInput) =>
+    chatApi.post<AdminTaskDefinition>('/api/admin/task-definitions', data),
+  updateTaskDefinition: (taskType: string, data: UpdateTaskDefinitionInput) =>
+    chatApi.put<AdminTaskDefinition>(`/api/admin/task-definitions/${taskType}`, data),
+  deleteTaskDefinition: (taskType: string) =>
+    chatApi.delete<AdminTaskDefinition>(`/api/admin/task-definitions/${taskType}`),
+
+  listTaskModelBindings: (taskType?: string) =>
+    chatApi.get<TaskModelBinding[]>('/api/admin/task-model-bindings', { params: { taskType } }),
+  createTaskModelBinding: (data: CreateTaskModelBindingInput) =>
+    chatApi.post<TaskModelBinding>('/api/admin/task-model-bindings', data),
+  updateTaskModelBinding: (
+    taskType: string,
+    modelConfigId: string,
+    data: UpdateTaskModelBindingInput,
+  ) =>
+    chatApi.put<TaskModelBinding>(
+      `/api/admin/task-model-bindings/${taskType}/${modelConfigId}`,
+      data,
+    ),
+  deleteTaskModelBinding: (taskType: string, modelConfigId: string) =>
+    chatApi.delete<TaskModelBinding>(
+      `/api/admin/task-model-bindings/${taskType}/${modelConfigId}`,
+    ),
+
+  listDiscounts: () => chatApi.get<PricingDiscount[]>('/api/admin/discounts'),
+  createDiscount: (data: CreateDiscountInput) =>
+    chatApi.post<PricingDiscount>('/api/admin/discounts', data),
+  updateDiscount: (id: string, data: UpdateDiscountInput) =>
+    chatApi.put<PricingDiscount>(`/api/admin/discounts/${id}`, data),
+  deleteDiscount: (id: string) => chatApi.delete<PricingDiscount>(`/api/admin/discounts/${id}`),
+};
+
 // Default export for existing import compatibility.
 export default userApi;
