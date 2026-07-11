@@ -223,23 +223,19 @@ export function SystemModelFormSheet({
                 {t('membershipAccessEmpty')}
               </p>
             ) : (
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 gap-0.5">
                 {membershipLevels.map((level) => (
                   <label
                     key={level.id}
-                    className="border-border hover:bg-muted/50 flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2"
+                    className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1"
                   >
                     <Checkbox
                       checked={form.allowedMembershipLevelIds.includes(level.id)}
                       onCheckedChange={() => toggleMembershipLevel(level.id)}
                     />
-                    <span className="min-w-0 flex-1">
-                      <span className="text-foreground block truncate text-sm">
-                        {level.name}
-                      </span>
-                      <span className="text-muted-foreground block text-xs">
-                        {t('membershipLevelMeta', { level: level.level })}
-                      </span>
+                    <span className="text-foreground truncate text-sm">{level.name}</span>
+                    <span className="text-muted-foreground text-xs">
+                      ({t('membershipLevelMeta', { level: level.level })})
                     </span>
                   </label>
                 ))}

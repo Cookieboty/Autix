@@ -1,10 +1,11 @@
 'use client';
 
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { DryRunResult, ParamsSchema, PricingSchema } from '@autix/shared-store';
 import { Button } from '../../ui/button';
 import { Skeleton } from '../../ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { buildDryRunPayload, parseJsonOrNull } from './pricing-admin-helpers';
 
 // Lazy + Suspense, matching packages/shared-ui/src/artifact/ArtifactEditor.tsx — Monaco has no
@@ -50,12 +51,22 @@ export function ModelSchemaEditor({
   const [dryRunError, setDryRunError] = useState<string | null>(null);
   const [dryRunning, setDryRunning] = useState(false);
 
-  const theme = useMemo(() => {
-    if (typeof document === 'undefined') return 'vs';
-    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs';
-  }, []);
+  /**
+   * Admin (`clients/web` and `clients/desktop`) ships no light-theme CSS at all: `:root` in
+   * both `globals.css` files already holds the dark palette, and neither file defines a
+   * `[data-theme='light']` override, so toggling `useTheme()`'s 'light'/'dark' state produces
+   * no visual change today. Wiring Monaco to that state (as the previous
+   * `document.documentElement.getAttribute('data-theme')` check did) is what caused the
+   * white-editor-on-dark-background bug: a fresh admin session defaults to theme state
+   * 'light' (see clients/web/components/providers.tsx `defaultTheme="light"`) even though the
+   * surrounding chrome always renders dark. Hardcoding vs-dark here matches what the admin
+   * actually looks like; revisit once a real light palette ships.
+   */
+  const theme = 'vs-dark';
 
-  const editorFallback = <Skeleton className="h-full w-full" />;
+  const editorFallback = <Skeleton className="h-full w-full bg-card" />;
+
+  const [activeTab, setActiveTab] = useState<'params' | 'pricing' | 'sample'>('params');
 
   const handleDryRun = async () => {
     const paramsSchema = parseJsonOrNull(paramsSchemaText) as ParamsSchema | null;
@@ -80,10 +91,19 @@ export function ModelSchemaEditor({
 
   return (
     <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-1.5">
-          <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('paramsSchemaLabel')}</span>
-          <div className="h-64 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
+        <TabsList>
+          <TabsTrigger value="params">{t('paramsSchemaLabel')}</TabsTrigger>
+          <TabsTrigger value="pricing">{t('pricingSchemaLabel')}</TabsTrigger>
+          <TabsTrigger value="sample">{t('sampleParamsLabel')}</TabsTrigger>
+        </TabsList>
+
+        {/* Each editor's text lives in controlled state one level up (paramsSchemaText /
+            pricingSchemaText from the parent form) or in sampleParamsText above — so even
+            though Radix unmounts the inactive TabsContent panels, switching tabs can never
+            drop unsaved edits; the next mount just re-renders from the same state. */}
+        <TabsContent value="params">
+          <div className="bg-card h-64 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
             <Suspense fallback={editorFallback}>
               <Editor
                 height="100%"
@@ -95,10 +115,9 @@ export function ModelSchemaEditor({
               />
             </Suspense>
           </div>
-        </div>
-        <div className="grid gap-1.5">
-          <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('pricingSchemaLabel')}</span>
-          <div className="h-64 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
+        </TabsContent>
+        <TabsContent value="pricing">
+          <div className="bg-card h-64 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
             <Suspense fallback={editorFallback}>
               <Editor
                 height="100%"
@@ -110,24 +129,22 @@ export function ModelSchemaEditor({
               />
             </Suspense>
           </div>
-        </div>
-      </div>
-
-      <div className="grid gap-1.5">
-        <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('sampleParamsLabel')}</span>
-        <div className="h-24 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
-          <Suspense fallback={editorFallback}>
-            <Editor
-              height="100%"
-              language="json"
-              theme={theme}
-              value={sampleParamsText}
-              onChange={(value) => setSampleParamsText(value ?? '')}
-              options={{ minimap: { enabled: false }, fontSize: 13, automaticLayout: true }}
-            />
-          </Suspense>
-        </div>
-      </div>
+        </TabsContent>
+        <TabsContent value="sample">
+          <div className="bg-card h-64 overflow-hidden rounded-md border" style={{ borderColor: 'var(--border)' }}>
+            <Suspense fallback={editorFallback}>
+              <Editor
+                height="100%"
+                language="json"
+                theme={theme}
+                value={sampleParamsText}
+                onChange={(value) => setSampleParamsText(value ?? '')}
+                options={{ minimap: { enabled: false }, fontSize: 13, automaticLayout: true }}
+              />
+            </Suspense>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <div className="flex items-center gap-2">
         <Button
