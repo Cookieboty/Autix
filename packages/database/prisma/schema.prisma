@@ -523,7 +523,6 @@ model model_configs {
   createdAt               DateTime                         @default(now())
   updatedAt               DateTime                         @updatedAt
   capabilities            String[]                         @default(["text"])
-  pointCostWeight         Decimal                          @default(1.0) @db.Decimal(6, 2)
   /// NULL = 尚未配置（不可与占位空 schema 混淆，例如空 terms 会被 evaluatePricing 计算为 0）
   paramsSchema            Json?
   pricingSchema           Json?
@@ -1607,35 +1606,6 @@ enum PointHoldStatus {
   EXPIRED
 }
 
-enum PricingBaseUnit {
-  image
-  second
-  task
-  message
-  token
-  tool_call
-}
-
-enum PricingComponentType {
-  base
-  fixed_extra
-  per_image
-  per_second
-  input_token_per_1k
-  output_token_per_1k
-  context_token_per_1k
-  per_tool_call
-  per_mcp_call
-  per_skill_call
-  per_batch
-  per_reference_image
-  reasoning_multiplier
-  reference_image_multiplier
-  video_input_multiplier
-  audio_input_multiplier
-  priority_multiplier
-}
-
 enum CampaignType {
   CONTINUOUS_USE
   INVITATION
@@ -1713,45 +1683,6 @@ model point_hold_items {
 
   @@index([holdId])
   @@index([grantId])
-}
-
-model generation_pricing_rules {
-  id            String                               @id @default(cuid())
-  taskType      String
-  name          String
-  baseUnit      PricingBaseUnit                      @default(task)
-  priority      Int                                  @default(0)
-  conditions    Json?
-  refundPolicy  Json?
-  metadata      Json?
-  isActive      Boolean                              @default(true)
-  effectiveFrom DateTime?
-  effectiveTo   DateTime?
-  createdAt     DateTime                             @default(now())
-  updatedAt     DateTime                             @updatedAt
-  components    generation_pricing_rule_components[]
-
-  @@unique([taskType, name])
-  @@index([taskType, isActive])
-  @@index([priority])
-  @@index([effectiveFrom, effectiveTo])
-}
-
-model generation_pricing_rule_components {
-  id            String                   @id @default(cuid())
-  ruleId        String
-  componentType PricingComponentType
-  unitCost      Decimal?                 @db.Decimal(10, 2)
-  multiplier    Decimal?                 @db.Decimal(6, 2)
-  config        Json?
-  sort          Int                      @default(0)
-  isActive      Boolean                  @default(true)
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  rule          generation_pricing_rules @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-
-  @@index([ruleId, isActive])
-  @@index([componentType])
 }
 
 model campaigns {
