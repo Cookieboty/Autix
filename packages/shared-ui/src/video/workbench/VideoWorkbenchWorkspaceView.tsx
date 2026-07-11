@@ -70,6 +70,10 @@ interface VideoWorkbenchWorkspaceViewProps {
   pricingSchema: PricingSchema | undefined;
   pricingContext: { multiplier: number; discountFactor: number };
   onParamsChange: (params: Record<string, unknown>) => void;
+  /** 全局视频参数（非计价参数的音频开关/seed 也存在这个包里，见下方保留区块）。 */
+  clipParams: Record<string, unknown>;
+  hasClip: boolean;
+  onClipParamChange: (partial: Record<string, unknown>, removeKeys?: string[]) => void;
   onSelectClip: (clipId: string | null) => void;
   onOpenStoryboardTools: () => void;
   onAddStoryboardClip: (duration: number) => void;
@@ -161,6 +165,9 @@ export function VideoWorkbenchWorkspaceView({
   pricingSchema,
   pricingContext,
   onParamsChange,
+  clipParams,
+  hasClip,
+  onClipParamChange,
   onSelectClip,
   onOpenStoryboardTools,
   onAddStoryboardClip,
@@ -330,6 +337,9 @@ export function VideoWorkbenchWorkspaceView({
             pricingContext={pricingContext}
             onClose={() => onParamsOpenChange(false)}
             onParamsChange={onParamsChange}
+            clipParams={clipParams}
+            hasClip={hasClip}
+            onClipParamChange={onClipParamChange}
           />
 
           <div className="min-h-0 overflow-y-auto p-4">

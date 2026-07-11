@@ -24,6 +24,7 @@ import { useVideoWorkbenchMaterialController } from './workbench/useVideoWorkben
 import { useVideoWorkbenchMaterials } from './workbench/useVideoWorkbenchMaterials';
 import { useVideoWorkbenchModels } from './workbench/useVideoWorkbenchModels';
 import { useVideoWorkbenchTemplates } from './workbench/useVideoWorkbenchTemplates';
+import { schemaParamsToVideoClipParams } from './workbench/schema-params-mapping';
 import { buildVideoInitialDraftParams, type VideoInitialDraft } from './workbench/initial-draft';
 import { buildReusableVideoProject } from './workbench/video-history-reuse';
 import { VideoWorkbenchWorkspaceView } from './workbench/VideoWorkbenchWorkspaceView';
@@ -546,7 +547,13 @@ export function VideoWorkbenchWorkspace({
         multiplier: selectedVideoTaskModel?.multiplier ?? 1,
         discountFactor: selectedVideoTaskModel?.discountFactor ?? 1,
       }}
-      onParamsChange={(params) => void updateSelectedClipParams(params)}
+      // 显式的 schema<->clip-params 映射层（task 7 review CRITICAL 1）：seconds
+      // 改名到 duration，resolution/ratio 键值本就一致原样透传。见
+      // schema-params-mapping.ts 顶部注释里的 source of truth。
+      onParamsChange={(params) => void updateSelectedClipParams(schemaParamsToVideoClipParams(params))}
+      clipParams={globalVideoParams}
+      hasClip={Boolean(selectedClip)}
+      onClipParamChange={(partial, removeKeys) => void updateSelectedClipParams(partial, removeKeys)}
       onSelectClip={selectClip}
       onOpenStoryboardTools={() => openStoryboardTool(storyboardPrompt)}
       onAddStoryboardClip={(duration) => void handleAddStoryboardClip(duration)}

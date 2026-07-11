@@ -18,6 +18,7 @@ import {
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
 } from '@autix/domain/image';
+import { schemaParamsToImageSettings } from './schema-params-mapping';
 import { toast } from 'sonner';
 import { useImagePreview } from '../../chat/ImagePreview';
 import { useRouter } from '../../navigation';
@@ -482,9 +483,16 @@ export function useImageStudioWorkspaceController({
         multiplier: selectedImageTaskModel?.multiplier ?? 1,
         discountFactor: selectedImageTaskModel?.discountFactor ?? 1,
       },
+      settings,
+      capability,
       onClose: () => setSettingsOpen(false),
+      // 显式的 schema<->settings 映射层（task 7 review CRITICAL 2）：resolution/
+      // quantity 改名到 size/count 且 resolution 还要做真实取值换算，quality 原样
+      // 传递，见 schema-params-mapping.ts 顶部注释里的 source of truth。不再是盲
+      // cast，orphan key 不会再悄悄丢参数。
       onParamsChange: (params: Record<string, unknown>) =>
-        updateSettings(params as Partial<ImageStudioModelSettings>),
+        updateSettings(schemaParamsToImageSettings(params, settings.size, capability)),
+      onSettingsChange: updateSettings,
     },
     headerProps: {
       activeTemplateName,
