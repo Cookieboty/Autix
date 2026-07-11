@@ -213,18 +213,28 @@ async function seedBindings(assigned: Map<string, ModelPresetKey>) {
 
     const eligible = [...assigned.entries()].filter(([, key]) => task.modelPresets.includes(key));
 
+    // 该任务是否已经有默认绑定？有则本次不再设默认，避免与 one-default-per-task 的
+    // 局部唯一索引冲突（P2002）——运营/上一次 seed 已选的默认模型保持不变。
+    const existingDefault = await prisma.task_model_bindings.findFirst({
+      where: { taskType: task.taskType, isDefault: true },
+      select: { modelConfigId: true },
+    });
+    let defaultAssigned = existingDefault !== null;
+
     for (const [index, [modelConfigId]] of eligible.entries()) {
+      const makeDefault = !defaultAssigned && index === 0;
       await prisma.task_model_bindings.upsert({
         where: { taskType_modelConfigId: { taskType: task.taskType, modelConfigId } },
-        update: {}, // 幂等：已存在的绑定不覆盖运营调过的 multiplier
+        update: {}, // 幂等：已存在的绑定不覆盖运营调过的 multiplier / isDefault
         create: {
           taskType: task.taskType,
           modelConfigId,
           multiplier: 1.0,
-          isDefault: index === 0,
+          isDefault: makeDefault,
           sort: index * 10,
         },
       });
+      if (makeDefault) defaultAssigned = true;
       count += 1;
     }
   }
