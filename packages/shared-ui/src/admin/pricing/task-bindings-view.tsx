@@ -46,7 +46,12 @@ export function TaskBindingsView({ bindings, onUpdate }: TaskBindingsViewProps) 
             <tbody>
               {rows.map((row) => (
                 <tr key={row.modelConfigId} className="border-t border-border">
-                  <td className="py-2">{row.modelConfigId}</td>
+                  <td className="py-2">
+                    <div className="font-medium">{row.modelName || row.modelConfigId}</div>
+                    {row.model && (
+                      <div className="text-muted-foreground font-mono text-xs">{row.model}</div>
+                    )}
+                  </td>
                   <td className="py-2">
                     <Input
                       type="number"

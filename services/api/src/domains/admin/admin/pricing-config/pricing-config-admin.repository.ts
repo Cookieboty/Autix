@@ -136,6 +136,8 @@ export class PricingConfigAdminRepository {
     return this.prisma.task_model_bindings.findMany({
       where: taskType ? { taskType } : undefined,
       orderBy: [{ taskType: 'asc' }, { sort: 'asc' }],
+      // 带出模型名/model-id，后台绑定页要显示可读名称而不是裸 modelConfigId(cuid)
+      include: { modelConfig: { select: { name: true, model: true } } },
     });
   }
 

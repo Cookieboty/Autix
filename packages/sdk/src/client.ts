@@ -2618,6 +2618,10 @@ export interface UpdateTaskDefinitionInput {
 export interface TaskModelBinding {
   taskType: string;
   modelConfigId: string;
+  /** 可读模型名（后台绑定页显示用；缺省时回退到 modelConfigId） */
+  modelName: string;
+  /** 网关 model-id，如 gpt-5.5 / doubao-seedance-2.0 */
+  model: string;
   multiplier: string;
   isDefault: boolean;
   isActive: boolean;

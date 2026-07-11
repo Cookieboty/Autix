@@ -274,7 +274,13 @@ export class PricingConfigAdminService {
   // =======================================================================
 
   async listTaskModelBindings(taskType?: string) {
-    return this.repo.listTaskModelBindings(taskType);
+    const rows = await this.repo.listTaskModelBindings(taskType);
+    // 展平出 modelName / model，供后台绑定页显示可读名称（回退到 modelConfigId）
+    return rows.map(({ modelConfig, ...binding }) => ({
+      ...binding,
+      modelName: modelConfig?.name ?? binding.modelConfigId,
+      model: modelConfig?.model ?? '',
+    }));
   }
 
   async createTaskModelBinding(input: CreateTaskModelBindingInput) {
