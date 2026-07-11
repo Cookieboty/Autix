@@ -3,30 +3,9 @@ import {
   OrderStatus,
   OrderType,
   PointsSource,
-  PricingComponentType,
   Prisma,
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
-
-const pricingRuleInclude: Prisma.generation_pricing_rulesInclude = {
-  components: {
-    orderBy: [{ sort: 'asc' }, { createdAt: 'asc' }],
-  },
-};
-
-export type PricingRuleComponentWriteData = {
-  componentType: PricingComponentType;
-  unitCost?: number | null;
-  multiplier?: number | null;
-  config?: Prisma.InputJsonValue;
-  sort?: number;
-  isActive?: boolean;
-};
-
-export type PricingRuleWriteData = {
-  rule: Prisma.generation_pricing_rulesUncheckedCreateInput;
-  components: PricingRuleComponentWriteData[];
-};
 
 @Injectable()
 export class AdminRepository {
@@ -72,80 +51,6 @@ export class AdminRepository {
 
   updatePointsPackage(id: string, data: Prisma.points_packagesUncheckedUpdateInput) {
     return this.prisma.points_packages.update({ where: { id }, data });
-  }
-
-  getPricingRules() {
-    return this.prisma.generation_pricing_rules.findMany({
-      include: pricingRuleInclude,
-      orderBy: [{ taskType: 'asc' }, { priority: 'desc' }, { name: 'asc' }],
-    });
-  }
-
-  createPricingRule(data: PricingRuleWriteData) {
-    return this.prisma.generation_pricing_rules.create({
-      data: {
-        ...data.rule,
-        components: {
-          create: data.components,
-        },
-      },
-      include: pricingRuleInclude,
-    });
-  }
-
-  async updatePricingRule(id: string, data: PricingRuleWriteData) {
-    return this.prisma.$transaction(async (tx) => {
-      await tx.generation_pricing_rule_components.deleteMany({ where: { ruleId: id } });
-      return tx.generation_pricing_rules.update({
-        where: { id },
-        data: {
-          ...data.rule,
-          components: {
-            create: data.components,
-          },
-        },
-        include: pricingRuleInclude,
-      });
-    });
-  }
-
-  getPricingRulesForTask(taskType: string) {
-    return this.prisma.generation_pricing_rules.findMany({
-      where: { taskType },
-      include: pricingRuleInclude,
-      orderBy: [{ priority: 'desc' }, { name: 'asc' }],
-    });
-  }
-
-  /**
-   * Atomically upsert many rules in ONE transaction. The caller decides create
-   * vs update by resolving `id` (matched by scope identity, not name). Any
-   * failure rolls the whole batch back — no partial success. Updated rules have
-   * their components fully replaced (delete + recreate).
-   */
-  async upsertPricingRulesInTransaction(
-    items: Array<{ id?: string; data: PricingRuleWriteData }>,
-  ): Promise<{ created: number; updated: number }> {
-    return this.prisma.$transaction(async (tx) => {
-      let created = 0;
-      let updated = 0;
-      for (const item of items) {
-        if (item.id) {
-          await tx.generation_pricing_rule_components.deleteMany({ where: { ruleId: item.id } });
-          await tx.generation_pricing_rules.update({
-            where: { id: item.id },
-            data: { ...item.data.rule, components: { create: item.data.components } },
-          });
-          updated += 1;
-        } else {
-          await tx.generation_pricing_rules.create({
-            data: { ...item.data.rule, components: { create: item.data.components } },
-          });
-          created += 1;
-        }
-      }
-      return { created, updated };
-    });
   }
 
   async listOrders(input: {

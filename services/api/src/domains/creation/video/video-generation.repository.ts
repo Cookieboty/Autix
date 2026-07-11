@@ -8,21 +8,9 @@ import {
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
-const SEEDANCE_PRICING_TASK_TYPES = ['video_generation'];
-
 @Injectable()
 export class VideoGenerationRepository {
   constructor(private readonly prisma: PrismaService) {}
-
-  findActiveSeedancePricingRulesForProbe() {
-    return this.prisma.generation_pricing_rules.findMany({
-      where: {
-        taskType: { in: SEEDANCE_PRICING_TASK_TYPES },
-        isActive: true,
-      },
-      select: { taskType: true, name: true },
-    });
-  }
 
   findActiveProviderGenerations(limit = 50) {
     return this.prisma.video_clip_generations.findMany({

@@ -4,30 +4,21 @@ import {
   PointHoldStatus,
   PointLedgerEventType,
   PointsSource,
-  PricingBaseUnit,
-  PricingComponentType,
-  Prisma,
-  type generation_pricing_rule_components,
 } from '../../platform/prisma/generated';
 import { PointsService } from './points.service';
 import { PointsRepository } from './repositories/points.repository';
-import { PricingRuleRepository } from './repositories/pricing-rule.repository';
 import { TaskPricingRepository } from './repositories/task-pricing.repository';
 import { PointsLedgerService } from './services/points-ledger.service';
 import { PointsHoldService } from './services/points-hold.service';
-import { PricingEstimatorService } from './services/pricing-estimator.service';
 import { TaskPricingEstimatorService } from './services/task-pricing-estimator.service';
-import type { PricingRuleWithComponents } from './pricing-estimator';
 
 function buildPointsService(prisma: unknown) {
   const pointsRepo = new PointsRepository(prisma as never);
-  const pricingRuleRepo = new PricingRuleRepository(prisma as never);
   const taskPricingRepo = new TaskPricingRepository(prisma as never);
   const ledgerService = new PointsLedgerService(pointsRepo);
   const holdService = new PointsHoldService(pointsRepo, ledgerService);
-  const pricingService = new PricingEstimatorService(pricingRuleRepo);
   const taskPricingService = new TaskPricingEstimatorService(taskPricingRepo);
-  return new PointsService(pointsRepo, ledgerService, holdService, pricingService, taskPricingService);
+  return new PointsService(pointsRepo, ledgerService, holdService, taskPricingService);
 }
 
 // NOTE: the task brief's literal scaffold typed this parameter as
@@ -43,15 +34,12 @@ function buildPointsService(prisma: unknown) {
 function buildPointsServiceWithTaskPricing(taskPricingService: Partial<TaskPricingEstimatorService>) {
   const prisma = createPrisma(createTx());
   const pointsRepo = new PointsRepository(prisma as never);
-  const pricingRuleRepo = new PricingRuleRepository(prisma as never);
   const ledgerService = new PointsLedgerService(pointsRepo);
   const holdService = new PointsHoldService(pointsRepo, ledgerService);
-  const pricingService = new PricingEstimatorService(pricingRuleRepo);
   return new PointsService(
     pointsRepo,
     ledgerService,
     holdService,
-    pricingService,
     taskPricingService as TaskPricingEstimatorService,
   );
 }
@@ -93,56 +81,11 @@ function createTx() {
 function createPrisma(tx: ReturnType<typeof createTx>) {
   return {
     $transaction: jest.fn((fn: (t: unknown) => unknown) => fn(tx)),
-    generation_pricing_rules: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-    },
     // findHoldById() reads through `this.prisma` directly (not a $transaction
     // callback), so the non-tx mock needs its own point_holds.findUnique. Sharing
     // the tx's mock keeps `tx.point_holds.findUnique.mockResolvedValue(...)` working
     // for both the transactional and non-transactional call paths.
     point_holds: tx.point_holds,
-  };
-}
-
-function pricingRule(
-  overrides: Partial<PricingRuleWithComponents> = {},
-): PricingRuleWithComponents {
-  return {
-    id: 'rule-1',
-    taskType: 'chat',
-    name: 'Chat',
-    baseUnit: PricingBaseUnit.message,
-    priority: 0,
-    conditions: null,
-    refundPolicy: null,
-    metadata: null,
-    isActive: true,
-    effectiveFrom: null,
-    effectiveTo: null,
-    createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-    components: [],
-    ...overrides,
-  };
-}
-
-function pricingComponent(
-  componentType: PricingComponentType,
-  values: Partial<generation_pricing_rule_components> = {},
-): generation_pricing_rule_components {
-  return {
-    id: `component-${componentType}`,
-    ruleId: 'rule-1',
-    componentType,
-    unitCost: null,
-    multiplier: null,
-    config: null,
-    sort: 10,
-    isActive: true,
-    createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-    ...values,
   };
 }
 
@@ -752,93 +695,4 @@ describe('PointsService.estimateCost — new engine', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('never calls the old PricingEstimatorService engine', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({
-      estimatedCost: 42,
-      taskType: 'image_generation',
-      modelConfigId: 'model-1',
-      breakdown: [],
-      pricingSnapshot: {} as never,
-    });
-    const service = buildPointsServiceWithTaskPricing({ estimateCost } as never);
-    const oldEngineSpy = jest.spyOn(
-      PricingEstimatorService.prototype,
-      'estimateCost',
-    );
-
-    await service.estimateCost({
-      taskType: 'image_generation',
-      modelConfigId: 'model-1',
-      params: {},
-    });
-
-    expect(oldEngineSpy).not.toHaveBeenCalled();
-    oldEngineSpy.mockRestore();
-  });
-});
-
-describe('PointsService.previewPricingRule', () => {
-  it('warns when a matched rule has no active components', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    const rule = pricingRule({
-      id: 'rule-empty',
-      taskType: 'empty_task',
-      name: '空组件规则',
-      components: [],
-    });
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([rule]);
-    prisma.generation_pricing_rules.findUnique.mockResolvedValue(rule);
-    const service = buildPointsService(prisma);
-
-    const preview = await service.previewPricingRule({ taskType: 'empty_task' });
-
-    expect(preview.warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: 'NO_COMPONENTS', field: 'components' }),
-        expect.objectContaining({ code: 'ZERO_ESTIMATED_COST' }),
-      ]),
-    );
-  });
-
-  it('validates component costs and multipliers in preview warnings', async () => {
-    const tx = createTx();
-    const prisma = createPrisma(tx);
-    const rule = pricingRule({
-      id: 'rule-invalid-components',
-      taskType: 'invalid_components',
-      name: '非法组件规则',
-      components: [
-        pricingComponent(PricingComponentType.base, {
-          unitCost: new Prisma.Decimal(-1),
-          sort: 10,
-        }),
-        pricingComponent(PricingComponentType.priority_multiplier, {
-          multiplier: new Prisma.Decimal(-2),
-          sort: 20,
-        }),
-      ],
-    });
-    prisma.generation_pricing_rules.findMany.mockResolvedValue([rule]);
-    prisma.generation_pricing_rules.findUnique.mockResolvedValue(rule);
-    const service = buildPointsService(prisma);
-
-    const preview = await service.previewPricingRule({
-      taskType: 'invalid_components',
-      priority: true,
-    });
-
-    expect(preview.warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'INVALID_COMPONENT_UNIT_COST',
-          field: `components.${PricingComponentType.base}.unitCost`,
-        }),
-        expect.objectContaining({
-          code: 'INVALID_COMPONENT_MULTIPLIER',
-          field: `components.${PricingComponentType.priority_multiplier}.multiplier`,
-        }),
-      ]),
-    );
-  });
 });

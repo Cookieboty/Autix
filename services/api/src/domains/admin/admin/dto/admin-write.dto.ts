@@ -5,13 +5,9 @@
 //   3. 后续如需扩展（i18n / 软删 / 校验范围）可在此集中处理。
 
 import {
-  ArrayMaxSize,
-  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
-  IsIn,
-  IsNumber,
   IsObject,
   IsOptional,
   IsPositive,
@@ -21,22 +17,9 @@ import {
   MaxLength,
   Min,
   MinLength,
-  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { BillingCycle, PricingComponentType } from '../../../platform/prisma/generated';
-
-const PRICING_BUSINESS_TASK_TYPES = [
-  'chat_message_fast',
-  'chat_message_standard',
-  'chat_message_reasoning',
-  'image_generation',
-  'video_generation',
-  'prompt_optimize_generation',
-  'video_template_optimize',
-  'video_storyboard_optimize',
-  'prompt_optimize_pro',
-] as const;
+import { BillingCycle } from '../../../platform/prisma/generated';
 
 // 会员等级与套餐相关 ──────────────────────────────────────────────
 
@@ -178,101 +161,6 @@ export class UpsertPointsPackageDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-}
-
-// 生成定价规则 ────────────────────────────────────────────────────
-
-export class PricingRuleComponentDto {
-  @IsOptional() @IsString() id?: string;
-  @IsEnum(PricingComponentType) componentType!: PricingComponentType;
-  @IsOptional() @IsNumber() @Min(0) unitCost?: number;
-  @IsOptional() @IsNumber() @Min(0) multiplier?: number;
-  @IsOptional() @IsObject() config?: Record<string, unknown>;
-  @IsOptional() @IsInt() @Min(0) sort?: number;
-  @IsOptional() @IsBoolean() isActive?: boolean;
-}
-
-export class UpsertPricingRuleDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  @IsIn(PRICING_BUSINESS_TASK_TYPES)
-  taskType!: string;
-
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  name!: string;
-
-  @IsOptional() @IsString() baseUnit?: string;
-  @IsOptional() @IsInt() @Min(0) priority?: number;
-  @IsOptional() @IsObject() conditions?: Record<string, unknown>;
-  @IsOptional() @IsObject() refundPolicy?: Record<string, unknown>;
-  @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(64)
-  @ValidateNested({ each: true })
-  @Type(() => PricingRuleComponentDto)
-  components?: PricingRuleComponentDto[];
-
-  @IsOptional() @IsBoolean() isActive?: boolean;
-}
-
-// 批量 Excel 模板导出：前端把「该任务的模型 + 维度选项」传来，后端做叉乘展开。
-export class PricingMatrixModelDto {
-  @IsString() @MinLength(1) provider!: string;
-  @IsString() @MinLength(1) modelName!: string;
-}
-
-export class ExportPricingTemplateDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  @IsIn(PRICING_BUSINESS_TASK_TYPES)
-  taskType!: string;
-
-  @IsArray()
-  @ArrayMaxSize(256)
-  @ValidateNested({ each: true })
-  @Type(() => PricingMatrixModelDto)
-  models!: PricingMatrixModelDto[];
-
-  @IsOptional() @IsArray() @IsString({ each: true }) qualities?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) resolutions?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) modelTiers?: string[];
-}
-
-// P3-3: pricing-rules 预览输入校验，避免 preview 接口接受任意字段污染日志/匹配
-export class PreviewPricingRuleInputDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  @IsIn(PRICING_BUSINESS_TASK_TYPES)
-  taskType!: string;
-
-  @IsOptional() @IsString() modelProvider?: string;
-  @IsOptional() @IsString() modelName?: string;
-  @IsOptional() @IsString() quality?: string;
-  @IsOptional() @IsString() resolution?: string;
-  @IsOptional() @IsString() modelTier?: string;
-
-  @IsOptional() @IsInt() @Min(0) quantity?: number;
-  @IsOptional() @IsNumber() @Min(0) seconds?: number;
-  @IsOptional() @IsInt() @Min(0) inputTokens?: number;
-  @IsOptional() @IsInt() @Min(0) outputTokens?: number;
-  @IsOptional() @IsInt() @Min(0) contextTokens?: number;
-  @IsOptional() @IsInt() @Min(0) toolCalls?: number;
-  @IsOptional() @IsInt() @Min(0) mcpCalls?: number;
-  @IsOptional() @IsInt() @Min(0) skillCalls?: number;
-  @IsOptional() @IsInt() @Min(0) batchCount?: number;
-  @IsOptional() @IsInt() @Min(0) referenceImages?: number;
-  @IsOptional() @IsBoolean() hasVideoInput?: boolean;
-  @IsOptional() @IsBoolean() hasAudioInput?: boolean;
-  @IsOptional() @IsBoolean() priority?: boolean;
-  @IsOptional() @IsString() contextMode?: string;
-
-  @IsOptional() @IsInt() @Min(0) membershipLevel?: number;
-  @IsOptional() @IsString() grantType?: string;
 }
 
 // 订单 ──────────────────────────────────────────────────────────

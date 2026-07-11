@@ -87,24 +87,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
   async onModuleInit() {
     await this.modelResolver.probeDefaultVideoModel();
-    // 第二阶段：启动期只读探测动态视频计费规则，缺失时 WARN，实际生成时阻断。
-    try {
-      const rules =
-        await this.repository.findActiveSeedancePricingRulesForProbe();
-      if (rules.length === 0) {
-        this.logger.warn(
-          '未发现 Seedance 动态计费规则；generateClip 将在计费预估阶段阻断生成。',
-        );
-      } else {
-        this.logger.log(
-          `Seedance 动态计费规则已启用: ${rules.map((r) => r.taskType).join(', ')}`,
-        );
-      }
-    } catch (err) {
-      this.logger.warn(
-        `Seedance 动态计费规则探测失败: ${(err as Error).message}`,
-      );
-    }
   }
 
   @Cron('*/30 * * * * *')

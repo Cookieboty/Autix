@@ -47,12 +47,6 @@ export class PointsController {
     return this.pointsService.getPackages();
   }
 
-  @Get('pricing-rules')
-  @Public()
-  async getPricingRules() {
-    return this.pointsService.getPricingRules();
-  }
-
   @Post('estimate')
   @Public()
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
