@@ -7,6 +7,7 @@ import {
   HomeStarterSection,
 } from './PublicHomeSections';
 import { PublicGrowthShell } from './PublicGrowthShell';
+import { SetPublicTopPromo } from './PublicTopPromo';
 import type { PublicHomeData } from './types';
 
 /**
@@ -19,6 +20,8 @@ export function PublicHomeView({ home }: { home?: PublicHomeData | null }) {
 
   return (
     <PublicGrowthShell showNav={false} showPromo={false}>
+      {/* 首页顶部横幅：静态 i18n 文案（由 (public) layout 在导航上方渲染） */}
+      <SetPublicTopPromo label={t('fallback.home.promo')} href="/pricing" />
       <main>
         <h1 className="sr-only">{t('home.title')}</h1>
         {heroSlots && heroSlots.length > 0 ? (
