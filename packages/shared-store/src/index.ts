@@ -42,6 +42,13 @@ export * from './profile-resources.actions';
 export * from './profile-resources.queries';
 export * from './public-growth.actions';
 export * from './public-growth.queries';
+export * from './campaign.actions';
+export * from './campaign.queries';
+// `useHomeStarterTasksQuery`/`useClaimHomeStarterTaskMutation` exist in both
+// public-growth.queries (legacy, pending deletion) and campaign.queries (new
+// home). Explicit re-export disambiguates the barrel in favor of campaign.queries;
+// remove once the legacy public-growth home-starter hooks are deleted.
+export { useHomeStarterTasksQuery, useClaimHomeStarterTaskMutation } from './campaign.queries';
 export * from './public-generator.actions';
 export * from './public-gallery.actions';
 export * from './public-profile.queries';
