@@ -3643,67 +3643,6 @@
         }
       }
     },
-    "community": {
-      "indexPromo": "探索由創作者審核作品組成的公開集合",
-      "eyebrow": "社群",
-      "title": "找到值得 Remix 的作品。",
-      "description": "社群頁收集已發布的圖片、影片、範本和創作者入口，同時不暴露私有生成歷史。",
-      "feedEyebrow": "Feed",
-      "feedTitle": "最新發布作品",
-      "create": "創作",
-      "openCommunity": "開啟社群",
-      "collectionPromo": "{title}：已發布公開作品與可重用方向",
-      "kind": {
-        "community": "社群",
-        "preset": "預設",
-        "viralPreset": "爆款預設",
-        "feature": "功能"
-      }
-    },
-    "presets": {
-      "promo": "面向圖片、影片和增長頁的可重用預設",
-      "viralPromo": "用於快速測試活動的爆款預設",
-      "eyebrow": "預設",
-      "viralEyebrow": "爆款預設",
-      "title": "每種視覺方向都能從可重用起點開始。",
-      "viralTitle": "從更容易傳播的格式開始。",
-      "description": "標籤、範本和公開範例幫助創作者更快從想法走向可發布產物。",
-      "picksEyebrow": "精選",
-      "picksTitle": "預設卡片與已發布範例",
-      "usePreset": "使用預設",
-      "detailPromo": "{title}：把這個預設作為私密生成起點",
-      "premiumBadge": "Pro-ready 預設"
-    },
-    "creation": {
-      "promo": "用公開作品頁分享已確認的圖片和影片",
-      "fallbackCreatorName": "Amux Studio 創作者",
-      "fallbackCreatorSubtitle": "公開主頁",
-      "views": "瀏覽",
-      "likes": "按讚",
-      "shares": "分享",
-      "prompt": "提示詞",
-      "promptHidden": "提示詞已隱藏",
-      "promptHiddenDescription": "創作者已將這個提示詞保持私密。你可以使用範本，或從新的提示詞開始。",
-      "copyLink": "複製連結",
-      "copied": "已複製",
-      "useThis": "使用這個",
-      "likeOrFollow": "按讚或關注",
-      "publishedOnly": "作品只會在創作者主動發布後出現。"
-    },
-    "profile": {
-      "promo": "創作者主頁：@{handle}",
-      "followCreator": "關注創作者",
-      "followers": "關注者",
-      "published": "已發布",
-      "publicHandle": "公開 handle 支援 /@{handle}",
-      "worksEyebrow": "作品",
-      "worksTitle": "已發布作品"
-    },
-    "growthPage": {
-      "promo": "{title}：探索工作流、範例和公開頁面",
-      "fallbackEyebrow": "Amux Studio 增長",
-      "fallbackCta": "開始創作"
-    },
     "metadata": {
       "home": {
         "title": "Amux Studio - AI 圖片、影片、預設和公開創作者頁面",
@@ -3721,28 +3660,6 @@
         "title": "價格 - Amux Studio",
         "description": "Amux Studio 面向 AI 圖片生成、AI 影片專案和公開增長頁面的方案與點數。"
       },
-      "community": {
-        "title": "社群 - Amux Studio",
-        "description": "探索 Amux Studio 公開集合、創作者確認的圖片、影片和可重用創意方向。"
-      },
-      "presets": {
-        "title": "預設 - Amux Studio",
-        "description": "瀏覽面向 AI 圖片、影片、活動和公開增長工作流的可重用 Amux Studio 預設。"
-      },
-      "viralPresets": {
-        "title": "爆款預設 - Amux Studio",
-        "description": "探索適用於短影片、活動鉤子和可分享圖片的 Amux Studio 爆款預設格式。"
-      },
-      "collectionTitle": "{title} - Amux Studio 社群",
-      "collectionFallbackTitle": "Amux Studio 社群",
-      "collectionDescription": "Amux Studio 公開社群集合。",
-      "presetTitle": "{name} - Amux Studio 預設",
-      "presetDescription": "面向可重用 AI 圖片和影片工作流的 Amux Studio 公開預設頁面。",
-      "publicCreationTitleFallback": "公開作品 - Amux Studio",
-      "publicCreationDescription": "一個公開的 Amux Studio AI 作品。",
-      "creatorDescription": "Amux Studio 公開創作者主頁。",
-      "growthPageTitleFallback": "Amux Studio 增長頁",
-      "growthPageDescription": "面向 AI 創意工作流的 Amux Studio 公開增長頁。",
       "videoShareTitle": "{title} - Amux Studio 影片",
       "videoShareFallbackTitle": "Amux Studio 影片分享",
       "videoShareDescriptionWithModel": "一個使用 {model} 生成的 Amux Studio 分享影片專案。",
@@ -3829,20 +3746,6 @@
           "description": "在圖片和影片之間組合、Remix 並重用視覺系統。"
         }
       },
-      "collections": {
-        "seedance": {
-          "title": "Seedance 影片",
-          "description": "影片實驗、鏡頭運動和發布可用的短片。"
-        },
-        "marketing": {
-          "title": "行銷工作室",
-          "description": "產品廣告、社群鉤子和活動系統。"
-        },
-        "soulCinema": {
-          "title": "靈魂電影",
-          "description": "電影感人像、場景和創作者主導的視覺世界。"
-        }
-      },
       "page": {
         "description": "一個將 Amux Studio 工作流轉化為可分享獲客表面的聚焦公開頁。",
         "sections": {
@@ -3859,16 +3762,8 @@
             "body": "已發布作品可以出現在集合、創作者主頁、分享頁和首頁。"
           }
         }
-      },
-      "collection": {
-        "description": "一個包含已發布 Amux Studio 作品和可重用想法的公開集合。"
-      },
-      "creator": {
-        "bio": "用於預覽已分享 Amux Studio 作品的公開創作者主頁。"
       }
     },
-    "collection": {},
-    "account": {},
     "common": {
       "discountBadge": "立減{percent}%"
     }
