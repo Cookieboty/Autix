@@ -151,6 +151,8 @@ export class MaterialsService {
       size: Number.isFinite(input.size ?? null) ? Number(input.size) : null,
       storageKey: input.storageKey?.trim() || null,
       sourceType,
+      // 该入口是素材库的手动上传创建，对应新维度 librarySource='UPLOAD'（区别于收藏/历史）。
+      librarySource: 'UPLOAD',
       sourceId: input.sourceId?.trim() || null,
       tags: this.normalizeTags(input.tags),
       metadata: (input.metadata ?? undefined) as Prisma.InputJsonValue | undefined,

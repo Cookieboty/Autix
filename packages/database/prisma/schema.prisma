@@ -124,6 +124,7 @@ model User {
   materialAssets                 material_assets[]            @relation("MaterialAssetUser")
   materialFolders                material_folders[]           @relation("MaterialFolderUser")
   canvasBoards                   canvas_boards[]              @relation("CanvasBoardUser")
+  galleryPosts                   gallery_posts[]              @relation("GalleryPostAuthor")
   createdAt                      DateTime                     @default(now())
   updatedAt                      DateTime                     @updatedAt
   lastLoginAt                    DateTime?
@@ -1044,6 +1045,8 @@ model image_generations {
   variables       Json?
   referenceImage  String?
   generatedImages String[]        @default([])
+  width           Int?
+  height          Int?
   status          String          @default("pending")
   error           String?
   durationMs      Int?
@@ -1884,31 +1887,41 @@ model video_clip_generations {
   @@index([seedanceTaskId])
 }
 
-model material_assets {
-  id           String            @id @default(cuid())
-  userId       String
-  user         User              @relation("MaterialAssetUser", fields: [userId], references: [id], onDelete: Cascade)
-  type         String            @db.VarChar(24)
-  title        String            @db.VarChar(200)
-  url          String
-  thumbnailUrl String?
-  mimeType     String?           @db.VarChar(120)
-  size         Int?
-  storageKey   String?           @db.VarChar(500)
-  sourceType   String            @db.VarChar(40)
-  sourceId     String?
-  tags         String[]          @default([])
-  metadata     Json?
-  folderId     String?
-  folder       material_folders? @relation("MaterialAssetFolder", fields: [folderId], references: [id], onDelete: SetNull)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  deletedAt    DateTime?
+enum MaterialLibrarySource {
+  UPLOAD
+  FAVORITE
+  HISTORY
+}
 
+model material_assets {
+  id                 String                @id @default(cuid())
+  userId             String
+  user               User                  @relation("MaterialAssetUser", fields: [userId], references: [id], onDelete: Cascade)
+  type               String                @db.VarChar(24)
+  title              String                @db.VarChar(200)
+  url                String?
+  thumbnailUrl       String?
+  mimeType           String?               @db.VarChar(120)
+  size               Int?
+  storageKey         String?               @db.VarChar(500)
+  sourceType         String                @db.VarChar(40)
+  librarySource      MaterialLibrarySource
+  sourceResourceType ResourceType?
+  sourceId           String?
+  tags               String[]              @default([])
+  metadata           Json?
+  folderId           String?
+  folder             material_folders?     @relation("MaterialAssetFolder", fields: [folderId], references: [id], onDelete: SetNull)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  deletedAt          DateTime?
+
+  @@unique([userId, librarySource, sourceResourceType, sourceId])
   @@index([userId, createdAt])
   @@index([userId, type])
   @@index([userId, deletedAt])
   @@index([userId, folderId, deletedAt])
+  @@index([userId, librarySource, deletedAt, createdAt])
 }
 
 model material_folders {
@@ -2067,7 +2080,6 @@ enum GallerySource {
   USER_UPLOAD
   FROM_GENERATION
   FROM_TEMPLATE
-  ADMIN_CURATED
 }
 
 enum FeaturedSlotKind {
@@ -2101,11 +2113,12 @@ model gallery_posts {
   aspectRatio String?  @db.VarChar(20)
   durationSec Int?
 
-  // 作品创作元数据（导入 / 生成来源填充）：提示词、生成模型、原始像素宽高。
-  prompt String?
-  model  String? @db.VarChar(100)
-  width  Int?
-  height Int?
+  // 作品创作元数据（导入 / 生成来源填充）：提示词、生成模型、原始像素宽高、参考图。
+  prompt         String?
+  model          String? @db.VarChar(100)
+  width          Int?
+  height         Int?
+  referenceImage String?
 
   sourceType        GallerySource @default(USER_UPLOAD)
   imageTemplateId   String?
@@ -2120,17 +2133,12 @@ model gallery_posts {
   isFeatured   Boolean       @default(false)
   isPinned     Boolean       @default(false)
 
-  authorId       String?
-  authorSnapshot Json?
+  authorId String
+  author   User   @relation("GalleryPostAuthor", fields: [authorId], references: [id], onDelete: Restrict)
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
-
-  // 媒体外链 → R2 迁移由独立后台 worker 异步完成（导入时先落原始外链，mediaMigrated=false 排队）。
-  // 默认 true：普通用户投稿/正常创建的作品媒体本就归属自己，不进迁移队列。
-  mediaMigrated          Boolean @default(true)
-  mediaMigrationAttempts Int     @default(0)
 
   sourceForImageTemplate image_templates? @relation("ImageTemplateSourceGallery")
 
@@ -2141,7 +2149,6 @@ model gallery_posts {
   @@index([authorId])
   @@index([imageTemplateId])
   @@index([videoTemplateId])
-  @@index([mediaMigrated, mediaMigrationAttempts])
 }
 
 model gallery_comments {
@@ -2184,6 +2191,7 @@ model resource_metrics {
   shareCount     Int @default(0)
   referenceCount Int @default(0)
   citationCount  Int @default(0)
+  downloadCount  Int @default(0)
 
   hotScore        Float     @default(0)
   hotScoreVersion String?
@@ -2216,6 +2224,18 @@ model resource_view_events {
 
   @@unique([resourceType, resourceId, viewerKey, minuteBucket, scope])
   @@index([resourceType, resourceId, dayBucket])
+}
+
+/// 资源下载事件流水（追加式）：与 resource_metrics.downloadCount 配合，前者是明细/审计，后者是聚合计数。
+model resource_download_events {
+  id           String       @id @default(cuid())
+  resourceType ResourceType
+  resourceId   String
+  userId       String
+  createdAt    DateTime     @default(now())
+
+  @@index([resourceType, resourceId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model resource_uv_days {

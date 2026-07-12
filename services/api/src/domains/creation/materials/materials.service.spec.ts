@@ -61,6 +61,17 @@ describe('MaterialsService folder support', () => {
     expect(foldersService.assertFolderExists).toHaveBeenCalledWith('u1', 'f1');
   });
 
+  it('create 写入 librarySource=UPLOAD（素材库手动上传创建）', async () => {
+    const { service, repo } = buildService();
+    await service.create('u1', {
+      type: 'image', title: 't', url: 'https://x/y.png',
+      sourceType: 'upload',
+    });
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ librarySource: 'UPLOAD' }),
+    );
+  });
+
   it('batchMove 校验目标文件夹并返回 count', async () => {
     const { service, repo, foldersService, membership } = buildService();
     const res = await service.batchMove('u1', ['m1', 'm2'], 'f1');

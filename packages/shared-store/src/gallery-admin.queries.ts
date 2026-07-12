@@ -105,25 +105,6 @@ export function useGalleryModeration(callbacks?: MutationCallbacks) {
   return { approve, reject, hide, remove, resolveReport };
 }
 
-/** JSON 批量导入广场作品，成功后失效待审/已审整个 galleryAdmin 缓存根。 */
-export function useImportGalleryMutation(callbacks?: MutationCallbacks) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (items: Record<string, any>[]) => galleryAdminActions.importGallery(items),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: galleryAdminQueryKeys.root() });
-      await callOnSuccess(callbacks);
-    },
-    onError: (error) => callOnError(error, callbacks),
-  });
-}
-
-export function useDownloadGalleryImportTemplateMutation() {
-  return useMutation({
-    mutationFn: () => galleryAdminActions.getGalleryImportTemplate(),
-  });
-}
-
 /** 复用通用 batch-job 轮询 action，供 TemplateImportDialog 的 pollJob 直接使用。 */
 export function useGalleryBatchJobPoller() {
   return galleryAdminActions.getBatchJob;

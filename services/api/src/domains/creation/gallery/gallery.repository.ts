@@ -11,19 +11,6 @@ export class GalleryRepository {
     return this.prisma.gallery_posts.findUnique({ where: { id } });
   }
 
-  /**
-   * 媒体迁移 worker 取一批待迁移作品：mediaMigrated=false 且尝试次数未达上限。
-   * 只取迁移所需字段，按 id 升序稳定分页。
-   */
-  findPostsPendingMediaMigration(maxAttempts: number, take: number) {
-    return this.prisma.gallery_posts.findMany({
-      where: { mediaMigrated: false, mediaMigrationAttempts: { lt: maxAttempts } },
-      orderBy: { id: 'asc' },
-      take,
-      select: { id: true, coverImage: true, mediaUrls: true, mediaMigrationAttempts: true },
-    });
-  }
-
   create(data: Prisma.gallery_postsUncheckedCreateInput) {
     return this.prisma.gallery_posts.create({ data });
   }

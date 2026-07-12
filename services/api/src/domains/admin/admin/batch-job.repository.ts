@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, ResourceType } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
-import type { ResourcePayload } from './resource-migration.service';
 
 type BatchResourceDelegate = {
-  update(args: { where: { id: string }; data: ResourcePayload | Record<string, unknown> }): Promise<unknown>;
+  update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<unknown>;
   delete(args: { where: { id: string } }): Promise<unknown>;
 };
 
@@ -44,7 +43,7 @@ export class BatchJobRepository {
   updateResource(
     resourceType: ResourceType,
     id: string,
-    data: ResourcePayload | Record<string, unknown>,
+    data: Record<string, unknown>,
   ) {
     return this.delegateFor(resourceType).update({ where: { id }, data });
   }

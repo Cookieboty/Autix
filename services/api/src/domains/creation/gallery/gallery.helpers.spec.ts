@@ -116,10 +116,10 @@ describe('assertSource (§6.4 来源强校验)', () => {
     ).toThrow();
   });
 
-  it('ADMIN_CURATED：仅管理员', () => {
+  it('ADMIN_CURATED 已删除来源：不再是合法 sourceType，任何角色均抛错（走 default 分支）', () => {
     expect(() =>
       assertSource({ kind: 'IMAGE', sourceType: 'ADMIN_CURATED' }, 'admin'),
-    ).not.toThrow();
+    ).toThrow();
     expect(() =>
       assertSource({ kind: 'IMAGE', sourceType: 'ADMIN_CURATED' }, 'author'),
     ).toThrow();

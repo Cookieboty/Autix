@@ -95,12 +95,6 @@ export function assertSource(
       }
       return;
 
-    case 'ADMIN_CURATED':
-      if (actor !== 'admin') {
-        throw new BadRequestException('ADMIN_CURATED 仅管理员可创建');
-      }
-      return;
-
     default:
       throw new BadRequestException(`未知来源类型: ${p.sourceType as string}`);
   }
@@ -113,7 +107,6 @@ const ADMIN_SOURCE_TYPES: GallerySource[] = [
   'USER_UPLOAD',
   'FROM_GENERATION',
   'FROM_TEMPLATE',
-  'ADMIN_CURATED',
 ];
 
 export const ADMIN_GALLERY_DEFAULT_PAGE_SIZE = 20;
