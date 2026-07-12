@@ -69,10 +69,6 @@ export class VideoTemplatesService extends BaseResourceService {
     return ResourceType.VIDEO_TEMPLATE;
   }
 
-  async exportForAdmin(where: Prisma.video_templatesWhereInput) {
-    return this.resources.findVideoTemplates(where);
-  }
-
   async create(authorId: string, dto: CreateVideoTemplateDto) {
     return this.resources.createVideoTemplate({
       title: dto.title,

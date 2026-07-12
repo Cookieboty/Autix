@@ -168,7 +168,7 @@ export class ImageGenerationFlowService {
   ): Promise<ResolvedImageRequest> {
     const template = (await this.imageTemplatesService.findById(
       input.templateId,
-    )) as { prompt: string; title?: string | null; externalId?: string | null };
+    )) as { prompt: string; title?: string | null };
     const variables = input.variables ?? {};
     const mode = resolveImageRequestMode(input);
     const modelConfig = await this.modelConfigService.getConfigForOrchestrator(

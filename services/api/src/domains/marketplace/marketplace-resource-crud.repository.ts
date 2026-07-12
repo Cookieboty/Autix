@@ -60,10 +60,6 @@ export class MarketplaceResourceCrudRepository {
     return this.prisma.agents.update({ where: { id }, data });
   }
 
-  findImageTemplates(where: Prisma.image_templatesWhereInput) {
-    return this.prisma.image_templates.findMany({ where });
-  }
-
   createImageTemplate(data: Prisma.image_templatesUncheckedCreateInput) {
     return this.prisma.image_templates.create({ data });
   }
@@ -73,10 +69,6 @@ export class MarketplaceResourceCrudRepository {
     data: Prisma.image_templatesUncheckedUpdateInput,
   ) {
     return this.prisma.image_templates.update({ where: { id }, data });
-  }
-
-  findVideoTemplates(where: Prisma.video_templatesWhereInput) {
-    return this.prisma.video_templates.findMany({ where });
   }
 
   createVideoTemplate(data: Prisma.video_templatesUncheckedCreateInput) {

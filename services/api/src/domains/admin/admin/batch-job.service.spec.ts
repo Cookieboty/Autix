@@ -87,16 +87,11 @@ function makeMockPrisma() {
 
 const noopSse = { emit: async () => undefined };
 
-function makeService(overrides?: { migration?: any; prisma?: any }) {
+function makeService(overrides?: { prisma?: any }) {
   const prisma = overrides?.prisma ?? makeMockPrisma();
-  const migration =
-    overrides?.migration ??
-    {
-      migrateMediaFields: async (data: Record<string, any>) => ({ data, errors: [] }),
-    };
   const repository = new BatchJobRepository(prisma as any);
-  const service = new BatchJobService(repository, noopSse as any, migration as any, prisma as any);
-  return { service, prisma, migration };
+  const service = new BatchJobService(repository, noopSse as any, prisma as any);
+  return { service, prisma };
 }
 
 describe('BatchJobService', () => {
@@ -114,73 +109,20 @@ describe('BatchJobService', () => {
     expect(job.total).toBe(1);
   });
 
-  it('processImport creates templates and counts failures', async () => {
-    const failingMigration = {
-      migrateMediaFields: async (data: Record<string, any>) => {
-        if (data.title === 'BAD') throw new Error('migration boom');
-        return { data, errors: data.title === 'WARN' ? ['cover: 404'] : [] };
-      },
-    };
-    const { service, prisma } = makeService({ migration: failingMigration });
+  it('processImport rejects non-gallery resource types (template import removed)', async () => {
+    const { service, prisma } = makeService();
     prisma._jobs.set('job-x', { id: 'job-x' });
 
     await (service as any).processImport('job-x', ResourceType.IMAGE_TEMPLATE, 'user-1', [
       { title: 'A' },
-      { title: 'WARN' },
-      { title: 'BAD' },
+      { title: 'B' },
     ]);
 
-    const created = [...prisma._imageStore.values()];
-    // A and WARN succeed (2 created), BAD fails during migration
-    expect(created.length).toBe(2);
-    const sample = created.find((c) => c.title === 'A');
-    expect(sample?.status).toBe(TemplateStatus.PENDING);
-    expect(sample?.authorId).toBe('user-1');
-
+    // No templates created; every item fails because template import is gone.
+    expect(prisma._imageStore.size).toBe(0);
     const job = prisma._jobs.get('job-x');
-    expect(job.processed).toBe(2);
-    expect(job.failed).toBe(1);
-    // both WARN (migrate warning) and BAD (failure) appear in errorLog
-    expect(job.errorLog.length).toBe(2);
-  });
-
-  it('processImport updates existing record when externalId+sourcePlatform match', async () => {
-    const { service, prisma } = makeService();
-    prisma._jobs.set('job-dup', { id: 'job-dup' });
-
-    // First import
-    await (service as any).processImport('job-dup', ResourceType.IMAGE_TEMPLATE, 'user-1', [
-      { title: 'Original', externalId: 'ext-1', sourcePlatform: 'civitai' },
-    ]);
-    expect(prisma._imageStore.size).toBe(1);
-    const original = [...prisma._imageStore.values()][0];
-    expect(original.title).toBe('Original');
-    expect(original.status).toBe(TemplateStatus.PENDING);
-
-    // Simulate approval
-    original.status = TemplateStatus.APPROVED;
-
-    // Second import with same externalId+sourcePlatform → should update, not create
-    prisma._jobs.set('job-dup2', { id: 'job-dup2' });
-    await (service as any).processImport('job-dup2', ResourceType.IMAGE_TEMPLATE, 'user-1', [
-      { title: 'Updated', externalId: 'ext-1', sourcePlatform: 'civitai' },
-    ]);
-    expect(prisma._imageStore.size).toBe(1);
-    const updated = prisma._imageStore.get(original.id);
-    expect(updated?.title).toBe('Updated');
-    // status should NOT be reset
-    expect(updated?.status).toBe(TemplateStatus.APPROVED);
-  });
-
-  it('processImport creates new record when externalId is absent', async () => {
-    const { service, prisma } = makeService();
-    prisma._jobs.set('job-no-ext', { id: 'job-no-ext' });
-
-    await (service as any).processImport('job-no-ext', ResourceType.IMAGE_TEMPLATE, 'user-1', [
-      { title: 'No ExtId A' },
-      { title: 'No ExtId B' },
-    ]);
-    expect(prisma._imageStore.size).toBe(2);
+    expect(job.processed).toBe(0);
+    expect(job.failed).toBe(2);
   });
 
   it('processImport randomizes gallery publishedAt within the previous 7 days by default', async () => {

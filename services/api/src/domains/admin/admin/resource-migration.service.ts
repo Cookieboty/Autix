@@ -96,8 +96,8 @@ export class ResourceMigrationService {
 
   /**
    * Migrate only the given media fields to R2, leaving every other field
-   * (e.g. originalUrl, authorUrl, externalMetadata) untouched so source
-   * reference links are preserved.
+   * untouched. Used by the gallery media-migration worker to re-host
+   * cover/media URLs while preserving the rest of the payload.
    */
   async migrateMediaFields(
     data: ResourcePayload,

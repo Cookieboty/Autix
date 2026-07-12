@@ -805,14 +805,6 @@ model image_templates {
   favoriteCount Int     @default(0)
   isHot         Boolean @default(false)
 
-  originalUrl      String?
-  authorName       String? @db.VarChar(200)
-  authorUrl        String?
-  sourcePlatform   String? @db.VarChar(100)
-  externalId       String? @db.VarChar(100)
-  externalSlug     String?
-  externalMetadata Json?
-
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
@@ -872,14 +864,6 @@ model video_templates {
   likeCount     Int     @default(0)
   favoriteCount Int     @default(0)
   isHot         Boolean @default(false)
-
-  originalUrl      String?
-  authorName       String? @db.VarChar(200)
-  authorUrl        String?
-  sourcePlatform   String? @db.VarChar(100)
-  externalId       String? @db.VarChar(100)
-  externalSlug     String?
-  externalMetadata Json?
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

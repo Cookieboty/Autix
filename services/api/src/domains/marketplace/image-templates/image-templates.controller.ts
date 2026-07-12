@@ -12,7 +12,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { TemplateStatus, ResourceType, type Prisma } from '../../platform/prisma/generated';
+import { TemplateStatus, ResourceType } from '../../platform/prisma/generated';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import {
   CurrentUser,
@@ -22,7 +22,6 @@ import {
 import { AdminGuard } from '../../identity/auth/admin.guard';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import { BatchJobService } from '../../admin/admin/batch-job.service';
-import type { ResourcePayload } from '../../admin/admin/resource-migration.service';
 import {
   ImageTemplatesService,
   type CreateImageTemplateDto,
@@ -184,56 +183,6 @@ export class ImageTemplatesAdminController {
       page: page ? +page : undefined,
       pageSize: pageSize ? +pageSize : undefined,
     });
-  }
-
-  @Post('import')
-  importTemplates(
-    @CurrentUser() user: AuthUser,
-    @Body() body: { items: ResourcePayload[] },
-  ) {
-    const userId = getCurrentUserId(user);
-    return this.batchJobService.createAndProcess(
-      userId,
-      'IMPORT',
-      ResourceType.IMAGE_TEMPLATE,
-      { items: body.items ?? [] },
-    );
-  }
-
-  @Get('import-template')
-  getImportTemplate() {
-    return [
-      {
-        title: '',
-        description: '',
-        category: '',
-        prompt: '',
-        variables: {},
-        coverImage: '',
-        exampleImages: [],
-        modelHint: '',
-        tags: [],
-        pointsCost: 0,
-        originalUrl: '',
-        authorName: '',
-        authorUrl: '',
-        sourcePlatform: '',
-        externalId: '',
-        externalSlug: '',
-        externalMetadata: {},
-      },
-    ];
-  }
-
-  @Get('export')
-  exportTemplates(
-    @Query('status') status?: TemplateStatus,
-    @Query('category') category?: string,
-  ) {
-    const where: Prisma.image_templatesWhereInput = {};
-    if (status) where.status = status;
-    if (category) where.category = category;
-    return this.service.exportForAdmin(where);
   }
 
   @Post('batch-review')

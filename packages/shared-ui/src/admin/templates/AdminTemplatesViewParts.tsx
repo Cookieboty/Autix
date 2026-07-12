@@ -18,29 +18,21 @@ interface Option<T extends string> {
 }
 
 export function AdminTemplatesToolbar({
-  enabledImportExport,
   resourceOptions,
   resourceType,
   showResourceSwitcher,
   statusFilter,
   statusOptions,
   t,
-  onDownloadTemplate,
-  onExport,
-  onImportOpen,
   onResourceTypeChange,
   onStatusFilterChange,
 }: {
-  enabledImportExport: boolean;
   resourceOptions: Array<Option<AdminTemplateResourceType>>;
   resourceType: AdminTemplateResourceType;
   showResourceSwitcher: boolean;
   statusFilter: AdminTemplateStatus | '';
   statusOptions: Array<Option<AdminTemplateStatus | ''>>;
   t: Translate;
-  onDownloadTemplate: () => void;
-  onExport: () => void;
-  onImportOpen: () => void;
   onResourceTypeChange: (resourceType: AdminTemplateResourceType) => void;
   onStatusFilterChange: (status: AdminTemplateStatus | '') => void;
 }) {
@@ -76,19 +68,6 @@ export function AdminTemplatesToolbar({
           </button>
         ))}
       </div>
-      {enabledImportExport && (
-        <>
-          <Button size="sm" variant="ghost" className="cursor-pointer" onClick={onImportOpen}>
-            {t('batchImport')}
-          </Button>
-          <Button size="sm" variant="ghost" className="cursor-pointer" onClick={onDownloadTemplate}>
-            {t('downloadTemplate')}
-          </Button>
-          <Button size="sm" variant="ghost" className="cursor-pointer" onClick={onExport}>
-            {t('exportTemplates')}
-          </Button>
-        </>
-      )}
     </div>
   );
 }
@@ -287,7 +266,6 @@ export function AdminTemplateDetailAside({
   mediaList,
   rejectReason,
   selected,
-  showSourceInfo,
   t,
   tCat,
   tTemplate,
@@ -299,7 +277,6 @@ export function AdminTemplateDetailAside({
   mediaList: string[];
   rejectReason: string;
   selected: AdminTemplateItem;
-  showSourceInfo: boolean;
   t: Translate;
   tCat: Translate;
   tTemplate: Translate;
@@ -361,10 +338,6 @@ export function AdminTemplateDetailAside({
             <p className="text-sm" style={{ color: 'var(--foreground)' }}>{selected.rejectReason}</p>
           </div>
         )}
-
-        {showSourceInfo && (selected.originalUrl || selected.authorName || selected.sourcePlatform || selected.externalId) && (
-          <SourceInfoBlock selected={selected} t={t} />
-        )}
       </div>
 
       {(selected.status === 'PENDING' || selected.status === 'IN_REVIEW') && (
@@ -402,45 +375,5 @@ export function AdminTemplateDetailAside({
         </div>
       )}
     </aside>
-  );
-}
-
-function SourceInfoBlock({ selected, t }: { selected: AdminTemplateItem; t: Translate }) {
-  return (
-    <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-      <p className="text-[11px] font-medium" style={{ color: 'var(--muted)' }}>{t('sourceInfo')}</p>
-      {selected.authorName && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('authorName')}:</span>
-          {selected.authorUrl ? (
-            <a href={selected.authorUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: 'var(--link)' }}>
-              {selected.authorName}
-            </a>
-          ) : (
-            <span className="text-xs" style={{ color: 'var(--foreground)' }}>{selected.authorName}</span>
-          )}
-        </div>
-      )}
-      {selected.sourcePlatform && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('sourcePlatform')}:</span>
-          <span className="text-xs" style={{ color: 'var(--foreground)' }}>{selected.sourcePlatform}</span>
-        </div>
-      )}
-      {selected.originalUrl && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('originalUrl')}:</span>
-          <a href={selected.originalUrl} target="_blank" rel="noopener noreferrer" className="truncate text-xs hover:underline" style={{ color: 'var(--link)' }}>
-            {t('viewSource')}
-          </a>
-        </div>
-      )}
-      {selected.externalId && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('externalId')}:</span>
-          <span className="font-mono text-xs" style={{ color: 'var(--foreground)' }}>{selected.externalId}</span>
-        </div>
-      )}
-    </div>
   );
 }

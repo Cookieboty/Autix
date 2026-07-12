@@ -3,20 +3,15 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import {
-  useAdminTemplateBatchJobPoller,
   useAdminTemplatesQuery,
   useBatchDeleteAdminTemplatesMutation,
   useBatchReviewAdminTemplatesMutation,
-  useDownloadAdminTemplateImportTemplateMutation,
-  useExportAdminTemplatesMutation,
-  useImportAdminTemplatesMutation,
   useReviewAdminTemplateMutation,
   useSetAdminTemplateHotMutation,
   type AdminTemplateItem,
   type AdminTemplateResourceType,
   type AdminTemplateStatus,
 } from '@autix/shared-store';
-import { TemplateImportDialog } from '../TemplateImportDialog';
 import {
   AdminTemplateDetailAside,
   AdminTemplatesBatchBar,
@@ -27,7 +22,6 @@ import {
 import {
   PAGE_SIZE,
   defaultCapabilities,
-  downloadJson,
   getTemplateMediaList,
   type TemplateCapability,
 } from './template-review-helpers';
@@ -62,7 +56,6 @@ export function AdminTemplatesView({
   const [rejectReason, setRejectReason] = useState('');
   const [acting, setActing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [importOpen, setImportOpen] = useState(false);
 
   const statusOptions = useMemo(
     () => [
@@ -97,10 +90,6 @@ export function AdminTemplatesView({
   const batchReviewMutation = useBatchReviewAdminTemplatesMutation();
   const batchDeleteMutation = useBatchDeleteAdminTemplatesMutation();
   const setHotMutation = useSetAdminTemplateHotMutation();
-  const downloadTemplateMutation = useDownloadAdminTemplateImportTemplateMutation();
-  const exportMutation = useExportAdminTemplatesMutation();
-  const importTemplatesMutation = useImportAdminTemplatesMutation(resourceType);
-  const pollBatchJob = useAdminTemplateBatchJobPoller();
 
   useEffect(() => {
     if (!data) return;
@@ -190,19 +179,6 @@ export function AdminTemplatesView({
     }
   };
 
-  const handleDownloadTemplate = async () => {
-    const payload = await downloadTemplateMutation.mutateAsync(resourceType);
-    downloadJson(payload, `${resourceType}-template.json`);
-  };
-
-  const handleExport = async () => {
-    const payload = await exportMutation.mutateAsync({
-      resourceType,
-      status: statusFilter || undefined,
-    });
-    downloadJson(payload, `${resourceType}-export.json`);
-  };
-
   const mediaList = getTemplateMediaList(selected, resourceType);
   const showBatchActions = enabled.batchActions && selectedIds.size > 0;
   const showResourceSwitcher = enabled.resourceSwitcher && resourceOptions.length > 1;
@@ -212,16 +188,12 @@ export function AdminTemplatesView({
     <div className="flex h-full overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden">
         <AdminTemplatesToolbar
-          enabledImportExport={enabled.importExport}
           resourceOptions={resourceOptions}
           resourceType={resourceType}
           showResourceSwitcher={showResourceSwitcher}
           statusFilter={statusFilter}
           statusOptions={statusOptions}
           t={t}
-          onDownloadTemplate={handleDownloadTemplate}
-          onExport={handleExport}
-          onImportOpen={() => setImportOpen(true)}
           onResourceTypeChange={(nextResourceType) => {
             setResourceType(nextResourceType);
             setPage(1);
@@ -269,23 +241,12 @@ export function AdminTemplatesView({
           mediaList={mediaList}
           rejectReason={rejectReason}
           selected={selected}
-          showSourceInfo={enabled.sourceInfo}
           t={t}
           tCat={tCat}
           tTemplate={tTemplate}
           onClose={() => setSelected(null)}
           onRejectReasonChange={setRejectReason}
           onReview={(id, action) => void handleReview(id, action)}
-        />
-      )}
-
-      {enabled.importExport && (
-        <TemplateImportDialog
-          open={importOpen}
-          onClose={() => setImportOpen(false)}
-          onImported={() => fetchList()}
-          importFn={(items) => importTemplatesMutation.mutateAsync(items).then((r) => r.data)}
-          pollJob={pollBatchJob}
         />
       )}
     </div>

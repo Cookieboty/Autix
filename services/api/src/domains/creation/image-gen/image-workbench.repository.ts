@@ -7,7 +7,6 @@ import {
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
 const IMAGE_WORKBENCH_SYSTEM_KEY = 'image-workbench';
-const IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID = 'system:image-workbench';
 
 const WORKBENCH_TEMPLATE_SELECT = {
   id: true,
@@ -58,11 +57,6 @@ export class ImageWorkbenchRepository {
         createdById: userId,
         sourceType: ImageTemplateSource.SYSTEM,
         systemKey: IMAGE_WORKBENCH_SYSTEM_KEY,
-        externalId: IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID,
-        externalMetadata: {
-          internal: true,
-          workbench: 'image',
-        },
         runtimeReason: '专业图片工作台内部归档模板',
       },
       select: WORKBENCH_TEMPLATE_SELECT,

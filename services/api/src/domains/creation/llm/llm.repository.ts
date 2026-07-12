@@ -16,7 +16,6 @@ const ACTIVE_AGENT_RUN_STATUSES: AgentRunStatus[] = [
 ];
 
 const CHAT_IMAGE_TOOL_SYSTEM_KEY = 'chat-image-tool';
-const CHAT_IMAGE_TOOL_TEMPLATE_EXTERNAL_ID = 'system:chat-image-tool';
 
 type PersistedImageItemBase = {
   url: string;
@@ -312,8 +311,6 @@ export class LlmRepository {
           createdById: userId,
           sourceType: ImageTemplateSource.SYSTEM,
           systemKey: CHAT_IMAGE_TOOL_SYSTEM_KEY,
-          externalId: CHAT_IMAGE_TOOL_TEMPLATE_EXTERNAL_ID,
-          externalMetadata: { internal: true, chatImageTool: true },
           runtimeReason: '对话图片工具内部直通模板',
         },
         select,

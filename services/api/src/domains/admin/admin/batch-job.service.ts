@@ -10,7 +10,7 @@ import {
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import { SseService, type TaskEventPayload } from '../../platform/sse/sse.service';
-import { ResourceMigrationService, type ResourcePayload } from './resource-migration.service';
+import type { ResourcePayload } from './resource-migration.service';
 import { mapGalleryImportItem, type MappedGalleryImport } from './gallery-import.mapper';
 import { BatchJobRepository } from './batch-job.repository';
 
@@ -47,7 +47,6 @@ export class BatchJobService {
   constructor(
     private readonly repository: BatchJobRepository,
     private readonly sse: SseService,
-    private readonly migration: ResourceMigrationService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -147,43 +146,6 @@ export class BatchJobService {
     }
   }
 
-  private static readonly IMAGE_FIELDS = new Set([
-    'title', 'description', 'category', 'prompt', 'variables',
-    'coverImage', 'exampleImages', 'modelHint', 'tags', 'pointsCost',
-    'originalUrl', 'authorName', 'authorUrl', 'sourcePlatform',
-    'externalId', 'externalSlug', 'externalMetadata',
-  ]);
-
-  private static readonly VIDEO_FIELDS = new Set([
-    'title', 'description', 'category', 'prompt', 'variables',
-    'coverImage', 'exampleMedia', 'modelHint', 'durationSec',
-    'defaultParams', 'materialSlots', 'tags', 'pointsCost',
-    'originalUrl', 'authorName', 'authorUrl', 'sourcePlatform',
-    'externalId', 'externalSlug', 'externalMetadata',
-  ]);
-
-  private static readonly GALLERY_FIELDS = new Set([
-    'kind', 'title', 'description', 'category', 'tags',
-    'coverImage', 'mediaUrls', 'aspectRatio', 'durationSec',
-  ]);
-
-  private pickAllowedFields(
-    data: ResourcePayload,
-    resourceType: ResourceType,
-  ): ResourcePayload {
-    const allowed =
-      resourceType === ResourceType.IMAGE_TEMPLATE
-        ? BatchJobService.IMAGE_FIELDS
-        : resourceType === ResourceType.GALLERY_POST
-          ? BatchJobService.GALLERY_FIELDS
-          : BatchJobService.VIDEO_FIELDS;
-    const result: ResourcePayload = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (allowed.has(key)) result[key] = value;
-    }
-    return result;
-  }
-
   /**
    * 广场作品导入直接落 gallery_posts 表（不经过 marketplace 的 repository.delegateFor，
    * 后者只认识 image_templates/video_templates）。管理员导入的作品视为运营精选，直接发布。
@@ -267,57 +229,17 @@ export class BatchJobService {
       try {
         const item = items[i];
 
-        // 广场作品：快速入库。按 data.json 形态只抽取需要的字段（image_url/prompt/model/width/height，
-        // 丢标题），先落原始外链（mediaMigrated=false），媒体迁移交给后台 worker 异步跑。
-        if (resourceType === ResourceType.GALLERY_POST) {
-          const mapped = mapGalleryImportItem(item);
-          await this.createGalleryPost(userId, mapped, galleryAuthorSnapshot);
-          processed++;
-          this.logger.log(`[Import ${jobId}] item[${i}] ✓ queued (gallery, media pending)`);
-          continue;
+        // 仅广场作品支持导入（模板外部导入已下线）。快速入库：按 data.json 形态只抽取需要的字段
+        // （image_url/prompt/model/width/height，丢标题），先落原始外链（mediaMigrated=false），
+        // 媒体迁移交给后台 worker 异步跑。
+        if (resourceType !== ResourceType.GALLERY_POST) {
+          throw new Error(`Import not supported for resource type: ${resourceType}`);
         }
 
-        const folder = `batch-import/${jobId}/${i}`;
-
-        this.logger.log(
-          `[Import ${jobId}] item[${i}] "${String(item.title ?? '')}" — starting migration`,
-        );
-
-        const { data, errors: migrateErrors } =
-          await this.migration.migrateMediaFields(item, folder);
-
-        if (migrateErrors.length > 0) {
-          this.logger.warn(
-            `[Import ${jobId}] item[${i}] migration warnings: ${migrateErrors.join('; ')}`,
-          );
-        }
-
-        const filtered = this.pickAllowedFields(data, resourceType);
-
-        {
-          const existing = filtered.externalId && filtered.sourcePlatform
-            ? await this.repository.findImportedResource(
-                resourceType,
-                filtered.externalId,
-                filtered.sourcePlatform,
-              )
-            : null;
-
-          if (existing) {
-            await this.repository.updateResource(resourceType, existing.id, filtered);
-            this.logger.log(
-              `[Import ${jobId}] item[${i}] ✓ updated existing (id=${existing.id})`,
-            );
-          } else {
-            await this.repository.createImportedResource(resourceType, userId, filtered);
-            this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully`);
-          }
-        }
-
+        const mapped = mapGalleryImportItem(item);
+        await this.createGalleryPost(userId, mapped, galleryAuthorSnapshot);
         processed++;
-        if (migrateErrors.length > 0) {
-          errors.push({ index: i, error: migrateErrors.join('; ') });
-        }
+        this.logger.log(`[Import ${jobId}] item[${i}] ✓ queued (gallery, media pending)`);
       } catch (err: unknown) {
         const details = errorDetails(err);
         failed++;

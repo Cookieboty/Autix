@@ -1293,12 +1293,6 @@ function makeAdminApi<TResource>(slug: MarketplaceTypeSlug) {
       id: string,
       data: { runtimeRequirement: RuntimeReq; runtimeReason?: string },
     ) => chatApi.patch<TResource>(`${base}/${id}/runtime`, data),
-    importTemplates: (items: Record<string, any>[]) =>
-      chatApi.post<{ jobId: string }>(`${base}/import`, { items }),
-    importTemplate: () =>
-      chatApi.get<Record<string, any>[]>(`${base}/import-template`),
-    exportTemplates: (params?: { status?: string; category?: string }) =>
-      chatApi.get<TResource[]>(`${base}/export`, { params }),
     batchReview: (
       ids: string[],
       action: 'approve' | 'reject' | 'revise',

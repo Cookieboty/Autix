@@ -50,12 +50,6 @@ export interface AdminTemplateHotInput {
   isHot: boolean;
 }
 
-export interface AdminTemplateExportParams {
-  resourceType?: AdminTemplateResourceType;
-  status?: AdminTemplateStatus;
-  category?: string;
-}
-
 const getAdminApi = (resourceType: AdminTemplateResourceType = 'image-templates') =>
   resourceType === 'image-templates' ? imageTemplateAdminApi : videoTemplateAdminApi;
 
@@ -107,22 +101,6 @@ export const adminTemplateActions = {
     isHot,
   }: AdminTemplateHotInput): Promise<unknown> =>
     getAdminApi(resourceType).setHot(id, isHot),
-  importTemplates: (
-    resourceType: AdminTemplateResourceType,
-    items: Record<string, any>[],
-  ) => getAdminApi(resourceType).importTemplates(items),
-  importTemplate: async (resourceType: AdminTemplateResourceType = 'image-templates') => {
-    const { data } = await getAdminApi(resourceType).importTemplate();
-    return data;
-  },
-  exportTemplates: async ({
-    resourceType = 'image-templates',
-    status,
-    category,
-  }: AdminTemplateExportParams = {}) => {
-    const { data } = await getAdminApi(resourceType).exportTemplates({ status, category });
-    return data;
-  },
   getBatchJob: async (jobId: string) => {
     const { data } = await batchJobApi.get(jobId);
     return data;

@@ -8,10 +8,8 @@ import {
   adminTemplateActions,
   type AdminTemplateBatchDeleteInput,
   type AdminTemplateBatchReviewInput,
-  type AdminTemplateExportParams,
   type AdminTemplateHotInput,
   type AdminTemplateListParams,
-  type AdminTemplateResourceType,
   type AdminTemplateReviewInput,
 } from './admin-template.actions';
 
@@ -102,47 +100,6 @@ export function useSetAdminTemplateHotMutation(callbacks?: MutationCallbacks) {
       await callOnSuccess(callbacks);
     },
     onError: (error) => callOnError(error, callbacks),
-  });
-}
-
-export function useImportAdminTemplatesMutation(
-  resourceType: AdminTemplateResourceType,
-  callbacks?: MutationCallbacks,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (items: Record<string, any>[]) =>
-      adminTemplateActions.importTemplates(resourceType, items),
-    onSuccess: async () => {
-      await invalidateTemplateLists(queryClient);
-      await callOnSuccess(callbacks);
-    },
-    onError: (error) => callOnError(error, callbacks),
-  });
-}
-
-export function useAdminTemplateImportTemplateQuery(
-  resourceType: AdminTemplateResourceType,
-  enabled = true,
-) {
-  return useQuery({
-    queryKey: ['adminTemplate', 'import-template', resourceType] as const,
-    queryFn: () => adminTemplateActions.importTemplate(resourceType),
-    enabled,
-  });
-}
-
-export function useDownloadAdminTemplateImportTemplateMutation() {
-  return useMutation({
-    mutationFn: (resourceType: AdminTemplateResourceType) =>
-      adminTemplateActions.importTemplate(resourceType),
-  });
-}
-
-export function useExportAdminTemplatesMutation() {
-  return useMutation({
-    mutationFn: (params: AdminTemplateExportParams) =>
-      adminTemplateActions.exportTemplates(params),
   });
 }
 

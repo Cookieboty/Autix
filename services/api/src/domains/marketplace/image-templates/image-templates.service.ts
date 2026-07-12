@@ -68,10 +68,6 @@ export class ImageTemplatesService extends BaseResourceService {
     return { sourceType: { not: ImageTemplateSource.SYSTEM } };
   }
 
-  async exportForAdmin(where: Prisma.image_templatesWhereInput) {
-    return this.resources.findImageTemplates(where);
-  }
-
   // 图片模板 runtime 恒定 CLOUD（生成走云端模型 API）
   async create(authorId: string, dto: CreateImageTemplateDto) {
     return this.resources.createImageTemplate({
