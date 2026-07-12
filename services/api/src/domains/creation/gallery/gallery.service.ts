@@ -566,6 +566,28 @@ export class GalleryService {
     return { downloadUrl };
   }
 
+  /**
+   * POST /gallery/:id/recreate（Plan C Task 6）：仅已发布作品可"再创作"，与 like/favorite/
+   * download 共用同一条"仅 PUBLISHED"校验（assertLikeableOrFavoritable）。返回值直接读
+   * gallery_posts 自身的创作快照（prompt/model/referenceImage）—— 不查 image_generations，
+   * 快照就是 Task 4（createSubmission/submitDraft）落库时固化的那份，与生成记录当下状态
+   * 无关，即便原生成记录已被删除也不影响 recreate。同时记一次引用事件并 INCR
+   * referenceCount（refType 用 'recreate' 标识来源动作，与 recordReference 通用签名一致）。
+   * referenceImage 为 null 时不返回该字段（brief："referenceImage 为 null 则不含"）。
+   */
+  async recreate(
+    userId: string,
+    id: string,
+  ): Promise<{ prompt: string | null; model: string | null; referenceImage?: string }> {
+    const post = await this.assertLikeableOrFavoritable(id);
+    await this.metrics.recordReference(ResourceType.GALLERY_POST, id, 'recreate', userId);
+    return {
+      prompt: post.prompt,
+      model: post.model,
+      ...(post.referenceImage ? { referenceImage: post.referenceImage } : {}),
+    };
+  }
+
   // ── 管理端 ──────────────────────────────────────────────────────────
 
   async listPending(cursor: string | undefined, take: number) {

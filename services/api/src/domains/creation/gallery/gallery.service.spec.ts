@@ -709,3 +709,89 @@ describe('GalleryService.download — 仅 PUBLISHED + 非幂等计数', () => {
     expect(calls).toBe(2);
   });
 });
+
+// ── recreate（Plan C Task 6）────────────────────────────────────────────
+
+/**
+ * recreate 复用 assertLikeableOrFavoritable 的"仅 PUBLISHED"校验（404 不存在 / 400 未发布），
+ * 与 like/favorite/download 完全一致。返回值必须来自 gallery_posts 自身的快照字段
+ * （prompt/model/referenceImage）—— mock repo 只暴露 post 字段、完全不接触
+ * image_generations，足以证明 recreate 读的是 Task 4 落库的快照而非重新查生成记录。
+ */
+function makeRecreateService(overrides: {
+  posts?: Record<string, Record<string, unknown>>;
+  recordReferenceImpl?: (...args: unknown[]) => Promise<unknown>;
+}) {
+  const repo = {
+    findById: async (id: string) => overrides.posts?.[id] ?? null,
+  };
+  const recordReference = jest.fn(
+    overrides.recordReferenceImpl ?? (async () => ({ referenceCount: 1 })),
+  );
+  const metrics = { recordReference };
+  const r2 = {};
+  const service = new GalleryService(repo as never, metrics as never, r2 as never);
+  return { service, repo, metrics, recordReference };
+}
+
+describe('GalleryService.recreate — 仅 PUBLISHED，读快照 + referenceCount+1', () => {
+  const publishedPost = {
+    id: 'p-pub',
+    authorId: 'author-1',
+    status: 'PUBLISHED',
+    prompt: 'a cat wearing sunglasses',
+    model: 'flux-pro',
+    referenceImage: 'https://cdn/ref.png',
+  };
+  const draftPost = {
+    id: 'd-1',
+    authorId: 'author-1',
+    status: 'DRAFT',
+    prompt: 'draft prompt',
+    model: 'flux-pro',
+    referenceImage: null,
+  };
+
+  it('PUBLISHED：返回 gallery_posts 自身快照 prompt/model/referenceImage，并记一次引用（referenceCount+1）', async () => {
+    const { service, recordReference } = makeRecreateService({
+      posts: { 'p-pub': publishedPost },
+    });
+    const result = await service.recreate('user-9', 'p-pub');
+    expect(result).toEqual({
+      prompt: publishedPost.prompt,
+      model: publishedPost.model,
+      referenceImage: publishedPost.referenceImage,
+    });
+    expect(recordReference).toHaveBeenCalledTimes(1);
+    expect(recordReference).toHaveBeenCalledWith(
+      ResourceType.GALLERY_POST,
+      'p-pub',
+      'recreate',
+      'user-9',
+    );
+  });
+
+  it('referenceImage 为 null 时不含该字段', async () => {
+    const { service } = makeRecreateService({
+      posts: { 'p-pub': { ...publishedPost, referenceImage: null } },
+    });
+    const result = await service.recreate('user-9', 'p-pub');
+    expect(result).not.toHaveProperty('referenceImage');
+  });
+
+  it('作品不存在 → 404', async () => {
+    const { service } = makeRecreateService({ posts: {} });
+    await expect(service.recreate('user-1', 'missing')).rejects.toThrow(NotFoundException);
+  });
+
+  it.each(['DRAFT', 'PENDING', 'HIDDEN', 'REJECTED', 'UNPUBLISHED', 'REMOVED'])(
+    '状态为 %s（非 PUBLISHED）→ 拒绝（400），且不记引用',
+    async (status) => {
+      const { service, recordReference } = makeRecreateService({
+        posts: { 'd-1': { ...draftPost, status } },
+      });
+      await expect(service.recreate('user-1', 'd-1')).rejects.toThrow(BadRequestException);
+      expect(recordReference).not.toHaveBeenCalled();
+    },
+  );
+});

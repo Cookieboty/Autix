@@ -144,6 +144,13 @@ export class GalleryController {
     return this.service.download(getCurrentUserId(user), id);
   }
 
+  /** 仅已发布作品可"再创作"；返回该作品自身的创作快照（prompt/model/referenceImage）并记一次引用。 */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/recreate')
+  recreate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.recreate(getCurrentUserId(user), id);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post(':id/report')
   @HttpCode(HttpStatus.CREATED)
