@@ -163,6 +163,20 @@ export class GalleryService {
     );
   }
 
+  /** 把生成快照展平成 create/update 的元数据字段；无快照（非 FROM_GENERATION）时返回空对象。 */
+  private metadataFields(
+    snapshot: GallerySnapshotFields | undefined,
+  ): Pick<GallerySnapshotFields, 'prompt' | 'model' | 'width' | 'height' | 'referenceImage'> | Record<string, never> {
+    if (!snapshot) return {};
+    return {
+      prompt: snapshot.prompt,
+      model: snapshot.model,
+      width: snapshot.width,
+      height: snapshot.height,
+      referenceImage: snapshot.referenceImage,
+    };
+  }
+
   /**
    * POST /gallery：完整投稿，先审后发 → 直接 PENDING，不设 publishedAt。
    * FROM_GENERATION 来源的 prompt/model/width/height/referenceImage 从服务端生成记录快照，
@@ -242,12 +256,18 @@ export class GalleryService {
     return this.repo.update(id, { ...dto });
   }
 
-  /** POST /gallery/:id/submit：DRAFT → PENDING，提交时用当前记录字段跑 assertSource。 */
+  /**
+   * POST /gallery/:id/submit：DRAFT → PENDING，提交时用当前记录字段跑 assertSource。
+   * 与 createSubmission 一致：FROM_GENERATION 在提交时从服务端生成记录快照
+   * prompt/model/width/height，避免 draft→submit 路径下这些字段留空（Tasks 6/7 会读取）。
+   * 草稿无持久化的 allowPublicReference，故 referenceImage 走保守分支——仅当参考图本身
+   * 已是站内公开可复用资源时才快照（不认用户 flag），否则 null。
+   */
   async submitDraft(authorId: string, id: string) {
     const post = await this.getOwned(id, authorId);
     assertTransition(post.status, GalleryStatus.PENDING, 'author');
     assertSource(toSourcePayload(post), 'author');
-    await this.assertOwnership(
+    const generation = await this.assertOwnership(
       {
         sourceType: post.sourceType,
         imageGenerationId: post.imageGenerationId,
@@ -255,7 +275,11 @@ export class GalleryService {
       },
       authorId,
     );
-    return this.repo.update(id, { status: GalleryStatus.PENDING });
+    const snapshot = await this.buildGenerationSnapshot(generation, authorId, undefined);
+    return this.repo.update(id, {
+      status: GalleryStatus.PENDING,
+      ...this.metadataFields(snapshot),
+    });
   }
 
   /**
@@ -280,9 +304,13 @@ export class GalleryService {
       videoGenerationId: dto.videoGenerationId ?? post.videoGenerationId,
     };
     assertSource(merged, 'author');
-    await this.assertOwnership(merged, authorId);
+    const generation = await this.assertOwnership(merged, authorId);
 
-    const data: Prisma.gallery_postsUncheckedUpdateInput = { ...dto };
+    // updatePost 可改 imageGenerationId/来源，故 FROM_GENERATION 编辑后重新从生成记录快照
+    // prompt/model/width/height。referenceImage 与草稿路径同款保守分支（不认用户 flag，
+    // 显式 allowPublicReference 授权仅存在于直接 createSubmission）。
+    const snapshot = await this.buildGenerationSnapshot(generation, authorId, undefined);
+    const data: Prisma.gallery_postsUncheckedUpdateInput = { ...dto, ...this.metadataFields(snapshot) };
     if (post.status === GalleryStatus.PUBLISHED || post.status === GalleryStatus.HIDDEN) {
       data.status = GalleryStatus.PENDING;
       data.publishedAt = null;
