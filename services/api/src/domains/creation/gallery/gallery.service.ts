@@ -471,8 +471,16 @@ export class GalleryService {
   /**
    * GET /gallery/feed：公开热度 Feed（首页图片/视频画廊消费）。
    * 只返回 PUBLISHED 作品，按 kind 分流（IMAGE/VIDEO），并附带互动指标（无指标行则补零）。
+   * Plan C Task 8：登录态附本页每项的 liked/favorited —— 拿到本页 items 后收集 ids，
+   * 各跑一次批量成员查询（findLikedIds/findFavoritedIds，Task 7 已建），逐项 overlay，
+   * 不逐条查（防 N+1，与 getDetail 复用同一批量方法）。匿名 viewer 省略、跳过批量查询。
    */
-  async listFeed(kind: string | undefined, cursor: string | undefined, take: number) {
+  async listFeed(
+    kind: string | undefined,
+    cursor: string | undefined,
+    take: number,
+    viewer?: AuthUser,
+  ) {
     const normalizedKind =
       String(kind).toUpperCase() === GalleryKind.VIDEO ? GalleryKind.VIDEO : GalleryKind.IMAGE;
     const n = Math.trunc(Number(take));
@@ -483,10 +491,17 @@ export class GalleryService {
       cursor,
       clampedTake,
     );
-    const metricsMap = await this.metrics.getMetricsMap(
-      ResourceType.GALLERY_POST,
-      items.map((post) => post.id),
-    );
+    const ids = items.map((post) => post.id);
+    const metricsMap = await this.metrics.getMetricsMap(ResourceType.GALLERY_POST, ids);
+
+    let likedIds: Set<string> | undefined;
+    let favoritedIds: Set<string> | undefined;
+    if (viewer && ids.length > 0) {
+      [likedIds, favoritedIds] = await Promise.all([
+        this.interactions!.findLikedIds(viewer.id, ResourceType.GALLERY_POST, ids),
+        this.interactions!.findFavoritedIds(viewer.id, ResourceType.GALLERY_POST, ids),
+      ]);
+    }
 
     return {
       items: items.map((post) => {
@@ -501,6 +516,8 @@ export class GalleryService {
             viewCount: m?.viewCount ?? 0,
             referenceCount: m?.referenceCount ?? 0,
           },
+          liked: likedIds ? likedIds.has(post.id) : undefined,
+          favorited: favoritedIds ? favoritedIds.has(post.id) : undefined,
         };
       }),
       nextCursor,

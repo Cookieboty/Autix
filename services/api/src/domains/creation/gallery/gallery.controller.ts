@@ -38,15 +38,18 @@ export class GalleryController {
   /**
    * 公开热度 Feed：kind=IMAGE|VIDEO 分流，只返回 PUBLISHED 作品。
    * 注意：必须声明在 GET :id 之前，否则 /gallery/feed 会被 :id 路由吞掉。
+   * Plan C Task 8：可选登录态注入（与 getDetail 同一 @OptionalCurrentUser 模式）——
+   * feed 本身仍公开匿名可访问，登录态则附本页每项的 liked/favorited（批量 overlay，防 N+1）。
    */
   @Public()
   @Get('feed')
   feed(
+    @OptionalCurrentUser() user: AuthUser | undefined,
     @Query('kind') kind?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.service.listFeed(kind, cursor, limit ? Number(limit) : 24);
+    return this.service.listFeed(kind, cursor, limit ? Number(limit) : 24, user);
   }
 
   @UseGuards(JwtAuthGuard)
