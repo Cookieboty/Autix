@@ -1,10 +1,4 @@
-import type {
-  PublicCollectionDetail,
-  PublicCreatorDetail,
-  PublicGrowthHome,
-  PublicGrowthMediaItem,
-  PublicGrowthPage,
-} from './types';
+import type { PublicGrowthMediaItem, PublicGrowthPage } from './types';
 
 type GrowthTranslator = (key: string, values?: Record<string, string | number>) => string;
 
@@ -150,99 +144,6 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
   ];
 }
 
-export function getFallbackHome(t: GrowthTranslator): PublicGrowthHome {
-  const items = getFallbackItems(t);
-
-  return {
-    promo: {
-      label: t('fallback.home.promo'),
-      href: '/pricing',
-    },
-    mediaRail: items,
-    featureMatrix: [
-      {
-        key: 'image',
-        title: t('fallback.features.image.title'),
-        description: t('fallback.features.image.description'),
-        href: '/ai/image',
-        badge: 'Nano',
-        mediaUrl: items[0].mediaUrl,
-        accent: 'var(--growth-plan-0)',
-      },
-      {
-        key: 'video',
-        title: t('fallback.features.video.title'),
-        description: t('fallback.features.video.description'),
-        href: '/ai/video',
-        badge: 'Seedance',
-        mediaUrl: items[1].mediaUrl,
-        accent: 'var(--growth-plan-1)',
-      },
-      {
-        key: 'marketing',
-        title: t('fallback.features.marketing.title'),
-        description: t('fallback.features.marketing.description'),
-        href: '/marketing-studio',
-        badge: t('fallback.badges.growth'),
-        mediaUrl: items[2].mediaUrl,
-        accent: 'var(--growth-plan-3)',
-      },
-      {
-        key: 'canvas',
-        title: t('fallback.features.canvas.title'),
-        description: t('fallback.features.canvas.description'),
-        href: '/draw',
-        badge: t('fallback.badges.edit'),
-        mediaUrl: items[3].mediaUrl,
-        accent: 'var(--growth-plan-2)',
-      },
-    ],
-    banner: {
-      key: 'banner',
-      title: t('fallback.home.bannerTitle'),
-      description: t('fallback.home.bannerDescription'),
-      href: '/community',
-      badge: t('fallback.home.bannerBadge'),
-      mediaUrl: items[4].mediaUrl,
-      accent: 'var(--growth-plan-0)',
-    },
-    masonryItems: items,
-    tagRail: [
-      { label: t('fallback.tags.marketingHooks'), href: '/presets?tag=marketing' },
-      { label: t('fallback.tags.productVideo'), href: '/presets?tag=product' },
-      { label: t('fallback.tags.cinematicPortrait'), href: '/presets?tag=cinema' },
-      { label: t('fallback.tags.canvasRemix'), href: '/draw' },
-    ],
-    sections: [],
-    collections: [
-      {
-        slug: 'seedance',
-        kind: 'COMMUNITY',
-        title: t('fallback.collections.seedance.title'),
-        description: t('fallback.collections.seedance.description'),
-        heroMedia: items[1].mediaUrl,
-        tags: [t('fallback.tags.video'), t('fallback.tags.motion'), t('fallback.tags.storyboard')],
-      },
-      {
-        slug: 'marketing-studio',
-        kind: 'COMMUNITY',
-        title: t('fallback.collections.marketing.title'),
-        description: t('fallback.collections.marketing.description'),
-        heroMedia: items[2].mediaUrl,
-        tags: [t('fallback.tags.ads'), t('fallback.tags.marketing'), t('fallback.tags.product')],
-      },
-      {
-        slug: 'soul-cinema',
-        kind: 'COMMUNITY',
-        title: t('fallback.collections.soulCinema.title'),
-        description: t('fallback.collections.soulCinema.description'),
-        heroMedia: items[4].mediaUrl,
-        tags: [t('fallback.tags.cinema'), t('fallback.tags.portrait'), t('fallback.tags.series')],
-      },
-    ],
-  };
-}
-
 export function getFallbackPage(t: GrowthTranslator, slug = 'marketing-studio'): PublicGrowthPage {
   const items = getFallbackItems(t);
   return {
@@ -272,34 +173,5 @@ export function getFallbackPage(t: GrowthTranslator, slug = 'marketing-studio'):
         body: t('fallback.page.sections.discovery.body'),
       },
     ],
-  };
-}
-
-export function getFallbackCollection(t: GrowthTranslator, slug = 'community'): PublicCollectionDetail {
-  const items = getFallbackItems(t);
-  return {
-    collection: {
-      slug,
-      kind: 'COMMUNITY',
-      title: slug === 'community' ? t('community.eyebrow') : prettifySlug(slug),
-      description: t('fallback.collection.description'),
-      heroMedia: items[1].mediaUrl,
-      tags: [t('fallback.tags.community'), t('fallback.tags.public'), t('fallback.tags.creative')],
-    },
-    items,
-  };
-}
-
-export function getFallbackCreator(t: GrowthTranslator): PublicCreatorDetail {
-  return {
-    profile: {
-      userId: 'fallback',
-      handle: 'autix',
-      displayName: 'Amux Studio',
-      avatar: null,
-      bio: t('fallback.creator.bio'),
-      followerCount: 0,
-      followingCount: 0,
-    },
   };
 }
