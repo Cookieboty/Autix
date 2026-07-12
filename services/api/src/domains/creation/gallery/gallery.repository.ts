@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, GalleryKind, GalleryStatus } from '../../platform/prisma/generated';
+import { Prisma, GalleryKind, GalleryStatus, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
 /** gallery_posts / gallery_reports 的数据访问层。所有状态迁移由 service 层用 assertTransition 校验后再调用这里。 */
@@ -96,18 +96,67 @@ export class GalleryRepository {
     return this.prisma.gallery_reports.update({ where: { id }, data });
   }
 
+  /**
+   * 归属校验 + 元数据快照共用的查询：一次查询同时拿到 userId（归属判定）与
+   * resolvedPrompt/modelUsed/width/height/referenceImage（快照来源），避免重复查库。
+   */
   findImageGenerationOwner(id: string) {
     return this.prisma.image_generations.findUnique({
       where: { id },
-      select: { userId: true },
+      select: {
+        userId: true,
+        resolvedPrompt: true,
+        modelUsed: true,
+        width: true,
+        height: true,
+        referenceImage: true,
+      },
     });
   }
 
   findVideoGenerationOwner(id: string) {
     return this.prisma.video_generations.findUnique({
       where: { id },
-      select: { userId: true },
+      select: {
+        userId: true,
+        resolvedPrompt: true,
+        modelUsed: true,
+        referenceImage: true,
+      },
     });
+  }
+
+  /**
+   * 参考图授权判定用：参考图 URL 是否命中"公开可复用站内资源"——
+   * 用户自有素材 / 已发布(PUBLISHED)画廊作品 / 已通过(APPROVED)模板 三者之一即视为可复用。
+   * 均为按 URL 精确匹配的直接查询（非模糊启发式）；未命中任何一项时由调用方按 allowPublicReference 兜底。
+   */
+  async isReferenceImagePubliclyReusable(url: string, authorId: string): Promise<boolean> {
+    const [ownMaterial, publishedPost, approvedTemplate] = await Promise.all([
+      this.prisma.material_assets.findFirst({
+        where: {
+          userId: authorId,
+          deletedAt: null,
+          OR: [{ url }, { thumbnailUrl: url }],
+        },
+        select: { id: true },
+      }),
+      this.prisma.gallery_posts.findFirst({
+        where: {
+          status: GalleryStatus.PUBLISHED,
+          OR: [{ coverImage: url }, { mediaUrls: { has: url } }],
+        },
+        select: { id: true },
+      }),
+      this.prisma.image_templates.findFirst({
+        where: {
+          status: TemplateStatus.APPROVED,
+          OR: [{ coverImage: url }, { exampleImages: { has: url } }],
+        },
+        select: { id: true },
+      }),
+    ]);
+    return !!(ownMaterial || publishedPost || approvedTemplate);
   }
 
   writeAuditLog(action: string, actorId: string, payload: Record<string, unknown>) {

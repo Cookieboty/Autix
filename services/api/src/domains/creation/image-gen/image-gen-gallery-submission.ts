@@ -40,6 +40,53 @@ export function deriveAspectRatioFromSize(size: string | undefined | null): stri
   return `${width / divisor}:${height / divisor}`;
 }
 
+/** image_generations 中用于快照到 gallery_posts 的字段子集（image/video 生成记录共用）。 */
+export interface GenerationSnapshotRecord {
+  resolvedPrompt: string;
+  modelUsed: string;
+  /** video_generations 无 width/height 列，取 undefined/null 均视为未知。 */
+  width?: number | null;
+  height?: number | null;
+  referenceImage: string | null;
+}
+
+export interface ReferenceImageAuthorization {
+  /** 投稿方（DTO）显式声明允许公开参考图。 */
+  allowPublicReference?: boolean;
+  /** 参考图本身是否已是站内公开可复用资源（PUBLISHED 画廊 / APPROVED 模板 / 用户自有素材），由调用方查库判定后传入。 */
+  referenceImageIsPubliclyReusable?: boolean;
+}
+
+export interface GallerySnapshotFields {
+  prompt: string;
+  model: string;
+  width: number | null;
+  height: number | null;
+  referenceImage: string | null;
+}
+
+/**
+ * 从生成记录快照画廊投稿的元数据字段（§投稿闭环 Task 4）。
+ * prompt/model/width/height 始终来自服务端生成记录，不信任调用方 DTO。
+ * referenceImage：仅当 `allowPublicReference === true` 或参考图本身是公开可复用的站内资源
+ * (`referenceImageIsPubliclyReusable === true`) 时才快照；否则默认为 null（保守 fail-closed）。
+ */
+export function snapshotGenerationMetadata(
+  generation: GenerationSnapshotRecord,
+  authorization: ReferenceImageAuthorization,
+): GallerySnapshotFields {
+  const referenceImageAuthorized =
+    authorization.allowPublicReference === true ||
+    authorization.referenceImageIsPubliclyReusable === true;
+  return {
+    prompt: generation.resolvedPrompt,
+    model: generation.modelUsed,
+    width: generation.width ?? null,
+    height: generation.height ?? null,
+    referenceImage: referenceImageAuthorized ? generation.referenceImage : null,
+  };
+}
+
 /**
  * 将 workbench 生成结果映射为画廊投稿 dto。
  * 多图只投一条画廊帖子，coverImage 取第一张。

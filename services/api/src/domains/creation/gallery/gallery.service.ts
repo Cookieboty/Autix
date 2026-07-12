@@ -22,6 +22,20 @@ import type { UpdateGalleryPostDto } from './dto/update-gallery-post.dto';
 import type { RejectGalleryPostDto } from './dto/reject-post.dto';
 import type { ResolveGalleryReportDto } from './dto/resolve-report.dto';
 import type { CreateGalleryReportDto } from './dto/create-report.dto';
+import {
+  snapshotGenerationMetadata,
+  type GallerySnapshotFields,
+} from '../image-gen/image-gen-gallery-submission';
+
+/** findImageGenerationOwner/findVideoGenerationOwner 的返回形状：归属判定 + 快照来源共用。 */
+interface GenerationOwnershipRecord {
+  userId: string;
+  resolvedPrompt: string;
+  modelUsed: string;
+  width?: number | null;
+  height?: number | null;
+  referenceImage: string | null;
+}
 
 /** 与 AdminGuard 一致的管理员判定，供"公开详情按角色可见性"复用（见 §5.1.1）。 */
 export function isAdminUser(user: AuthUser | undefined): boolean {
@@ -86,36 +100,82 @@ export class GalleryService {
     return this.repo.listDistinctCategories();
   }
 
+  /**
+   * FROM_GENERATION 归属校验 —— fail-closed（安全修复，替换原 best-effort 实现）：
+   * - 查不到生成记录（`gen == null`）→ 403，不再放行（此前"查不到就放行"会让已删除/伪造 id 蒙混过关）；
+   * - 记录存在但不属于当前用户 → 403；
+   * - 查询异常直接向上抛，不 catch 吞掉（此前 catch 后静默放行同样是越权漏洞）。
+   * 返回命中的生成记录，供调用方复用做元数据快照（避免重复查库）；非 FROM_GENERATION 时返回 undefined。
+   */
   private async assertOwnership(dto: {
     sourceType: string;
     imageGenerationId?: string | null;
     videoGenerationId?: string | null;
-  }, authorId: string): Promise<void> {
-    if (dto.sourceType !== 'FROM_GENERATION') return;
-    // TODO: image_generations/video_generations 归属校验，best-effort ——
-    // 查不到就放行，不阻塞投稿（见任务说明）。
-    try {
-      if (dto.imageGenerationId) {
-        const gen = await this.repo.findImageGenerationOwner(dto.imageGenerationId);
-        if (gen && gen.userId !== authorId) {
-          throw new ForbiddenException('该生成记录不属于当前用户');
-        }
-      } else if (dto.videoGenerationId) {
-        const gen = await this.repo.findVideoGenerationOwner(dto.videoGenerationId);
-        if (gen && gen.userId !== authorId) {
-          throw new ForbiddenException('该生成记录不属于当前用户');
-        }
+  }, authorId: string): Promise<GenerationOwnershipRecord | undefined> {
+    if (dto.sourceType !== 'FROM_GENERATION') return undefined;
+
+    if (dto.imageGenerationId) {
+      const gen = await this.repo.findImageGenerationOwner(dto.imageGenerationId);
+      if (gen == null || gen.userId !== authorId) {
+        throw new ForbiddenException('生成记录不存在或不属于当前用户');
       }
-    } catch (err) {
-      if (err instanceof ForbiddenException) throw err;
-      // 查询异常不阻塞投稿，仅放行（best-effort）。
+      return gen;
     }
+
+    if (dto.videoGenerationId) {
+      const gen = await this.repo.findVideoGenerationOwner(dto.videoGenerationId);
+      if (gen == null || gen.userId !== authorId) {
+        throw new ForbiddenException('生成记录不存在或不属于当前用户');
+      }
+      return gen;
+    }
+
+    return undefined;
   }
 
-  /** POST /gallery：完整投稿，先审后发 → 直接 PENDING，不设 publishedAt。 */
+  /**
+   * 由 assertOwnership 命中的生成记录构造画廊元数据快照。
+   * referenceImage 授权：dto.allowPublicReference===true 时直接采信；否则查询该参考图是否
+   * 本身就是站内公开可复用资源（PUBLISHED 画廊 / APPROVED 模板 / 用户自有素材）。
+   * 均不满足时 referenceImage 快照为 null（保守默认，见任务说明）。
+   */
+  private async buildGenerationSnapshot(
+    generation: GenerationOwnershipRecord | undefined,
+    authorId: string,
+    allowPublicReference: boolean | undefined,
+  ): Promise<GallerySnapshotFields | undefined> {
+    if (!generation) return undefined;
+
+    const referenceImageIsPubliclyReusable =
+      allowPublicReference !== true && !!generation.referenceImage
+        ? await this.repo.isReferenceImagePubliclyReusable(generation.referenceImage, authorId)
+        : false;
+
+    return snapshotGenerationMetadata(
+      {
+        resolvedPrompt: generation.resolvedPrompt,
+        modelUsed: generation.modelUsed,
+        width: generation.width,
+        height: generation.height,
+        referenceImage: generation.referenceImage,
+      },
+      { allowPublicReference, referenceImageIsPubliclyReusable },
+    );
+  }
+
+  /**
+   * POST /gallery：完整投稿，先审后发 → 直接 PENDING，不设 publishedAt。
+   * FROM_GENERATION 来源的 prompt/model/width/height/referenceImage 从服务端生成记录快照，
+   * 不采信 DTO（DTO 本就不携带这些字段）。
+   */
   async createSubmission(authorId: string, dto: CreateGalleryPostDto) {
     assertSource(dto as GallerySourcePayload, 'author');
-    await this.assertOwnership(dto, authorId);
+    const generation = await this.assertOwnership(dto, authorId);
+    const snapshot = await this.buildGenerationSnapshot(
+      generation,
+      authorId,
+      dto.allowPublicReference,
+    );
 
     return this.repo.create({
       kind: dto.kind,
@@ -132,6 +192,11 @@ export class GalleryService {
       videoTemplateId: dto.videoTemplateId,
       imageGenerationId: dto.imageGenerationId,
       videoGenerationId: dto.videoGenerationId,
+      prompt: snapshot?.prompt,
+      model: snapshot?.model,
+      width: snapshot?.width,
+      height: snapshot?.height,
+      referenceImage: snapshot?.referenceImage ?? null,
       status: GalleryStatus.PENDING,
       authorId,
     });

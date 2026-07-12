@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -80,4 +81,12 @@ export class CreateGalleryPostDto {
   @IsOptional()
   @IsString()
   videoGenerationId?: string;
+
+  /**
+   * FROM_GENERATION 投稿时，是否允许把生成时使用的参考图一并快照进画廊帖子的 referenceImage。
+   * 未提供或非 true 时默认不快照（fail-closed；见 gallery.service.buildGenerationSnapshot）。
+   */
+  @IsOptional()
+  @IsBoolean()
+  allowPublicReference?: boolean;
 }
