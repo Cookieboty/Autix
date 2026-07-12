@@ -667,6 +667,8 @@ async function main() {
         modelHint: tpl.modelHint,
         tags: tpl.tags,
         authorId: AUTHOR_ID,
+        createdById: AUTHOR_ID,
+        sourceType: 'ADMIN_CREATED',
         status: 'APPROVED',
         useCount: tpl.useCount,
         likeCount: tpl.likeCount,

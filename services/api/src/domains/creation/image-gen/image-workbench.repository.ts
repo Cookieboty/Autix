@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, TemplateStatus } from '../../platform/prisma/generated';
+import {
+  ImageTemplateSource,
+  Prisma,
+  TemplateStatus,
+} from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
 const IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID = 'system:image-workbench';
@@ -36,6 +40,9 @@ export class ImageWorkbenchRepository {
         tags: ['workbench'],
         authorId: userId,
         status: TemplateStatus.ARCHIVED,
+        createdById: userId,
+        sourceType: ImageTemplateSource.SYSTEM,
+        systemKey: 'image-workbench',
         externalId: IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID,
         externalMetadata: {
           internal: true,

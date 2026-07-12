@@ -1264,6 +1264,8 @@ async function main() {
         runtimeDetectedBy: 'AUTO',
         runtimeReason: '视频模板恒定云端运行',
         authorId: AUTHOR_ID,
+        createdById: AUTHOR_ID,
+        sourceType: 'ADMIN_CREATED',
         status: 'APPROVED',
         useCount: v.useCount,
         likeCount: v.likeCount,

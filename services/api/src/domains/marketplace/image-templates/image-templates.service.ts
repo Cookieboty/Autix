@@ -4,6 +4,7 @@ import {
   ResourceType,
   RuntimeReq,
   DetectionSrc,
+  ImageTemplateSource,
   type Prisma,
 } from '../../platform/prisma/generated';
 import { randomUUID } from 'crypto';
@@ -94,6 +95,8 @@ export class ImageTemplatesService extends BaseResourceService {
       runtimeReason: '图片模板恒定云端运行',
       authorId,
       status: TemplateStatus.PENDING,
+      createdById: authorId,
+      sourceType: ImageTemplateSource.ADMIN_CREATED,
     });
   }
 

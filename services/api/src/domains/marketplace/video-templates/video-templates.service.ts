@@ -4,6 +4,7 @@ import {
   ResourceType,
   RuntimeReq,
   DetectionSrc,
+  VideoTemplateSource,
   type Prisma,
 } from '../../platform/prisma/generated';
 import { randomUUID } from 'crypto';
@@ -92,6 +93,8 @@ export class VideoTemplatesService extends BaseResourceService {
       runtimeReason: '视频模板恒定云端运行',
       authorId,
       status: TemplateStatus.PENDING,
+      createdById: authorId,
+      sourceType: VideoTemplateSource.ADMIN_CREATED,
     });
   }
 

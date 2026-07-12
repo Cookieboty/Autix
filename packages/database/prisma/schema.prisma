@@ -91,6 +91,10 @@ model User {
   arenaSessions                  arena_sessions[]             @relation("ArenaSessionUser")
   imageTemplates                 image_templates[]            @relation("ImageTemplateAuthor")
   videoTemplates                 video_templates[]            @relation("VideoTemplateAuthor")
+  imageTemplatesCreated          image_templates[]            @relation("ImageTemplateCreatedBy")
+  imageTemplatesReviewed         image_templates[]            @relation("ImageTemplateReviewer")
+  videoTemplatesCreated          video_templates[]            @relation("VideoTemplateCreatedBy")
+  videoTemplatesReviewed         video_templates[]            @relation("VideoTemplateReviewer")
   skills                         skills[]                     @relation("SkillAuthor")
   mcpServers                     mcp_servers[]                @relation("McpServerAuthor")
   agents                         agents[]                     @relation("AgentAuthor")
@@ -756,6 +760,17 @@ enum TemplateStatus {
   ARCHIVED
 }
 
+enum ImageTemplateSource {
+  ADMIN_CREATED
+  GALLERY_CONVERSION
+  SYSTEM
+}
+
+enum VideoTemplateSource {
+  ADMIN_CREATED
+  SYSTEM
+}
+
 enum McpTransport {
   stdio
   sse
@@ -802,15 +817,28 @@ model image_templates {
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
 
+  sourceType          ImageTemplateSource @default(ADMIN_CREATED)
+  sourceGalleryPostId String?             @unique
+  sourceGalleryPost   gallery_posts?      @relation("ImageTemplateSourceGallery", fields: [sourceGalleryPostId], references: [id], onDelete: Restrict)
+  createdById         String
+  createdBy           User                @relation("ImageTemplateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedById        String?
+  reviewedAt          DateTime?
+  reviewedBy          User?               @relation("ImageTemplateReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  systemKey           String?
+
   generations image_generations[]
   author      User                @relation("ImageTemplateAuthor", fields: [authorId], references: [id], onDelete: Restrict)
 
+  @@unique([authorId, systemKey])
   @@index([authorId])
   @@index([status])
   @@index([category])
   @@index([useCount])
   @@index([publishedAt])
   @@index([isHot])
+  @@index([sourceType])
+  @@index([createdById])
 }
 
 model video_templates {
@@ -857,15 +885,26 @@ model video_templates {
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
 
+  sourceType   VideoTemplateSource @default(ADMIN_CREATED)
+  createdById  String
+  createdBy    User                @relation("VideoTemplateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewedBy   User?               @relation("VideoTemplateReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  systemKey    String?
+
   generations video_generations[]
   author      User                @relation("VideoTemplateAuthor", fields: [authorId], references: [id], onDelete: Restrict)
 
+  @@unique([authorId, systemKey])
   @@index([authorId])
   @@index([status])
   @@index([category])
   @@index([useCount])
   @@index([publishedAt])
   @@index([isHot])
+  @@index([sourceType])
+  @@index([createdById])
 }
 
 model skills {
@@ -2108,6 +2147,8 @@ model gallery_posts {
   // 默认 true：普通用户投稿/正常创建的作品媒体本就归属自己，不进迁移队列。
   mediaMigrated          Boolean @default(true)
   mediaMigrationAttempts Int     @default(0)
+
+  sourceForImageTemplate image_templates? @relation("ImageTemplateSourceGallery")
 
   @@index([status, publishedAt(sort: Desc), id(sort: Desc)])
   @@index([status, kind, publishedAt(sort: Desc), id(sort: Desc)])
