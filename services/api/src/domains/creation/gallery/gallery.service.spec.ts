@@ -710,6 +710,68 @@ describe('GalleryService.download — 仅 PUBLISHED + 非幂等计数', () => {
   });
 });
 
+// ── favorite/unfavorite（Plan C Task 10：改走 FavoriteLibraryService）─────
+
+function makeFavoriteService(overrides: {
+  posts?: Record<string, Record<string, unknown>>;
+  favoriteLibrary?: { favorite?: jest.Mock; unfavorite?: jest.Mock };
+}) {
+  const repo = {
+    findById: async (id: string) => overrides.posts?.[id] ?? null,
+  };
+  const favoriteLibrary = {
+    favorite: jest.fn().mockResolvedValue({ favorited: true }),
+    unfavorite: jest.fn().mockResolvedValue({ favorited: false }),
+    ...(overrides.favoriteLibrary ?? {}),
+  };
+  const service = new GalleryService(
+    repo as never,
+    {} as never,
+    {} as never,
+    undefined,
+    favoriteLibrary as never,
+  );
+  return { service, repo, favoriteLibrary };
+}
+
+describe('GalleryService.favorite/unfavorite — 单事务收藏耦合(Plan C Task 10)', () => {
+  const publishedPost = { id: 'p-pub', status: 'PUBLISHED' };
+
+  it('favorite：仅 PUBLISHED 可收藏，委托给 FavoriteLibraryService.favorite', async () => {
+    const { service, favoriteLibrary } = makeFavoriteService({ posts: { 'p-pub': publishedPost } });
+    await service.favorite('user-1', 'p-pub');
+    expect(favoriteLibrary.favorite).toHaveBeenCalledWith('user-1', ResourceType.GALLERY_POST, 'p-pub');
+  });
+
+  it.each(['DRAFT', 'PENDING', 'HIDDEN', 'REJECTED', 'UNPUBLISHED', 'REMOVED'])(
+    'favorite：状态为 %s（非 PUBLISHED）→ 拒绝(400)，不调用 FavoriteLibraryService',
+    async (status) => {
+      const { service, favoriteLibrary } = makeFavoriteService({
+        posts: { p1: { ...publishedPost, id: 'p1', status } },
+      });
+      await expect(service.favorite('user-1', 'p1')).rejects.toThrow(BadRequestException);
+      expect(favoriteLibrary.favorite).not.toHaveBeenCalled();
+    },
+  );
+
+  it('favorite：作品不存在 → 404', async () => {
+    const { service } = makeFavoriteService({ posts: {} });
+    await expect(service.favorite('user-1', 'missing')).rejects.toThrow(NotFoundException);
+  });
+
+  it('unfavorite：不校验 PUBLISHED 状态（用户应始终能取消自己的收藏），直接委托', async () => {
+    const { service, favoriteLibrary } = makeFavoriteService({
+      posts: { 'p-hidden': { id: 'p-hidden', status: 'HIDDEN' } },
+    });
+    await service.unfavorite('user-1', 'p-hidden');
+    expect(favoriteLibrary.unfavorite).toHaveBeenCalledWith(
+      'user-1',
+      ResourceType.GALLERY_POST,
+      'p-hidden',
+    );
+  });
+});
+
 // ── recreate（Plan C Task 6）────────────────────────────────────────────
 
 /**

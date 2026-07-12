@@ -778,6 +778,11 @@ enum McpTransport {
   http
 }
 
+/// Plan C Task 10：favoriteCount 已删（收藏改走 FavoriteLibraryService + resource_metrics 单一来源，
+/// 列表/详情展示改读 resource_metrics.favoriteCount）。likeCount/useCount 暂保留——它们仍是
+/// base-resource.service.like() 与 template-generation.repository 生成计数、以及
+/// marketplace-query.repository 首页/热门/编辑精选排序的直接读写列，全量迁到 resource_metrics
+/// 需要同时重做这三处排序/写入路径，超出本任务范围，留作后续任务。
 model image_templates {
   id            String   @id @default(cuid())
   title         String   @db.VarChar(200)
@@ -803,7 +808,6 @@ model image_templates {
   authorId      String
   useCount      Int     @default(0)
   likeCount     Int     @default(0)
-  favoriteCount Int     @default(0)
   isHot         Boolean @default(false)
 
   createdAt   DateTime  @default(now())
@@ -863,7 +867,6 @@ model video_templates {
   authorId      String
   useCount      Int     @default(0)
   likeCount     Int     @default(0)
-  favoriteCount Int     @default(0)
   isHot         Boolean @default(false)
 
   createdAt   DateTime  @default(now())

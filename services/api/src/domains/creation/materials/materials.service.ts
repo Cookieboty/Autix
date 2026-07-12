@@ -9,6 +9,7 @@ import { Prisma } from '../../platform/prisma/generated';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { assertInStationMediaUrls } from '../gallery/gallery.helpers';
+import { FavoriteLibraryService } from './favorite-library.service';
 import { MaterialsRepository } from './materials.repository';
 // type-only import avoids the circular ESM TDZ at load time; the string injection token handles DI resolution
 import type { MaterialFoldersService } from './material-folders.service';
@@ -58,6 +59,7 @@ export class MaterialsService {
     private readonly r2Service: CloudflareR2Service,
     @Inject(MATERIAL_FOLDERS_SERVICE)
     private readonly foldersService: MaterialFoldersService,
+    private readonly favoriteLibrary: FavoriteLibraryService,
   ) {}
 
   async getEntitlement(userId: string) {
@@ -192,6 +194,7 @@ export class MaterialsService {
     }
     if (input.folderId !== undefined) {
       await this.foldersService.assertFolderExists(userId, input.folderId);
+      await this.assertMoveAllowed(userId, input.folderId);
       data.folder = input.folderId
         ? { connect: { id: input.folderId } }
         : { disconnect: true };
@@ -199,29 +202,52 @@ export class MaterialsService {
     return this.materialsRepository.update(id, data);
   }
 
+  /** Plan C Task 10：单删走 FavoriteLibraryService——FAVORITE 素材联动取消收藏，UPLOAD/HISTORY 仍软删。 */
   async remove(userId: string, id: string) {
-    await this.ensureOwned(userId, id);
-    await this.materialsRepository.softDelete(id);
+    await this.favoriteLibrary.deleteMaterial(userId, id);
   }
 
+  /** Plan C Task 10：批量删同上，经 FavoriteLibraryService 统一入口。 */
   async batchRemove(userId: string, ids: string[]) {
-    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
-    if (uniqueIds.length === 0) return { count: 0 };
-    const result = await this.materialsRepository.softDeleteMany(userId, uniqueIds);
-    return { count: result.count };
+    return this.favoriteLibrary.deleteMaterials(userId, ids);
+  }
+
+  /**
+   * Plan C Task 10：会员过期规则——只允许"其他文件夹 → 默认(folderId=null)"，
+   * 不允许移入任何具体文件夹（含默认→其他、其他→其他）。folderId=null 恒放行。
+   */
+  private async assertMoveAllowed(userId: string, targetFolderId: string | null) {
+    if (targetFolderId === null) return;
+    const entitlement = await this.getEntitlement(userId);
+    if (!entitlement.canUse) {
+      throw new ForbiddenException('会员已过期，仅可将素材移回默认文件夹');
+    }
   }
 
   async batchMove(userId: string, ids: string[], folderId: string | null) {
     const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
     if (uniqueIds.length === 0) return { count: 0 };
     await this.foldersService.assertFolderExists(userId, folderId);
+    await this.assertMoveAllowed(userId, folderId);
     const result = await this.materialsRepository.moveMany(userId, uniqueIds, folderId);
     return { count: result.count };
   }
 
   async useAsset(userId: string, id: string) {
     await this.assertCanAddOrUse(userId);
-    return this.ensureOwned(userId, id);
+    const asset = await this.ensureOwned(userId, id);
+    await this.favoriteLibrary.assertUsable(asset);
+    return asset;
+  }
+
+  /**
+   * Plan C Task 10：`POST /materials/:id/download`——sourceState 拦截（blocked/missing → 403），
+   * 不复用 useAsset 的会员校验（brief：download 不要求会员，只拦截来源已失效的素材）。
+   */
+  async download(userId: string, id: string): Promise<{ downloadUrl: string | null }> {
+    const asset = await this.ensureOwned(userId, id);
+    await this.favoriteLibrary.assertUsable(asset);
+    return { downloadUrl: asset.url ?? asset.thumbnailUrl ?? null };
   }
 
   private async ensureOwned(userId: string, id: string) {

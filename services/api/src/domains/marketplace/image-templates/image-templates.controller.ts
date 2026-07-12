@@ -82,6 +82,13 @@ export class ImageTemplatesController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Delete(':id/favorite')
+  unfavorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
+    return this.service.unfavorite(userId, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post(':id/generations')
   createGeneration(
     @CurrentUser() user: AuthUser,

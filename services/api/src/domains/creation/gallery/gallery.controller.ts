@@ -141,7 +141,7 @@ export class GalleryController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id/favorite')
   unfavorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.metrics.unfavorite(getCurrentUserId(user), ResourceType.GALLERY_POST, id);
+    return this.service.unfavorite(getCurrentUserId(user), id);
   }
 
   /** 仅已发布作品可下载；同步事务记一次下载事件 + INCR downloadCount，返回下载 URL。 */

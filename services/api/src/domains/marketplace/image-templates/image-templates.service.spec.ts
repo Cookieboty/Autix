@@ -123,6 +123,14 @@ function createMocks(overrides: BuildOverrides = {}) {
     getPublicBaseUrl: jest.fn().mockResolvedValue(R2_PUBLIC_BASE),
     ...(overrides.r2 ?? {}),
   };
+  const metrics = {
+    getMetrics: jest.fn().mockResolvedValue({ favoriteCount: 0 }),
+    getMetricsMap: jest.fn().mockResolvedValue(new Map()),
+  };
+  const favoriteLibrary = {
+    favorite: jest.fn().mockResolvedValue({ favorited: true }),
+    unfavorite: jest.fn().mockResolvedValue({ favorited: false }),
+  };
   const resourceInteractions = new ResourceInteractionRepository(prisma as never);
   const service = new ImageTemplatesService(
     resourceInteractions,
@@ -132,9 +140,23 @@ function createMocks(overrides: BuildOverrides = {}) {
     models as never,
     generations as never,
     membership as never,
-    {} as never,
+    metrics as never,
+    favoriteLibrary as never,
   );
-  return { service, prisma, tx, points, models, generations, resources, membership, resourceInteractions, r2 };
+  return {
+    service,
+    prisma,
+    tx,
+    points,
+    models,
+    generations,
+    resources,
+    membership,
+    resourceInteractions,
+    r2,
+    metrics,
+    favoriteLibrary,
+  };
 }
 
 function buildImageTemplatesService(overrides: BuildOverrides = {}) {
@@ -291,6 +313,25 @@ describe('ImageTemplatesService — 公开可见守卫 (status=APPROVED && sourc
   it('favorite: 目标非公开可见 → NotFoundException', async () => {
     const { service } = createMocks();
     await expect(service.favorite('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+  });
+
+  it('favorite: 公开可见 → 委托给 FavoriteLibraryService.favorite', async () => {
+    const { service, favoriteLibrary } = createMocks();
+    await service.favorite('u1', 'tpl-1');
+    expect(favoriteLibrary.favorite).toHaveBeenCalledWith('u1', 'IMAGE_TEMPLATE', 'tpl-1');
+  });
+
+  it('unfavorite: 委托给 FavoriteLibraryService.unfavorite，不经公开可见守卫', async () => {
+    const { service, favoriteLibrary } = createMocks();
+    await service.unfavorite('u1', 'tpl-pending');
+    expect(favoriteLibrary.unfavorite).toHaveBeenCalledWith('u1', 'IMAGE_TEMPLATE', 'tpl-pending');
+  });
+
+  it('findPublicVisibleById：favoriteCount 改读 resource_metrics（列已从 image_templates 删除）', async () => {
+    const { service, metrics } = createMocks();
+    metrics.getMetrics.mockResolvedValue({ favoriteCount: 7 });
+    const row = (await service.findPublicVisibleById('tpl-1')) as { favoriteCount: number };
+    expect(row.favoriteCount).toBe(7);
   });
 
   it('recordView: 目标非公开可见 → NotFoundException', async () => {

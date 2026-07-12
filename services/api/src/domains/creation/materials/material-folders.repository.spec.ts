@@ -55,20 +55,7 @@ describe('MaterialFoldersRepository', () => {
     });
   });
 
-  it('softDeleteWithAssets 事务内先软删素材再软删文件夹', async () => {
-    const prisma = createPrismaMock();
-    const repo = new MaterialFoldersRepository(prisma as never);
-
-    await repo.softDeleteWithAssets('u1', 'f1');
-
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(prisma._tx.material_assets.updateMany).toHaveBeenCalledWith({
-      where: { userId: 'u1', folderId: 'f1', deletedAt: null },
-      data: { deletedAt: expect.any(Date) },
-    });
-    expect(prisma._tx.material_folders.update).toHaveBeenCalledWith({
-      where: { id: 'f1' },
-      data: { deletedAt: expect.any(Date) },
-    });
-  });
+  // Plan C Task 10：softDeleteWithAssets 已删除——删文件夹连带素材的逻辑改经
+  // FavoriteLibraryService.deleteFolder（见 material-folders.service.spec.ts /
+  // favorite-library.service.spec.ts 的 deleteFolder 用例），repository 不再自己拼事务。
 });

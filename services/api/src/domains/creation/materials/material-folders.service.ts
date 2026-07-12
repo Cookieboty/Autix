@@ -6,6 +6,7 @@ import {
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
+import { FavoriteLibraryService } from './favorite-library.service';
 import { MaterialFoldersRepository } from './material-folders.repository';
 import { MaterialsService } from './materials.service';
 
@@ -27,6 +28,7 @@ export class MaterialFoldersService {
     // without it Nest deadlocks resolving the useExisting token alias at boot.
     @Inject(forwardRef(() => MaterialsService))
     private readonly materialsService: MaterialsService,
+    private readonly favoriteLibrary: FavoriteLibraryService,
   ) {}
 
   async listSidebar(userId: string) {
@@ -93,9 +95,10 @@ export class MaterialFoldersService {
     }
   }
 
+  /** Plan C Task 10：删文件夹经 FavoriteLibraryService——夹内 FAVORITE 素材联动取消收藏，其余仍软删。 */
   async remove(userId: string, id: string) {
     await this.ensureFolderOwned(userId, id);
-    await this.repository.softDeleteWithAssets(userId, id);
+    await this.favoriteLibrary.deleteFolder(userId, id);
   }
 
   async ensureFolderOwned(userId: string, id: string) {

@@ -13,9 +13,10 @@ import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { assertInStationMediaUrls } from '../../creation/gallery/gallery.helpers';
-import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { BaseResourceService, type ListResourceQuery } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
+import { FavoriteLibraryService } from '../../creation/materials/favorite-library.service';
 import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 import { TemplateGenerationRepository } from '../template-generation.repository';
 
@@ -59,9 +60,10 @@ export class VideoTemplatesService extends BaseResourceService {
     private readonly modelConfigService: ModelConfigService,
     private readonly generations: TemplateGenerationRepository,
     private readonly membershipService: MembershipService,
-    resourceMetrics: ResourceMetricsService,
+    private readonly metrics: ResourceMetricsService,
+    private readonly favoriteLibrary: FavoriteLibraryService,
   ) {
-    super(resourceInteractions, resourceMetrics);
+    super(resourceInteractions, metrics);
   }
 
   protected get delegate() {
@@ -82,14 +84,76 @@ export class VideoTemplatesService extends BaseResourceService {
     return super.like(userId, id);
   }
 
+  /**
+   * Plan C Task 10：favorite 改走 FavoriteLibraryService（单事务收藏耦合，落 FAVORITE 素材）。
+   * 保留 Plan B Task 5 的公开可见守卫——非公开可见模板不可收藏。
+   */
   override async favorite(userId: string, id: string) {
     await this.requirePublicVisible(id);
-    return super.favorite(userId, id);
+    return this.favoriteLibrary.favorite(userId, ResourceType.VIDEO_TEMPLATE, id);
+  }
+
+  /**
+   * Plan C Task 10：新增 DELETE 语义的取消收藏（此前模板收藏是单个 POST toggle，
+   * 现与 Gallery 的 POST/DELETE 对齐）。不复用 requirePublicVisible 门禁——用户应始终
+   * 能取消自己的收藏，即便模板之后被下架/归档。
+   */
+  async unfavorite(userId: string, id: string) {
+    return this.favoriteLibrary.unfavorite(userId, ResourceType.VIDEO_TEMPLATE, id);
   }
 
   override async recordView(userId: string | undefined, id: string) {
     await this.requirePublicVisible(id);
     return super.recordView(userId, id);
+  }
+
+  /**
+   * Plan C Task 10：favoriteCount 列已从 video_templates 删除（收藏改走
+   * FavoriteLibraryService + resource_metrics 单一来源），列表/详情展示改读 resource_metrics。
+   */
+  // 返回类型刻意保持跟基类一致的 unknown/unknown[]——下游在拿到结果后各自做窄化 cast，
+  // 收紧成具体对象类型会让那些 cast 因"类型不重叠"编译失败（见 image-templates.service.ts 同名注释）。
+  override async findAll(query: ListResourceQuery): Promise<{
+    items: unknown[];
+    total: number;
+    page: number;
+    pageSize: number;
+    hasMore: boolean;
+  }> {
+    const res = await super.findAll(query);
+    const items = await this.attachFavoriteCounts(res.items);
+    return { ...res, items };
+  }
+
+  override async findById(id: string): Promise<unknown> {
+    const row = await super.findById(id);
+    return this.attachFavoriteCount(row);
+  }
+
+  override async findPublicVisibleById(id: string): Promise<unknown | null> {
+    const row = await super.findPublicVisibleById(id);
+    if (!row) return null;
+    return this.attachFavoriteCount(row);
+  }
+
+  private async attachFavoriteCount(row: unknown): Promise<unknown> {
+    const id = (row as { id?: unknown }).id;
+    if (typeof id !== 'string') return row;
+    const metrics = await this.metrics.getMetrics(ResourceType.VIDEO_TEMPLATE, id);
+    return { ...(row as object), favoriteCount: metrics.favoriteCount };
+  }
+
+  private async attachFavoriteCounts(items: unknown[]): Promise<unknown[]> {
+    const ids = items
+      .map((item) => (item as { id?: unknown }).id)
+      .filter((id): id is string => typeof id === 'string');
+    if (ids.length === 0) return items;
+    const metricsMap = await this.metrics.getMetricsMap(ResourceType.VIDEO_TEMPLATE, ids);
+    return items.map((item) => {
+      const id = (item as { id?: unknown }).id;
+      const favoriteCount = typeof id === 'string' ? (metricsMap.get(id)?.favoriteCount ?? 0) : 0;
+      return { ...(item as object), favoriteCount };
+    });
   }
 
   /**

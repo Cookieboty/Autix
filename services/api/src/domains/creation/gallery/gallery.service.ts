@@ -9,6 +9,7 @@ import { GalleryKind, GalleryStatus, Prisma, ResourceType } from '../../platform
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
+import { FavoriteLibraryService } from '../materials/favorite-library.service';
 import { GalleryRepository } from './gallery.repository';
 import { presentAuthor, type PresentedAuthor } from './gallery-author.presenter';
 import {
@@ -91,6 +92,9 @@ export class GalleryService {
     // BaseResourceService 的写法，让既有 3 参构造的纯单测（feed/download/recreate）无需改动；
     // 生产环境经 DI 恒注入真实实例。
     private readonly interactions?: ResourceInteractionRepository,
+    // Plan C Task 10：favorite/unfavorite 改走 FavoriteLibraryService（单事务收藏耦合）。
+    // 同上，可选只是为了不动既有不测 favorite/unfavorite 的构造点；生产环境恒注入。
+    private readonly favoriteLibrary?: FavoriteLibraryService,
   ) {}
 
   /** 管理端广场列表：页码分页 + 筛选（kind/category/sourceType/标题搜索/仅非我域名），返回 total。 */
@@ -625,7 +629,16 @@ export class GalleryService {
 
   async favorite(userId: string, id: string) {
     await this.assertLikeableOrFavoritable(id);
-    return this.metrics.favorite(userId, ResourceType.GALLERY_POST, id);
+    return this.favoriteLibrary!.favorite(userId, ResourceType.GALLERY_POST, id);
+  }
+
+  /**
+   * Plan C Task 10：取消收藏不复用 assertLikeableOrFavoritable 的"仅 PUBLISHED"门禁——
+   * 与此前直接调 metrics.unfavorite 的行为一致，用户应始终能取消自己的收藏，即便作品
+   * 之后被下架/隐藏/删除。
+   */
+  async unfavorite(userId: string, id: string) {
+    return this.favoriteLibrary!.unfavorite(userId, ResourceType.GALLERY_POST, id);
   }
 
   /**

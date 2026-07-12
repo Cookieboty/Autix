@@ -81,6 +81,13 @@ export class MaterialsController {
     return this.materialsService.useAsset(userId, id);
   }
 
+  /** Plan C Task 10：下载前置 sourceState 拦截（blocked/missing → 403），不要求会员。 */
+  @Post(':id/download')
+  download(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
+    return this.materialsService.download(userId, id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
