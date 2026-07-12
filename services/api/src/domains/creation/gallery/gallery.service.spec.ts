@@ -289,3 +289,99 @@ describe('GalleryService.submitDraft — 草稿→提交时快照元数据', () 
     expect(captured!).not.toHaveProperty('referenceImage');
   });
 });
+
+describe('GalleryService.updatePost — 仅在来源/生成引用变动时才重新快照', () => {
+  const authorId = 'user-me';
+  const genA = 'gen-a';
+  const genB = 'gen-b';
+  const postId = 'post-x';
+
+  const genAImage: MockImageGeneration = {
+    userId: authorId,
+    resolvedPrompt: 'prompt A',
+    modelUsed: 'model-A',
+    width: 512,
+    height: 512,
+    referenceImage: 'https://cdn.example.com/ref-a.png',
+  };
+  const genBImage: MockImageGeneration = {
+    userId: authorId,
+    resolvedPrompt: 'prompt B',
+    modelUsed: 'model-B',
+    width: 1024,
+    height: 1024,
+    referenceImage: 'https://cdn.example.com/ref-b.png',
+  };
+
+  /** 已通过 createSubmission(allowPublicReference:true) 写入了一张“非公开可复用”的私有参考图。 */
+  function existingPost(): Record<string, unknown> {
+    return {
+      id: postId,
+      authorId,
+      kind: 'IMAGE',
+      status: 'PENDING',
+      sourceType: 'FROM_GENERATION',
+      mediaUrls: ['https://cdn/a.png'],
+      imageTemplateId: null,
+      videoTemplateId: null,
+      imageGenerationId: genA,
+      videoGenerationId: null,
+      prompt: 'prompt A',
+      model: 'model-A',
+      width: 512,
+      height: 512,
+      referenceImage: 'https://cdn.example.com/ref-a.png',
+    };
+  }
+
+  it('只改无关字段（title）→ 不重新快照，已授权的私有 referenceImage/prompt/width 存活', async () => {
+    let captured: Record<string, unknown> | null = null;
+    const service = makeService({
+      imageGenerations: { [genA]: genAImage },
+      isReferenceImagePubliclyReusable: false, // 该私有参考图并非站内公开可复用
+      posts: { [postId]: existingPost() },
+      captureUpdate: (_id, data) => {
+        captured = data;
+      },
+    });
+    await service.updatePost(authorId, postId, { title: '新标题' } as never);
+    expect(captured!.title).toBe('新标题');
+    // 未改来源 → 不应写入任何元数据字段（保留库中原值，不被 null 覆盖）
+    expect(captured!).not.toHaveProperty('referenceImage');
+    expect(captured!).not.toHaveProperty('prompt');
+    expect(captured!).not.toHaveProperty('width');
+    expect(captured!).not.toHaveProperty('height');
+    expect(captured!).not.toHaveProperty('model');
+  });
+
+  it('改 imageGenerationId → 用新 generation 重新快照（保守分支 referenceImage=null）', async () => {
+    let captured: Record<string, unknown> | null = null;
+    const service = makeService({
+      imageGenerations: { [genA]: genAImage, [genB]: genBImage },
+      isReferenceImagePubliclyReusable: false,
+      posts: { [postId]: existingPost() },
+      captureUpdate: (_id, data) => {
+        captured = data;
+      },
+    });
+    await service.updatePost(authorId, postId, { imageGenerationId: genB } as never);
+    expect(captured!.prompt).toBe(genBImage.resolvedPrompt);
+    expect(captured!.model).toBe(genBImage.modelUsed);
+    expect(captured!.width).toBe(genBImage.width);
+    expect(captured!.height).toBe(genBImage.height);
+    expect(captured!.referenceImage).toBeNull();
+  });
+
+  it('改 imageGenerationId 指向他人 generation → Forbidden（fail-closed）', async () => {
+    const service = makeService({
+      imageGenerations: {
+        [genA]: genAImage,
+        [genB]: { ...genBImage, userId: 'someone-else' },
+      },
+      posts: { [postId]: existingPost() },
+    });
+    await expect(
+      service.updatePost(authorId, postId, { imageGenerationId: genB } as never),
+    ).rejects.toThrow(ForbiddenException);
+  });
+});

@@ -306,11 +306,18 @@ export class GalleryService {
     assertSource(merged, 'author');
     const generation = await this.assertOwnership(merged, authorId);
 
-    // updatePost 可改 imageGenerationId/来源，故 FROM_GENERATION 编辑后重新从生成记录快照
-    // prompt/model/width/height。referenceImage 与草稿路径同款保守分支（不认用户 flag，
-    // 显式 allowPublicReference 授权仅存在于直接 createSubmission）。
-    const snapshot = await this.buildGenerationSnapshot(generation, authorId, undefined);
-    const data: Prisma.gallery_postsUncheckedUpdateInput = { ...dto, ...this.metadataFields(snapshot) };
+    const data: Prisma.gallery_postsUncheckedUpdateInput = { ...dto };
+    // 仅当本次编辑真正改动了来源/生成引用时才重新快照，避免编辑无关字段（如仅改标题）时
+    // 把 createSubmission 时经 allowPublicReference===true 授权写入的 referenceImage 静默清空。
+    // referenceImage 走保守分支（不认用户 flag，显式授权仅存在于直接 createSubmission）。
+    const sourceRefChanged =
+      (dto.sourceType !== undefined && dto.sourceType !== post.sourceType) ||
+      (dto.imageGenerationId !== undefined && dto.imageGenerationId !== post.imageGenerationId) ||
+      (dto.videoGenerationId !== undefined && dto.videoGenerationId !== post.videoGenerationId);
+    if (sourceRefChanged) {
+      const snapshot = await this.buildGenerationSnapshot(generation, authorId, undefined);
+      Object.assign(data, this.metadataFields(snapshot));
+    }
     if (post.status === GalleryStatus.PUBLISHED || post.status === GalleryStatus.HIDDEN) {
       data.status = GalleryStatus.PENDING;
       data.publishedAt = null;
