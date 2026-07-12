@@ -1,6 +1,7 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { Button } from '../ui';
+import { Check, Link2, Loader2 } from 'lucide-react';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
 import type { OAuthProviderId } from '../auth/types';
 
 const NAME: Record<OAuthProviderId, string> = {
@@ -26,30 +27,47 @@ export function AccountSecuritySection(props: AccountSecuritySectionProps) {
   const rows = [...new Set([...props.allProviders, ...props.linkedProviders])];
   if (!rows.length) return null;
   return (
-    <section className="rounded-lg border p-4">
-      <h3 className="mb-3 text-sm font-medium">{t('accountSecurityTitle')}</h3>
-      {props.error ? (
-        <p className="mb-3 text-sm text-red-500" role="alert">{props.error}</p>
-      ) : null}
-      <ul className="flex flex-col gap-2">
-        {rows.map((p) => {
-          const linked = props.linkedProviders.includes(p);
-          const enabled = props.allProviders.includes(p);
-          return (
-            <li key={p} className="flex items-center justify-between">
-              <span>{NAME[p]}{linked ? ` · ${t('linked')}` : ''}</span>
-              <Button
-                variant={linked ? 'outline' : 'default'}
-                // 未启用且未绑定 → 无操作可做，禁用；已绑定（即便停配）仍可解绑
-                disabled={props.busyProvider === p || (!enabled && !linked)}
-                onClick={() => (linked ? props.onUnlink(p) : props.onLink(p))}
-              >
-                {linked ? t('unlink') : t('link')}
-              </Button>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('accountSecurityTitle')}</CardTitle>
+        <CardDescription>{t('accountSecurityDescription')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {props.error ? (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">{props.error}</p>
+        ) : null}
+        <ul className="divide-y divide-border rounded-md border border-border">
+          {rows.map((p) => {
+            const linked = props.linkedProviders.includes(p);
+            const enabled = props.allProviders.includes(p);
+            const busy = props.busyProvider === p;
+            return (
+              <li key={p} className="flex min-h-16 items-center gap-3 px-3 py-2">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted font-semibold text-foreground">
+                  {NAME[p][0]}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-foreground">{NAME[p]}</div>
+                  <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                    {linked ? <Check className="size-3.5 text-emerald-500" aria-hidden="true" /> : <Link2 className="size-3.5" aria-hidden="true" />}
+                    {linked ? t('linked') : t('notLinked')}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={linked ? 'outline' : 'default'}
+                  disabled={busy || (!enabled && !linked)}
+                  onClick={() => (linked ? props.onUnlink(p) : props.onLink(p))}
+                >
+                  {busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                  {linked ? t('unlink') : t('link')}
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }

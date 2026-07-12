@@ -86,9 +86,11 @@ export class UserService {
   }
 
   async findAll(query: QueryUserDto, currentUser: AuthUser): Promise<UserListResult> {
-    const { username, email, page = 1, pageSize = 10 } = query;
+    const { username, email, page = 1, pageSize = 10, includeDeleted = false } = query;
 
-    const where: Prisma.UserWhereInput = {};
+    const where: Prisma.UserWhereInput = {
+      status: includeDeleted && currentUser.isSuperAdmin ? undefined : { not: 'DELETED' },
+    };
 
     // System-scoped filtering: non-super admins only see users in their current system
     if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
@@ -127,6 +129,9 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('用户不存在');
     }
+    if (user.status === 'DELETED' && !currentUser.isSuperAdmin) {
+      throw new NotFoundException('用户不存在');
+    }
 
     // System-scoped access check
     if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
@@ -139,13 +144,24 @@ export class UserService {
     }
 
     const { password, ...result } = user;
+    // spec §3.2 F：超管查看已注销用户时返回匿名化只读快照并标记 readonly:true，供前端隐藏编辑动作。
+    if (user.status === 'DELETED') {
+      return { ...result, readonly: true as const };
+    }
     return result;
   }
 
   async update(id: string, dto: UpdateUserDto, currentUser: AuthUser) {
-    await this.findOne(id, currentUser); // 检查权限
+    const target = await this.findOne(id, currentUser);
+    this.assertMutable(target.status);
+    this.assertActorOutranksTarget(currentUser, target);
 
-    const updateData = dto as Partial<Omit<CreateUserDto, 'password'>>;
+    const updateData: UpdateUserDto = {};
+    if (Object.prototype.hasOwnProperty.call(dto, 'username')) updateData.username = dto.username;
+    if (Object.prototype.hasOwnProperty.call(dto, 'email')) updateData.email = dto.email;
+    if (Object.prototype.hasOwnProperty.call(dto, 'realName')) updateData.realName = dto.realName;
+    if (Object.prototype.hasOwnProperty.call(dto, 'avatar')) updateData.avatar = dto.avatar;
+    if (Object.prototype.hasOwnProperty.call(dto, 'phone')) updateData.phone = dto.phone;
 
     if (updateData.username || updateData.email) {
       const existingUser = await this.userRepository.findConflictForUpdate(id, updateData);
@@ -155,13 +171,13 @@ export class UserService {
       }
     }
 
-    return this.userRepository.updateAndSyncRegistration(id, dto, (tx) =>
-      this.registrationStatusSync.sync(tx, id, dto.status),
-    );
+    return this.userRepository.update(id, updateData);
   }
 
   async remove(id: string, currentUser: AuthUser): Promise<MessageResponse> {
-    await this.findOne(id, currentUser); // 检查权限
+    const target = await this.findOne(id, currentUser);
+    this.assertMutable(target.status);
+    this.assertActorOutranksTarget(currentUser, target);
 
     if (id === currentUser.id) {
       throw new ForbiddenException('不能删除自己');
@@ -176,14 +192,13 @@ export class UserService {
     dto: ResetPasswordDto,
     currentUser: AuthUser,
   ): Promise<MessageResponse> {
-    await this.findOne(id, currentUser); // 检查权限
+    const target = await this.findOne(id, currentUser);
+    this.assertMutable(target.status);
+    this.assertActorOutranksTarget(currentUser, target);
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 12);
 
-    await this.userRepository.updatePassword(id, hashedPassword);
-
-    // 撤销该用户的所有 session
-    await this.userRepository.revokeSessions(id);
+    await this.userRepository.updatePasswordAndRevokeSessions(id, hashedPassword);
 
     return { message: '密码重置成功，用户需要重新登录' };
   }
@@ -193,7 +208,9 @@ export class UserService {
     dto: UpdateStatusDto,
     currentUser: AuthUser,
   ): Promise<MessageResponse> {
-    await this.findOne(id, currentUser); // 检查权限
+    const target = await this.findOne(id, currentUser);
+    this.assertMutable(target.status);
+    this.assertActorOutranksTarget(currentUser, target);
 
     if (id === currentUser.id) {
       throw new ForbiddenException('不能修改自己的状态');
@@ -216,7 +233,14 @@ export class UserService {
     systemRoles: { systemId: string; roleIds: string[] }[],
     currentUser: AuthUser,
   ): Promise<MessageResponse> {
-    await this.findOne(userId, currentUser);
+    const target = await this.findOne(userId, currentUser);
+    this.assertMutable(target.status);
+    this.assertActorOutranksTarget(currentUser, target);
+
+    // 安全：非超管不得修改自己的角色（与 remove/updateStatus 的自我保护一致），防止自我提权。
+    if (!currentUser.isSuperAdmin && userId === currentUser.id) {
+      throw new ForbiddenException('不能修改自己的角色');
+    }
 
     // System admin can only assign roles in their current system
     if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
@@ -268,5 +292,25 @@ export class UserService {
     }, {});
 
     return Object.values(rolesBySystem);
+  }
+
+  private assertMutable(status: string): void {
+    if (status === 'DELETED') {
+      throw new ConflictException({ code: 'USER_DELETED', message: '已删除用户为只读记录' });
+    }
+  }
+
+  /**
+   * 安全：非超级管理员不得对超级管理员目标执行改资料/改状态/重置密码/改角色/删除等操作。
+   * 否则同系统内的普通管理员只要与超管共享一个系统角色，就能通过 reset-password 接管、或
+   * disable 锁死更高权限账户（authz 之前仅判"同系统"，不比较权限层级）。
+   */
+  private assertActorOutranksTarget(
+    currentUser: AuthUser,
+    target: { isSuperAdmin?: boolean },
+  ): void {
+    if (!currentUser.isSuperAdmin && target.isSuperAdmin) {
+      throw new ForbiddenException('无权操作更高权限的用户');
+    }
   }
 }

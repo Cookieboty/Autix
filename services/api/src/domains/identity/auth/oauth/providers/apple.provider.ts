@@ -9,12 +9,13 @@ const TOKEN_URL = 'https://appleid.apple.com/auth/token';
 const ISSUER = 'https://appleid.apple.com';
 const JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
 
-type AppleClaims = { sub: string; email?: string; nonce?: string };
+type AppleClaims = { sub: string; email?: string; nonce?: string; auth_time?: number };
 type AppleUserField = { name?: { firstName?: string; lastName?: string }; email?: string };
 
 @Injectable()
 export class AppleProvider implements OAuthProvider {
   readonly name = 'apple' as const;
+  readonly supportsReauth = process.env.APPLE_OAUTH_REAUTH_ENABLED === 'true';
   constructor(
     private readonly config: OAuthConfigService,
     private readonly secretFactory?: { create(): Promise<string> },
@@ -25,7 +26,7 @@ export class AppleProvider implements OAuthProvider {
       },
   ) {}
 
-  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): Promise<string> {
+  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string; reauth?: boolean }): Promise<string> {
     const { clientId, redirectUri } = await this.config.getAppleConfig();
     // Apple 不走 PKCE（见本计划 capability 说明）：用 nonce + state + 机密 client_secret 保证安全，
     // 故不附带 code_challenge（Apple token endpoint 对 code_verifier 无官方保证）。
@@ -39,6 +40,7 @@ export class AppleProvider implements OAuthProvider {
       state: i.state,
     };
     if (i.nonce) params.nonce = i.nonce;
+    if (i.reauth) params.max_age = '0';
     url.search = new URLSearchParams(params).toString();
     return url.toString();
   }
@@ -86,18 +88,25 @@ export class AppleProvider implements OAuthProvider {
     const displayName = user?.name
       ? [user.name.firstName, user.name.lastName].filter(Boolean).join(' ') || null
       : null;
-    const email = claims.email ?? user?.email ?? null;
+    // 安全：只信任**签名 id_token** 里的 `email` 声明。`user` 字段来自未签名的 form_post body
+    // （Apple 仅在首次授权返回，且这里直接来自可伪造的 POST body）。若把它当作"已验证"，攻击者可在
+    // 后续授权（id_token 无 email）时注入 victim 邮箱并被 AccountResolution §6.2 自动关联到受害者账户
+    // → 账户接管。因此 email 仍可回退到 user.email 作展示/建号用途，但 emailVerified 只在 email 来自
+    // 签名 claim 时才为真。
+    const emailFromSignedToken = claims.email ?? null;
+    const email = emailFromSignedToken ?? user?.email ?? null;
     const isPrivateRelay = Boolean(email && email.endsWith('@privaterelay.appleid.com'));
 
     return {
       provider: 'apple',
       providerAccountId: claims.sub,
       email,
-      emailVerified: true, // Apple 已验证
+      emailVerified: Boolean(emailFromSignedToken), // 仅签名 id_token 中的 email 视为已验证
       displayName,
       avatar: null, // Apple 不提供头像
       raw: { claims, isPrivateRelay },
       tokens,
+      authTime: claims.auth_time,
     };
   }
 }

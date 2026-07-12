@@ -8,12 +8,13 @@ import { cn } from '../ui/utils';
 
 type AuthFieldShellProps = {
   id?: string;
+  errorId?: string;
   label: ReactNode;
   error?: ReactNode;
   children: ReactNode;
 };
 
-export function AuthFieldShell({ id, label, error, children }: AuthFieldShellProps) {
+export function AuthFieldShell({ id, errorId, label, error, children }: AuthFieldShellProps) {
   return (
     <div className="space-y-1.5">
       <label
@@ -24,7 +25,7 @@ export function AuthFieldShell({ id, label, error, children }: AuthFieldShellPro
       </label>
       {children}
       {error && (
-        <p className="text-xs mt-1 text-destructive">{error}</p>
+        <p id={errorId} className="text-xs mt-1 text-destructive">{error}</p>
       )}
     </div>
   );

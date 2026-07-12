@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma, RegistrationStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
@@ -75,10 +75,11 @@ export class RegistrationRepository {
         },
       });
 
-      await tx.user.update({
-        where: { id: input.userId },
+      const activated = await tx.user.updateMany({
+        where: { id: input.userId, status: { not: 'DELETED' } },
         data: { status: 'ACTIVE' },
       });
+      if (activated.count !== 1) throw new ConflictException({ code: 'USER_DELETED', message: '账户已删除' });
 
       await tx.userRole.upsert({
         where: { userId_roleId: { userId: input.userId, roleId: input.roleId } },
@@ -107,10 +108,11 @@ export class RegistrationRepository {
         },
       });
 
-      await tx.user.update({
-        where: { id: input.userId },
+      const disabled = await tx.user.updateMany({
+        where: { id: input.userId, status: { not: 'DELETED' } },
         data: { status: 'DISABLED' },
       });
+      if (disabled.count !== 1) throw new ConflictException({ code: 'USER_DELETED', message: '账户已删除' });
     });
   }
 

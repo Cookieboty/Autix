@@ -67,6 +67,7 @@ function initPlatform(): void {
       localStorage.removeItem('user');
       localStorage.removeItem('menus');
       localStorage.removeItem('systems');
+      localStorage.removeItem('authFeatures');
     },
     getUser: async () => {
       try {
@@ -106,6 +107,17 @@ function initPlatform(): void {
     },
     setSystems: async (systems) => {
       localStorage.setItem('systems', JSON.stringify(systems));
+    },
+    getFeatures: async () => {
+      try {
+        const raw = localStorage.getItem('authFeatures');
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    },
+    setFeatures: async (features) => {
+      localStorage.setItem('authFeatures', JSON.stringify(features));
     },
   };
 

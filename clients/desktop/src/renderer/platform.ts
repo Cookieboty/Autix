@@ -4,6 +4,8 @@ import {
   type ClipboardAdapter,
   type NavigationAdapter,
   type EnvConfig,
+  type OAuthStepUpAdapter,
+  type OAuthLinkAdapter,
 } from '@autix/platform';
 
 type ReactRouter = {
@@ -46,6 +48,8 @@ const auth: AuthAdapter = {
   setMenus: (menus) => window.electron.auth.setMenus(menus),
   getSystems: () => window.electron.auth.getSystems(),
   setSystems: (systems) => window.electron.auth.setSystems(systems),
+  getFeatures: () => window.electron.auth.getFeatures(),
+  setFeatures: (features) => window.electron.auth.setFeatures(features as Record<string, boolean>),
 };
 
 const navigation: NavigationAdapter = {
@@ -79,6 +83,18 @@ const clipboard: ClipboardAdapter = {
   writeText: (text) => navigator.clipboard.writeText(text),
 };
 
+const oauthStepUp: OAuthStepUpAdapter = {
+  reserve: (provider) => window.electron.auth.reserveStepUp(provider),
+  complete: (input) => window.electron.auth.completeStepUp(input),
+  cancel: (flowId) => window.electron.auth.cancelStepUp(flowId),
+};
+
+const oauthLink: OAuthLinkAdapter = {
+  reserve: (provider) => window.electron.auth.reserveStepUp(provider),
+  complete: (input) => window.electron.auth.completeLink(input),
+  cancel: (flowId) => window.electron.auth.cancelStepUp(flowId),
+};
+
 /** 桌面端运行时配置：通过 import.meta.env 读 Vite 环境变量 */
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
@@ -93,6 +109,8 @@ registerPlatform({
   navigation,
   env,
   clipboard,
+  oauthStepUp,
+  oauthLink,
   storage: {
     getItem: (key) => window.localStorage.getItem(key),
     setItem: (key, value) => window.localStorage.setItem(key, value),

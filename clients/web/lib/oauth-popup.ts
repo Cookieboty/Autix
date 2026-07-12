@@ -1,8 +1,12 @@
+import type { StepUpPurpose } from '@autix/domain';
+
 export type OAuthPopupResult = {
   code?: string;
   linked?: string;
   error?: string;
   cancelled?: boolean;
+  proof?: string;
+  purpose?: StepUpPurpose;
 };
 
 const POPUP_NAME = 'autix-oauth';
@@ -12,8 +16,14 @@ const BROADCAST_NAME = 'autix-oauth';
 const FLOW_TIMEOUT_MS = 10 * 60 * 1000; // 与后端 state TTL 对齐(放弃流程的兜底)
 
 export function newChannel(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+  throw new Error('SECURE_RANDOM_UNAVAILABLE');
 }
 
 // 必须在用户手势(click)中同步调用,以规避弹窗拦截器;返回 null 表示被拦截。
@@ -27,6 +37,8 @@ type RelayData = {
   code?: string;
   linked?: string;
   error?: string;
+  proof?: string;
+  purpose?: StepUpPurpose;
 } | null;
 
 export function driveOAuthPopup(
@@ -63,7 +75,13 @@ export function driveOAuthPopup(
     const accept = (data: RelayData) => {
       if (!data || data.source !== 'autix-oauth') return;
       if (data.channel !== channel) return;
-      finish({ code: data.code, linked: data.linked, error: data.error });
+      finish({
+        code: data.code,
+        linked: data.linked,
+        error: data.error,
+        proof: data.proof,
+        purpose: data.purpose,
+      });
     };
 
     // 兼容信道:opener.postMessage(opener 未被 COOP 切断时,如部分 provider)。

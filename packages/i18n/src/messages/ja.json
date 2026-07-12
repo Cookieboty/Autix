@@ -196,7 +196,131 @@
     "backToLoginOptions": "ログイン方法に戻る",
     "loginEmailTitle": "Amux Studio にログイン",
     "or": "または",
-    "modalTerms": "続行すると、<privacy>プライバシーポリシー</privacy>を確認し、<terms>利用規約</terms>に同意したものとみなされます。また、18歳以上であることを確認します"
+    "modalTerms": "続行すると、<privacy>プライバシーポリシー</privacy>を確認し、<terms>利用規約</terms>に同意したものとみなされます。また、18歳以上であることを確認します",
+    "selfService": {
+      "settingsTab": "アカウント設定",
+      "sectionAccount": "アカウントセキュリティ",
+      "sectionAccountDescription": "ログインパスワードとアカウント通知用メールアドレスを管理します。",
+      "sectionProfile": "プロフィール",
+      "sectionDanger": "危険な操作",
+      "sectionDangerDescription": "これらの操作はアカウントとデータに永続的な影響を与えます。",
+      "superAdminBlocked": "スーパー管理者は自分のアカウントを削除できません。先にスーパー管理者ロールを移譲するか、サポートにお問い合わせください。"
+    },
+    "profileBasics": {
+      "title": "個人プロフィール",
+      "description": "ニックネーム、自己紹介、アバターを編集できます。その他の項目はアカウントセキュリティまたは言語設定で管理します。",
+      "fieldNickname": "ニックネーム",
+      "fieldDescription": "自己紹介",
+      "fieldAvatar": "アバター URL",
+      "placeholderNickname": "ニックネームを入力",
+      "placeholderDescription": "自己紹介を入力",
+      "placeholderAvatar": "https://...",
+      "submit": "保存",
+      "submitting": "保存中...",
+      "success": "保存しました",
+      "errorGeneric": "保存に失敗しました。もう一度お試しください",
+      "errorNicknameTooLong": "ニックネームは {max} 文字以内で入力してください",
+      "errorDescriptionTooLong": "自己紹介は {max} 文字以内で入力してください",
+      "errorAvatarTooLong": "アバター URL は {max} 文字以内で入力してください",
+      "errorAvatarType": "未対応の画像形式です。対応形式：{types}",
+      "errorAvatarSize": "画像が大きすぎます。最大 {maxMb} MB",
+      "avatarUploadLabel": "アバター画像をアップロード",
+      "avatarUploadButton": "画像をアップロード",
+      "avatarUploading": "アップロード中...",
+      "avatarUploadHint": "PNG、JPEG、WebP、GIF（最大 {maxMb} MB）",
+      "avatarPreviewAlt": "現在のアバターのプレビュー",
+      "avatarUrlFallbackHint": "この環境では画像のアップロードを利用できません。画像 URL を使用できます。"
+    },
+    "stepUp": {
+      "title": "Identity Verification",
+      "descRedirect": "For your security, please re-authenticate with {provider}.",
+      "descOtp": "We sent a verification code to {email}. Please enter it within {minutes} minutes.",
+      "descUnsupported": "Your current sign-in method does not support this action. Please contact support.",
+      "buttonRedirect": "Verify with {provider}",
+      "buttonSendOtp": "Send code",
+      "buttonResendOtp": "Resend ({seconds}s)",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "6-digit code",
+      "verifying": "Verifying...",
+      "verified": "Verified",
+      "invalid": "Code is invalid or expired",
+      "locked": "Too many attempts, please try again later",
+      "expired": "Verification session expired, please start over",
+      "contactSupport": "Contact support"
+    },
+    "changePassword": {
+      "title": "Change password",
+      "titleSet": "Set password",
+      "descSet": "Set a password so you can sign in with your username.",
+      "current": "Current password",
+      "currentPlaceholder": "Enter current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "submitting": "Updating...",
+      "success": "Password updated",
+      "tooWeak": "Password too weak — include upper/lowercase and numbers",
+      "currentInvalid": "Current password is incorrect"
+    },
+    "changeEmail": {
+      "title": "Change email",
+      "current": "Current email",
+      "new": "New email",
+      "newPlaceholder": "your-new@email.com",
+      "pending": "A confirmation link has been sent to {email}. Please confirm from the email.",
+      "confirmProcessing": "Confirming email change…",
+      "confirmSuccess": "Email updated. Please sign in again.",
+      "confirmError": "The confirmation link is invalid or expired.",
+      "taken": "This email is already in use",
+      "cancelPending": "Cancel pending change"
+    },
+    "deleteAccount": {
+      "sectionTitle": "Delete account",
+      "sectionHint": "Account deletion cannot be undone. Some data will be retained in anonymized form for finance and audit compliance.",
+      "openDialog": "Delete account",
+      "dialogTitle": "Confirm account deletion",
+      "dialogHint": "Please type your username {username} to confirm.",
+      "usernamePlaceholder": "Type username to confirm",
+      "checkboxIrreversible": "I understand this action is irreversible",
+      "confirm": "Delete account",
+      "processing": "Deleting...",
+      "success": "Account deleted",
+      "userDeleted": "Account has been deleted and cannot be used."
+    },
+    "profileEdit": {
+      "title": "Edit profile",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "1-32 characters",
+      "description": "Bio",
+      "descriptionPlaceholder": "Up to 500 characters",
+      "submit": "Save",
+      "success": "Profile updated"
+    },
+    "avatar": {
+      "upload": "Upload avatar",
+      "uploading": "Uploading...",
+      "success": "Avatar updated",
+      "tooLarge": "Image size exceeds limit",
+      "invalidType": "Only JPG / PNG / WebP are supported",
+      "featureDisabled": "Avatar upload is not yet available"
+    },
+    "errorCommon": {
+      "rateLimited": "Too many requests, please try again later",
+      "contactSupport": "Please contact support",
+      "featureDisabled": "This feature is not yet available"
+    },
+    "errorCodes": {
+      "STEP_UP_INVALID_OR_EXPIRED": "Identity verification is invalid, expired, or already used",
+      "STEP_UP_UNAVAILABLE": "Self-service identity verification is unavailable for this account",
+      "OTP_INVALID": "The verification code is incorrect",
+      "OTP_LOCKED": "Too many attempts, please try again later",
+      "OTP_ALREADY_CONSUMED": "This verification code has already been used",
+      "TOO_MANY_REQUESTS": "Too many requests, please try again later",
+      "USER_DELETED": "This account has been deleted",
+      "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "The username confirmation does not match",
+      "PROVIDER_REAUTH_UNSUPPORTED": "Your current sign-in method cannot re-authenticate here",
+      "CONTACT_SUPPORT": "Please contact support"
+    }
   },
   "chat": {
     "newConversation": "新しいチャット",
@@ -692,7 +816,9 @@
     "loading": "読み込み中…",
     "membershipRequired": "会員登録が必要です",
     "membershipRequiredDesc": "ライブラリは会員限定の機能です。会員にアップグレードしてドキュメントをアップロードし、ナレッジベースを構築しましょう。",
-    "upgradeMembership": "会員にアップグレード"
+    "upgradeMembership": "会員にアップグレード",
+    "statusDeleted": "已删除",
+    "includeDeleted": "包含已删除用户"
   },
   "artifact": {
     "preview": "プレビュー",
@@ -1304,7 +1430,8 @@
         "tabHistory": "閲覧履歴",
         "tabLibrary": "ライブラリ",
         "tabModels": "モデル設定",
-        "tabMembership": "メンバーシップ"
+        "tabMembership": "メンバーシップ",
+        "tabSettings": "アカウント設定"
       },
       "status": {
         "statusPending": "審査待ち",
@@ -1336,7 +1463,9 @@
       }
     },
     "accountSecurityTitle": "連携アカウント",
+    "accountSecurityDescription": "外部アカウントを連携して、安全なログイン方法を追加します。",
     "linked": "連携済み",
+    "notLinked": "未連携",
     "link": "連携する",
     "unlink": "連携解除",
     "accountLinkedSuccess": "アカウントの連携が完了しました。"
@@ -4448,7 +4577,9 @@
     "statusInReview": "审核中",
     "statusApproved": "已通过",
     "statusRejected": "已拒绝",
-    "statusArchived": "已归档"
+    "statusArchived": "已归档",
+    "statusDeleted": "Deleted",
+    "includeDeleted": "Include deleted users"
   },
   "landing": {
     "brand": "Amux Studio",

@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UserRegistrationStatusSyncService } from './user-registration-status-sync.service';
 import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
@@ -24,7 +24,10 @@ function mockUser(overrides: Record<string, unknown> = {}) {
 
 function createTx() {
   return {
+    $queryRaw: jest.fn().mockResolvedValue([{ status: 'PENDING', avatarStorageKey: null }]),
     user: { update: jest.fn().mockResolvedValue({}) },
+    userSession: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    storage_cleanup_tasks: { create: jest.fn().mockResolvedValue({}) },
     systemRegistration: {
       findMany: jest.fn().mockResolvedValue([]),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -41,6 +44,9 @@ function createPrisma(
   return {
     user: {
       findUnique: jest.fn().mockResolvedValue(mockUser(userOverrides)),
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
+      count: jest.fn().mockResolvedValue(0),
     },
     userSession: { deleteMany: jest.fn().mockResolvedValue({}) },
     $transaction: jest.fn((fn: (t: unknown) => unknown) => fn(tx)),
@@ -76,6 +82,18 @@ describe('UserService.updateStatus', () => {
     await expect(
       service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects every status transition out of DELETED', async () => {
+    const tx = createTx();
+    tx.$queryRaw.mockResolvedValue([{ status: 'DELETED' }]);
+    const prisma = createPrisma(tx, { status: 'DELETED' });
+    const service = buildService(prisma);
+
+    await expect(
+      service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.user.update).not.toHaveBeenCalled();
   });
 
   // ── Enable (→ ACTIVE) ──────────────────────────────────────────
@@ -236,5 +254,113 @@ describe('UserService.updateStatus', () => {
     expect(prisma.userSession.deleteMany).toHaveBeenCalledWith({
       where: { userId: 'u1' },
     });
+  });
+});
+
+describe('UserService DELETED visibility and update whitelist', () => {
+  it('filters DELETED by default and ignores includeDeleted for non-super admins', async () => {
+    const tx = createTx();
+    const prisma = createPrisma(tx);
+    const service = buildService(prisma);
+    const admin = { ...ADMIN_USER, isSuperAdmin: false };
+
+    await service.findAll({ includeDeleted: true } as any, admin);
+
+    expect(prisma.user.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ status: { not: 'DELETED' } }),
+    });
+  });
+
+  it('allows only super admin to explicitly include DELETED rows', async () => {
+    const tx = createTx();
+    const prisma = createPrisma(tx);
+    const service = buildService(prisma);
+
+    await service.findAll({ includeDeleted: true } as any, ADMIN_USER);
+
+    expect(prisma.user.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ status: undefined }),
+    });
+  });
+
+  it('drops status and creation-only fields from internal update calls', async () => {
+    const tx = createTx();
+    tx.$queryRaw.mockResolvedValue([{ status: 'ACTIVE' }]);
+    const prisma = createPrisma(tx, { status: 'ACTIVE' });
+    const service = buildService(prisma);
+
+    await service.update('u1', {
+      username: 'updated',
+      status: 'DELETED',
+      systemId: 'other-system',
+      roleCode: 'SUPER_ADMIN',
+    } as any, ADMIN_USER);
+
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { username: 'updated' },
+    }));
+  });
+
+  it('clears the internal avatar key and enqueues cleanup in the admin update transaction', async () => {
+    const tx = createTx();
+    tx.$queryRaw.mockResolvedValue([{
+      status: 'ACTIVE',
+      avatarStorageKey: 'avatars/u1/old.png',
+    }]);
+    const prisma = createPrisma(tx, { status: 'ACTIVE' });
+    const service = buildService(prisma);
+
+    await service.update('u1', { avatar: 'https://cdn.example.com/new.png' }, ADMIN_USER);
+
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'u1' },
+      data: {
+        avatar: 'https://cdn.example.com/new.png',
+        avatarStorageKey: null,
+      },
+    }));
+    expect(tx.storage_cleanup_tasks.create).toHaveBeenCalledWith({
+      data: {
+        storageKey: 'avatars/u1/old.png',
+        ownerUserId: 'u1',
+        reason: 'ADMIN_AVATAR_REPLACED',
+      },
+    });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not touch avatar ownership or enqueue cleanup for other admin updates', async () => {
+    const tx = createTx();
+    tx.$queryRaw.mockResolvedValue([{
+      status: 'ACTIVE',
+      avatarStorageKey: 'avatars/u1/current.png',
+    }]);
+    const prisma = createPrisma(tx, { status: 'ACTIVE' });
+    const service = buildService(prisma);
+
+    await service.update('u1', { realName: 'Alice' }, ADMIN_USER);
+
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { realName: 'Alice' },
+    }));
+    expect(tx.storage_cleanup_tasks.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('UserService.resetPassword', () => {
+  it('hashes the validated password and revokes sessions in one repository transaction', async () => {
+    const tx = createTx();
+    tx.$queryRaw.mockResolvedValue([{ status: 'ACTIVE', avatarStorageKey: null }]);
+    const prisma = createPrisma(tx, { status: 'ACTIVE' });
+    const service = buildService(prisma);
+
+    await service.resetPassword('u1', { newPassword: 'Password1' }, ADMIN_USER);
+
+    const passwordUpdate = tx.user.update.mock.calls[0]?.[0];
+    expect(passwordUpdate.where).toEqual({ id: 'u1' });
+    expect(passwordUpdate.data.password).not.toBe('Password1');
+    expect(passwordUpdate.data.password).toMatch(/^\$2[aby]\$/);
+    expect(tx.userSession.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u1' } });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 });

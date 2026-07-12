@@ -41,7 +41,7 @@ interface User {
   email: string;
   realName?: string;
   phone?: string;
-  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
+  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING' | 'DELETED';
 }
 
 interface UserDrawerProps {
@@ -57,7 +57,6 @@ interface UserForm {
   password?: string;
   realName?: string;
   phone?: string;
-  status?: string;
   systemId?: string;
   roleCode?: string;
 }
@@ -86,7 +85,6 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     formState: { errors },
   } = useForm<UserForm>();
 
-  const status = watch('status');
   const systemId = watch('systemId');
   const roleCode = watch('roleCode');
   const { data: systems = [] } = useAdminSystemsQuery(open && isSuperAdmin);
@@ -113,7 +111,6 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
           email: user.email,
           realName: user.realName || '',
           phone: user.phone || '',
-          status: user.status,
         });
       } else {
         reset({
@@ -122,7 +119,6 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
           password: '',
           realName: '',
           phone: '',
-          status: 'ACTIVE',
           systemId: '',
           roleCode: 'USER',
         });
@@ -370,43 +366,6 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   style={adminInputStyle}
                   aria-invalid={!!errors.phone}
                 />
-              </AdminField>
-            </AdminFieldGroup>
-          </AdminDrawerSection>
-        )}
-
-        {isEdit && (
-          <AdminDrawerSection title={t('drawerStatusSection')} description={t('drawerStatusDescription')}>
-            <AdminFieldGroup template="minmax(0,1fr) 180px">
-              <AdminField label={t('drawerStatusLabel')}>
-                <Select
-                  value={status || 'ACTIVE'}
-                  onValueChange={(val) => setValue('status', val)}
-                >
-                  <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ACTIVE">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
-                        {t('drawerStatusActiveItem')}
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="DISABLED">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
-                        {t('drawerStatusDisabledItem')}
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="LOCKED">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--danger)' }} />
-                        {t('drawerStatusLockedItem')}
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
               </AdminField>
             </AdminFieldGroup>
           </AdminDrawerSection>

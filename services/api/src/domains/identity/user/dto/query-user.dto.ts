@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class QueryUserDto {
@@ -21,4 +21,9 @@ export class QueryUserDto {
   @IsInt()
   @Min(1)
   pageSize?: number = 10;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  includeDeleted?: boolean = false;
 }

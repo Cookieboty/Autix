@@ -13,6 +13,7 @@ type GitHubEmail = { email: string; primary: boolean; verified: boolean };
 @Injectable()
 export class GitHubProvider implements OAuthProvider {
   readonly name = 'github' as const;
+  readonly supportsReauth = false;
   constructor(
     private readonly config: OAuthConfigService,
     private readonly exchange: (code: string, codeVerifier: string, cfg: GitHubConfig) => Promise<RawTokenSet> = async (code, codeVerifier, cfg) => {
@@ -38,7 +39,7 @@ export class GitHubProvider implements OAuthProvider {
     },
   ) {}
 
-  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): Promise<string> {
+  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string; reauth?: boolean }): Promise<string> {
     const { clientId, redirectUri } = await this.config.getGitHubConfig();
     const url = new URL(AUTH_URL);
     url.search = new URLSearchParams({

@@ -8,11 +8,12 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const ISSUERS = ['https://accounts.google.com', 'accounts.google.com'];
 const JWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
 
-type IdTokenClaims = { sub: string; email?: string; email_verified?: boolean; name?: string; picture?: string; nonce?: string };
+type IdTokenClaims = { sub: string; email?: string; email_verified?: boolean; name?: string; picture?: string; nonce?: string; auth_time?: number };
 
 @Injectable()
 export class GoogleProvider implements OAuthProvider {
   readonly name = 'google' as const;
+  readonly supportsReauth = process.env.GOOGLE_OAUTH_REAUTH_ENABLED === 'true';
   constructor(
     private readonly config: OAuthConfigService,
     private readonly verifyIdToken: (idToken: string, audience: string) => Promise<IdTokenClaims> =
@@ -22,7 +23,7 @@ export class GoogleProvider implements OAuthProvider {
       },
   ) {}
 
-  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): Promise<string> {
+  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string; reauth?: boolean }): Promise<string> {
     const { clientId, redirectUri } = await this.config.getGoogleConfig();
     const url = new URL(AUTH_URL);
     const params: Record<string, string> = {
@@ -34,9 +35,10 @@ export class GoogleProvider implements OAuthProvider {
       code_challenge: i.codeChallenge,
       code_challenge_method: 'S256',
       access_type: 'offline',
-      prompt: 'consent',
+      prompt: i.reauth ? 'login' : 'consent',
     };
     if (i.nonce) params.nonce = i.nonce;
+    if (i.reauth) params.max_age = '0';
     url.search = new URLSearchParams(params).toString();
     return url.toString();
   }
@@ -83,6 +85,7 @@ export class GoogleProvider implements OAuthProvider {
       avatar: claims.picture ?? null,
       raw: claims,
       tokens,
+      authTime: claims.auth_time,
     };
   }
 }

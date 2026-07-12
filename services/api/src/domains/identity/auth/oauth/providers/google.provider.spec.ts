@@ -12,6 +12,20 @@ function cfg(over: any = {}) {
 }
 
 describe('GoogleProvider', () => {
+  const previousReauthFlag = process.env.GOOGLE_OAUTH_REAUTH_ENABLED;
+
+  afterEach(() => {
+    if (previousReauthFlag === undefined) delete process.env.GOOGLE_OAUTH_REAUTH_ENABLED;
+    else process.env.GOOGLE_OAUTH_REAUTH_ENABLED = previousReauthFlag;
+  });
+
+  it('strong re-auth capability is disabled by default and requires an explicit rollout flag', () => {
+    delete process.env.GOOGLE_OAUTH_REAUTH_ENABLED;
+    expect(new GoogleProvider(cfg()).supportsReauth).toBe(false);
+    process.env.GOOGLE_OAUTH_REAUTH_ENABLED = 'true';
+    expect(new GoogleProvider(cfg()).supportsReauth).toBe(true);
+  });
+
   it('buildAuthorizeUrl 用固定后端 callback 作 redirect_uri，含 S256 与 nonce', async () => {
     const p = new GoogleProvider(cfg());
     const url = new URL(await p.buildAuthorizeUrl({ state: 'st', codeChallenge: 'cc', nonce: 'nn' }));
@@ -23,6 +37,14 @@ describe('GoogleProvider', () => {
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('nonce')).toBe('nn');
     expect(url.searchParams.get('scope')).toContain('email');
+    expect(url.searchParams.get('max_age')).toBeNull();
+  });
+
+  it('reauth authorize URL adds the strong-auth parameters only for REAUTH', async () => {
+    const p = new GoogleProvider(cfg());
+    const url = new URL(await p.buildAuthorizeUrl({ state: 'st', codeChallenge: 'cc', nonce: 'nn', reauth: true }));
+    expect(url.searchParams.get('prompt')).toBe('login');
+    expect(url.searchParams.get('max_age')).toBe('0');
   });
 
   it('fetchProfile 校验 nonce 后把 id_token claims 规范化', async () => {

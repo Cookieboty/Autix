@@ -6,7 +6,7 @@ export interface AdminUser {
   email: string;
   realName?: string;
   phone?: string;
-  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
+  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING' | 'DELETED';
 }
 
 export interface AdminSystem {
@@ -177,6 +177,7 @@ export interface AdminUserListParams {
   page: number;
   pageSize?: number;
   username?: string;
+  includeDeleted?: boolean;
 }
 
 export interface AdminPasswordChangeInput {
@@ -290,9 +291,10 @@ export const adminIdentityActions = {
   createUser: (data: AdminUserFormInput) => userApi.post('/users', data),
   updateUser: (userId: string, data: Partial<AdminUserFormInput>) =>
     userApi.patch(`/users/${userId}`, data),
-  listUsers: async ({ page, pageSize = 10, username }: AdminUserListParams) => {
+  listUsers: async ({ page, pageSize = 10, username, includeDeleted }: AdminUserListParams) => {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (username) params.set('username', username);
+    if (includeDeleted) params.set('includeDeleted', 'true');
     const { data } = await userApi.get(`/users?${params}`);
     return toUserListResponse(data);
   },

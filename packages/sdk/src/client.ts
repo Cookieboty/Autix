@@ -6,6 +6,7 @@ import type {
   CanvasBoard,
   CanvasBoardState,
   CanvasEntitlement,
+  AvatarPresignResult,
 } from '@autix/domain';
 import { createApiInstance, getApiBaseUrl, LLM_REQUEST_TIMEOUT_MS } from './client-core';
 
@@ -36,11 +37,12 @@ export const getLinkedAccounts = () =>
 
 export const startLinkOAuth = (
   provider: string,
-  body: { systemCode: string; clientType: string; redirectUri: string },
+  // 安全（#3）：link/unlink 需携带 step-up 一次性 proof（purpose='unlink-provider'）。
+  body: { systemCode: string; clientType: string; redirectUri: string; proof: string },
 ) => userApi.post<{ authorizeUrl: string }>(`/auth/link/${provider}`, body);
 
-export const unlinkOAuth = (provider: string) =>
-  userApi.delete(`/auth/unlink/${provider}`);
+export const unlinkOAuth = (provider: string, proof: string) =>
+  userApi.delete(`/auth/unlink/${provider}`, { data: { proof } });
 
 // ── Conversations ────────────────────────────────────────────────────────
 export type ConversationKind = 'chat' | 'video' | 'image' | 'avatar';
@@ -1612,6 +1614,14 @@ export const storageApi = {
       '/api/storage/presign',
       data,
     ),
+  /**
+   * T16: 头像上传 reservation。
+   * 返回 `{ uploadUrl, storageKey, publicUrl, expiresAt }`，前端拿到后：
+   * 1. PUT uploadUrl 直传 R2
+   * 2. 调 `PATCH auth/profile` with `{ avatarStorageKey: storageKey }` 消费 reservation
+   */
+  presignAvatarUpload: (data: { fileName: string; contentType: string; sizeBytes: number }) =>
+    userApi.post<AvatarPresignResult>('/storage/avatar-presign', data),
 };
 
 // ── Membership ──────────────────────────────────────────────────────────

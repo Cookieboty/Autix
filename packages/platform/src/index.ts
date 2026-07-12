@@ -22,6 +22,8 @@ export interface AuthAdapter {
   setMenus?(menus: unknown[]): Promise<void>;
   getSystems?(): Promise<unknown[]>;
   setSystems?(systems: unknown[]): Promise<void>;
+  getFeatures?(): Promise<object>;
+  setFeatures?(features: object): Promise<void>;
 }
 
 export interface NavigationAdapter {
@@ -48,6 +50,26 @@ export interface ClipboardAdapter {
   writeText(text: string): Promise<void> | void;
 }
 
+export interface OAuthStepUpAdapter {
+  reserve(provider: string): Promise<{ redirectUri: string; flowId: string }>;
+  complete(input: {
+    flowId: string;
+    authorizeUrl: string;
+    expectedPurpose: string;
+  }): Promise<{ proof: string; purpose: string }>;
+  cancel(flowId: string): Promise<void>;
+}
+
+export interface OAuthLinkAdapter {
+  reserve(provider: string): Promise<{ redirectUri: string; flowId: string }>;
+  complete(input: {
+    flowId: string;
+    authorizeUrl: string;
+    expectedProvider: string;
+  }): Promise<{ linked: string }>;
+  cancel(flowId: string): Promise<void>;
+}
+
 export interface StorageAdapter {
   getItem(key: string): Promise<string | null> | string | null;
   setItem(key: string, value: string): Promise<void> | void;
@@ -67,6 +89,8 @@ let env: EnvConfig | null = null;
 let storage: StorageAdapter | null = null;
 let sessionStorage_: StorageAdapter | null = null;
 let clipboard: ClipboardAdapter | null = null;
+let oauthStepUp: OAuthStepUpAdapter | null = null;
+let oauthLink: OAuthLinkAdapter | null = null;
 const memoryStorage = new Map<string, string>();
 const sessionMemoryStorage = new Map<string, string>();
 
@@ -97,6 +121,8 @@ export function registerPlatform(opts: {
   storage?: StorageAdapter;
   sessionStorage?: StorageAdapter;
   clipboard?: ClipboardAdapter;
+  oauthStepUp?: OAuthStepUpAdapter;
+  oauthLink?: OAuthLinkAdapter;
 }): void {
   auth = opts.auth;
   navigation = opts.navigation;
@@ -104,6 +130,8 @@ export function registerPlatform(opts: {
   storage = opts.storage ?? fallbackStorage;
   sessionStorage_ = opts.sessionStorage ?? null;
   clipboard = opts.clipboard ?? null;
+  oauthStepUp = opts.oauthStepUp ?? null;
+  oauthLink = opts.oauthLink ?? null;
 }
 
 export function getAuth(): AuthAdapter {
@@ -146,6 +174,14 @@ export function getClipboard(): ClipboardAdapter {
     );
   }
   return clipboard;
+}
+
+export function getOAuthStepUp(): OAuthStepUpAdapter | null {
+  return oauthStepUp;
+}
+
+export function getOAuthLink(): OAuthLinkAdapter | null {
+  return oauthLink;
 }
 
 export function isPlatformReady(): boolean {

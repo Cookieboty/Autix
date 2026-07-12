@@ -15,7 +15,9 @@ export class InviteRepository {
   }
 
   findCodeByCode(code: string) {
-    return this.prisma.invite_codes.findUnique({ where: { code } });
+    return this.prisma.invite_codes.findFirst({
+      where: { code, user: { status: { not: 'DELETED' } } },
+    });
   }
 
   findRecordByInvitee(inviteeUserId: string) {

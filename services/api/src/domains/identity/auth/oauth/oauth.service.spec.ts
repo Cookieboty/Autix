@@ -3,6 +3,7 @@ import { OAuthService } from './oauth.service';
 function deps() {
   const provider = {
     name: 'google',
+    supportsReauth: true,
     buildAuthorizeUrl: jest.fn().mockResolvedValue('https://auth/url'),
     exchangeCode: jest.fn().mockResolvedValue({ accessToken: 'at', idToken: 'jwt' }),
     fetchProfile: jest.fn().mockResolvedValue({ provider: 'google', providerAccountId: 'sub1', email: 'a@x.com', emailVerified: true, displayName: 'A', avatar: null, raw: {}, tokens: { accessToken: 'at' } }),
@@ -15,6 +16,7 @@ function deps() {
       // For other providers (e.g. github), return a dynamic mock with matching provider name
       return {
         name,
+        supportsReauth: name !== 'github',
         buildAuthorizeUrl: jest.fn().mockResolvedValue('https://auth/url'),
         exchangeCode: jest.fn().mockResolvedValue({ accessToken: 'at' }),
         fetchProfile: jest.fn().mockResolvedValue({ provider: name, providerAccountId: 'sub1', email: 'a@x.com', emailVerified: true, displayName: 'A', avatar: null, raw: {}, tokens: { accessToken: 'at' } }),
@@ -47,8 +49,12 @@ function deps() {
   const campaignRewards = { grantRegistrationBonus: jest.fn() };
   const cipher = { encrypt: (s: string) => `enc(${s})`, decrypt: (s: string) => s };
   const config = { getWebRedirectAllowlist: jest.fn().mockResolvedValue(['http://web/oauth/callback']) };
-  const svc = new OAuthService(registry as any, resolution as any, authService as any, identity as any, sessionRepo as any, social as any, invite as any, campaignRewards as any, cipher as any, config as any);
-  return { svc, provider, resolution, authService, social, sessionRepo, identity, registry, config, campaignRewards };
+  const stepUp = {
+    signOAuthProof: jest.fn().mockResolvedValue({ proof: 'proof', expiresAt: new Date().toISOString() }),
+    verifyAndConsumeProof: jest.fn().mockResolvedValue(undefined),
+  };
+  const svc = new OAuthService(registry as any, resolution as any, authService as any, identity as any, sessionRepo as any, social as any, invite as any, campaignRewards as any, cipher as any, config as any, stepUp as any);
+  return { svc, provider, resolution, authService, social, sessionRepo, identity, registry, config, campaignRewards, stepUp };
 }
 
 describe('OAuthService', () => {
@@ -144,6 +150,15 @@ describe('OAuthService', () => {
     social.consumeLoginCode.mockResolvedValueOnce(null);
     await expect(svc.exchangeLoginCode('bad')).rejects.toThrow('OAUTH_EXCHANGE_EXPIRED');
   });
+
+  it('handleCallback 不吞会话签发失败', async () => {
+    const { ForbiddenException } = await import('@nestjs/common');
+    const { svc, authService } = deps();
+    authService.issueSessionForUser.mockRejectedValueOnce(new ForbiddenException('其他禁用原因'));
+    await expect(
+      svc.handleCallback({ provider: 'google', code: 'c', state: 'st', ip: '', userAgent: '' }),
+    ).rejects.toThrow('其他禁用原因');
+  });
 });
 
 describe('redirect 放行（desktop loopback）', () => {
@@ -198,14 +213,117 @@ describe('OAuthService 绑定/解绑', () => {
   it('unlink 保留最后凭证 → 抛错', async () => {
     const { svc, identity } = deps();
     identity.hasOtherCredential = jest.fn().mockResolvedValue(false);
-    await expect(svc.unlink('u1', 'github')).rejects.toThrow('OAUTH_CANNOT_UNLINK_LAST_CREDENTIAL');
+    await expect(svc.unlink('u1', 'github', 'proof-1', 'session-1')).rejects.toThrow('OAUTH_CANNOT_UNLINK_LAST_CREDENTIAL');
   });
 
   it('unlink 仍有其它凭证 → 删除', async () => {
-    const { svc, identity } = deps();
+    const { svc, identity, stepUp } = deps();
     identity.hasOtherCredential = jest.fn().mockResolvedValue(true);
     identity.deleteUserAccount = jest.fn().mockResolvedValue(undefined);
-    await svc.unlink('u1', 'github');
+    await svc.unlink('u1', 'github', 'proof-1', 'session-1');
+    // 安全（#3）：删除前必须先校验+消费 step-up proof
+    expect(stepUp.verifyAndConsumeProof).toHaveBeenCalledWith('proof-1', 'u1', 'unlink-provider', 'session-1');
     expect(identity.deleteUserAccount).toHaveBeenCalledWith('u1', 'github');
+  });
+});
+
+describe('OAuthService REAUTH', () => {
+  it('startReauth 只选择明确支持强重认证的已绑定 provider', async () => {
+    const { svc, identity, social, provider } = deps();
+    identity.findUserAccountsByUserId.mockResolvedValueOnce([{ provider: 'google' }]);
+
+    const result = await svc.startReauth({
+      userId: 'u1',
+      sessionId: 'session-1',
+      purpose: 'delete-account',
+      clientType: 'web',
+      redirectUri: 'http://web/oauth/callback',
+    });
+
+    expect(result).toMatchObject({ kind: 'redirect', provider: 'google' });
+    expect(social.createState).toHaveBeenCalledWith(expect.objectContaining({
+      flow: 'REAUTH',
+      linkUserId: 'u1',
+      sessionId: 'session-1',
+      purpose: 'STEP_UP_DELETE_ACCOUNT',
+    }));
+    expect(provider.buildAuthorizeUrl).toHaveBeenCalledWith(expect.objectContaining({ reauth: true }));
+  });
+
+  it('startReauth 对不支持强重认证的 provider 返回 null 以回退 OTP', async () => {
+    const { svc, identity, social } = deps();
+    identity.findUserAccountsByUserId.mockResolvedValueOnce([{ provider: 'github' }]);
+
+    await expect(svc.startReauth({
+      userId: 'u1',
+      sessionId: 'session-1',
+      purpose: 'change-password',
+      clientType: 'web',
+      redirectUri: 'http://web/oauth/callback',
+    })).resolves.toBeNull();
+    expect(social.createState).not.toHaveBeenCalled();
+  });
+
+  it('callback 为匹配账号和新鲜 auth_time 签发 session-bound proof', async () => {
+    const { svc, social, provider, identity, stepUp, authService } = deps();
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    social.consumeState.mockResolvedValueOnce({
+      provider: 'google',
+      flow: 'REAUTH',
+      redirectUri: 'http://web/oauth/callback',
+      codeVerifier: 'cv',
+      nonce: 'nn',
+      linkUserId: 'u1',
+      sessionId: 'session-1',
+      purpose: 'STEP_UP_DELETE_ACCOUNT',
+      createdAt: new Date(Date.now() - 1_000),
+    });
+    provider.fetchProfile.mockResolvedValueOnce({
+      provider: 'google',
+      providerAccountId: 'sub1',
+      authTime: nowSeconds,
+      tokens: { accessToken: 'at' },
+    });
+    identity.findUserAccount.mockResolvedValueOnce({ userId: 'u1' });
+
+    await expect(svc.handleCallback({
+      provider: 'google', code: 'c', state: 'st', ip: '', userAgent: '',
+    })).resolves.toEqual({
+      redirectUri: 'http://web/oauth/callback',
+      proof: 'proof',
+      purpose: 'delete-account',
+    });
+    expect(stepUp.signOAuthProof).toHaveBeenCalledWith('u1', 'delete-account', 'session-1');
+    expect(authService.issueSessionForUser).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['provider account mismatch', { userId: 'other' }, Math.floor(Date.now() / 1000)],
+    ['stale auth_time', { userId: 'u1' }, Math.floor((Date.now() - 10 * 60_000) / 1000)],
+  ])('callback rejects %s without signing a proof', async (_label, account, authTime) => {
+    const { svc, social, provider, identity, stepUp } = deps();
+    social.consumeState.mockResolvedValueOnce({
+      provider: 'google',
+      flow: 'REAUTH',
+      redirectUri: 'http://web/oauth/callback',
+      codeVerifier: 'cv',
+      nonce: 'nn',
+      linkUserId: 'u1',
+      sessionId: 'session-1',
+      purpose: 'STEP_UP_CHANGE_PASSWORD',
+      createdAt: new Date(),
+    });
+    provider.fetchProfile.mockResolvedValueOnce({
+      provider: 'google', providerAccountId: 'sub1', authTime, tokens: { accessToken: 'at' },
+    });
+    identity.findUserAccount.mockResolvedValueOnce(account);
+
+    await expect(svc.handleCallback({
+      provider: 'google', code: 'c', state: 'st', ip: '', userAgent: '',
+    })).resolves.toEqual({
+      redirectUri: 'http://web/oauth/callback',
+      errorCode: 'STEP_UP_INVALID_OR_EXPIRED',
+    });
+    expect(stepUp.signOAuthProof).not.toHaveBeenCalled();
   });
 });

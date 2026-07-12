@@ -15,6 +15,13 @@ enum UserStatus {
   DISABLED
   LOCKED
   PENDING
+  DELETED
+}
+
+enum SocialLoginFlow {
+  LOGIN
+  LINK
+  REAUTH
 }
 
 enum PermissionAction {
@@ -74,7 +81,10 @@ model User {
   pendingEmail                   String?
   password                       String?
   realName                       String?
+  nickname                       String?                      @db.VarChar(60)
+  description                    String?                      @db.VarChar(500)
   avatar                         String?
+  avatarStorageKey               String?
   phone                          String?
   language                       String?                      @default("zh-CN")
   status                         UserStatus                   @default(ACTIVE)
@@ -127,10 +137,14 @@ model User {
   createdAt                      DateTime                     @default(now())
   updatedAt                      DateTime                     @updatedAt
   lastLoginAt                    DateTime?
+  deletedAt                      DateTime?
   signupIp                       String?
   signupDeviceId                 String?
   riskProfile                    user_risk_profiles?          @relation("UserRiskProfile")
   riskEvents                     user_risk_events[]           @relation("UserRiskEvent")
+  emailOtps                      email_otps[]                 @relation("EmailOtpUser")
+  stepUpProofs                   step_up_proofs[]             @relation("StepUpProofUser")
+  pendingUploads                 pending_uploads[]            @relation("PendingUploadOwner")
 
   @@map("users")
 }
@@ -328,6 +342,9 @@ model SocialLoginState {
   inviteCode   String?
   deviceId     String?
   linkUserId   String?
+  flow         SocialLoginFlow @default(LOGIN)
+  purpose      EmailOtpPurpose?
+  sessionId    String?
   expiresAt    DateTime
   createdAt    DateTime @default(now())
 
@@ -2451,4 +2468,162 @@ model featured_slots {
   @@index([placement, isEnabled, position])
   @@index([resourceType, resourceId])
   @@index([startsAt, endsAt])
+}
+
+// ============================================================================
+// 用户账号自助功能（Step-up / OTP / Reservation Upload / Rate Limit）
+// ============================================================================
+
+enum EmailOtpPurpose {
+  STEP_UP_CHANGE_PASSWORD
+  STEP_UP_SET_PASSWORD
+  STEP_UP_CHANGE_EMAIL
+  STEP_UP_DELETE_ACCOUNT
+  STEP_UP_UNLINK_PROVIDER
+  EMAIL_CHANGE_CONFIRM
+}
+
+/// 邮箱一次性验证码（OTP）+ 一次性凭证 hash 存储
+/// - codeHash：argon2 派生的 OTP 摘要，禁止明文存储
+/// - purpose：区分 step-up 用途，一次性 proof 绑定同一 purpose 才能消费
+model email_otps {
+  id             String          @id @default(cuid())
+  userId         String?
+  user           User?           @relation("EmailOtpUser", fields: [userId], references: [id], onDelete: SetNull)
+  emailHash      String          @db.VarChar(128)
+  codeHash       String
+  purpose        EmailOtpPurpose
+  sessionId      String
+  attempts       Int             @default(0)
+  maxAttempts    Int             @default(5)
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  invalidatedAt  DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([userId, sessionId, purpose])
+  @@index([emailHash, purpose])
+  @@index([expiresAt])
+  @@map("email_otps")
+}
+
+/// 短时、单次、绑定 user/session/purpose 的高危操作复核凭证。
+/// JWT 只承载 jti；业务事务必须条件更新本表 consumedAt 后才可继续。
+model step_up_proofs {
+  jti         String          @id @db.VarChar(64)
+  userId      String
+  user        User            @relation("StepUpProofUser", fields: [userId], references: [id], onDelete: Cascade)
+  sessionId   String          @db.VarChar(128)
+  purpose     EmailOtpPurpose
+  kind        String          @db.VarChar(32)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime        @default(now())
+
+  @@index([userId, sessionId, purpose])
+  @@index([expiresAt])
+  @@map("step_up_proofs")
+}
+
+enum PendingUploadPurpose {
+  AVATAR
+  GENERIC
+}
+
+enum PendingUploadStatus {
+  PENDING
+  CONSUMED
+  EXPIRED
+}
+
+/// R2 上传预留（reservation）
+/// - storageKey 全局唯一；上传前由 presign API 写入
+/// - PATCH /users/me/profile 消费 reservation 时事务内更新 consumedAt + 用户表
+/// - 过期未消费的 reservation 由 worker 转入 storage_cleanup_tasks
+model pending_uploads {
+  id             String                @id @default(cuid())
+  ownerUserId    String
+  owner          User                  @relation("PendingUploadOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  storageKey     String                @unique
+  storageBucket  String?
+  contentType    String?               @db.VarChar(80)
+  sizeBytes      Int?
+  purpose        PendingUploadPurpose  @default(AVATAR)
+  status         PendingUploadStatus   @default(PENDING)
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  metadata       Json?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([ownerUserId, status])
+  @@index([expiresAt, status])
+  @@map("pending_uploads")
+}
+
+enum StorageCleanupTaskStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  SKIPPED_STILL_REFERENCED
+  DEAD
+}
+
+enum StorageCleanupReason {
+  UPLOAD_EXPIRED
+  AVATAR_REPLACED
+  AVATAR_CLEARED
+  AVATAR_ORIGINAL_REPLACED
+  USER_DELETED
+  ACCOUNT_DELETED
+  ADMIN_AVATAR_REPLACED
+  PENDING_UPLOAD_EXPIRED
+  MANUAL
+}
+
+/// 存储对象清理队列（T10：spec §3.2 A'）
+/// - 事务后 enqueue，PENDING → PROCESSING(worker claim, lease 5min) → COMPLETED/SKIPPED_STILL_REFERENCED/DEAD
+/// - HeadObject 返回 404 时直接置 COMPLETED（对象已经不在了，等价于成功）
+/// - attempts 到达 maxAttempts 后 DEAD，需人工介入
+/// - worker 抢占：SELECT ... FOR UPDATE SKIP LOCKED；lease 过期允许其它 worker 抢占
+/// - ownerUserId 用于二次归属校验，避免误删共享对象
+model storage_cleanup_tasks {
+  id             String                    @id @default(cuid())
+  storageKey     String                    @db.VarChar(500)
+  storageBucket  String?
+  ownerUserId    String?
+  reason         StorageCleanupReason
+  status         StorageCleanupTaskStatus  @default(PENDING)
+  attempts       Int                       @default(0)
+  maxAttempts    Int                       @default(6)
+  lastError      String?
+  scheduledAt    DateTime                  @default(now())
+  nextRetryAt    DateTime                  @default(now())
+  lockedAt       DateTime?
+  lockedBy       String?
+  leaseExpiresAt DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  @@index([status, nextRetryAt])
+  @@index([status, leaseExpiresAt])
+  @@index([storageKey])
+  @@index([ownerUserId])
+  @@map("storage_cleanup_tasks")
+}
+
+/// 通用限流计数（dimension + bucketStart 复合主键）
+/// - dimension 编码格式："<action>:<scope>:<value>" 例如 "email-change:user:cuid" / "otp-request:emailhash:<hex>"
+/// - 消费必须在事务内以 UPSERT + WHERE count < limit 实现原子性（矩阵评审 P2-5）
+model rate_limit_counters {
+  dimension    String   @db.VarChar(200)
+  bucketStart  DateTime
+  count        Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@id([dimension, bucketStart])
+  @@index([bucketStart])
+  @@map("rate_limit_counters")
 }

@@ -1,7 +1,10 @@
 import { IsString, MinLength, IsOptional, IsEmail, MaxLength, Matches } from 'class-validator';
-
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
-const PASSWORD_MESSAGE = '密码必须包含大写字母、小写字母和数字';
+import {
+  PASSWORD_REGEX,
+  PASSWORD_VALIDATION_MESSAGE,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MAX_LENGTH,
+} from '@autix/domain';
 
 export class LoginDto {
   @IsString()
@@ -34,9 +37,9 @@ export class RegisterDto {
   email: string;
 
   @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
+  @MinLength(PASSWORD_MIN_LENGTH)
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_VALIDATION_MESSAGE })
   password: string;
 
   @IsString()
@@ -57,9 +60,9 @@ export class ResetPasswordByTokenDto {
   token: string;
 
   @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
+  @MinLength(PASSWORD_MIN_LENGTH)
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_VALIDATION_MESSAGE })
   newPassword: string;
 }
 
@@ -73,12 +76,43 @@ export class ResendActivationDto {
   email: string;
 }
 
+export class RequestEmailSupplementDto {
+  @IsEmail()
+  email: string;
+}
+
 export class RequestEmailChangeDto {
   @IsEmail()
   email: string;
+
+  @IsString()
+  proof: string;
 }
 
 export class ConfirmEmailChangeDto {
   @IsString()
   token: string;
+}
+
+export class SetOrChangePasswordDto {
+  // step-up proof（一次性 JWT）
+  @IsString()
+  proof: string;
+
+  @IsString()
+  @MinLength(PASSWORD_MIN_LENGTH)
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_VALIDATION_MESSAGE })
+  newPassword: string;
+}
+
+export class DeleteAccountDto {
+  // step-up proof（一次性 JWT，purpose='delete-account'）
+  @IsString()
+  proof: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  usernameConfirmation: string;
 }

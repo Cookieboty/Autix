@@ -33,7 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       payload.sub,
       currentSystemId,
     );
-    if (!user || user.status === 'DISABLED' || user.status === 'LOCKED') {
+    if (!user || user.status === 'DISABLED' || user.status === 'LOCKED' || user.status === 'DELETED') {
       throw new UnauthorizedException('User disabled');
     }
 

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../platform/prisma/prisma.service';
+import type { EmailOtpPurpose, SocialLoginFlow } from '@autix/database';
 
 @Injectable()
 export class SocialLoginRepository {
@@ -8,7 +9,8 @@ export class SocialLoginRepository {
   createState(data: {
     state: string; nonce: string; codeVerifier: string; provider: string; systemCode: string;
     clientType: string; redirectUri: string; inviteCode?: string; deviceId?: string;
-    linkUserId?: string; expiresAt: Date;
+    linkUserId?: string; flow?: SocialLoginFlow; purpose?: EmailOtpPurpose;
+    sessionId?: string; expiresAt: Date;
   }) {
     return this.prisma.socialLoginState.create({ data });
   }

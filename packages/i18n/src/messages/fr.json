@@ -196,7 +196,131 @@
     "backToLoginOptions": "Retour aux options de connexion",
     "loginEmailTitle": "Se connecter à Amux Studio",
     "or": "OU",
-    "modalTerms": "En continuant, je reconnais la <privacy>Politique de confidentialité</privacy> et j’accepte les <terms>Conditions d’utilisation</terms>. Je confirme aussi avoir au moins 18 ans"
+    "modalTerms": "En continuant, je reconnais la <privacy>Politique de confidentialité</privacy> et j’accepte les <terms>Conditions d’utilisation</terms>. Je confirme aussi avoir au moins 18 ans",
+    "selfService": {
+      "settingsTab": "Paramètres du compte",
+      "sectionAccount": "Sécurité du compte",
+      "sectionAccountDescription": "Gérez votre mot de passe et l’adresse e-mail de notification du compte.",
+      "sectionProfile": "Profil",
+      "sectionDanger": "Zone dangereuse",
+      "sectionDangerDescription": "Ces actions affectent définitivement votre compte et vos données.",
+      "superAdminBlocked": "Les super-administrateurs ne peuvent pas supprimer leur propre compte. Veuillez d'abord transférer le rôle de super-administrateur ou contacter le support."
+    },
+    "profileBasics": {
+      "title": "Profil personnel",
+      "description": "Modifiez votre pseudonyme, votre bio et votre avatar. Les autres champs sont gérés dans la sécurité du compte ou les paramètres de langue.",
+      "fieldNickname": "Pseudonyme",
+      "fieldDescription": "Bio",
+      "fieldAvatar": "URL de l’avatar",
+      "placeholderNickname": "Saisissez un pseudonyme",
+      "placeholderDescription": "Présentez-vous en quelques mots",
+      "placeholderAvatar": "https://...",
+      "submit": "Enregistrer",
+      "submitting": "Enregistrement...",
+      "success": "Enregistré",
+      "errorGeneric": "Échec de l’enregistrement, veuillez réessayer",
+      "errorNicknameTooLong": "Le pseudonyme ne doit pas dépasser {max} caractères",
+      "errorDescriptionTooLong": "La bio ne doit pas dépasser {max} caractères",
+      "errorAvatarTooLong": "L’URL de l’avatar ne doit pas dépasser {max} caractères",
+      "errorAvatarType": "Format d’image non pris en charge. Formats autorisés : {types}",
+      "errorAvatarSize": "L’image est trop volumineuse. Maximum {maxMb} Mo",
+      "avatarUploadLabel": "Importer une image d’avatar",
+      "avatarUploadButton": "Importer une image",
+      "avatarUploading": "Importation...",
+      "avatarUploadHint": "PNG, JPEG, WebP ou GIF, {maxMb} Mo max.",
+      "avatarPreviewAlt": "Aperçu de l’avatar actuel",
+      "avatarUrlFallbackHint": "L’importation d’images n’est pas disponible ici. Vous pouvez utiliser une URL d’image."
+    },
+    "stepUp": {
+      "title": "Identity Verification",
+      "descRedirect": "For your security, please re-authenticate with {provider}.",
+      "descOtp": "We sent a verification code to {email}. Please enter it within {minutes} minutes.",
+      "descUnsupported": "Your current sign-in method does not support this action. Please contact support.",
+      "buttonRedirect": "Verify with {provider}",
+      "buttonSendOtp": "Send code",
+      "buttonResendOtp": "Resend ({seconds}s)",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "6-digit code",
+      "verifying": "Verifying...",
+      "verified": "Verified",
+      "invalid": "Code is invalid or expired",
+      "locked": "Too many attempts, please try again later",
+      "expired": "Verification session expired, please start over",
+      "contactSupport": "Contact support"
+    },
+    "changePassword": {
+      "title": "Change password",
+      "titleSet": "Set password",
+      "descSet": "Set a password so you can sign in with your username.",
+      "current": "Current password",
+      "currentPlaceholder": "Enter current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "submitting": "Updating...",
+      "success": "Password updated",
+      "tooWeak": "Password too weak — include upper/lowercase and numbers",
+      "currentInvalid": "Current password is incorrect"
+    },
+    "changeEmail": {
+      "title": "Change email",
+      "current": "Current email",
+      "new": "New email",
+      "newPlaceholder": "your-new@email.com",
+      "pending": "A confirmation link has been sent to {email}. Please confirm from the email.",
+      "confirmProcessing": "Confirming email change…",
+      "confirmSuccess": "Email updated. Please sign in again.",
+      "confirmError": "The confirmation link is invalid or expired.",
+      "taken": "This email is already in use",
+      "cancelPending": "Cancel pending change"
+    },
+    "deleteAccount": {
+      "sectionTitle": "Delete account",
+      "sectionHint": "Account deletion cannot be undone. Some data will be retained in anonymized form for finance and audit compliance.",
+      "openDialog": "Delete account",
+      "dialogTitle": "Confirm account deletion",
+      "dialogHint": "Please type your username {username} to confirm.",
+      "usernamePlaceholder": "Type username to confirm",
+      "checkboxIrreversible": "I understand this action is irreversible",
+      "confirm": "Delete account",
+      "processing": "Deleting...",
+      "success": "Account deleted",
+      "userDeleted": "Account has been deleted and cannot be used."
+    },
+    "profileEdit": {
+      "title": "Edit profile",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "1-32 characters",
+      "description": "Bio",
+      "descriptionPlaceholder": "Up to 500 characters",
+      "submit": "Save",
+      "success": "Profile updated"
+    },
+    "avatar": {
+      "upload": "Upload avatar",
+      "uploading": "Uploading...",
+      "success": "Avatar updated",
+      "tooLarge": "Image size exceeds limit",
+      "invalidType": "Only JPG / PNG / WebP are supported",
+      "featureDisabled": "Avatar upload is not yet available"
+    },
+    "errorCommon": {
+      "rateLimited": "Too many requests, please try again later",
+      "contactSupport": "Please contact support",
+      "featureDisabled": "This feature is not yet available"
+    },
+    "errorCodes": {
+      "STEP_UP_INVALID_OR_EXPIRED": "Identity verification is invalid, expired, or already used",
+      "STEP_UP_UNAVAILABLE": "Self-service identity verification is unavailable for this account",
+      "OTP_INVALID": "The verification code is incorrect",
+      "OTP_LOCKED": "Too many attempts, please try again later",
+      "OTP_ALREADY_CONSUMED": "This verification code has already been used",
+      "TOO_MANY_REQUESTS": "Too many requests, please try again later",
+      "USER_DELETED": "This account has been deleted",
+      "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "The username confirmation does not match",
+      "PROVIDER_REAUTH_UNSUPPORTED": "Your current sign-in method cannot re-authenticate here",
+      "CONTACT_SUPPORT": "Please contact support"
+    }
   },
   "chat": {
     "newConversation": "Nouvelle conversation",
@@ -692,7 +816,9 @@
     "loading": "Chargement...",
     "membershipRequired": "Abonnement requis",
     "membershipRequiredDesc": "La bibliothèque est une fonctionnalité réservée aux membres. Passez à un abonnement pour télécharger des documents et construire votre base de connaissances.",
-    "upgradeMembership": "Passer à l'abonnement"
+    "upgradeMembership": "Passer à l'abonnement",
+    "statusDeleted": "已删除",
+    "includeDeleted": "包含已删除用户"
   },
   "artifact": {
     "preview": "Aperçu",
@@ -1304,7 +1430,8 @@
         "tabHistory": "Historique de navigation",
         "tabLibrary": "Bibliothèque",
         "tabModels": "Configuration des modèles",
-        "tabMembership": "Centre d’abonnement"
+        "tabMembership": "Centre d’abonnement",
+        "tabSettings": "Paramètres du compte"
       },
       "status": {
         "statusPending": "En attente",
@@ -1336,7 +1463,9 @@
       }
     },
     "accountSecurityTitle": "Comptes liés",
+    "accountSecurityDescription": "Associez des comptes tiers pour disposer de méthodes de connexion sécurisées supplémentaires.",
     "linked": "Lié",
+    "notLinked": "Non lié",
     "link": "Lier",
     "unlink": "Délier",
     "accountLinkedSuccess": "Compte lié avec succès."
@@ -2883,7 +3012,9 @@
     "statusInReview": "En révision",
     "statusApproved": "Approuvé",
     "statusRejected": "Refusé",
-    "statusArchived": "Archivé"
+    "statusArchived": "Archivé",
+    "statusDeleted": "Deleted",
+    "includeDeleted": "Include deleted users"
   },
   "membership": {
     "active": "Actif",

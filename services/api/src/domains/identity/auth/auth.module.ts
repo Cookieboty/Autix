@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller';
 import { AuthIdentityRepository } from './auth-identity.repository';
 import { AuthService } from './auth.service';
 import { EmailChangeService } from './email-change.service';
+import { AccountDeletionService } from './account-deletion.service';
 import { AuthSessionRepository } from './auth-session.repository';
 import { AuthTokenFactory } from './auth-token.factory';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -14,6 +15,8 @@ import { MembershipGuard } from './membership.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { AdminGuard } from './admin.guard';
 import { MailModule } from '../../platform/mail/mail.module';
+import { CommonModule } from '../../platform/common/common.module';
+import { StorageModule } from '../../platform/storage/storage.module';
 import { InviteModule } from '../../billing/invite/invite.module';
 import { CampaignModule } from '../../billing/campaign/campaign.module';
 import { OAuthController } from './oauth/oauth.controller';
@@ -26,6 +29,10 @@ import { AccountResolutionService } from './oauth/account-resolution.service';
 import { SocialLoginRepository } from './oauth/social-login.repository';
 import { TokenCipher } from './oauth/token-cipher';
 import { OAuthConfigService } from './oauth/oauth-config.service';
+import { StepUpService } from './step-up/step-up.service';
+import { StepUpRepository } from './step-up/step-up.repository';
+import { StepUpCleanupCron } from './step-up/step-up-cleanup.cron';
+import { EmailHashService } from './step-up/email-hash.service';
 
 const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSignOptions['expiresIn'];
 
@@ -37,6 +44,8 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
       signOptions: { expiresIn: jwtAccessExpiresIn },
     }),
     MailModule,
+    CommonModule,
+    StorageModule,
     CampaignModule,
     forwardRef(() => InviteModule),
   ],
@@ -44,9 +53,14 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
   providers: [
     AuthService,
     EmailChangeService,
+    AccountDeletionService,
     AuthIdentityRepository,
     AuthSessionRepository,
     AuthTokenFactory,
+    StepUpService,
+    StepUpRepository,
+    StepUpCleanupCron,
+    EmailHashService,
     JwtStrategy,
     AdminGuard,
     MembershipGuard,
@@ -61,7 +75,7 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
     OAuthService,
     OAuthConfigService,
     { provide: GoogleProvider, useFactory: (c: OAuthConfigService) => new GoogleProvider(c), inject: [OAuthConfigService] },
-    { provide: AppleProvider,  useFactory: (c: OAuthConfigService) => new AppleProvider(c),  inject: [OAuthConfigService] },
+    { provide: AppleProvider, useFactory: (c: OAuthConfigService) => new AppleProvider(c), inject: [OAuthConfigService] },
     { provide: GitHubProvider, useFactory: (c: OAuthConfigService) => new GitHubProvider(c), inject: [OAuthConfigService] },
     {
       provide: OAuthProviderRegistry,
@@ -94,6 +108,6 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
       },
     },
   ],
-  exports: [JwtModule, AuthService, AdminGuard, MembershipGuard, AuthIdentityRepository],
+  exports: [JwtModule, AuthService, AdminGuard, MembershipGuard, AuthIdentityRepository, StepUpService, EmailHashService],
 })
-export class AuthModule {}
+export class AuthModule { }

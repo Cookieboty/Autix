@@ -14,8 +14,26 @@ const auth = {
   setMenus: (menus: unknown[]) => ipcRenderer.invoke('auth:set-menus', menus) as Promise<void>,
   getSystems: () => ipcRenderer.invoke('auth:get-systems') as Promise<unknown[]>,
   setSystems: (systems: unknown[]) => ipcRenderer.invoke('auth:set-systems', systems) as Promise<void>,
+  getFeatures: () => ipcRenderer.invoke('auth:get-features') as Promise<Record<string, boolean>>,
+  setFeatures: (features: Record<string, boolean>) => ipcRenderer.invoke('auth:set-features', features) as Promise<void>,
   startOAuth: (input: { provider: string; apiBaseUrl: string; systemCode: string; inviteCode?: string }) =>
     ipcRenderer.invoke('auth:start-oauth', input) as Promise<{ code?: string; error?: string }>,
+  reserveStepUp: (provider: string) =>
+    ipcRenderer.invoke('oauth:step-up:reserve-loopback', { provider }) as Promise<{ redirectUri: string; flowId: string }>,
+  completeStepUp: async (input: { flowId: string; authorizeUrl: string; expectedPurpose: string }) => {
+    await ipcRenderer.invoke('oauth:step-up:open', input);
+    const result = await ipcRenderer.invoke('oauth:step-up:await-callback', { flowId: input.flowId }) as { proof?: string; purpose?: string };
+    if (!result.proof || result.purpose !== input.expectedPurpose) throw new Error('STEP_UP_INVALID_OR_EXPIRED');
+    return result;
+  },
+  completeLink: async (input: { flowId: string; authorizeUrl: string; expectedProvider: string }) => {
+    await ipcRenderer.invoke('oauth:step-up:open', input);
+    const result = await ipcRenderer.invoke('oauth:step-up:await-callback', { flowId: input.flowId }) as { linked?: string };
+    if (!result.linked || result.linked !== input.expectedProvider) throw new Error('OAUTH_LINK_RESULT_INVALID');
+    return { linked: result.linked };
+  },
+  cancelStepUp: (flowId: string) =>
+    ipcRenderer.invoke('oauth:step-up:cancel', { flowId }) as Promise<void>,
 };
 
 const win = {

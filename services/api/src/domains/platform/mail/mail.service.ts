@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type { SendMailOptions, Transporter } from 'nodemailer';
+import type { StepUpPurpose } from '@autix/domain';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
 
 type MailRuntimeConfig = {
@@ -9,6 +10,14 @@ type MailRuntimeConfig = {
   resetBaseUrl: string;
   activationBaseUrl: string;
   emailVerifyBaseUrl: string;
+};
+
+const STEP_UP_PURPOSE_LABELS: Record<StepUpPurpose, string> = {
+  'change-password': '修改密码',
+  'set-password': '设置密码',
+  'change-email': '修改邮箱',
+  'delete-account': '删除账号',
+  'unlink-provider': '解绑登录方式',
 };
 
 @Injectable()
@@ -90,9 +99,47 @@ export class MailService {
     }, config);
   }
 
+  async sendStepUpOtp(
+    to: string,
+    code: string,
+    purpose: StepUpPurpose,
+    expiresInMinutes = 5,
+  ): Promise<void> {
+    if (!/^\d{6}$/.test(code)) {
+      throw new Error('Step-up OTP must be exactly 6 digits');
+    }
+
+    const config = await this.getRuntimeConfig();
+    if (!config.transporter) {
+      throw new Error('SMTP transport is not configured');
+    }
+
+    const purposeLabel = STEP_UP_PURPOSE_LABELS[purpose];
+    await this.sendMail({
+      to,
+      subject: '验证账号操作',
+      text: [
+        `您正在进行${purposeLabel}操作。`,
+        `验证码：${code}`,
+        `验证码将在 ${expiresInMinutes} 分钟后失效，且仅可使用一次。`,
+        '如非本人操作，请忽略此邮件。',
+      ].join('\n'),
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+          <h2>验证账号操作</h2>
+          <p>您正在进行${purposeLabel}操作，请输入以下验证码完成身份复核：</p>
+          <p style="font-size: 32px; font-weight: 700; letter-spacing: 6px;">${code}</p>
+          <p style="color: #666; font-size: 13px;">验证码将在 ${expiresInMinutes} 分钟后失效，且仅可使用一次。</p>
+          <p style="color: #666; font-size: 13px;">如非本人操作，请忽略此邮件。</p>
+        </div>
+      `,
+    }, config, true);
+  }
+
   private async sendMail(
     options: Omit<SendMailOptions, 'from'>,
     runtimeConfig?: MailRuntimeConfig,
+    propagateFailure = false,
   ): Promise<void> {
     const config = runtimeConfig ?? await this.getRuntimeConfig();
     if (!config.transporter) return;
@@ -103,6 +150,7 @@ export class MailService {
       });
     } catch (err) {
       this.logger.error('Failed to send email', err instanceof Error ? err.stack : String(err));
+      if (propagateFailure) throw err;
     }
   }
 

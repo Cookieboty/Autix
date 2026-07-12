@@ -7,13 +7,13 @@ export class AdminBootstrapRepository {
 
   findSuperAdmin() {
     return this.prisma.user.findFirst({
-      where: { isSuperAdmin: true },
+      where: { isSuperAdmin: true, status: { not: 'DELETED' } },
     });
   }
 
   updatePassword(userId: string, password: string) {
-    return this.prisma.user.update({
-      where: { id: userId },
+    return this.prisma.user.updateMany({
+      where: { id: userId, status: { not: 'DELETED' } },
       data: { password },
     });
   }

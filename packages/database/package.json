@@ -7,6 +7,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "dotenv -e ../../.env -- bunx prisma generate --schema prisma/schema.prisma && tsc",
+    "test": "bun run build && bun test test",
     "typecheck": "tsc --noEmit",
     "db:format": "dotenv -e ../../.env -- bunx prisma format --schema prisma/schema.prisma",
     "db:validate": "dotenv -e ../../.env -- bunx prisma validate --schema prisma/schema.prisma",
@@ -14,6 +15,7 @@
     "db:migrate": "dotenv -e ../../.env -- bunx prisma migrate dev --schema prisma/schema.prisma",
     "db:deploy": "dotenv -e ../../.env -- bunx prisma migrate deploy --schema prisma/schema.prisma",
     "db:push": "dotenv -e ../../.env -- bunx prisma db push --schema prisma/schema.prisma",
+    "db:baseline:check": "dotenv -e ../../.env -- bun run scripts/check-migration-readiness.ts",
     "db:flat-migrate": "bun run scripts/flat-migrate.ts",
     "db:init-membership": "bun run scripts/init-membership-data.ts",
     "db:migrate-legacy": "bun run scripts/migrate-legacy-data.ts",

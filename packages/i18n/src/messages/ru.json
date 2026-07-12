@@ -196,7 +196,131 @@
     "backToLoginOptions": "Назад к способам входа",
     "loginEmailTitle": "Войти в Amux Studio",
     "or": "ИЛИ",
-    "modalTerms": "Продолжая, я подтверждаю, что ознакомился с <privacy>Политикой конфиденциальности</privacy> и согласен с <terms>Условиями использования</terms>. Я также подтверждаю, что мне уже исполнилось 18 лет"
+    "modalTerms": "Продолжая, я подтверждаю, что ознакомился с <privacy>Политикой конфиденциальности</privacy> и согласен с <terms>Условиями использования</terms>. Я также подтверждаю, что мне уже исполнилось 18 лет",
+    "selfService": {
+      "settingsTab": "Настройки аккаунта",
+      "sectionAccount": "Безопасность аккаунта",
+      "sectionAccountDescription": "Управляйте паролем для входа и почтой для уведомлений аккаунта.",
+      "sectionProfile": "Профиль",
+      "sectionDanger": "Опасная зона",
+      "sectionDangerDescription": "Эти действия необратимо влияют на аккаунт и данные.",
+      "superAdminBlocked": "Суперадминистратор не может удалить собственную учётную запись. Сначала передайте роль суперадминистратора или обратитесь в поддержку."
+    },
+    "profileBasics": {
+      "title": "Личный профиль",
+      "description": "Измените имя, описание и аватар. Остальные поля доступны в настройках безопасности аккаунта или языка.",
+      "fieldNickname": "Имя",
+      "fieldDescription": "О себе",
+      "fieldAvatar": "URL аватара",
+      "placeholderNickname": "Введите имя",
+      "placeholderDescription": "Расскажите о себе",
+      "placeholderAvatar": "https://...",
+      "submit": "Сохранить",
+      "submitting": "Сохранение...",
+      "success": "Сохранено",
+      "errorGeneric": "Не удалось сохранить. Попробуйте ещё раз",
+      "errorNicknameTooLong": "Имя не должно превышать {max} символов",
+      "errorDescriptionTooLong": "Описание не должно превышать {max} символов",
+      "errorAvatarTooLong": "URL аватара не должен превышать {max} символов",
+      "errorAvatarType": "Неподдерживаемый формат изображения. Допустимые: {types}",
+      "errorAvatarSize": "Изображение слишком большое. Максимум {maxMb} МБ",
+      "avatarUploadLabel": "Загрузить изображение аватара",
+      "avatarUploadButton": "Загрузить изображение",
+      "avatarUploading": "Загрузка...",
+      "avatarUploadHint": "PNG, JPEG, WebP или GIF, до {maxMb} МБ",
+      "avatarPreviewAlt": "Предпросмотр текущего аватара",
+      "avatarUrlFallbackHint": "Загрузка изображений недоступна. Можно использовать URL изображения."
+    },
+    "stepUp": {
+      "title": "Identity Verification",
+      "descRedirect": "For your security, please re-authenticate with {provider}.",
+      "descOtp": "We sent a verification code to {email}. Please enter it within {minutes} minutes.",
+      "descUnsupported": "Your current sign-in method does not support this action. Please contact support.",
+      "buttonRedirect": "Verify with {provider}",
+      "buttonSendOtp": "Send code",
+      "buttonResendOtp": "Resend ({seconds}s)",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "6-digit code",
+      "verifying": "Verifying...",
+      "verified": "Verified",
+      "invalid": "Code is invalid or expired",
+      "locked": "Too many attempts, please try again later",
+      "expired": "Verification session expired, please start over",
+      "contactSupport": "Contact support"
+    },
+    "changePassword": {
+      "title": "Change password",
+      "titleSet": "Set password",
+      "descSet": "Set a password so you can sign in with your username.",
+      "current": "Current password",
+      "currentPlaceholder": "Enter current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "submitting": "Updating...",
+      "success": "Password updated",
+      "tooWeak": "Password too weak — include upper/lowercase and numbers",
+      "currentInvalid": "Current password is incorrect"
+    },
+    "changeEmail": {
+      "title": "Change email",
+      "current": "Current email",
+      "new": "New email",
+      "newPlaceholder": "your-new@email.com",
+      "pending": "A confirmation link has been sent to {email}. Please confirm from the email.",
+      "confirmProcessing": "Confirming email change…",
+      "confirmSuccess": "Email updated. Please sign in again.",
+      "confirmError": "The confirmation link is invalid or expired.",
+      "taken": "This email is already in use",
+      "cancelPending": "Cancel pending change"
+    },
+    "deleteAccount": {
+      "sectionTitle": "Delete account",
+      "sectionHint": "Account deletion cannot be undone. Some data will be retained in anonymized form for finance and audit compliance.",
+      "openDialog": "Delete account",
+      "dialogTitle": "Confirm account deletion",
+      "dialogHint": "Please type your username {username} to confirm.",
+      "usernamePlaceholder": "Type username to confirm",
+      "checkboxIrreversible": "I understand this action is irreversible",
+      "confirm": "Delete account",
+      "processing": "Deleting...",
+      "success": "Account deleted",
+      "userDeleted": "Account has been deleted and cannot be used."
+    },
+    "profileEdit": {
+      "title": "Edit profile",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "1-32 characters",
+      "description": "Bio",
+      "descriptionPlaceholder": "Up to 500 characters",
+      "submit": "Save",
+      "success": "Profile updated"
+    },
+    "avatar": {
+      "upload": "Upload avatar",
+      "uploading": "Uploading...",
+      "success": "Avatar updated",
+      "tooLarge": "Image size exceeds limit",
+      "invalidType": "Only JPG / PNG / WebP are supported",
+      "featureDisabled": "Avatar upload is not yet available"
+    },
+    "errorCommon": {
+      "rateLimited": "Too many requests, please try again later",
+      "contactSupport": "Please contact support",
+      "featureDisabled": "This feature is not yet available"
+    },
+    "errorCodes": {
+      "STEP_UP_INVALID_OR_EXPIRED": "Identity verification is invalid, expired, or already used",
+      "STEP_UP_UNAVAILABLE": "Self-service identity verification is unavailable for this account",
+      "OTP_INVALID": "The verification code is incorrect",
+      "OTP_LOCKED": "Too many attempts, please try again later",
+      "OTP_ALREADY_CONSUMED": "This verification code has already been used",
+      "TOO_MANY_REQUESTS": "Too many requests, please try again later",
+      "USER_DELETED": "This account has been deleted",
+      "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "The username confirmation does not match",
+      "PROVIDER_REAUTH_UNSUPPORTED": "Your current sign-in method cannot re-authenticate here",
+      "CONTACT_SUPPORT": "Please contact support"
+    }
   },
   "chat": {
     "newConversation": "Новый чат",
@@ -692,7 +816,9 @@
     "loading": "Загрузка...",
     "membershipRequired": "Требуется подписка",
     "membershipRequiredDesc": "Библиотека доступна только для участников. Оформите подписку, чтобы загружать документы и создавать базу знаний.",
-    "upgradeMembership": "Оформить подписку"
+    "upgradeMembership": "Оформить подписку",
+    "statusDeleted": "已删除",
+    "includeDeleted": "包含已删除用户"
   },
   "artifact": {
     "preview": "Предпросмотр",
@@ -1304,7 +1430,8 @@
         "tabHistory": "История просмотров",
         "tabLibrary": "Библиотека",
         "tabModels": "Настройки моделей",
-        "tabMembership": "Подписка"
+        "tabMembership": "Подписка",
+        "tabSettings": "Настройки аккаунта"
       },
       "status": {
         "statusPending": "Ожидает проверки",
@@ -1336,7 +1463,9 @@
       }
     },
     "accountSecurityTitle": "Привязанные аккаунты",
+    "accountSecurityDescription": "Привяжите сторонние аккаунты, чтобы получить дополнительные безопасные способы входа.",
     "linked": "Привязан",
+    "notLinked": "Не привязан",
     "link": "Привязать",
     "unlink": "Отвязать",
     "accountLinkedSuccess": "Аккаунт успешно привязан."
@@ -4448,7 +4577,9 @@
     "statusInReview": "审核中",
     "statusApproved": "已通过",
     "statusRejected": "已拒绝",
-    "statusArchived": "已归档"
+    "statusArchived": "已归档",
+    "statusDeleted": "Deleted",
+    "includeDeleted": "Include deleted users"
   },
   "landing": {
     "brand": "Amux Studio",

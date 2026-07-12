@@ -3,6 +3,8 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
+  GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomBytes } from 'crypto';
@@ -46,7 +48,7 @@ function sanitizeFolder(folder?: string): string {
 
 @Injectable()
 export class CloudflareR2Service {
-  constructor(private readonly systemSettingsService: SystemSettingsService) {}
+  constructor(private readonly systemSettingsService: SystemSettingsService) { }
 
   /**
    * Generate a presigned PUT URL for direct browser upload.
@@ -56,6 +58,8 @@ export class CloudflareR2Service {
     fileName: string;
     contentType: string;
     folder?: string;
+    /** 传入时把精确 Content-Length 绑定到 presigned PUT 签名。 */
+    sizeBytes?: number;
     /**
      * 认证用户 id。注意：不再把它拼进对象 key —— 加 `u/${userId}/` 前缀会改变对象路径，
      * 若 R2 公有访问/CORS 是按前缀配置的，会导致上传后按 URL 回源失败（画板贴图回归）。
@@ -81,6 +85,7 @@ export class CloudflareR2Service {
       Bucket: config.bucket,
       Key: key,
       ContentType: contentType,
+      ContentLength: opts.sizeBytes,
     });
 
     const uploadUrl = await getSignedUrl(config.client, command, {
@@ -150,10 +155,64 @@ export class CloudflareR2Service {
     );
   }
 
+  /**
+   * T10: HeadObject 存在性检查（不下载对象体）。
+   * 返回 true=对象存在；false=对象不存在（404）。
+   * 抛出=网络或权限错误（由调用方决定重试）。
+   * cleanup worker 用此在 DeleteObject 前先探测，把"对象已经不在"这种情况直接标记为 COMPLETED。
+   */
+  async objectExists(key: string): Promise<boolean> {
+    return (await this.getObjectMetadata(key)).exists;
+  }
+
+  async getObjectMetadata(key: string): Promise<{
+    exists: boolean;
+    contentLength: number | null;
+    contentType: string | null;
+  }> {
+    const config = await this.getRuntimeConfig();
+    try {
+      const result = await config.client.send(
+        new HeadObjectCommand({ Bucket: config.bucket, Key: key }),
+      );
+      return {
+        exists: true,
+        contentLength: result.ContentLength ?? null,
+        contentType: result.ContentType ?? null,
+      };
+    } catch (err) {
+      const status = (err as { $metadata?: { httpStatusCode?: number }; name?: string })?.$metadata?.httpStatusCode;
+      const name = (err as { name?: string })?.name;
+      if (status === 404 || name === 'NotFound' || name === 'NoSuchKey') {
+        return { exists: false, contentLength: null, contentType: null };
+      }
+      throw err;
+    }
+  }
+
   /** Resolve a stored object key into its accessible public URL. */
   async getPublicUrl(key: string): Promise<string> {
     const publicUrl = (await this.setting('storage.r2PublicUrl')).replace(/\/+$/, '');
     return `${publicUrl}/${key.replace(/^\/+/, '')}`;
+  }
+
+  /**
+   * T18: 服务端拉取对象体到内存 Buffer，供 sharp 等预处理管线使用。
+   * 用途：头像 consume 阶段下载用户 PUT 的原图，做 resize/strip metadata 后再重新上传。
+   * 注意：调用方必须自行约束大小（AVATAR_UPLOAD_LIMITS.maxSizeBytes），
+   * 避免恶意大对象引发 OOM。当前实现直接读到内存；如未来引入 >10MB 场景应改成流式。
+   */
+  async downloadObject(key: string): Promise<Buffer> {
+    const config = await this.getRuntimeConfig();
+    const res = await config.client.send(
+      new GetObjectCommand({ Bucket: config.bucket, Key: key }),
+    );
+    const body = res.Body as unknown as { transformToByteArray?: () => Promise<Uint8Array> } | undefined;
+    if (!body || typeof body.transformToByteArray !== 'function') {
+      throw new Error(`R2 downloadObject: empty body for key=${key}`);
+    }
+    const bytes = await body.transformToByteArray();
+    return Buffer.from(bytes);
   }
 
   /** R2 公网访问域名前缀（无尾斜杠）。空串表示未配置。供"非我域名"过滤判断媒体是否已托管在自有 R2。 */

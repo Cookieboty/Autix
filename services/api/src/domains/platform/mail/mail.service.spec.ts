@@ -1,0 +1,76 @@
+import type { SendMailOptions } from 'nodemailer';
+import type { SystemSettingsService } from '../system-settings/system-settings.service';
+import { MailService } from './mail.service';
+
+function createService() {
+  const settings = {
+    getString: jest.fn().mockResolvedValue(''),
+    getBoolean: jest.fn().mockResolvedValue(true),
+  };
+  return new MailService(settings as unknown as SystemSettingsService);
+}
+
+function runtimeConfig(sendMail: jest.Mock) {
+  return {
+    transporter: { sendMail },
+    from: 'security@example.com',
+    resetBaseUrl: 'https://example.com/reset',
+    activationBaseUrl: 'https://example.com/activate',
+    emailVerifyBaseUrl: 'https://example.com/email/confirm',
+  };
+}
+
+describe('MailService.sendStepUpOtp', () => {
+  it('renders the six-digit code and operation details directly in the email', async () => {
+    const service = createService();
+    const sendMail = jest.fn().mockResolvedValue({});
+    Object.defineProperty(service, 'getRuntimeConfig', {
+      value: jest.fn().mockResolvedValue(runtimeConfig(sendMail)),
+    });
+
+    await service.sendStepUpOtp('user@example.com', '042817', 'delete-account', 5);
+
+    expect(sendMail).toHaveBeenCalledTimes(1);
+    const options = sendMail.mock.calls[0]?.[0] as SendMailOptions;
+    expect(options).toMatchObject({
+      from: 'security@example.com',
+      to: 'user@example.com',
+      subject: '验证账号操作',
+    });
+    expect(options.text).toContain('删除账号');
+    expect(options.text).toContain('验证码：042817');
+    expect(options.html).toContain('删除账号');
+    expect(options.html).toContain('>042817</p>');
+    expect(options.html).not.toContain('?token=');
+  });
+
+  it('propagates SMTP failures so the caller can invalidate the challenge', async () => {
+    const service = createService();
+    const smtpError = new Error('SMTP unavailable');
+    const sendMail = jest.fn().mockRejectedValue(smtpError);
+    Object.defineProperty(service, 'getRuntimeConfig', {
+      value: jest.fn().mockResolvedValue(runtimeConfig(sendMail)),
+    });
+    Object.defineProperty(service, 'logger', {
+      value: { error: jest.fn() },
+    });
+
+    await expect(
+      service.sendStepUpOtp('user@example.com', '123456', 'change-email'),
+    ).rejects.toBe(smtpError);
+  });
+
+  it('rejects when SMTP is not configured instead of reporting a phantom delivery', async () => {
+    const service = createService();
+    Object.defineProperty(service, 'getRuntimeConfig', {
+      value: jest.fn().mockResolvedValue({
+        ...runtimeConfig(jest.fn()),
+        transporter: null,
+      }),
+    });
+
+    await expect(
+      service.sendStepUpOtp('user@example.com', '123456', 'set-password'),
+    ).rejects.toThrow('SMTP transport is not configured');
+  });
+});

@@ -5,7 +5,8 @@ import {
 } from '@microsoft/fetch-event-source';
 import { DEFAULT_LANGUAGE } from '@autix/i18n';
 import { getAuth, getNavigation, getEnv, getStorage } from '@autix/platform';
-import type { ApiResponse, TaskEvent } from '@autix/domain';
+import type { ApiResponse, ApiResponseHint, TaskEvent } from '@autix/domain';
+import { isStepUpErrorCode } from '@autix/domain';
 import type {
   CanvasAction,
   CanvasActionEstimate,
@@ -325,18 +326,22 @@ export function authFetchEventSource(
   });
 }
 
-export function uploadToPresignedUrl(
+export async function uploadToPresignedUrl(
   uploadUrl: string,
   body: BodyInit,
   options: { contentType?: string; headers?: HeadersInit } = {},
 ): Promise<Response> {
   const headers = new Headers(options.headers);
   if (options.contentType) headers.set('Content-Type', options.contentType);
-  return fetch(uploadUrl, {
+  const response = await fetch(uploadUrl, {
     method: 'PUT',
     body,
     headers,
   });
+  if (!response.ok) {
+    throw new Error(`Presigned upload failed with status ${response.status}`);
+  }
+  return response;
 }
 
 export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string): AxiosInstance {
@@ -363,6 +368,9 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
           const err = new AxiosError(payload.msg, 'API_ERROR', res.config, res.request, res);
           (err as AxiosError & { code?: string }).code = payload.code;
           (err as AxiosError & { msg?: string }).msg = payload.msg;
+          (err as AxiosError & { hint?: ApiResponseHint }).hint = payload.hint;
+          // 保留后端结构化错误上下文，供需要额外提示信息的业务使用。
+          (err as AxiosError & { data?: unknown }).data = payload.data;
           if (matchInsufficientPointsMessage(payload.msg)) {
             const { required, available } = parseInsufficientPointsMessage(payload.msg);
             const decorated = err as AxiosError & {
@@ -393,6 +401,9 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
           (res as { pagination?: unknown }).pagination = (data as { pagination?: unknown })
             .pagination;
         }
+        if (payload.hint) {
+          (res as { hint?: ApiResponseHint }).hint = payload.hint;
+        }
         res.data = data;
       }
       return res;
@@ -407,6 +418,7 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
         const payload = res.data as ApiResponse<unknown>;
         (error as AxiosError & { msg?: string; code?: string }).msg = payload.msg;
         (error as AxiosError & { msg?: string; code?: string }).code = payload.code;
+        (error as AxiosError & { hint?: ApiResponseHint }).hint = payload.hint;
       }
 
       const finalMsg =
@@ -431,9 +443,15 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
         });
       }
 
+      const originalUrl = original?.url ?? '';
+      const isStepUpRoute = originalUrl.includes('/auth/step-up');
+      const errorCode = (error as AxiosError & { code?: string }).code;
+      const shouldSkipRefresh = isStepUpRoute || isStepUpErrorCode(errorCode);
+
       if (
         res?.status === 401 &&
         original &&
+        !shouldSkipRefresh &&
         !original.url?.includes('/auth/login') &&
         !original.url?.includes('/auth/refresh')
       ) {

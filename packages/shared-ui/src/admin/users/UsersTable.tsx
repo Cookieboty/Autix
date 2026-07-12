@@ -152,6 +152,7 @@ function UserRow({
   onResetPassword: (user: User) => void;
   onToggleStatus: (user: User) => void;
 }) {
+  const deleted = user.status === 'DELETED';
   return (
     <TableRow>
       <TableCell>
@@ -170,13 +171,13 @@ function UserRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center justify-end gap-2">
-          {canUpdate && (
+          {canUpdate && !deleted && (
             <Button variant="outline" size="sm" onClick={() => onEdit(user)}>
               <Edit className="mr-1.5 h-3.5 w-3.5" />
               {t('edit')}
             </Button>
           )}
-          {canUpdate && (
+          {canUpdate && !deleted && (
             <Button variant="outline" size="sm" onClick={() => onToggleStatus(user)}>
               {user.status === 'ACTIVE' ? (
                 <>
@@ -191,7 +192,7 @@ function UserRow({
               )}
             </Button>
           )}
-          {canUpdate && (
+          {canUpdate && !deleted && (
             <Button
               variant="outline"
               size="sm"
@@ -202,7 +203,7 @@ function UserRow({
               {t('resetPassword')}
             </Button>
           )}
-          {canDelete && (
+          {canDelete && !deleted && (
             <Button
               variant="outline"
               size="sm"
@@ -228,6 +229,7 @@ function UserStatusBadge({ status, t }: { status: User['status']; t: Translate }
     DISABLED: { label: t('statusDisabled'), variant: 'outline' },
     LOCKED: { label: t('statusLocked'), variant: 'destructive' },
     PENDING: { label: t('statusPending'), variant: 'default' },
+    DELETED: { label: t('statusDeleted'), variant: 'outline' },
   };
   const current = map[status];
   return (

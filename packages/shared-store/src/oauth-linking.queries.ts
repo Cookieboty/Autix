@@ -19,7 +19,9 @@ export function useUnlinkAccountMutation(cb?: {
 }) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (provider: string) => authActions.unlinkAccount(provider),
+    // 安全（#3）：解绑需带 step-up 一次性 proof。
+    mutationFn: (vars: { provider: string; proof: string }) =>
+      authActions.unlinkAccount(vars.provider, vars.proof),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: oauthLinkingKeys.linked() });
       await cb?.onSuccess?.();

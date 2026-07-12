@@ -18,7 +18,10 @@ export default function OAuthPopupCallbackPage() {
     const code = params.get('code') ?? undefined;
     const linked = params.get('linked') ?? undefined;
     const error = params.get('error') ?? undefined;
-    const payload = { source: 'autix-oauth', channel, code, linked, error };
+    const proof = params.get('proof') ?? undefined;
+    const purpose = params.get('purpose') ?? undefined;
+    if (proof) window.history.replaceState(null, '', window.location.pathname);
+    const payload = { source: 'autix-oauth', channel, code, linked, error, proof, purpose };
 
     let delivered = false;
 

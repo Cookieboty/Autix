@@ -28,6 +28,7 @@
     "./admin/profile": "./src/admin/profile/index.ts",
     "./marketplace": "./src/marketplace/index.ts",
     "./auth": "./src/auth/index.ts",
+    "./security": "./src/security/index.ts",
     "./profile": "./src/profile/index.ts",
     "./resources": "./src/resources/index.ts",
     "./hooks": "./src/hooks/index.ts",

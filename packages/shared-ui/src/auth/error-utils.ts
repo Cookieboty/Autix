@@ -1,9 +1,13 @@
 type ApiErrorLike = {
   msg?: unknown;
+  code?: unknown;
+  data?: unknown;
   response?: {
     data?: {
       msg?: unknown;
       message?: unknown;
+      code?: unknown;
+      data?: unknown;
     };
   };
 };

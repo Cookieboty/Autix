@@ -1,83 +1,52 @@
+import { UnauthorizedException } from '@nestjs/common';
 import { AuthSessionRepository } from './auth-session.repository';
 
-function createPrisma() {
-  return {
+function createRepository(status = 'ACTIVE') {
+  const tx = {
+    $queryRaw: jest.fn().mockResolvedValue([{ status }]),
     userSession: {
-      create: jest.fn().mockResolvedValue({ id: 'session-1' }),
-      findUnique: jest.fn().mockResolvedValue({ id: 'session-1' }),
-      update: jest.fn().mockResolvedValue({ id: 'session-1' }),
-      delete: jest.fn().mockResolvedValue({ id: 'session-1' }),
+      create: jest.fn().mockResolvedValue({ id: 'session-1', refreshToken: 'refresh-1' }),
     },
-  } as any;
+    user: { update: jest.fn().mockResolvedValue({}) },
+  };
+  const prisma = {
+    $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+  };
+  return { repository: new AuthSessionRepository(prisma as any), tx, prisma };
 }
 
-describe('AuthSessionRepository', () => {
-  it('creates sessions with current system context', async () => {
-    const prisma = createPrisma();
-    const repository = new AuthSessionRepository(prisma);
-    const expiresAt = new Date('2026-06-20T00:00:00.000Z');
+describe('AuthSessionRepository.create', () => {
+  it('creates the session and updates lastLoginAt under the same user row lock', async () => {
+    const { repository, tx, prisma } = createRepository();
 
     await repository.create({
-      userId: 'user-1',
-      refreshToken: 'refresh-token',
+      userId: 'u1',
+      refreshToken: 'refresh-1',
       ip: '127.0.0.1',
-      userAgent: 'test-agent',
-      expiresAt,
+      userAgent: 'test',
+      expiresAt: new Date('2099-01-01T00:00:00Z'),
       currentSystemId: 'system-1',
     });
 
-    expect(prisma.userSession.create).toHaveBeenCalledWith({
-      data: {
-        userId: 'user-1',
-        refreshToken: 'refresh-token',
-        ip: '127.0.0.1',
-        userAgent: 'test-agent',
-        expiresAt,
-        currentSystemId: 'system-1',
-      },
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(tx.userSession.create).toHaveBeenCalledTimes(1);
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { lastLoginAt: expect.any(Date) },
     });
   });
 
-  it('loads refresh sessions with the user required for token payloads', async () => {
-    const prisma = createPrisma();
-    const repository = new AuthSessionRepository(prisma);
+  it('does not write session or lastLoginAt when deletion won the row lock', async () => {
+    const { repository, tx } = createRepository('DELETED');
 
-    await repository.findByRefreshToken('refresh-token');
-
-    expect(prisma.userSession.findUnique).toHaveBeenCalledWith({
-      where: { refreshToken: 'refresh-token' },
-      include: { user: true },
-    });
-  });
-
-  it('rotates refresh tokens by session id', async () => {
-    const prisma = createPrisma();
-    const repository = new AuthSessionRepository(prisma);
-    const expiresAt = new Date('2026-06-20T00:00:00.000Z');
-
-    await repository.rotateRefreshToken({
-      sessionId: 'session-1',
-      refreshToken: 'new-refresh-token',
-      expiresAt,
-    });
-
-    expect(prisma.userSession.update).toHaveBeenCalledWith({
-      where: { id: 'session-1' },
-      data: {
-        refreshToken: 'new-refresh-token',
-        expiresAt,
-      },
-    });
-  });
-
-  it('deletes sessions by id', async () => {
-    const prisma = createPrisma();
-    const repository = new AuthSessionRepository(prisma);
-
-    await repository.delete('session-1');
-
-    expect(prisma.userSession.delete).toHaveBeenCalledWith({
-      where: { id: 'session-1' },
-    });
+    await expect(repository.create({
+      userId: 'u1',
+      refreshToken: 'refresh-1',
+      ip: '',
+      userAgent: '',
+      expiresAt: new Date('2099-01-01T00:00:00Z'),
+    })).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(tx.userSession.create).not.toHaveBeenCalled();
+    expect(tx.user.update).not.toHaveBeenCalled();
   });
 });

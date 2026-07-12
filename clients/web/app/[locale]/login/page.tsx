@@ -56,7 +56,7 @@ export default function ChatLoginPage() {
     authActions.fetchOAuthProviders().then(({ providers: list, comingSoon: cs }) => {
       setProviders(list as OAuthProviderId[]);
       setComingSoon(cs as OAuthProviderId[]);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const t = useTranslations('auth');

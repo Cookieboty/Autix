@@ -1,4 +1,12 @@
-import type { AuthUser } from '../auth';
+/**
+ * T15.9: rbac 层的"权限主体"最小契约，取代对 `AuthUser` 的直接依赖，
+ * 以便 auth 域可以反过来 import rbac 里的 `Menu / SystemInfo` 而不制造循环。
+ * 任何具备 `permissions[]`（可选 `isSuperAdmin`）的对象都能被 rbac helpers 检查。
+ */
+export interface RbacSubject {
+  permissions?: unknown[];
+  isSuperAdmin?: boolean;
+}
 
 export interface Menu {
   id: string;
@@ -31,9 +39,9 @@ export function checkAdmin(user: unknown): boolean {
   });
 }
 
-export function hasPermission(user: AuthUser | null, permission: string): boolean {
+export function hasPermission(user: RbacSubject | null, permission: string): boolean {
   if (!user) return false;
-  if ((user as AuthUser & { isSuperAdmin?: boolean }).isSuperAdmin) return true;
+  if (user.isSuperAdmin) return true;
   const permissions = Array.isArray(user.permissions)
     ? user.permissions.map((p) => (typeof p === 'string' ? p : (p as { code: string }).code))
     : [];

@@ -5,13 +5,24 @@ const mockGet = vi.fn();
 const mockDelete = vi.fn();
 const mockSetTokens = vi.fn();
 const mockSetUser = vi.fn();
+const mockSetFeatures = vi.fn();
+const mockGetUser = vi.fn();
+const mockGetFeatures = vi.fn();
 
 vi.mock('@autix/sdk', () => ({
   userApi: { post: mockPost, get: mockGet, delete: mockDelete },
 }));
 
 vi.mock('@autix/platform', () => ({
-  getAuth: () => ({ setTokens: mockSetTokens, setUser: mockSetUser }),
+  getAuth: () => ({
+    setTokens: mockSetTokens,
+    setUser: mockSetUser,
+    setFeatures: mockSetFeatures,
+    getUser: mockGetUser,
+    getFeatures: mockGetFeatures,
+    getMenus: vi.fn().mockResolvedValue([]),
+    getSystems: vi.fn().mockResolvedValue([]),
+  }),
   getNavigation: vi.fn(),
 }));
 
@@ -23,11 +34,30 @@ describe('authActions.login 仍复用 loadSessionFromTokens', () => {
   it('login 调 /auth/login 后走 persist + profile + setUser', async () => {
     const { authActions } = await import('./auth.store');
     mockPost.mockResolvedValueOnce({ data: { accessToken: 'AT', refreshToken: 'RT' } });
-    mockGet.mockResolvedValueOnce({ data: { id: 'u1', status: 'ACTIVE', menus: [], systems: [] } });
+    mockGet.mockResolvedValueOnce({
+      data: { id: 'u1', status: 'ACTIVE', menus: [], systems: [], features: { accountDeletion: true } },
+    });
     const r = await authActions.login({ username: 'a', password: 'p' });
     expect(mockPost).toHaveBeenCalledWith('/auth/login', { username: 'a', password: 'p' });
     expect(mockGet).toHaveBeenCalledWith('/auth/profile');
     expect(r.user).toEqual(expect.objectContaining({ id: 'u1' }));
+    expect(r.features).toEqual({ accountDeletion: true });
+    expect(mockSetFeatures).toHaveBeenCalledWith({ accountDeletion: true });
+  });
+});
+
+describe('auth store hydration', () => {
+  it('restores persisted profile feature flags instead of resetting them', async () => {
+    const { useAuthStore } = await import('./auth.store');
+    mockGetUser.mockResolvedValueOnce({ id: 'u1', status: 'ACTIVE', isSuperAdmin: false, permissions: [], roles: [] });
+    mockGetFeatures.mockResolvedValueOnce({ nicknameEditable: true, accountDeletion: true });
+
+    await useAuthStore.getState().hydrate();
+
+    expect(useAuthStore.getState().features).toEqual({
+      nicknameEditable: true,
+      accountDeletion: true,
+    });
   });
 });
 
@@ -106,11 +136,11 @@ describe('OAuth store actions', () => {
     const { authActions } = await import('./auth.store');
     mockPost.mockResolvedValueOnce({ data: { authorizeUrl: 'https://accounts.google/link' } });
     const r = await authActions.getLinkAuthorizeUrl('google', {
-      systemCode: 'sys', redirectUri: 'http://web/oauth/popup-callback?channel=c2',
+      systemCode: 'sys', redirectUri: 'http://web/oauth/popup-callback?channel=c2', proof: 'proof-1',
     });
     expect(r).toEqual({ authorizeUrl: 'https://accounts.google/link' });
     expect(mockPost).toHaveBeenCalledWith('/auth/link/google', {
-      systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/popup-callback?channel=c2',
+      systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/popup-callback?channel=c2', proof: 'proof-1',
     });
   });
 });
@@ -129,8 +159,8 @@ describe('linking store actions', () => {
   it('unlinkAccount 调 delete', async () => {
     const { authActions } = await import('./auth.store');
     mockDelete.mockResolvedValueOnce({ data: { success: true } });
-    await authActions.unlinkAccount('github');
-    expect(mockDelete).toHaveBeenCalledWith('/auth/unlink/github');
+    await authActions.unlinkAccount('github', 'proof-1');
+    expect(mockDelete).toHaveBeenCalledWith('/auth/unlink/github', { data: { proof: 'proof-1' } });
   });
 
   it('linkAccount 取 authorizeUrl 后跳转', async () => {
@@ -139,7 +169,7 @@ describe('linking store actions', () => {
     (getNavigation as ReturnType<typeof vi.fn>).mockReturnValue({ assign });
     const { authActions } = await import('./auth.store');
     mockPost.mockResolvedValueOnce({ data: { authorizeUrl: 'https://u' } });
-    await authActions.linkAccount('github', { systemCode: 'sys', redirectUri: 'http://web/oauth/callback' });
+    await authActions.linkAccount('github', { systemCode: 'sys', redirectUri: 'http://web/oauth/callback', proof: 'proof-1' });
     expect(mockPost).toHaveBeenCalledWith('/auth/link/github', expect.objectContaining({ clientType: 'web', systemCode: 'sys' }));
     expect(assign).toHaveBeenCalledWith('https://u');
   });

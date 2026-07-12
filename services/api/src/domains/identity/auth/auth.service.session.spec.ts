@@ -12,7 +12,6 @@ function makeUser(over: Partial<any> = {}): any {
 function makeService() {
   const identity = {
     findActiveSystems: jest.fn(),
-    updateLastLoginAt: jest.fn().mockResolvedValue(undefined),
   };
   const session = {
     create: jest.fn().mockResolvedValue({ id: 'sess1', refreshToken: 'rt1' }),
@@ -25,19 +24,22 @@ function makeService() {
   const svc = new AuthService(
     {} as any, {} as any, {} as any, {} as any,
     identity as any, session as any, tokenFactory as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
   );
   return { svc, identity, session, tokenFactory };
 }
 
 describe('AuthService.issueSessionForUser', () => {
   it('创建会话并返回 { loginResult, sessionId }，loginResult 与密码登录同构', async () => {
-    const { svc, session, identity } = makeService();
+    const { svc, session } = makeService();
     const { loginResult, sessionId } = await svc.issueSessionForUser(makeUser(), { ip: '1.1.1.1', userAgent: 'UA' });
 
     expect(session.create).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'u1', refreshToken: 'rt1', ip: '1.1.1.1', userAgent: 'UA', currentSystemId: 's1' }),
     );
-    expect(identity.updateLastLoginAt).toHaveBeenCalledWith('u1');
     expect(sessionId).toBe('sess1');
     // loginResult 不含 sessionId（响应语义零变化）
     expect(loginResult).not.toHaveProperty('sessionId');
@@ -69,6 +71,10 @@ describe('AuthService.buildLoginResultFromSession 守卫', () => {
       identity as any,
       sessionRepo as any,
       tokenFactory as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
     );
   }
   it('会话失效（isActive=false）抛错', async () => {

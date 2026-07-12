@@ -196,7 +196,131 @@
     "backToLoginOptions": "返回其他登入方式",
     "loginEmailTitle": "登入 Amux Studio",
     "or": "或",
-    "modalTerms": "繼續即表示我已閱讀<privacy>隱私權政策</privacy>並同意<terms>使用條款</terms>，同時確認本人已年滿 18 歲"
+    "modalTerms": "繼續即表示我已閱讀<privacy>隱私權政策</privacy>並同意<terms>使用條款</terms>，同時確認本人已年滿 18 歲",
+    "selfService": {
+      "settingsTab": "帳號設定",
+      "sectionAccount": "帳號安全",
+      "sectionAccountDescription": "管理登入密碼與接收帳號通知的電子郵件。",
+      "sectionProfile": "個人資料",
+      "sectionDanger": "危險操作",
+      "sectionDangerDescription": "這些操作會永久影響你的帳號與資料。",
+      "superAdminBlocked": "超級管理員無法自行註銷帳號。請先移交超級管理員角色，或聯絡客服。"
+    },
+    "profileBasics": {
+      "title": "個人資料",
+      "description": "編輯暱稱、簡介和頭像，其他欄位請分別在帳號安全和語言設定中修改。",
+      "fieldNickname": "暱稱",
+      "fieldDescription": "個人簡介",
+      "fieldAvatar": "頭像 URL",
+      "placeholderNickname": "請輸入暱稱",
+      "placeholderDescription": "介紹一下你自己",
+      "placeholderAvatar": "https://...",
+      "submit": "儲存",
+      "submitting": "儲存中...",
+      "success": "已儲存",
+      "errorGeneric": "儲存失敗，請稍後再試",
+      "errorNicknameTooLong": "暱稱長度不能超過 {max}",
+      "errorDescriptionTooLong": "簡介長度不能超過 {max}",
+      "errorAvatarTooLong": "頭像 URL 長度不能超過 {max}",
+      "errorAvatarType": "不支援的圖片格式，允許：{types}",
+      "errorAvatarSize": "圖片過大，最大 {maxMb} MB",
+      "avatarUploadLabel": "上傳頭像圖片",
+      "avatarUploadButton": "上傳圖片",
+      "avatarUploading": "上傳中...",
+      "avatarUploadHint": "PNG、JPEG、WebP 或 GIF，最大 {maxMb} MB",
+      "avatarPreviewAlt": "目前頭像預覽",
+      "avatarUrlFallbackHint": "目前環境未啟用圖片上傳，可以使用頭像圖片連結。"
+    },
+    "stepUp": {
+      "title": "Identity Verification",
+      "descRedirect": "For your security, please re-authenticate with {provider}.",
+      "descOtp": "We sent a verification code to {email}. Please enter it within {minutes} minutes.",
+      "descUnsupported": "Your current sign-in method does not support this action. Please contact support.",
+      "buttonRedirect": "Verify with {provider}",
+      "buttonSendOtp": "Send code",
+      "buttonResendOtp": "Resend ({seconds}s)",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "6-digit code",
+      "verifying": "Verifying...",
+      "verified": "Verified",
+      "invalid": "Code is invalid or expired",
+      "locked": "Too many attempts, please try again later",
+      "expired": "Verification session expired, please start over",
+      "contactSupport": "Contact support"
+    },
+    "changePassword": {
+      "title": "Change password",
+      "titleSet": "Set password",
+      "descSet": "Set a password so you can sign in with your username.",
+      "current": "Current password",
+      "currentPlaceholder": "Enter current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "submitting": "Updating...",
+      "success": "Password updated",
+      "tooWeak": "Password too weak — include upper/lowercase and numbers",
+      "currentInvalid": "Current password is incorrect"
+    },
+    "changeEmail": {
+      "title": "Change email",
+      "current": "Current email",
+      "new": "New email",
+      "newPlaceholder": "your-new@email.com",
+      "pending": "A confirmation link has been sent to {email}. Please confirm from the email.",
+      "confirmProcessing": "Confirming email change…",
+      "confirmSuccess": "Email updated. Please sign in again.",
+      "confirmError": "The confirmation link is invalid or expired.",
+      "taken": "This email is already in use",
+      "cancelPending": "Cancel pending change"
+    },
+    "deleteAccount": {
+      "sectionTitle": "Delete account",
+      "sectionHint": "Account deletion cannot be undone. Some data will be retained in anonymized form for finance and audit compliance.",
+      "openDialog": "Delete account",
+      "dialogTitle": "Confirm account deletion",
+      "dialogHint": "Please type your username {username} to confirm.",
+      "usernamePlaceholder": "Type username to confirm",
+      "checkboxIrreversible": "I understand this action is irreversible",
+      "confirm": "Delete account",
+      "processing": "Deleting...",
+      "success": "Account deleted",
+      "userDeleted": "Account has been deleted and cannot be used."
+    },
+    "profileEdit": {
+      "title": "Edit profile",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "1-32 characters",
+      "description": "Bio",
+      "descriptionPlaceholder": "Up to 500 characters",
+      "submit": "Save",
+      "success": "Profile updated"
+    },
+    "avatar": {
+      "upload": "Upload avatar",
+      "uploading": "Uploading...",
+      "success": "Avatar updated",
+      "tooLarge": "Image size exceeds limit",
+      "invalidType": "Only JPG / PNG / WebP are supported",
+      "featureDisabled": "Avatar upload is not yet available"
+    },
+    "errorCommon": {
+      "rateLimited": "Too many requests, please try again later",
+      "contactSupport": "Please contact support",
+      "featureDisabled": "This feature is not yet available"
+    },
+    "errorCodes": {
+      "STEP_UP_INVALID_OR_EXPIRED": "Identity verification is invalid, expired, or already used",
+      "STEP_UP_UNAVAILABLE": "Self-service identity verification is unavailable for this account",
+      "OTP_INVALID": "The verification code is incorrect",
+      "OTP_LOCKED": "Too many attempts, please try again later",
+      "OTP_ALREADY_CONSUMED": "This verification code has already been used",
+      "TOO_MANY_REQUESTS": "Too many requests, please try again later",
+      "USER_DELETED": "This account has been deleted",
+      "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "The username confirmation does not match",
+      "PROVIDER_REAUTH_UNSUPPORTED": "Your current sign-in method cannot re-authenticate here",
+      "CONTACT_SUPPORT": "Please contact support"
+    }
   },
   "chat": {
     "newConversation": "新對話",
@@ -692,7 +816,9 @@
     "loading": "載入中…",
     "membershipRequired": "需要開通會員",
     "membershipRequiredDesc": "資料庫為會員專屬功能，開通會員即可上傳文件、建立知識庫。",
-    "upgradeMembership": "開通會員"
+    "upgradeMembership": "開通會員",
+    "statusDeleted": "已删除",
+    "includeDeleted": "包含已删除用户"
   },
   "artifact": {
     "preview": "預覽",
@@ -1304,7 +1430,8 @@
         "tabHistory": "瀏覽歷史",
         "tabLibrary": "資料庫",
         "tabModels": "模型配置",
-        "tabMembership": "會員中心"
+        "tabMembership": "會員中心",
+        "tabSettings": "帳號設定"
       },
       "status": {
         "statusPending": "待審核",
@@ -1336,7 +1463,9 @@
       }
     },
     "accountSecurityTitle": "已綁定帳號",
+    "accountSecurityDescription": "綁定第三方帳號，以便使用更多安全登入方式。",
     "linked": "已綁定",
+    "notLinked": "未綁定",
     "link": "綁定",
     "unlink": "解除綁定",
     "accountLinkedSuccess": "帳號綁定成功。"
@@ -4448,7 +4577,9 @@
     "statusInReview": "审核中",
     "statusApproved": "已通过",
     "statusRejected": "已拒绝",
-    "statusArchived": "已归档"
+    "statusArchived": "已归档",
+    "statusDeleted": "Deleted",
+    "includeDeleted": "Include deleted users"
   },
   "landing": {
     "brand": "Amux Studio",

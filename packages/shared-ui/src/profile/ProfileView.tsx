@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  Settings,
   Upload,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -35,14 +36,16 @@ import {
   type ProfileResourceRow,
 } from '../resources';
 import { AccountSecuritySection, type AccountSecuritySectionProps } from './AccountSecuritySection';
+import { AccountSelfServiceView, type AccountSelfServiceViewProps } from '../security/AccountSelfServiceView';
 
-export type ProfileTabKey = MeTab | 'membership' | 'library';
+export type ProfileTabKey = MeTab | 'membership' | 'library' | 'settings';
 
 export type ProfileUserSummary = {
   realName?: string | null;
   username?: string | null;
   email?: string | null;
   avatar?: string | null;
+  nickname?: string | null;
 };
 
 export type ProfileMainTab = {
@@ -65,6 +68,7 @@ export const DEFAULT_PROFILE_TABS: ProfileMainTab[] = [
   { key: 'history', labelKey: 'tabHistory', icon: <Bookmark className="h-3.5 w-3.5" /> },
   { key: 'library', labelKey: 'tabLibrary', icon: <BookOpen className="h-3.5 w-3.5" /> },
   { key: 'membership', labelKey: 'tabMembership', icon: <Crown className="h-3.5 w-3.5" /> },
+  { key: 'settings', labelKey: 'tabSettings', icon: <Settings className="h-3.5 w-3.5" /> },
 ];
 
 export const DEFAULT_PROFILE_MEMBERSHIP_ACTIONS: ProfileMembershipAction[] = [
@@ -76,7 +80,7 @@ export const DEFAULT_PROFILE_MEMBERSHIP_ACTIONS: ProfileMembershipAction[] = [
 ];
 
 export function isProfileResourceTab(tab: ProfileTabKey): tab is MeTab {
-  return tab !== 'membership' && tab !== 'library';
+  return tab !== 'membership' && tab !== 'library' && tab !== 'settings';
 }
 
 export function ProfileTopBar({
@@ -106,13 +110,13 @@ export function ProfileUserHeader({
   stats: PlatformStats | null;
 }) {
   const t = useTranslations('profile.resources');
-  const nickname = user?.realName || user?.username || t('notLoggedIn');
+  const nickname = user?.nickname || user?.realName || user?.username || t('notLoggedIn');
   const initial = (nickname[0] || '?').toUpperCase();
 
   return (
-    <Card>
-      <CardContent className="flex items-center gap-4">
-        <Avatar size="lg" className="size-16">
+    <section className="flex flex-col gap-5 border-b border-border pb-6 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <Avatar size="lg" className="size-16 sm:size-18">
           {user?.avatar && <AvatarImage src={user.avatar} alt={nickname} />}
           <AvatarFallback className="bg-primary text-2xl font-semibold text-primary-foreground">
             {initial}
@@ -122,12 +126,12 @@ export function ProfileUserHeader({
           <div className="text-base font-semibold text-foreground">{nickname}</div>
           <div className="mt-1 text-xs text-muted-foreground">{user?.email ?? '—'}</div>
         </div>
-        <div className="flex items-center gap-6 text-center">
-          <ProfileStat label={t('stats.publishedResources')} value={stats?.totalResources ?? 0} />
-          <ProfileStat label={t('stats.platformFavorites')} value={stats?.totalAcquisitions ?? 0} />
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="grid grid-cols-2 gap-6 border-t border-border pt-4 text-center sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+        <ProfileStat label={t('stats.publishedResources')} value={stats?.totalResources ?? 0} />
+        <ProfileStat label={t('stats.platformFavorites')} value={stats?.totalAcquisitions ?? 0} />
+      </div>
+    </section>
   );
 }
 
@@ -193,11 +197,10 @@ export function ProfileTabStrip({
             key={tabItem.key}
             type="button"
             onClick={() => onTabChange(tabItem.key)}
-            className={`-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors ${
-              active
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+            className={`-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors ${active
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
           >
             {tabItem.icon} {t(`tabs.${tabItem.labelKey}`)}
           </button>
@@ -347,6 +350,9 @@ export function ProfileView({
   onTabChange,
   onResourceClick,
   onNavigate,
+  basicsSlot,
+  accountSecurity,
+  accountSelfService,
 }: {
   user: ProfileUserSummary | null | undefined;
   stats: PlatformStats | null;
@@ -366,6 +372,9 @@ export function ProfileView({
   onTabChange: (tab: ProfileTabKey) => void;
   onResourceClick: (type: ResourceType | undefined, id: string | undefined) => void;
   onNavigate: (href: string) => void;
+  basicsSlot?: ReactNode;
+  accountSecurity?: AccountSecuritySectionProps;
+  accountSelfService?: AccountSelfServiceViewProps;
 }) {
   const t = useTranslations('profile.resources');
   const resourceTab = isProfileResourceTab(activeTab) ? activeTab : null;
@@ -403,6 +412,12 @@ export function ProfileView({
               actionLabel={t('library.action')}
               onAction={() => onNavigate('/library')}
             />
+          ) : activeTab === 'settings' ? (
+            <div className="space-y-6">
+              {basicsSlot}
+              {accountSecurity ? <AccountSecuritySection {...accountSecurity} /> : null}
+              {accountSelfService ? <AccountSelfServiceView {...accountSelfService} /> : null}
+            </div>
           ) : (
             <ProfileResourcesPanel
               rows={resourceRows}
@@ -413,11 +428,13 @@ export function ProfileView({
           )}
         </div>
 
-        <ProfileStatsBar
-          stats={stats}
-          totalPointsSpent={totalPointsSpent}
-          publishedCount={resourceTab === 'published' ? resourceRows.length : null}
-        />
+        {activeTab !== 'settings' ? (
+          <ProfileStatsBar
+            stats={stats}
+            totalPointsSpent={totalPointsSpent}
+            publishedCount={resourceTab === 'published' ? resourceRows.length : null}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -427,17 +444,31 @@ export function ProfileOverviewView({
   user,
   stats,
   accountSecurity,
+  accountSelfService,
+  basicsSlot,
 }: {
   user: ProfileUserSummary | null | undefined;
   stats: PlatformStats | null;
   accountSecurity?: AccountSecuritySectionProps;
+  accountSelfService?: AccountSelfServiceViewProps;
+  /**
+   * T13: 由 client 页注入的"基础资料自助编辑"面板（nickname/description/avatar）。
+   * 与 AccountSelfService（改邮箱/密码/删号）在语义上分层，独立成 slot 避免耦合。
+   */
+  basicsSlot?: ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <ProfileTopBar />
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <ProfileUserHeader user={user} stats={stats} />
-        {accountSecurity ? <div className="mt-6"><AccountSecuritySection {...accountSecurity} /></div> : null}
+      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:py-8">
+        <div className="mx-auto w-full max-w-6xl">
+          <ProfileUserHeader user={user} stats={stats} />
+          <div className="mt-6 grid items-start gap-6 lg:grid-cols-12">
+            {basicsSlot ? <div className="lg:col-span-7">{basicsSlot}</div> : null}
+            {accountSecurity ? <div className="lg:col-span-5"><AccountSecuritySection {...accountSecurity} /></div> : null}
+          </div>
+          {accountSelfService ? <div className="mt-6"><AccountSelfServiceView {...accountSelfService} /></div> : null}
+        </div>
       </div>
     </div>
   );

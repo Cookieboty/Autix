@@ -3,8 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const getOAuthAuthorizeUrl = vi.fn();
 const getLinkAuthorizeUrl = vi.fn();
 const completeOAuthLogin = vi.fn();
+const startStepUpForOAuth = vi.fn();
 vi.mock('@autix/shared-store', () => ({
   authActions: { getOAuthAuthorizeUrl, getLinkAuthorizeUrl, completeOAuthLogin },
+  securityActions: { startStepUpForOAuth },
 }));
 
 const assign = vi.fn();
@@ -97,7 +99,7 @@ describe('oauth-popup-flow', () => {
     getLinkAuthorizeUrl.mockResolvedValue({ authorizeUrl: 'https://g/link' });
     driveOAuthPopup.mockResolvedValue({ linked: 'google' });
     const { linkWithPopup } = await import('../lib/oauth-popup-flow');
-    const out = await linkWithPopup({ provider: 'google' });
+    const out = await linkWithPopup({ provider: 'google', proof: 'proof-1' });
     expect(getLinkAuthorizeUrl).toHaveBeenCalledWith('google', expect.objectContaining({
       redirectUri: `${window.location.origin}/oauth/popup-callback?channel=CH`,
     }));
@@ -108,7 +110,7 @@ describe('oauth-popup-flow', () => {
     openBlankPopup.mockReturnValue(null);
     getLinkAuthorizeUrl.mockResolvedValue({ authorizeUrl: 'https://g/linkfb' });
     const { linkWithPopup } = await import('../lib/oauth-popup-flow');
-    const out = await linkWithPopup({ provider: 'google' });
+    const out = await linkWithPopup({ provider: 'google', proof: 'proof-1' });
     expect(getLinkAuthorizeUrl).toHaveBeenCalledWith('google', expect.objectContaining({
       redirectUri: `${window.location.origin}/oauth/callback`,
     }));
@@ -116,4 +118,43 @@ describe('oauth-popup-flow', () => {
     expect(window.sessionStorage.getItem('autix.oauth.returnTo')).toBeNull();
     expect(out).toEqual({ kind: 'redirected' });
   });
+
+  it('stepUpWithPopup 被拦截时仍请求服务端并允许进入 OTP', async () => {
+    openBlankPopup.mockReturnValue(null);
+    const otp = {
+      kind: 'otp',
+      channel: 'email',
+      maskedTarget: 'a***@example.com',
+      requestId: 'otp-1',
+      resendCooldownSeconds: 60,
+      expiresAt: '2026-07-12T01:00:00.000Z',
+    } as const;
+    startStepUpForOAuth.mockResolvedValue(otp);
+    const { stepUpWithPopup } = await import('../lib/oauth-popup-flow');
+
+    await expect(stepUpWithPopup('delete-account')).resolves.toEqual(otp);
+    expect(startStepUpForOAuth).toHaveBeenCalledWith(expect.objectContaining({
+      purpose: 'delete-account',
+      clientType: 'web',
+      redirectUri: `${window.location.origin}/oauth/callback`,
+      preferEmailOtp: true,
+    }));
+  });
+
+  it('stepUpWithPopup 被拦截且服务端选择 OAuth 时返回 redirect 供用户二次点击开窗', async () => {
+    openBlankPopup.mockReturnValue(null);
+    const redirect = {
+      kind: 'redirect',
+      provider: 'google',
+      authorizeUrl: 'https://g/reauth',
+      state: 'state-1',
+      expiresAt: '2026-07-12T01:00:00.000Z',
+    } as const;
+    startStepUpForOAuth.mockResolvedValue(redirect);
+    const { stepUpWithPopup } = await import('../lib/oauth-popup-flow');
+
+    await expect(stepUpWithPopup('delete-account')).resolves.toEqual(redirect);
+    expect(driveOAuthPopup).not.toHaveBeenCalled();
+  });
+
 });

@@ -1,5 +1,7 @@
 import type { AuthLoginResult } from '@autix/shared-store';
 import { authActions } from '@autix/shared-store';
+import { securityActions } from '@autix/shared-store';
+import type { StartStepUpResult, StepUpPurpose } from '@autix/domain';
 import { getNavigation } from '@autix/platform';
 import { openBlankPopup, driveOAuthPopup, newChannel, type OAuthPopupResult } from './oauth-popup';
 
@@ -68,12 +70,53 @@ export async function loginWithPopup(opts: { provider: string; returnTo: string 
   return { kind: 'logged-in', result };
 }
 
-export async function linkWithPopup(opts: { provider: string }): Promise<LinkPopupOutcome> {
+export async function linkWithPopup(opts: { provider: string; proof: string }): Promise<LinkPopupOutcome> {
   const raw = await runPopupFlow(
-    (redirectUri) => authActions.getLinkAuthorizeUrl(opts.provider, { systemCode: SYSTEM_CODE, redirectUri }),
+    (redirectUri) => authActions.getLinkAuthorizeUrl(opts.provider, { systemCode: SYSTEM_CODE, redirectUri, proof: opts.proof }),
   );
   if (raw.kind !== 'message') return raw;
   const linked = raw.result.linked;
   if (!linked) return { kind: 'error', code: GENERIC };
   return { kind: 'linked', linked };
+}
+
+export async function stepUpWithPopup(
+  purpose: StepUpPurpose,
+): Promise<StartStepUpResult | { kind: 'proof'; proof: string }> {
+  const popup = openBlankPopup();
+  let channel: string;
+  try {
+    channel = newChannel();
+  } catch (error) {
+    popup?.close();
+    throw error;
+  }
+
+  let start: StartStepUpResult;
+  try {
+    start = await securityActions.startStepUpForOAuth({
+      purpose,
+      clientType: 'web',
+      redirectUri: popup
+        ? `${window.location.origin}/oauth/popup-callback?channel=${channel}`
+        : `${window.location.origin}/oauth/callback`,
+      preferEmailOtp: !popup,
+    });
+  } catch (error) {
+    popup?.close();
+    throw error;
+  }
+  if (start.kind !== 'redirect') {
+    popup?.close();
+    return start;
+  }
+  if (!popup) return start;
+
+  const result = await driveOAuthPopup(popup, start.authorizeUrl, channel);
+  if (result.cancelled) throw new Error('OAUTH_POPUP_CANCELLED');
+  if (result.error) throw new Error(result.error);
+  if (!result.proof || result.purpose !== purpose) {
+    throw new Error('STEP_UP_INVALID_OR_EXPIRED');
+  }
+  return { kind: 'proof', proof: result.proof };
 }

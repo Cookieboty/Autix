@@ -122,8 +122,13 @@ export class RiskRepository {
     return this.prisma.user_risk_events.create({ data });
   }
 
-  setUserStatus(userId: string, status: UserStatus) {
-    return this.prisma.user.update({ where: { id: userId }, data: { status } });
+  async setUserStatus(userId: string, status: UserStatus) {
+    // 安全/spec §3.2 D''：DELETED 是终态；风控升降级对已注销（或已不存在）用户一律 no-op，
+    // 既不写回状态、也不抛异常（风控是后台尽力而为动作，不应因终态用户中断）。
+    await this.prisma.user.updateMany({
+      where: { id: userId, status: { not: 'DELETED' } },
+      data: { status },
+    });
   }
 
   // ===== R2: 自动评分 =====

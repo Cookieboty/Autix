@@ -15,7 +15,13 @@ export interface DesktopAuthApi {
   setMenus(menus: unknown[]): Promise<void>;
   getSystems(): Promise<unknown[]>;
   setSystems(systems: unknown[]): Promise<void>;
+  getFeatures(): Promise<Record<string, boolean>>;
+  setFeatures(features: Record<string, boolean>): Promise<void>;
   startOAuth(input: { provider: string; apiBaseUrl: string; systemCode: string; inviteCode?: string }): Promise<{ code?: string; error?: string }>;
+  reserveStepUp(provider: string): Promise<{ redirectUri: string; flowId: string }>;
+  completeStepUp(input: { flowId: string; authorizeUrl: string; expectedPurpose: string }): Promise<{ proof: string; purpose: string }>;
+  completeLink(input: { flowId: string; authorizeUrl: string; expectedProvider: string }): Promise<{ linked: string }>;
+  cancelStepUp(flowId: string): Promise<void>;
 }
 
 export interface DesktopWindowApi {

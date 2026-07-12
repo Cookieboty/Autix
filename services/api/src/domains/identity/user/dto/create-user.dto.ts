@@ -1,5 +1,19 @@
-import { IsString, IsEmail, MinLength, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  MinLength,
+  MaxLength,
+  Matches,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
 import { UserStatus } from '@autix/database';
+import {
+  PASSWORD_REGEX,
+  PASSWORD_VALIDATION_MESSAGE,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MAX_LENGTH,
+} from '@autix/domain';
 
 export class CreateUserDto {
   @IsString()
@@ -10,7 +24,9 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(6)
+  @MinLength(PASSWORD_MIN_LENGTH)
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_VALIDATION_MESSAGE })
   password?: string;
 
   @IsOptional()

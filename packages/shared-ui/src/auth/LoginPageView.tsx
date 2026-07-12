@@ -198,7 +198,7 @@ export function LoginFormPanel({
         <button
           type="button"
           onClick={() => setEmailMode(true)}
-        className="flex min-h-14 w-full items-center justify-center gap-3 rounded-md border border-white/12 bg-transparent px-4 text-base font-bold text-white transition hover:bg-white/[0.07]"
+          className="flex min-h-14 w-full items-center justify-center gap-3 rounded-md border border-white/12 bg-transparent px-4 text-base font-bold text-white transition hover:bg-white/[0.07]"
         >
           <EmailProviderIcon className="size-5" />
           {t('oauthContinueEmail')}

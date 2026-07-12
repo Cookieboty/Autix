@@ -9,6 +9,20 @@ function makeProvider(claims: any) {
 }
 
 describe('AppleProvider', () => {
+  const previousReauthFlag = process.env.APPLE_OAUTH_REAUTH_ENABLED;
+
+  afterEach(() => {
+    if (previousReauthFlag === undefined) delete process.env.APPLE_OAUTH_REAUTH_ENABLED;
+    else process.env.APPLE_OAUTH_REAUTH_ENABLED = previousReauthFlag;
+  });
+
+  it('strong re-auth capability is disabled by default and requires an explicit rollout flag', () => {
+    delete process.env.APPLE_OAUTH_REAUTH_ENABLED;
+    expect(makeProvider({}).supportsReauth).toBe(false);
+    process.env.APPLE_OAUTH_REAUTH_ENABLED = 'true';
+    expect(makeProvider({}).supportsReauth).toBe(true);
+  });
+
   it('buildAuthorizeUrl 用 form_post + scope name email + nonce', async () => {
     const p = makeProvider({});
     const url = new URL(await p.buildAuthorizeUrl({ state: 'st', codeChallenge: 'cc', nonce: 'nn' }));
@@ -19,6 +33,14 @@ describe('AppleProvider', () => {
     expect(url.searchParams.get('nonce')).toBe('nn');
     expect(url.searchParams.get('redirect_uri')).toBe('http://localhost:3100/api/auth/callback/apple');
     expect(url.searchParams.get('code_challenge')).toBeNull(); // Apple 不走 PKCE
+    expect(url.searchParams.get('max_age')).toBeNull();
+  });
+
+  it('reauth authorize URL adds max_age only for REAUTH', async () => {
+    const url = new URL(await makeProvider({}).buildAuthorizeUrl({
+      state: 'st', codeChallenge: 'cc', nonce: 'nn', reauth: true,
+    }));
+    expect(url.searchParams.get('max_age')).toBe('0');
   });
 
   it('fetchProfile 校验 nonce，relay 邮箱视为已验证，姓名取自首次 extra.user', async () => {

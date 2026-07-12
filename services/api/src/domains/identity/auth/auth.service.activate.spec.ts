@@ -30,6 +30,10 @@ function buildAuthService() {
     identityRepository,
     sessionRepository,
     tokenFactory,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
   );
   return { service, settlePendingInvitationReward, campaignRewardService };
 }

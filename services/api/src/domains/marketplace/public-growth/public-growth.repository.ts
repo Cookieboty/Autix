@@ -85,8 +85,8 @@ export class PublicGrowthRepository {
   }
 
   findCreatorProfile(handle: string) {
-    return this.prisma.creator_profiles.findUnique({
-      where: { handle },
+    return this.prisma.creator_profiles.findFirst({
+      where: { handle, user: { status: { not: 'DELETED' } } },
       include: {
         user: {
           select: {
@@ -102,8 +102,8 @@ export class PublicGrowthRepository {
 
   async followCreator(handle: string, followerId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const profile = await tx.creator_profiles.findUnique({
-        where: { handle },
+      const profile = await tx.creator_profiles.findFirst({
+        where: { handle, user: { status: { not: 'DELETED' } } },
       });
       if (!profile) return null;
       if (profile.userId === followerId) return profile;

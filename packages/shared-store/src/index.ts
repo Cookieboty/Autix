@@ -1,4 +1,5 @@
 export * from './auth.store';
+export * from './security.actions';
 export * from './oauth-linking.queries';
 export * from './language.store';
 export * from './chat.store';

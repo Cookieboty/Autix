@@ -1,7 +1,11 @@
-import { OAuthController } from './oauth.controller';
+import { OAuthController, buildCallbackRedirect } from './oauth.controller';
 
 function resMock() {
-  const res: any = { redirectedTo: '', redirect: (url: string) => { res.redirectedTo = url; } };
+  const res: any = {
+    redirectedTo: '',
+    setHeader: jest.fn(),
+    redirect: (url: string) => { res.redirectedTo = url; },
+  };
   return res;
 }
 function reqMock() {
@@ -84,18 +88,40 @@ describe('OAuthController', () => {
     expect(service.listLinkedAccounts).toHaveBeenCalledWith('u1');
   });
 
-  it('link 带 linkUserId 发起授权', async () => {
-    const service = { createAuthorization: jest.fn().mockResolvedValue({ authorizeUrl: 'https://u' }) } as any;
+  it('link 带 step-up proof 发起授权', async () => {
+    const service = { createLinkAuthorization: jest.fn().mockResolvedValue({ authorizeUrl: 'https://u' }) } as any;
     const ctrl = new OAuthController(service, {} as any);
-    const r = await ctrl.link('github', { systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback' } as any, user);
-    expect(service.createAuthorization).toHaveBeenCalledWith(expect.objectContaining({ provider: 'github', linkUserId: 'u1' }));
+    const r = await ctrl.link('github', { systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback', proof: 'p' } as any, user);
+    expect(service.createLinkAuthorization).toHaveBeenCalledWith(expect.objectContaining({ provider: 'github', userId: 'u1', proof: 'p' }));
     expect(r).toEqual({ authorizeUrl: 'https://u' });
   });
 
-  it('unlink 调 service.unlink', async () => {
+  it('unlink 调 service.unlink（带 proof）', async () => {
     const service = { unlink: jest.fn().mockResolvedValue(undefined) } as any;
     const ctrl = new OAuthController(service, {} as any);
-    expect(await ctrl.unlink('github', user)).toEqual({ success: true });
-    expect(service.unlink).toHaveBeenCalledWith('u1', 'github');
+    expect(await ctrl.unlink('github', { proof: 'p' } as any, user)).toEqual({ success: true });
+    expect(service.unlink).toHaveBeenCalledWith('u1', 'github', 'p', undefined);
+  });
+
+});
+
+describe('buildCallbackRedirect', () => {
+  it('errorCode 仅拼 error=', () => {
+    expect(
+      buildCallbackRedirect({ redirectUri: 'http://web/x', errorCode: 'OAUTH_PROVIDER_DENIED' }),
+    ).toBe('http://web/x?error=OAUTH_PROVIDER_DENIED');
+  });
+  it('已有 query 时使用 & 连接', () => {
+    expect(
+      buildCallbackRedirect({
+        redirectUri: 'http://web/x?foo=1',
+        errorCode: 'OAUTH_PROVIDER_DENIED',
+      }),
+    ).toBe('http://web/x?foo=1&error=OAUTH_PROVIDER_DENIED');
+  });
+  it('loginCode 分支', () => {
+    expect(
+      buildCallbackRedirect({ redirectUri: 'http://web/x', loginCode: 'LC' }),
+    ).toBe('http://web/x?code=LC');
   });
 });

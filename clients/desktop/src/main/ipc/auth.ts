@@ -24,6 +24,7 @@ interface PrefsData {
   language?: string;
   menus?: unknown[];
   systems?: unknown[];
+  features?: Record<string, boolean>;
 }
 
 function readTokens(): TokenBundle | null {
@@ -101,6 +102,7 @@ export function registerAuthIpc(): void {
     delete prefs.user;
     delete prefs.menus;
     delete prefs.systems;
+    delete prefs.features;
     writePrefs(prefs);
   });
 
@@ -133,6 +135,14 @@ export function registerAuthIpc(): void {
     const systems = arraySchema.parse(raw);
     const prefs = readPrefs();
     prefs.systems = systems;
+    writePrefs(prefs);
+  });
+
+  ipcMain.handle('auth:get-features', () => readPrefs().features ?? {});
+  ipcMain.handle('auth:set-features', (_e, raw) => {
+    const features = z.record(z.string(), z.boolean()).parse(raw);
+    const prefs = readPrefs();
+    prefs.features = features;
     writePrefs(prefs);
   });
 }

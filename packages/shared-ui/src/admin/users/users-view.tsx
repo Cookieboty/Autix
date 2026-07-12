@@ -19,6 +19,7 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  Checkbox,
 } from '../../ui';
 import {
   useAdminUsersQuery,
@@ -83,6 +84,7 @@ export function AdminUsersView() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
+  const [includeDeleted, setIncludeDeleted] = useState(false);
 
   const isSuperAdmin = user?.isSuperAdmin ?? false;
   const currentSystemId = user?.currentSystemId;
@@ -111,6 +113,7 @@ export function AdminUsersView() {
     page,
     pageSize: 10,
     username: search,
+    includeDeleted: isSuperAdmin && includeDeleted,
   });
 
   const { data: pendingCountData } = usePendingRegistrationCountQuery();
@@ -233,6 +236,18 @@ export function AdminUsersView() {
 
                 {activeTab === 'all' && (
                   <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                    {isSuperAdmin ? (
+                      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Checkbox
+                          checked={includeDeleted}
+                          onCheckedChange={(checked) => {
+                            setIncludeDeleted(checked === true);
+                            setPage(1);
+                          }}
+                        />
+                        {t('includeDeleted')}
+                      </label>
+                    ) : null}
                     <div className="border-border relative w-full border-b md:min-w-[280px]">
                       <Search className="text-muted-foreground pointer-events-none absolute left-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
                       <Input

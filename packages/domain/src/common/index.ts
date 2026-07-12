@@ -1,9 +1,15 @@
+export interface ApiResponseHint {
+  i18nKey: string;
+  params?: Record<string, string | number>;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   code: string;
   msg: string;
   traceId: string;
   data: T;
+  hint?: ApiResponseHint;
 }
 
 export interface PaginationMeta {
@@ -39,26 +45,77 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'INTERNAL_ERROR'
-  | 'VALIDATION_ERROR';
+  | 'VALIDATION_ERROR'
+  | 'STEP_UP_REQUIRED'
+  | 'STEP_UP_INVALID_OR_EXPIRED'
+  | 'STEP_UP_UNAVAILABLE'
+  | 'OTP_REQUIRED'
+  | 'OTP_INVALID'
+  | 'OTP_LOCKED'
+  | 'OTP_ALREADY_CONSUMED'
+  | 'EMAIL_CHANGE_TOKEN_INVALID'
+  | 'EMAIL_TAKEN'
+  | 'PASSWORD_TOO_WEAK'
+  | 'PROVIDER_REAUTH_UNSUPPORTED'
+  | 'TOO_MANY_REQUESTS'
+  | 'USER_DELETED'
+  | 'USER_NOT_AVAILABLE'
+  | 'INVALID_STATUS_TRANSITION'
+  | 'EMAIL_CHANGE_NOT_AVAILABLE'
+  | 'ACCOUNT_DELETE_CONFIRMATION_MISMATCH'
+  | 'SUPER_ADMIN_CANNOT_SELF_DELETE'
+  | 'CONTACT_SUPPORT'
+  | 'FEATURE_DISABLED'
+  | 'STORAGE_RESERVATION_INVALID'
+  | 'STORAGE_RESERVATION_CONSUMED'
+  | 'STORAGE_OBJECT_MISSING';
 
-export function buildSuccess<T>(data: T, msg = 'common.request_success'): ApiResponse<T> {
-  return {
+export const STEP_UP_ERROR_CODES: readonly ErrorCode[] = [
+  'STEP_UP_REQUIRED',
+  'STEP_UP_INVALID_OR_EXPIRED',
+  'STEP_UP_UNAVAILABLE',
+  'OTP_REQUIRED',
+  'OTP_INVALID',
+  'OTP_LOCKED',
+  'OTP_ALREADY_CONSUMED',
+] as const;
+
+export function isStepUpErrorCode(code: string | undefined | null): boolean {
+  if (!code) return false;
+  return (STEP_UP_ERROR_CODES as readonly string[]).includes(code);
+}
+
+export function buildSuccess<T>(
+  data: T,
+  msg = 'common.request_success',
+  hint?: ApiResponseHint,
+): ApiResponse<T> {
+  const res: ApiResponse<T> = {
     success: true,
     code: '200',
     msg,
     traceId: crypto.randomUUID(),
     data,
   };
+  if (hint) res.hint = hint;
+  return res;
 }
 
-export function buildError(code: ErrorCode, msg: string, traceId?: string): ApiResponse<null> {
-  return {
+export function buildError(
+  code: ErrorCode,
+  msg: string,
+  traceId?: string,
+  hint?: ApiResponseHint,
+): ApiResponse<null> {
+  const res: ApiResponse<null> = {
     success: false,
     code,
     msg,
     traceId: traceId ?? crypto.randomUUID(),
     data: null,
   };
+  if (hint) res.hint = hint;
+  return res;
 }
 
 export interface TaskEvent {
