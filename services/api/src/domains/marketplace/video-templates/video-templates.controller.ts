@@ -8,7 +8,6 @@ import {
   Param,
   Patch,
   Post,
-  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -66,32 +65,6 @@ export class VideoTemplatesController {
     const tpl = await this.service.findById(id);
     await this.service.recordView(userId, id).catch(() => undefined);
     return tpl;
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post()
-  create(@CurrentUser() user: AuthUser, @Body() body: CreateVideoTemplateDto) {
-    const userId = getCurrentUserId(user);
-    return this.service.create(userId, body);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Put(':id')
-  update(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-    @Body() body: UpdateVideoTemplateDto,
-  ) {
-    const userId = getCurrentUserId(user);
-    return this.service.update(id, userId, body);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    const userId = getCurrentUserId(user);
-    await this.service.remove(id, userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -171,6 +144,29 @@ export class VideoTemplatesAdminController {
     private readonly service: VideoTemplatesService,
     private readonly batchJobService: BatchJobService,
   ) {}
+
+  @Post()
+  create(@CurrentUser() user: AuthUser, @Body() body: CreateVideoTemplateDto) {
+    const adminId = getCurrentUserId(user);
+    return this.service.create(adminId, body);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: UpdateVideoTemplateDto,
+  ) {
+    const adminId = getCurrentUserId(user);
+    return this.service.update(id, adminId, body);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const adminId = getCurrentUserId(user);
+    await this.service.remove(id, adminId);
+  }
 
   @Get()
   findForReview(

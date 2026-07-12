@@ -59,6 +59,7 @@ function createMocks(overrides: BuildOverrides = {}) {
   };
   const resources = {
     delegateFor: jest.fn(() => prisma.image_templates),
+    createImageTemplate: jest.fn(async (data: any) => ({ id: 'tpl-new', ...data })),
   };
   const service = new ImageTemplatesService(
     new ResourceInteractionRepository(prisma as never),
@@ -76,6 +77,31 @@ function createMocks(overrides: BuildOverrides = {}) {
 function buildImageTemplatesService(overrides: BuildOverrides = {}) {
   return createMocks(overrides).service;
 }
+
+describe('ImageTemplatesService.create — admin scoped', () => {
+  it('管理员创建模板: authorId=createdById=admin, sourceType=ADMIN_CREATED', async () => {
+    const { service, resources } = createMocks();
+    const adminId = 'admin-1';
+
+    const tpl = await service.create(adminId, {
+      title: 'Admin Template',
+      category: 'portrait',
+      prompt: 'Make {{subject}}',
+      variables: [],
+    });
+
+    expect(tpl.authorId).toBe(adminId);
+    expect(tpl.createdById).toBe(adminId);
+    expect(tpl.sourceType).toBe('ADMIN_CREATED');
+    expect(resources.createImageTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authorId: adminId,
+        createdById: adminId,
+        sourceType: 'ADMIN_CREATED',
+      }),
+    );
+  });
+});
 
 describe('ImageTemplatesService.createGeneration billing', () => {
   it('freezes configurable template image points and confirms after record creation', async () => {
