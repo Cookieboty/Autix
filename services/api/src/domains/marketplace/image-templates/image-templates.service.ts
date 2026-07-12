@@ -68,6 +68,22 @@ export class ImageTemplatesService extends BaseResourceService {
     return { sourceType: { not: ImageTemplateSource.SYSTEM } };
   }
 
+  // ── 公开可见交互(点赞/收藏/浏览):先经公开可见守卫,不可见 → 404 ──────
+  override async like(userId: string, id: string) {
+    await this.requirePublicVisible(id);
+    return super.like(userId, id);
+  }
+
+  override async favorite(userId: string, id: string) {
+    await this.requirePublicVisible(id);
+    return super.favorite(userId, id);
+  }
+
+  override async recordView(userId: string | undefined, id: string) {
+    await this.requirePublicVisible(id);
+    return super.recordView(userId, id);
+  }
+
   // 图片模板 runtime 恒定 CLOUD（生成走云端模型 API）
   async create(authorId: string, dto: CreateImageTemplateDto) {
     return this.resources.createImageTemplate({
@@ -113,7 +129,7 @@ export class ImageTemplatesService extends BaseResourceService {
       modelConfigId?: string;
     },
   ) {
-    const tpl = (await this.findById(templateId)) as {
+    const tpl = (await this.requirePublicVisible(templateId)) as {
       prompt: string;
       title?: string;
     };

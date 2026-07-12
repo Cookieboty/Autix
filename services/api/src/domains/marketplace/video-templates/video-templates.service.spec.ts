@@ -1,19 +1,60 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { VideoTemplatesService } from './video-templates.service';
 
 interface BuildOverrides {
   pointsService?: Partial<{ estimateCost: jest.Mock }>;
+  templates?: Array<Record<string, unknown>>;
 }
 
+// 极简 Prisma where 匹配器：支持 flat 字段相等、AND 数组、{not: x}
+function matchesWhere(row: Record<string, unknown>, where?: Record<string, unknown>): boolean {
+  if (!where) return true;
+  return Object.entries(where).every(([key, cond]) => {
+    if (key === 'AND') {
+      return (cond as Array<Record<string, unknown>>).every((sub) => matchesWhere(row, sub));
+    }
+    if (key === 'OR') {
+      return (cond as Array<Record<string, unknown>>).some((sub) => matchesWhere(row, sub));
+    }
+    const val = row[key];
+    if (cond && typeof cond === 'object' && 'not' in (cond as Record<string, unknown>)) {
+      return val !== (cond as Record<string, unknown>).not;
+    }
+    return val === cond;
+  });
+}
+
+const APPROVED_TPL = {
+  id: 'tpl-1',
+  prompt: 'Animate {{subject}}',
+  title: 'Clip',
+  authorId: 'author-1',
+  durationSec: 5,
+  status: 'APPROVED',
+  sourceType: 'ADMIN_CREATED',
+};
+const PENDING_TPL = {
+  id: 'tpl-pending',
+  prompt: 'Animate {{subject}}',
+  title: 'Draft Clip',
+  authorId: 'author-1',
+  durationSec: 5,
+  status: 'PENDING',
+  sourceType: 'ADMIN_CREATED',
+};
+const SYSTEM_TPL = {
+  id: 'tpl-system',
+  prompt: 'Animate {{subject}}',
+  title: 'Workbench Clip',
+  authorId: 'system',
+  durationSec: 5,
+  status: 'APPROVED',
+  sourceType: 'SYSTEM',
+};
+
 function createMocks(overrides: BuildOverrides = {}) {
-  const template = {
-    id: 'tpl-1',
-    prompt: 'Animate {{subject}}',
-    title: 'Clip',
-    authorId: 'author-1',
-    durationSec: 5,
-  };
+  const templates = overrides.templates ?? [APPROVED_TPL, PENDING_TPL, SYSTEM_TPL];
   const tx = {
     video_generations: {
       create: jest.fn(async (args: any) => ({ id: args.data.id, ...args.data })),
@@ -24,11 +65,25 @@ function createMocks(overrides: BuildOverrides = {}) {
   };
   const prisma = {
     video_templates: {
-      findUnique: jest.fn(async () => template),
-      update: jest.fn(),
+      findUnique: jest.fn(async (args: any) => templates.find((t) => t.id === args.where.id) ?? null),
+      findMany: jest.fn(async (args: any = {}) => templates.filter((t) => matchesWhere(t, args.where))),
+      count: jest.fn(async (args: any = {}) => templates.filter((t) => matchesWhere(t, args.where)).length),
+      update: jest.fn(async () => ({})),
     },
     resource_views: {
       count: jest.fn(async () => 0),
+      groupBy: jest.fn(async () => []),
+      create: jest.fn(async () => ({})),
+    },
+    resource_likes: {
+      findUnique: jest.fn(async () => null),
+      create: jest.fn(async (args: any) => ({ id: 'like-1', ...args.data })),
+      delete: jest.fn(async () => ({})),
+    },
+    resource_favorites: {
+      findUnique: jest.fn(async () => null),
+      create: jest.fn(async (args: any) => ({ id: 'fav-1', ...args.data })),
+      delete: jest.fn(async () => ({})),
     },
     $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(tx)),
   };
@@ -61,8 +116,9 @@ function createMocks(overrides: BuildOverrides = {}) {
   const resources = {
     delegateFor: jest.fn(() => prisma.video_templates),
   };
+  const resourceInteractions = new ResourceInteractionRepository(prisma as never);
   const service = new VideoTemplatesService(
-    new ResourceInteractionRepository(prisma as never),
+    resourceInteractions,
     resources as never,
     points as never,
     models as never,
@@ -70,12 +126,89 @@ function createMocks(overrides: BuildOverrides = {}) {
     membership as never,
     {} as never,
   );
-  return { service, tx, points, models, generations, resources, membership };
+  return { service, tx, points, models, generations, resources, membership, resourceInteractions };
 }
 
 function buildVideoTemplatesService(overrides: BuildOverrides = {}) {
   return createMocks(overrides).service;
 }
+
+describe('VideoTemplatesService — 公开可见守卫 (status=APPROVED && sourceType!=SYSTEM)', () => {
+  it('findPublicVisibleById: 非 APPROVED 模板 → null', async () => {
+    const { service } = createMocks();
+    const row = await service.findPublicVisibleById('tpl-pending');
+    expect(row).toBeNull();
+  });
+
+  it('findPublicVisibleById: SYSTEM 来源模板(即使 APPROVED) → null', async () => {
+    const { service } = createMocks();
+    const row = await service.findPublicVisibleById('tpl-system');
+    expect(row).toBeNull();
+  });
+
+  it('findPublicVisibleById: 不存在的 id → null', async () => {
+    const { service } = createMocks();
+    const row = await service.findPublicVisibleById('tpl-missing');
+    expect(row).toBeNull();
+  });
+
+  it('findPublicVisibleById: APPROVED 且非 SYSTEM → 返回该模板', async () => {
+    const { service } = createMocks();
+    const row = (await service.findPublicVisibleById('tpl-1')) as { id: string } | null;
+    expect(row?.id).toBe('tpl-1');
+  });
+
+  it('公开列表 findAll: 只返回 APPROVED && sourceType!=SYSTEM', async () => {
+    const { service } = createMocks();
+    const res = await service.findAll({});
+    const items = res.items as Array<{ id: string; status: string; sourceType: string }>;
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((t) => t.status === 'APPROVED' && t.sourceType !== 'SYSTEM')).toBe(true);
+    expect(items.some((t) => t.id === 'tpl-pending')).toBe(false);
+    expect(items.some((t) => t.id === 'tpl-system')).toBe(false);
+  });
+
+  it('like: 目标非公开可见(PENDING) → NotFoundException', async () => {
+    const { service } = createMocks();
+    await expect(service.like('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+  });
+
+  it('like: 目标为 SYSTEM 来源 → NotFoundException', async () => {
+    const { service } = createMocks();
+    await expect(service.like('u1', 'tpl-system')).rejects.toThrow(NotFoundException);
+  });
+
+  it('favorite: 目标非公开可见 → NotFoundException', async () => {
+    const { service } = createMocks();
+    await expect(service.favorite('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+  });
+
+  it('recordView: 目标非公开可见 → NotFoundException', async () => {
+    const { service } = createMocks();
+    await expect(service.recordView('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+  });
+
+  it('createGeneration: 目标非公开可见(PENDING) → NotFoundException, 不冻结积分', async () => {
+    const { service, points } = createMocks();
+    await expect(
+      service.createGeneration('tpl-pending', 'u1', {
+        modelUsed: 'seedance-pro',
+        variables: { subject: 'shoe' },
+      }),
+    ).rejects.toThrow(NotFoundException);
+    expect(points.createHold).not.toHaveBeenCalled();
+  });
+
+  it('createGeneration: 目标为 SYSTEM 来源 → NotFoundException', async () => {
+    const { service } = createMocks();
+    await expect(
+      service.createGeneration('tpl-system', 'u1', {
+        modelUsed: 'seedance-pro',
+        variables: { subject: 'shoe' },
+      }),
+    ).rejects.toThrow(NotFoundException);
+  });
+});
 
 describe('VideoTemplatesService.createGeneration billing', () => {
   it('freezes configurable template video points with duration and confirms after record creation', async () => {

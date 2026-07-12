@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -42,7 +43,6 @@ export class ImageTemplatesController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('authorId') authorId?: string,
-    @Query('status') status?: TemplateStatus,
   ) {
     return this.service.findAll({
       category,
@@ -51,7 +51,6 @@ export class ImageTemplatesController {
       page: page ? +page : undefined,
       pageSize: pageSize ? +pageSize : undefined,
       authorId,
-      status,
     });
   }
 
@@ -62,7 +61,8 @@ export class ImageTemplatesController {
     @Param('id') id: string,
   ) {
     const userId = user?.id;
-    const tpl = await this.service.findById(id);
+    const tpl = await this.service.findPublicVisibleById(id);
+    if (!tpl) throw new NotFoundException('模板不存在');
     await this.service.recordView(userId, id).catch(() => undefined);
     return tpl;
   }

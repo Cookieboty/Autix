@@ -141,6 +141,35 @@ export abstract class BaseResourceService {
     return this.attachViewCount(row);
   }
 
+  /**
+   * 统一公开可见谓词：APPROVED && 子类附加条件(如 sourceType != SYSTEM)。
+   * 复用 additionalFindAllWhere，与公开列表(findAll)的过滤条件保持一致。
+   */
+  protected get publicVisibleWhere(): Record<string, unknown> {
+    return { status: TemplateStatus.APPROVED, ...this.additionalFindAllWhere };
+  }
+
+  /**
+   * 公开入口(详情/点赞/收藏/浏览/生成)统一走这里；命中不可见(不存在/未过审/被过滤的来源)返回 null。
+   * Controller/子类负责把 null 转换为 404。管理员/内部 workbench 路径请继续用 findById，不要改用本方法。
+   */
+  async findPublicVisibleById(id: string): Promise<unknown | null> {
+    const rows = await this.delegate.findMany({
+      where: { id, ...this.publicVisibleWhere },
+      take: 1,
+    });
+    const row = rows[0];
+    if (!row) return null;
+    return this.attachViewCount(row);
+  }
+
+  /** findPublicVisibleById 的“找不到就抛 404”便捷封装,供公开交互动作(like/favorite/recordView/generation)前置校验用。 */
+  protected async requirePublicVisible(id: string): Promise<unknown> {
+    const row = await this.findPublicVisibleById(id);
+    if (!row) throw new NotFoundException('资源不存在或不可公开访问');
+    return row;
+  }
+
   async remove(id: string, userId: string) {
     const row = (await this.findById(id)) as { authorId: string };
     if (row.authorId !== userId) throw new ForbiddenException('无权删除此资源');

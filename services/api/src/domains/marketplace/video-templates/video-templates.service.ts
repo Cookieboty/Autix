@@ -69,6 +69,26 @@ export class VideoTemplatesService extends BaseResourceService {
     return ResourceType.VIDEO_TEMPLATE;
   }
 
+  protected override get additionalFindAllWhere(): Record<string, unknown> {
+    return { sourceType: { not: VideoTemplateSource.SYSTEM } };
+  }
+
+  // ── 公开可见交互(点赞/收藏/浏览):先经公开可见守卫,不可见 → 404 ──────
+  override async like(userId: string, id: string) {
+    await this.requirePublicVisible(id);
+    return super.like(userId, id);
+  }
+
+  override async favorite(userId: string, id: string) {
+    await this.requirePublicVisible(id);
+    return super.favorite(userId, id);
+  }
+
+  override async recordView(userId: string | undefined, id: string) {
+    await this.requirePublicVisible(id);
+    return super.recordView(userId, id);
+  }
+
   async create(authorId: string, dto: CreateVideoTemplateDto) {
     return this.resources.createVideoTemplate({
       title: dto.title,
@@ -119,7 +139,7 @@ export class VideoTemplatesService extends BaseResourceService {
       modelConfigId?: string;
     },
   ) {
-    const tpl = (await this.findById(templateId)) as {
+    const tpl = (await this.requirePublicVisible(templateId)) as {
       prompt: string;
       title?: string;
       durationSec?: number | null;
