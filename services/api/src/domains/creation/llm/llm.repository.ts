@@ -334,6 +334,8 @@ export class LlmRepository {
     variables: Prisma.InputJsonValue;
     referenceImage?: string;
     generatedImages: string[];
+    width?: number | null;
+    height?: number | null;
     durationMs: number;
     conversationId?: string;
     conversationContent: string;
@@ -355,6 +357,8 @@ export class LlmRepository {
           variables: input.variables,
           referenceImage: input.referenceImage,
           generatedImages: input.generatedImages,
+          width: input.width ?? null,
+          height: input.height ?? null,
           status: 'completed',
           durationMs: input.durationMs,
         },

@@ -78,6 +78,26 @@ export function buildImageConversationContent(images: string[]): string {
   return images.map((url) => `![](${url})`).join('\n');
 }
 
+// 最终落库的 width/height 只能来自 API 实际应用的 appliedSettings.size（非请求值），
+// 且只接受严格的 "WxH" 整数形式；"auto" 或其他任何不可解析的形式（含
+// gemini "1024x1024@1K" 这种带分辨率后缀的组合格式）一律存 null——不回读像素，
+// 避免与请求值混淆。
+const STRICT_SIZE_RE = /^(\d+)x(\d+)$/;
+
+export function parseAppliedImageSize(size: string | undefined | null): {
+  width: number | null;
+  height: number | null;
+} {
+  const match = size ? STRICT_SIZE_RE.exec(size.trim()) : null;
+  if (!match) return { width: null, height: null };
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return { width: null, height: null };
+  }
+  return { width, height };
+}
+
 export function buildCompletedImageGenerationRepositoryInput(input: {
   requestInput: {
     templateId: string;
@@ -91,7 +111,9 @@ export function buildCompletedImageGenerationRepositoryInput(input: {
   durationMs: number;
   sourceImages?: SourceImageRef[];
   referenceImages?: SourceImageRef[];
+  appliedSettings?: AppliedImageSettings;
 }) {
+  const { width, height } = parseAppliedImageSize(input.appliedSettings?.size);
   return {
     templateId: input.requestInput.templateId,
     userId: input.requestInput.userId,
@@ -110,6 +132,8 @@ export function buildCompletedImageGenerationRepositoryInput(input: {
       input.referenceImages,
     ),
     generatedImages: input.images,
+    width,
+    height,
     durationMs: input.durationMs,
     conversationId: input.requestInput.conversationId,
     conversationContent: buildImageConversationContent(input.images),
