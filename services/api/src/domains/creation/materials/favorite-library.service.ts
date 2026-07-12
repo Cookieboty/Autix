@@ -280,6 +280,9 @@ export class FavoriteLibraryService {
     for (const fav of favorites) {
       if (!fav.sourceResourceType || !fav.sourceId) {
         // 防御性兜底：理论上 FAVORITE 行必有溯源三元组；缺失时按普通素材硬删，避免留孤行。
+        // 实践中不可达——FAVORITE 行只由本服务 createFavoriteMaterial 写入，恒带
+        // sourceResourceType+sourceId，且 @@unique([userId,librarySource,sourceResourceType,sourceId])
+        // 也要求它们非空；此分支纯为防御未来的其它写入口，正常路径永不进入。
         await tx.material_assets.delete({ where: { id: fav.id } });
         continue;
       }
