@@ -15,6 +15,7 @@ import {
   getCurrentUserId,
 } from '../../identity/auth/decorators/current-user.decorator';
 import { GalleryService } from './gallery.service';
+import { GalleryTemplateConversionService } from './gallery-template-conversion.service';
 import { RejectGalleryPostDto } from './dto/reject-post.dto';
 import { ResolveGalleryReportDto } from './dto/resolve-report.dto';
 
@@ -22,7 +23,10 @@ import { ResolveGalleryReportDto } from './dto/resolve-report.dto';
 @Controller('admin/gallery')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class GalleryAdminController {
-  constructor(private readonly service: GalleryService) {}
+  constructor(
+    private readonly service: GalleryService,
+    private readonly conversion: GalleryTemplateConversionService,
+  ) {}
 
   /** 分类下拉数据（须声明在 @Get() 之前，避免被通配吞掉）。 */
   @Get('categories')
@@ -82,6 +86,12 @@ export class GalleryAdminController {
   @Post(':id/remove')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.remove(getCurrentUserId(user), id);
+  }
+
+  /** Plan C Task 9：把已发布图片作品转换为图片模板（幂等，重复调用返回已有模板）。 */
+  @Post(':id/convert-to-template')
+  convertToTemplate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.conversion.convertToTemplate(getCurrentUserId(user), id);
   }
 
   @Post('reports/:id/resolve')

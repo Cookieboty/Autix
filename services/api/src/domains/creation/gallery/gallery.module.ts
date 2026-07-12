@@ -6,13 +6,14 @@ import { CommonModule } from '../../platform/common/common.module';
 import { StorageModule } from '../../platform/storage/storage.module';
 import { GalleryRepository } from './gallery.repository';
 import { GalleryService } from './gallery.service';
+import { GalleryTemplateConversionService } from './gallery-template-conversion.service';
 import { GalleryController } from './gallery.controller';
 import { GalleryAdminController } from './gallery-admin.controller';
 
 @Module({
   imports: [PrismaModule, AuthModule, ResourceMetricsModule, CommonModule, StorageModule],
   controllers: [GalleryController, GalleryAdminController],
-  providers: [GalleryService, GalleryRepository],
+  providers: [GalleryService, GalleryRepository, GalleryTemplateConversionService],
   exports: [GalleryService],
 })
 export class GalleryModule {}

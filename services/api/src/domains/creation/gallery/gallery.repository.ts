@@ -179,6 +179,27 @@ export class GalleryRepository {
     return !!(ownMaterial || publishedPost || approvedTemplate);
   }
 
+  /**
+   * Plan C Task 9：管理端 REMOVE 与"归档其转换出的图片模板"必须原子——同一事务内
+   * 先把作品 status→REMOVED，再把 sourceGalleryPostId 命中该作品的 image_templates
+   * 批量 status→ARCHIVED（已是 ARCHIVED 的跳过，避免无意义写）。没有关联模板时
+   * updateMany 影响 0 行，语义上等价于普通 remove。仅此路径触发归档——author 自行
+   * unpublish（PUBLISHED→UNPUBLISHED）不经过这里，不会归档任何模板。
+   */
+  removeAndArchiveTemplate(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.gallery_posts.update({
+        where: { id },
+        data: { status: GalleryStatus.REMOVED },
+      });
+      await tx.image_templates.updateMany({
+        where: { sourceGalleryPostId: id, status: { not: TemplateStatus.ARCHIVED } },
+        data: { status: TemplateStatus.ARCHIVED },
+      });
+      return updated;
+    });
+  }
+
   writeAuditLog(action: string, actorId: string, payload: Record<string, unknown>) {
     return this.prisma.admin_audit_logs.create({
       data: {

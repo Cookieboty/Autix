@@ -748,10 +748,15 @@ export class GalleryService {
     return updated;
   }
 
+  /**
+   * 管理端移除作品：REMOVED 与"归档其转换出的图片模板"在同一事务内完成（Plan C
+   * Task 9，见 GalleryRepository.removeAndArchiveTemplate）——避免出现作品已删
+   * 但转换模板仍挂着 APPROVED 的中间状态。
+   */
   async remove(adminId: string, id: string) {
     const post = await this.requirePost(id);
     assertTransition(post.status, GalleryStatus.REMOVED, 'admin');
-    const updated = await this.repo.update(id, { status: GalleryStatus.REMOVED });
+    const updated = await this.repo.removeAndArchiveTemplate(id);
     await this.repo.writeAuditLog('gallery.remove', adminId, {
       targetType: 'gallery_post',
       targetId: id,
