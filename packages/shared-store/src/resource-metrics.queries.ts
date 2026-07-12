@@ -1,10 +1,16 @@
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  dedicatedInteractionActions,
+  hasDedicatedInteractionRoute,
   resourceMetricsActions,
+  type DedicatedInteractionType,
   type MetricResourceType,
   type ResourceMetrics,
 } from './resource-metrics.actions';
+
+/** dedicated 专属端点只回 { liked } / { favorited }，通用端点回完整 ResourceMetrics。 */
+type InteractionResult = ResourceMetrics | { liked: boolean } | { favorited: boolean };
 
 export const resourceMetricsQueryKeys = {
   root: () => ['resourceMetrics'] as const,
@@ -40,6 +46,13 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
 
+  // Plan C Task 10：IMAGE_TEMPLATE / VIDEO_TEMPLATE 的 like/favorite 必须走各自受守卫的
+  // 专属端点（通用端点已对它们 400）。SKILL / MCP / AGENT 继续走通用 resourceMetricsActions。
+  // 专属端点只回 { liked } / { favorited }（非完整指标），故成功后靠乐观增量 + 失效重取
+  // metrics（GET 对全类型仍开放）来同步真实计数；share 无专属路由、始终走通用端点。
+  const dedicated = hasDedicatedInteractionRoute(type);
+  const dedicatedType = type as DedicatedInteractionType;
+
   const applyDelta = useCallback(
     (patch: Partial<ResourceMetrics>) => {
       const previous = queryClient.getQueryData<ResourceMetrics>(queryKey);
@@ -51,8 +64,28 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
     [queryClient, queryKey],
   );
 
-  const likeMutation = useMutation<ResourceMetrics, unknown, void, OptimisticContext>({
-    mutationFn: () => resourceMetricsActions.like(type, id),
+  // 成功后：专属端点回 boolean 态 → 同步本地 liked/favorited 并失效重取真实指标；
+  // 通用端点回完整指标 → 直接写入缓存。
+  const finalizeSuccess = useCallback(
+    (data: InteractionResult) => {
+      if (dedicated) {
+        if ('liked' in data) setLiked(data.liked);
+        if ('favorited' in data) setFavorited(data.favorited);
+        void queryClient.invalidateQueries({ queryKey });
+        return;
+      }
+      queryClient.setQueryData(queryKey, data as ResourceMetrics);
+    },
+    [dedicated, queryClient, queryKey],
+  );
+
+  const likeMutation = useMutation<InteractionResult, unknown, void, OptimisticContext>({
+    // 专属 like 端点为 POST 切换（无 DELETE 反向）——本 mutation 仅在 !liked 时触发（见 toggleLike），
+    // 故 POST 恒切换为已点赞。
+    mutationFn: () =>
+      dedicated
+        ? dedicatedInteractionActions.toggleLike(dedicatedType, id)
+        : resourceMetricsActions.like(type, id),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
       const previous = applyDelta({
@@ -65,11 +98,15 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       setLiked(false);
     },
-    onSuccess: (data) => queryClient.setQueryData(queryKey, data),
+    onSuccess: finalizeSuccess,
   });
 
-  const unlikeMutation = useMutation<ResourceMetrics, unknown, void, OptimisticContext>({
-    mutationFn: () => resourceMetricsActions.unlike(type, id),
+  const unlikeMutation = useMutation<InteractionResult, unknown, void, OptimisticContext>({
+    // 专属端点无 DELETE unlike——再次 POST 同一 like 端点即切换为未点赞（本 mutation 仅在 liked 时触发）。
+    mutationFn: () =>
+      dedicated
+        ? dedicatedInteractionActions.toggleLike(dedicatedType, id)
+        : resourceMetricsActions.unlike(type, id),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
       const previous = applyDelta({
@@ -85,11 +122,14 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       setLiked(true);
     },
-    onSuccess: (data) => queryClient.setQueryData(queryKey, data),
+    onSuccess: finalizeSuccess,
   });
 
-  const favoriteMutation = useMutation<ResourceMetrics, unknown, void, OptimisticContext>({
-    mutationFn: () => resourceMetricsActions.favorite(type, id),
+  const favoriteMutation = useMutation<InteractionResult, unknown, void, OptimisticContext>({
+    mutationFn: () =>
+      dedicated
+        ? dedicatedInteractionActions.favorite(dedicatedType, id)
+        : resourceMetricsActions.favorite(type, id),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
       const previous = applyDelta({
@@ -103,11 +143,14 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       setFavorited(false);
     },
-    onSuccess: (data) => queryClient.setQueryData(queryKey, data),
+    onSuccess: finalizeSuccess,
   });
 
-  const unfavoriteMutation = useMutation<ResourceMetrics, unknown, void, OptimisticContext>({
-    mutationFn: () => resourceMetricsActions.unfavorite(type, id),
+  const unfavoriteMutation = useMutation<InteractionResult, unknown, void, OptimisticContext>({
+    mutationFn: () =>
+      dedicated
+        ? dedicatedInteractionActions.unfavorite(dedicatedType, id)
+        : resourceMetricsActions.unfavorite(type, id),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
       const previous = applyDelta({
@@ -123,7 +166,7 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
       setFavorited(true);
     },
-    onSuccess: (data) => queryClient.setQueryData(queryKey, data),
+    onSuccess: finalizeSuccess,
   });
 
   const shareMutation = useMutation<ResourceMetrics, unknown, void, OptimisticContext>({

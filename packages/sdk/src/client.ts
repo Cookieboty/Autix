@@ -933,6 +933,11 @@ function makeResourceApi<TResource>(slug: MarketplaceTypeSlug) {
     like: (id: string) => chatApi.post<{ liked: boolean }>(`${base}/${id}/like`),
     favorite: (id: string) =>
       chatApi.post<{ favorited: boolean }>(`${base}/${id}/favorite`),
+    // Plan C Task 10：模板收藏改为显式 POST=favorite / DELETE=unfavorite（不再 POST toggle），
+    // 与 gallery 一致。dedicated 路由带公开可见守卫，是模板收藏的唯一正确入口
+    // （通用 /resources/:type/:id/favorite 已对模板类型 400，见 resource-metrics.controller）。
+    unfavorite: (id: string) =>
+      chatApi.delete<{ favorited: boolean }>(`${base}/${id}/favorite`),
   };
 }
 
