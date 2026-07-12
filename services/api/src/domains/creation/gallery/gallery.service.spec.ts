@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ResourceType } from '../../platform/prisma/generated';
 import { GalleryService } from './gallery.service';
 
 /**
@@ -612,5 +613,99 @@ describe('GalleryService — Task 4.6：草稿 / 更新路径 bypass 关闭', ()
     await service.updatePost(authorId, 'p2', { mediaUrls: ['https://evil.com/x.png'] } as never);
     expect(captured!.mediaUrls).toEqual(inStationGen.generatedImages);
     expect(captured!.coverImage).toBe(inStationGen.generatedImages![0]);
+  });
+});
+
+// ── download（Plan C Task 5）──────────────────────────────────────────────
+
+/**
+ * download 复用 assertLikeableOrFavoritable 的"仅 PUBLISHED"校验（404 不存在 / 400 未发布），
+ * 与 like/favorite 完全一致。不同点：download 不去重——每次调用都必须真实触发
+ * metrics.recordDownload（同步事务插事件 + INCR downloadCount），不能被短路/吞掉。
+ */
+function makeDownloadService(overrides: {
+  posts?: Record<string, Record<string, unknown>>;
+  recordDownloadImpl?: (...args: unknown[]) => Promise<unknown>;
+}) {
+  const repo = {
+    findById: async (id: string) => overrides.posts?.[id] ?? null,
+  };
+  const recordDownload = jest.fn(
+    overrides.recordDownloadImpl ?? (async () => ({ downloadCount: 1 })),
+  );
+  const metrics = { recordDownload };
+  const r2 = {};
+  const service = new GalleryService(repo as never, metrics as never, r2 as never);
+  return { service, repo, metrics, recordDownload };
+}
+
+describe('GalleryService.download — 仅 PUBLISHED + 非幂等计数', () => {
+  const publishedPost = {
+    id: 'p-pub',
+    authorId: 'author-1',
+    status: 'PUBLISHED',
+    mediaUrls: ['https://cdn/a.png', 'https://cdn/b.png'],
+    coverImage: 'https://cdn/cover.png',
+  };
+
+  it('作品不存在 → 404', async () => {
+    const { service } = makeDownloadService({ posts: {} });
+    await expect(service.download('user-1', 'missing')).rejects.toThrow(NotFoundException);
+  });
+
+  it.each(['DRAFT', 'PENDING', 'HIDDEN', 'REJECTED', 'UNPUBLISHED', 'REMOVED'])(
+    '状态为 %s（非 PUBLISHED）→ 拒绝下载（400），且不触发计数',
+    async (status) => {
+      const { service, recordDownload } = makeDownloadService({
+        posts: { p1: { ...publishedPost, id: 'p1', status } },
+      });
+      await expect(service.download('user-1', 'p1')).rejects.toThrow(BadRequestException);
+      expect(recordDownload).not.toHaveBeenCalled();
+    },
+  );
+
+  it('PUBLISHED 作品：返回 mediaUrls[0] 作为下载 URL，并调用 metrics.recordDownload 一次', async () => {
+    const { service, recordDownload } = makeDownloadService({
+      posts: { 'p-pub': publishedPost },
+    });
+    const result = await service.download('user-9', 'p-pub');
+    expect(result).toEqual({ downloadUrl: 'https://cdn/a.png' });
+    expect(recordDownload).toHaveBeenCalledTimes(1);
+    expect(recordDownload).toHaveBeenCalledWith(
+      ResourceType.GALLERY_POST,
+      'p-pub',
+      'user-9',
+    );
+  });
+
+  it('mediaUrls 为空时兜底 coverImage', async () => {
+    const { service } = makeDownloadService({
+      posts: { p2: { ...publishedPost, id: 'p2', mediaUrls: [] } },
+    });
+    const result = await service.download('user-1', 'p2');
+    expect(result).toEqual({ downloadUrl: publishedPost.coverImage });
+  });
+
+  it('mediaUrls 和 coverImage 均缺失 → 404（无可下载资源）', async () => {
+    const { service, recordDownload } = makeDownloadService({
+      posts: { p3: { ...publishedPost, id: 'p3', mediaUrls: [], coverImage: null } },
+    });
+    await expect(service.download('user-1', 'p3')).rejects.toThrow(NotFoundException);
+    expect(recordDownload).not.toHaveBeenCalled();
+  });
+
+  it('非幂等：同一用户连续下载同一作品两次 → metrics.recordDownload 被调用两次（不去重）', async () => {
+    let calls = 0;
+    const { service, recordDownload } = makeDownloadService({
+      posts: { 'p-pub': publishedPost },
+      recordDownloadImpl: async () => {
+        calls += 1;
+        return { downloadCount: calls };
+      },
+    });
+    await service.download('user-1', 'p-pub');
+    await service.download('user-1', 'p-pub');
+    expect(recordDownload).toHaveBeenCalledTimes(2);
+    expect(calls).toBe(2);
   });
 });

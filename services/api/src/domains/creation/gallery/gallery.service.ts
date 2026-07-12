@@ -524,13 +524,18 @@ export class GalleryService {
     });
   }
 
-  /** M2：点赞/收藏前校验目标作品存在且已发布，避免在 DRAFT/HIDDEN/REMOVED/不存在的 id 上留下孤立指标行。 */
-  private async assertLikeableOrFavoritable(id: string): Promise<void> {
+  /**
+   * M2：点赞/收藏前校验目标作品存在且已发布，避免在 DRAFT/HIDDEN/REMOVED/不存在的 id 上
+   * 留下孤立指标行。Plan C Task 5：download 复用同一条"仅 PUBLISHED"校验，故返回命中的
+   * post（download 还需要它的 mediaUrls/coverImage 派生下载 URL，避免重复查库）。
+   */
+  private async assertLikeableOrFavoritable(id: string) {
     const post = await this.repo.findById(id);
     if (!post) throw new NotFoundException('作品不存在');
     if (post.status !== GalleryStatus.PUBLISHED) {
-      throw new BadRequestException('仅已发布作品可点赞/收藏');
+      throw new BadRequestException('仅已发布作品可点赞/收藏/下载');
     }
+    return post;
   }
 
   async like(userId: string, id: string) {
@@ -541,6 +546,24 @@ export class GalleryService {
   async favorite(userId: string, id: string) {
     await this.assertLikeableOrFavoritable(id);
     return this.metrics.favorite(userId, ResourceType.GALLERY_POST, id);
+  }
+
+  /**
+   * POST /gallery/:id/download（Plan C Task 5）：仅已发布作品可下载，与 like/favorite
+   * 共用同一条"仅 PUBLISHED"校验（assertLikeableOrFavoritable：404 不存在 / 400 未发布）。
+   * 下载不去重——每次调用都同步事务插一条 resource_download_events + 真实 INCR
+   * downloadCount（见 resource-metrics.repository.recordDownload），不同于 like/favorite
+   * 的幂等切换语义。下载 URL 取站内媒体（mediaUrls[0]，视频/多图取主资源），
+   * 缺失时兜底 coverImage。
+   */
+  async download(userId: string, id: string): Promise<{ downloadUrl: string }> {
+    const post = await this.assertLikeableOrFavoritable(id);
+    const downloadUrl = post.mediaUrls[0] ?? post.coverImage;
+    if (!downloadUrl) {
+      throw new NotFoundException('作品暂无可下载资源');
+    }
+    await this.metrics.recordDownload(ResourceType.GALLERY_POST, id, userId);
+    return { downloadUrl };
   }
 
   // ── 管理端 ──────────────────────────────────────────────────────────

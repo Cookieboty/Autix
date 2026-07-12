@@ -8,7 +8,8 @@ type CounterField =
   | 'likeCount'
   | 'favoriteCount'
   | 'shareCount'
-  | 'referenceCount';
+  | 'referenceCount'
+  | 'downloadCount';
 
 /**
  * I1：DECR 路径改为原子 SQL，列名必须来自本白名单——禁止把 `field` 参数（哪怕类型已收窄）
@@ -19,6 +20,7 @@ const COUNTER_COLUMNS: Record<CounterField, string> = {
   favoriteCount: 'favoriteCount',
   shareCount: 'shareCount',
   referenceCount: 'referenceCount',
+  downloadCount: 'downloadCount',
 };
 
 /**
@@ -153,6 +155,22 @@ export class ResourceMetricsRepository {
         },
       });
       await this.bumpCounter(tx, resourceType, resourceId, 'referenceCount', 1);
+      return this.readMetrics(tx, resourceType, resourceId);
+    });
+  }
+
+  /**
+   * 供 gallery.service.download 调用：记录一次下载事件（resource_download_events）
+   * 并 INCR downloadCount。与 like/favorite（create-first + 吞 P2002 幂等去重）不同——
+   * 下载语义上不去重：同一用户重复下载同一资源，每次都是一条新事件 + 一次真实自增，
+   * 不做 tryCreateUnique 短路（resource_download_events 本就没有唯一约束）。
+   */
+  recordDownload(resourceType: ResourceType, resourceId: string, userId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.resource_download_events.create({
+        data: { resourceType, resourceId, userId },
+      });
+      await this.bumpCounter(tx, resourceType, resourceId, 'downloadCount', 1);
       return this.readMetrics(tx, resourceType, resourceId);
     });
   }
