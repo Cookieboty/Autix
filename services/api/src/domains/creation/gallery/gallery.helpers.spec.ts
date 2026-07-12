@@ -1,4 +1,9 @@
-import { assertSource, assertTransition } from './gallery.helpers';
+import {
+  assertInStationMediaUrls,
+  assertSource,
+  assertTransition,
+  isInStationMediaUrl,
+} from './gallery.helpers';
 
 describe('assertTransition (§5.1.1 状态机)', () => {
   it('作者可 DRAFT→PENDING、REJECTED→PENDING', () => {
@@ -143,5 +148,39 @@ describe('assertSource (§6.4 来源强校验)', () => {
         'author',
       ),
     ).toThrow();
+  });
+});
+
+describe('isInStationMediaUrl / assertInStationMediaUrls（Task 4.5：站内来源写入守卫）', () => {
+  const base = 'https://cdn.mine.com';
+
+  it('命中站内域名（origin 精确匹配）→ true', () => {
+    expect(isInStationMediaUrl('https://cdn.mine.com/a.png', [base])).toBe(true);
+  });
+
+  it('非站内域名 → false', () => {
+    expect(isInStationMediaUrl('https://evil.com/x.png', [base])).toBe(false);
+  });
+
+  it('防前缀绕过：https://cdn.mine.com.evil.com 字符串以 base 开头但 host 不同 → false', () => {
+    expect(isInStationMediaUrl('https://cdn.mine.com.evil.com/x.png', [base])).toBe(false);
+  });
+
+  it('协议不同（http vs https）→ false', () => {
+    expect(isInStationMediaUrl('http://cdn.mine.com/a.png', [base])).toBe(false);
+  });
+
+  it('无效 URL / 空 base → false', () => {
+    expect(isInStationMediaUrl('not-a-url', [base])).toBe(false);
+    expect(isInStationMediaUrl('https://cdn.mine.com/a.png', [null, undefined, ''])).toBe(false);
+  });
+
+  it('assertInStationMediaUrls：全部命中不抛错；任意一个非站内 → BadRequestException', () => {
+    expect(() =>
+      assertInStationMediaUrls(['https://cdn.mine.com/a.png', 'https://cdn.mine.com/b.png'], [base]),
+    ).not.toThrow();
+    expect(() =>
+      assertInStationMediaUrls(['https://cdn.mine.com/a.png', 'https://evil.com/x.png'], [base]),
+    ).toThrow('仅允许使用站内存储的媒体链接');
   });
 });

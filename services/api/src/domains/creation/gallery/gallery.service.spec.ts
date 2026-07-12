@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { GalleryService } from './gallery.service';
 
 /**
@@ -8,7 +8,14 @@ import { GalleryService } from './gallery.service';
  * - 元数据快照：prompt/model/width/height 从 generation 记录快照，不信任 DTO。
  * - referenceImage 授权：仅 dto.allowPublicReference===true 或参考图本身是公开可复用
  *   站内资源时才快照，否则默认 null。
+ *
+ * Task 4.5：站内来源写入守卫。
+ * - FROM_GENERATION：mediaUrls/coverImage 完全从 generation.generatedImages 派生，忽略 DTO。
+ * - USER_UPLOAD：mediaUrls/coverImage 必须命中站内存储域名（r2.getPublicBaseUrl），否则 400。
  */
+
+/** 测试用站内存储域名基准，与 r2 mock 的 getPublicBaseUrl 返回值保持一致。 */
+const R2_PUBLIC_BASE = 'https://cdn';
 
 interface MockImageGeneration {
   userId: string;
@@ -17,6 +24,7 @@ interface MockImageGeneration {
   width: number | null;
   height: number | null;
   referenceImage: string | null;
+  generatedImages?: string[];
 }
 
 function makeService(overrides: {
@@ -25,6 +33,7 @@ function makeService(overrides: {
   isReferenceImagePubliclyReusable?: boolean;
   posts?: Record<string, Record<string, unknown>>;
   captureUpdate?: (id: string, data: Record<string, unknown>) => void;
+  r2PublicBaseUrl?: string;
 }) {
   const repo = {
     findImageGenerationOwner:
@@ -40,7 +49,10 @@ function makeService(overrides: {
       return { id, ...(overrides.posts?.[id] ?? {}), ...data };
     },
   };
-  return new GalleryService(repo as never, {} as never, {} as never);
+  const r2 = {
+    getPublicBaseUrl: async () => overrides.r2PublicBaseUrl ?? R2_PUBLIC_BASE,
+  };
+  return new GalleryService(repo as never, {} as never, r2 as never);
 }
 
 describe('GalleryService.createSubmission — fail-closed 归属校验', () => {
@@ -55,6 +67,7 @@ describe('GalleryService.createSubmission — fail-closed 归属校验', () => {
     width: 1024,
     height: 768,
     referenceImage: 'https://cdn.example.com/ref.png',
+    generatedImages: ['https://cdn/gen.png'],
   };
 
   it('FROM_GENERATION 投稿：generation 不属于作者 → 拒绝', async () => {
@@ -108,6 +121,8 @@ describe('GalleryService.createSubmission — fail-closed 归属校验', () => {
       imageGenerationId: myGenId,
     } as never);
     expect(post.id).toBe('post-1');
+    expect(post.mediaUrls).toEqual(myGen.generatedImages);
+    expect(post.coverImage).toBe(myGen.generatedImages![0]);
   });
 });
 
@@ -122,6 +137,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
     width: 1024,
     height: 768,
     referenceImage: 'https://cdn.example.com/ref.png',
+    generatedImages: ['https://cdn/gen.png'],
   };
 
   it('未授权参考图默认不快照，但 prompt/model/width/height 仍从 generation 快照', async () => {
@@ -196,6 +212,86 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
     } as never);
     expect(post.prompt).toBeUndefined();
     expect(post.referenceImage).toBeNull();
+  });
+});
+
+describe('GalleryService.createSubmission — Task 4.5：站内来源写入守卫', () => {
+  const authorId = 'user-me';
+  const myGenId = 'gen-mine';
+
+  const myGen: MockImageGeneration = {
+    userId: authorId,
+    resolvedPrompt: 'a cat wearing sunglasses',
+    modelUsed: 'flux-pro',
+    width: 1024,
+    height: 768,
+    referenceImage: null,
+    generatedImages: ['https://cdn/real-a.png', 'https://cdn/real-b.png'],
+  };
+
+  it('FROM_GENERATION 忽略 DTO mediaUrls，用 generation.generatedImages', async () => {
+    const service = makeService({ imageGenerations: { [myGenId]: myGen } });
+    const post = await service.createSubmission(authorId, {
+      kind: 'IMAGE',
+      category: 'ai_generated',
+      sourceType: 'FROM_GENERATION',
+      imageGenerationId: myGenId,
+      mediaUrls: ['https://evil.com/x.png'],
+    } as never);
+    expect(post.mediaUrls).toEqual(myGen.generatedImages); // 不采信 DTO
+    expect(post.coverImage).toBe(myGen.generatedImages![0]);
+  });
+
+  it('FROM_GENERATION：generation.generatedImages 为空 → 400（无可投稿媒体）', async () => {
+    const service = makeService({
+      imageGenerations: { [myGenId]: { ...myGen, generatedImages: [] } },
+    });
+    await expect(
+      service.createSubmission(authorId, {
+        kind: 'IMAGE',
+        category: 'ai_generated',
+        sourceType: 'FROM_GENERATION',
+        imageGenerationId: myGenId,
+      } as never),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('USER_UPLOAD 拒绝非站内存储域名 URL', async () => {
+    const service = makeService({});
+    await expect(
+      service.createSubmission(authorId, {
+        kind: 'IMAGE',
+        category: 'ai_generated',
+        sourceType: 'USER_UPLOAD',
+        mediaUrls: ['https://evil.com/x.png'],
+      } as never),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('USER_UPLOAD 拒绝非站内 coverImage（即便 mediaUrls 全部站内）', async () => {
+    const service = makeService({});
+    await expect(
+      service.createSubmission(authorId, {
+        kind: 'IMAGE',
+        category: 'ai_generated',
+        sourceType: 'USER_UPLOAD',
+        mediaUrls: ['https://cdn/a.png'],
+        coverImage: 'https://evil.com/cover.png',
+      } as never),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('USER_UPLOAD 站内 mediaUrls/coverImage 全部放行', async () => {
+    const service = makeService({});
+    const post = await service.createSubmission(authorId, {
+      kind: 'IMAGE',
+      category: 'ai_generated',
+      sourceType: 'USER_UPLOAD',
+      mediaUrls: ['https://cdn/a.png'],
+      coverImage: 'https://cdn/a.png',
+    } as never);
+    expect(post.mediaUrls).toEqual(['https://cdn/a.png']);
+    expect(post.coverImage).toBe('https://cdn/a.png');
   });
 });
 

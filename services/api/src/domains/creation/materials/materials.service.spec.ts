@@ -1,7 +1,10 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { MaterialsService } from './materials.service';
 
-function buildService(overrides: { repo?: any; folders?: any; membership?: any } = {}) {
+/** 测试用站内存储域名基准，与 r2 mock 的 getPublicBaseUrl 返回值保持一致（Task 4.5）。 */
+const R2_PUBLIC_BASE = 'https://cdn.autix.test';
+
+function buildService(overrides: { repo?: any; folders?: any; membership?: any; r2?: any } = {}) {
   const repo = {
     findMany: jest.fn().mockResolvedValue([[], 0]),
     create: jest.fn().mockImplementation((d: any) => ({ id: 'm1', ...d })),
@@ -21,13 +24,17 @@ function buildService(overrides: { repo?: any; folders?: any; membership?: any }
       },
     }),
   };
-  const r2 = { createPresignedUpload: jest.fn() };
+  const r2 = {
+    createPresignedUpload: jest.fn(),
+    getPublicBaseUrl: jest.fn().mockResolvedValue(R2_PUBLIC_BASE),
+    ...(overrides.r2 ?? {}),
+  };
   const foldersService = {
     assertFolderExists: jest.fn().mockResolvedValue(undefined),
     ...(overrides.folders ?? {}),
   };
   const service = new MaterialsService(repo as never, membership as never, r2 as never, foldersService as never);
-  return { service, repo, foldersService, membership };
+  return { service, repo, foldersService, membership, r2 };
 }
 
 describe('MaterialsService folder support', () => {
@@ -55,7 +62,7 @@ describe('MaterialsService folder support', () => {
   it('create 带 folderId 时校验文件夹存在', async () => {
     const { service, foldersService } = buildService();
     await service.create('u1', {
-      type: 'image', title: 't', url: 'https://x/y.png',
+      type: 'image', title: 't', url: `${R2_PUBLIC_BASE}/y.png`,
       sourceType: 'upload', folderId: 'f1',
     });
     expect(foldersService.assertFolderExists).toHaveBeenCalledWith('u1', 'f1');
@@ -64,7 +71,7 @@ describe('MaterialsService folder support', () => {
   it('create 写入 librarySource=UPLOAD（素材库手动上传创建）', async () => {
     const { service, repo } = buildService();
     await service.create('u1', {
-      type: 'image', title: 't', url: 'https://x/y.png',
+      type: 'image', title: 't', url: `${R2_PUBLIC_BASE}/y.png`,
       sourceType: 'upload',
     });
     expect(repo.create).toHaveBeenCalledWith(
@@ -140,7 +147,7 @@ describe('MaterialsService entitlement', () => {
       userId: 'user-1',
       type: 'image',
       title: 'asset',
-      url: 'https://example.com/a.png',
+      url: `${R2_PUBLIC_BASE}/a.png`,
       sourceType: 'upload',
       tags: [],
       deletedAt: null,
@@ -157,7 +164,7 @@ describe('MaterialsService entitlement', () => {
       service.create('user-1', {
         type: 'image',
         title: ' asset ',
-        url: 'https://example.com/a.png',
+        url: `${R2_PUBLIC_BASE}/a.png`,
         sourceType: 'upload',
         tags: [' ref ', 'ref', ''],
       }),
@@ -172,5 +179,71 @@ describe('MaterialsService entitlement', () => {
     await expect(service.useAsset('user-1', 'asset-1')).resolves.toMatchObject({ id: 'asset-1' });
     await expect(service.remove('user-1', 'asset-1')).resolves.toBeUndefined();
     expect(repo.softDelete).toHaveBeenCalledWith('asset-1');
+  });
+});
+
+describe('MaterialsService.create — Task 4.5：站内来源写入守卫', () => {
+  it('拒绝公网 URL / external 来源', async () => {
+    const { service } = buildService();
+    await expect(
+      service.create('u1', {
+        type: 'image',
+        title: 'evil',
+        url: 'https://evil.com/x.png',
+        sourceType: 'external',
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('拒绝非站内 host 的 url（即便 sourceType 是合法的 upload）', async () => {
+    const { service } = buildService();
+    await expect(
+      service.create('u1', {
+        type: 'image',
+        title: 'evil upload',
+        url: 'https://evil.com/x.png',
+        sourceType: 'upload',
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('拒绝 sourceType=external（即使 url 本身是站内域名）', async () => {
+    const { service } = buildService();
+    await expect(
+      service.create('u1', {
+        type: 'image',
+        title: 'external',
+        url: `${R2_PUBLIC_BASE}/a.png`,
+        sourceType: 'external',
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('拒绝非站内 host 的 thumbnailUrl', async () => {
+    const { service } = buildService();
+    await expect(
+      service.create('u1', {
+        type: 'image',
+        title: 'evil thumb',
+        url: `${R2_PUBLIC_BASE}/a.png`,
+        thumbnailUrl: 'https://evil.com/thumb.png',
+        sourceType: 'upload',
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('站内 url（image_generation 来源）放行', async () => {
+    const { service, repo } = buildService();
+    await expect(
+      service.create('u1', {
+        type: 'image',
+        title: 'from gen',
+        url: `${R2_PUBLIC_BASE}/gen-a.png`,
+        sourceType: 'image_generation',
+      }),
+    ).resolves.toMatchObject({ id: 'm1' });
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ url: `${R2_PUBLIC_BASE}/gen-a.png` }),
+    );
   });
 });

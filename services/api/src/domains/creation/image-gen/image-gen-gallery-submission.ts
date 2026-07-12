@@ -87,6 +87,33 @@ export function snapshotGenerationMetadata(
   };
 }
 
+/** image_generations.generatedImages / video_generations.generatedVideos 的字段子集。 */
+export interface GenerationMediaRecord {
+  generatedImages?: string[] | null;
+  generatedVideos?: string[] | null;
+}
+
+export interface DerivedSubmissionMedia {
+  mediaUrls: string[];
+  coverImage: string;
+}
+
+/**
+ * FROM_GENERATION 投稿的 mediaUrls/coverImage 派生（Task 4.5 站内来源守卫）：
+ * 完全来自服务端生成记录（generatedImages/generatedVideos），不信任调用方 DTO —— 与
+ * Task 4 的 prompt/model/width/height 快照（snapshotGenerationMetadata）保持同一原则。
+ * 生成结果为空时返回 null，调用方应视为"无可投稿媒体"直接拒绝（400），而不是静默放行。
+ */
+export function deriveGenerationMediaUrls(
+  record: GenerationMediaRecord,
+): DerivedSubmissionMedia | null {
+  const urls = record.generatedImages?.length
+    ? record.generatedImages
+    : record.generatedVideos ?? [];
+  if (urls.length === 0) return null;
+  return { mediaUrls: urls, coverImage: urls[0] };
+}
+
 /**
  * 将 workbench 生成结果映射为画廊投稿 dto。
  * 多图只投一条画廊帖子，coverImage 取第一张。

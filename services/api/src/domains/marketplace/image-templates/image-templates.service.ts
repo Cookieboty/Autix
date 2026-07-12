@@ -12,6 +12,7 @@ import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.servic
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
+import { assertInStationMediaUrls } from '../../creation/gallery/gallery.helpers';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
@@ -85,7 +86,16 @@ export class ImageTemplatesService extends BaseResourceService {
   }
 
   // 图片模板 runtime 恒定 CLOUD（生成走云端模型 API）
+  // Task 4.5 站内来源写入守卫：coverImage/exampleImages 必须命中站内存储域名，拒绝任意公网 URL。
   async create(authorId: string, dto: CreateImageTemplateDto) {
+    const media = [dto.coverImage, ...(dto.exampleImages ?? [])].filter(
+      (url): url is string => !!url,
+    );
+    if (media.length > 0) {
+      const r2Base = await this.r2.getPublicBaseUrl();
+      assertInStationMediaUrls(media, [r2Base], '封面图/示例图必须来自站内存储');
+    }
+
     return this.resources.createImageTemplate({
       title: dto.title,
       description: dto.description,

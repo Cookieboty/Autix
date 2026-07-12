@@ -5,7 +5,11 @@ import { ImageTemplatesService } from './image-templates.service';
 interface BuildOverrides {
   pointsService?: Partial<{ estimateCost: jest.Mock }>;
   templates?: Array<Record<string, unknown>>;
+  r2?: Partial<{ getPublicBaseUrl: jest.Mock }>;
 }
+
+/** 测试用站内存储域名基准，与 r2 mock 的 getPublicBaseUrl 返回值保持一致（Task 4.5）。 */
+const R2_PUBLIC_BASE = 'https://cdn.autix.test';
 
 // 极简 Prisma where 匹配器：支持 flat 字段相等、AND 数组、{not: x}
 function matchesWhere(row: Record<string, unknown>, where?: Record<string, unknown>): boolean {
@@ -114,18 +118,22 @@ function createMocks(overrides: BuildOverrides = {}) {
     delegateFor: jest.fn(() => prisma.image_templates),
     createImageTemplate: jest.fn(async (data: any) => ({ id: 'tpl-new', ...data })),
   };
+  const r2 = {
+    getPublicBaseUrl: jest.fn().mockResolvedValue(R2_PUBLIC_BASE),
+    ...(overrides.r2 ?? {}),
+  };
   const resourceInteractions = new ResourceInteractionRepository(prisma as never);
   const service = new ImageTemplatesService(
     resourceInteractions,
     resources as never,
-    {} as never,
+    r2 as never,
     points as never,
     models as never,
     generations as never,
     membership as never,
     {} as never,
   );
-  return { service, prisma, tx, points, models, generations, resources, membership, resourceInteractions };
+  return { service, prisma, tx, points, models, generations, resources, membership, resourceInteractions, r2 };
 }
 
 function buildImageTemplatesService(overrides: BuildOverrides = {}) {
@@ -152,6 +160,53 @@ describe('ImageTemplatesService.create — admin scoped', () => {
         authorId: adminId,
         createdById: adminId,
         sourceType: 'ADMIN_CREATED',
+      }),
+    );
+  });
+});
+
+describe('ImageTemplatesService.create — Task 4.5：站内来源写入守卫', () => {
+  it('拒绝非站内域名的 coverImage', async () => {
+    const { service } = createMocks();
+    await expect(
+      service.create('admin-1', {
+        title: 'Admin Template',
+        category: 'portrait',
+        prompt: 'Make {{subject}}',
+        variables: [],
+        coverImage: 'https://evil.com/cover.png',
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('拒绝非站内域名的 exampleImages（即便 coverImage 站内）', async () => {
+    const { service } = createMocks();
+    await expect(
+      service.create('admin-1', {
+        title: 'Admin Template',
+        category: 'portrait',
+        prompt: 'Make {{subject}}',
+        variables: [],
+        coverImage: `${R2_PUBLIC_BASE}/cover.png`,
+        exampleImages: [`${R2_PUBLIC_BASE}/ex-1.png`, 'https://evil.com/ex-2.png'],
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('站内 coverImage/exampleImages 全部放行', async () => {
+    const { service, resources } = createMocks();
+    await service.create('admin-1', {
+      title: 'Admin Template',
+      category: 'portrait',
+      prompt: 'Make {{subject}}',
+      variables: [],
+      coverImage: `${R2_PUBLIC_BASE}/cover.png`,
+      exampleImages: [`${R2_PUBLIC_BASE}/ex-1.png`],
+    });
+    expect(resources.createImageTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        coverImage: `${R2_PUBLIC_BASE}/cover.png`,
+        exampleImages: [`${R2_PUBLIC_BASE}/ex-1.png`],
       }),
     );
   });

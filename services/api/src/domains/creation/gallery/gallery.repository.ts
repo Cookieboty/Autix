@@ -110,6 +110,8 @@ export class GalleryRepository {
         width: true,
         height: true,
         referenceImage: true,
+        // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
+        generatedImages: true,
       },
     });
   }
@@ -122,6 +124,8 @@ export class GalleryRepository {
         resolvedPrompt: true,
         modelUsed: true,
         referenceImage: true,
+        // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
+        generatedVideos: true,
       },
     });
   }

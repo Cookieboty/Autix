@@ -8,6 +8,7 @@ import {
 import { Prisma } from '../../platform/prisma/generated';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
+import { assertInStationMediaUrls } from '../gallery/gallery.helpers';
 import { MaterialsRepository } from './materials.repository';
 // type-only import avoids the circular ESM TDZ at load time; the string injection token handles DI resolution
 import type { MaterialFoldersService } from './material-folders.service';
@@ -132,21 +133,33 @@ export class MaterialsService {
     });
   }
 
+  /**
+   * Task 4.5 站内来源写入守卫：素材必须来自站内存储（自有 R2 域名），拒绝任意公网 URL 与
+   * `sourceType='external'`（该值曾允许直接登记外链素材，是"所有资源来自站内"的一个写入口子）。
+   */
   async create(userId: string, input: MaterialCreateInput) {
     await this.assertCanAddOrUse(userId);
     await this.foldersService.assertFolderExists(userId, input.folderId ?? null);
     const type = this.normalizeType(input.type);
     const sourceType = this.normalizeSourceType(input.sourceType);
+    if (sourceType === 'external') {
+      throw new BadRequestException('不支持 external 来源，素材必须来自站内存储');
+    }
     const title = this.normalizeTitle(input.title);
     const url = input.url?.trim();
     if (!url) throw new BadRequestException('素材 URL 不能为空');
+    const thumbnailUrl = input.thumbnailUrl?.trim() || null;
+
+    const r2Base = await this.r2Service.getPublicBaseUrl();
+    const mediaUrls = thumbnailUrl ? [url, thumbnailUrl] : [url];
+    assertInStationMediaUrls(mediaUrls, [r2Base], '素材 URL 必须来自站内存储');
 
     return this.materialsRepository.create({
       userId,
       type,
       title,
       url,
-      thumbnailUrl: input.thumbnailUrl?.trim() || null,
+      thumbnailUrl,
       mimeType: input.mimeType?.trim() || null,
       size: Number.isFinite(input.size ?? null) ? Number(input.size) : null,
       storageKey: input.storageKey?.trim() || null,

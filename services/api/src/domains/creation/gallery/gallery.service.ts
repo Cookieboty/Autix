@@ -10,6 +10,7 @@ import { ResourceMetricsService } from '../../platform/resource-metrics/resource
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { GalleryRepository } from './gallery.repository';
 import {
+  assertInStationMediaUrls,
   assertSource,
   assertTransition,
   buildAdminGalleryWhere,
@@ -23,11 +24,16 @@ import type { RejectGalleryPostDto } from './dto/reject-post.dto';
 import type { ResolveGalleryReportDto } from './dto/resolve-report.dto';
 import type { CreateGalleryReportDto } from './dto/create-report.dto';
 import {
+  deriveGenerationMediaUrls,
   snapshotGenerationMetadata,
   type GallerySnapshotFields,
 } from '../image-gen/image-gen-gallery-submission';
 
-/** findImageGenerationOwner/findVideoGenerationOwner 的返回形状：归属判定 + 快照来源共用。 */
+/**
+ * findImageGenerationOwner/findVideoGenerationOwner 的返回形状：归属判定 + 快照来源共用。
+ * mediaUrls：统一自 generatedImages（图片）/ generatedVideos（视频）映射而来，供
+ * Task 4.5 的 FROM_GENERATION 媒体派生使用（见 deriveGenerationMediaUrls）。
+ */
 interface GenerationOwnershipRecord {
   userId: string;
   resolvedPrompt: string;
@@ -35,6 +41,7 @@ interface GenerationOwnershipRecord {
   width?: number | null;
   height?: number | null;
   referenceImage: string | null;
+  mediaUrls: string[];
 }
 
 /** 与 AdminGuard 一致的管理员判定，供"公开详情按角色可见性"复用（见 §5.1.1）。 */
@@ -119,7 +126,7 @@ export class GalleryService {
       if (gen == null || gen.userId !== authorId) {
         throw new ForbiddenException('生成记录不存在或不属于当前用户');
       }
-      return gen;
+      return { ...gen, mediaUrls: gen.generatedImages ?? [] };
     }
 
     if (dto.videoGenerationId) {
@@ -127,7 +134,7 @@ export class GalleryService {
       if (gen == null || gen.userId !== authorId) {
         throw new ForbiddenException('生成记录不存在或不属于当前用户');
       }
-      return gen;
+      return { ...gen, mediaUrls: gen.generatedVideos ?? [] };
     }
 
     return undefined;
@@ -190,6 +197,7 @@ export class GalleryService {
       authorId,
       dto.allowPublicReference,
     );
+    const media = await this.resolveSubmissionMedia(dto, generation);
 
     return this.repo.create({
       kind: dto.kind,
@@ -197,8 +205,8 @@ export class GalleryService {
       description: dto.description,
       category: dto.category,
       tags: dto.tags ?? [],
-      coverImage: dto.coverImage,
-      mediaUrls: dto.mediaUrls ?? [],
+      coverImage: media.coverImage,
+      mediaUrls: media.mediaUrls,
       aspectRatio: dto.aspectRatio,
       durationSec: dto.durationSec,
       sourceType: dto.sourceType,
@@ -214,6 +222,35 @@ export class GalleryService {
       status: GalleryStatus.PENDING,
       authorId,
     });
+  }
+
+  /**
+   * 投稿媒体来源守卫（Task 4.5，落实"所有资源来自站内"）：
+   * - FROM_GENERATION：完全忽略 DTO 的 mediaUrls/coverImage，从服务端生成记录
+   *   （generatedImages/generatedVideos）派生 —— 与 prompt/model 元数据快照同一原则，
+   *   不信任客户端。生成结果为空时视为无可投稿媒体，直接 400。
+   * - 其余来源（USER_UPLOAD 等）：校验 DTO 提供的 mediaUrls/coverImage 命中站内存储域名
+   *   （CloudflareR2Service.getPublicBaseUrl，唯一权威来源），非站内 → 400。
+   */
+  private async resolveSubmissionMedia(
+    dto: CreateGalleryPostDto,
+    generation: GenerationOwnershipRecord | undefined,
+  ): Promise<{ mediaUrls: string[]; coverImage: string | undefined }> {
+    if (dto.sourceType === 'FROM_GENERATION') {
+      const derived = deriveGenerationMediaUrls({ generatedImages: generation?.mediaUrls });
+      if (!derived) {
+        throw new BadRequestException('生成结果为空，无法投稿');
+      }
+      return derived;
+    }
+
+    const mediaUrls = dto.mediaUrls ?? [];
+    const candidates = dto.coverImage ? [...mediaUrls, dto.coverImage] : mediaUrls;
+    if (candidates.length > 0) {
+      const r2Base = await this.r2.getPublicBaseUrl();
+      assertInStationMediaUrls(candidates, [r2Base], '仅允许使用站内存储的媒体链接');
+    }
+    return { mediaUrls, coverImage: dto.coverImage };
   }
 
   /** POST /gallery/drafts：草稿，字段可不完整，不做 assertSource。 */

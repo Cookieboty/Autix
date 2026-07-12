@@ -8,9 +8,11 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { randomUUID } from 'crypto';
+import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
+import { assertInStationMediaUrls } from '../../creation/gallery/gallery.helpers';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
@@ -52,6 +54,7 @@ export class VideoTemplatesService extends BaseResourceService {
   constructor(
     resourceInteractions: ResourceInteractionRepository,
     private readonly resources: MarketplaceResourceCrudRepository,
+    private readonly r2: CloudflareR2Service,
     private readonly pointsService: PointsService,
     private readonly modelConfigService: ModelConfigService,
     private readonly generations: TemplateGenerationRepository,
@@ -89,7 +92,16 @@ export class VideoTemplatesService extends BaseResourceService {
     return super.recordView(userId, id);
   }
 
+  // Task 4.5 站内来源写入守卫：coverImage/exampleMedia 必须命中站内存储域名，拒绝任意公网 URL。
   async create(authorId: string, dto: CreateVideoTemplateDto) {
+    const media = [dto.coverImage, ...(dto.exampleMedia ?? [])].filter(
+      (url): url is string => !!url,
+    );
+    if (media.length > 0) {
+      const r2Base = await this.r2.getPublicBaseUrl();
+      assertInStationMediaUrls(media, [r2Base], '封面图/示例素材必须来自站内存储');
+    }
+
     return this.resources.createVideoTemplate({
       title: dto.title,
       description: dto.description,
