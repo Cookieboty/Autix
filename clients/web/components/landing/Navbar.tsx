@@ -184,7 +184,8 @@ export function Navbar() {
           {/* Auth buttons */}
           {mounted && isAuthenticated ? (
             <Link
-              href={chatEnabled ? '/chat' : '/community'}
+              // TODO(Plan C): 指向 /gallery
+              href={chatEnabled ? '/chat' : '/'}
               className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors ml-2"
               style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}
             >
@@ -332,7 +333,8 @@ export function Navbar() {
                   </div>
                   <div className="mt-4 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
                     <Link
-                      href="/community"
+                      // TODO(Plan C): 指向 /gallery
+                      href="/"
                       className="inline-flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
                       style={{ color: 'var(--brand)' }}
                       onClick={() => setMegaOpen(false)}
@@ -390,7 +392,8 @@ export function Navbar() {
           </div>
           <div className="flex gap-2 pt-2">
             {mounted && isAuthenticated ? (
-              <Link href={chatEnabled ? '/chat' : '/community'} className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{chatEnabled ? t('navWorkspace') : t('navTemplates')}</Link>
+              // TODO(Plan C): 指向 /gallery
+              <Link href={chatEnabled ? '/chat' : '/'} className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{chatEnabled ? t('navWorkspace') : t('navTemplates')}</Link>
             ) : (
               <>
                 <button type="button" onClick={() => { setMobileOpen(false); openAuthModal({ mode: 'entry' }); }} className="flex-1 text-center text-sm py-2 rounded-md" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>{t('login')}</button>
