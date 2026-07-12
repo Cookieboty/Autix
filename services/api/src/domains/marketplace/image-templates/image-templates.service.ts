@@ -65,12 +65,7 @@ export class ImageTemplatesService extends BaseResourceService {
   }
 
   protected override get additionalFindAllWhere(): Record<string, unknown> {
-    return {
-      OR: [
-        { externalId: null },
-        { externalId: { not: 'system:image-workbench' } },
-      ],
-    };
+    return { sourceType: { not: ImageTemplateSource.SYSTEM } };
   }
 
   async exportForAdmin(where: Prisma.image_templatesWhereInput) {

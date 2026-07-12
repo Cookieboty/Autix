@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { TemplateStatus } from '../platform/prisma/generated';
+import { ImageTemplateSource, TemplateStatus } from '../platform/prisma/generated';
 import { PrismaService } from '../platform/prisma/prisma.service';
 
 @Injectable()
 export class MarketplaceQueryRepository {
-  private readonly imageWorkbenchExternalId = 'system:image-workbench';
-
   constructor(private readonly prisma: PrismaService) {}
 
   findHomeCategoryRows(take: number) {
@@ -186,10 +184,7 @@ export class MarketplaceQueryRepository {
   private imageTemplatePublicWhere(extra: Record<string, unknown> = {}) {
     return {
       ...extra,
-      OR: [
-        { externalId: null },
-        { externalId: { not: this.imageWorkbenchExternalId } },
-      ],
+      sourceType: { not: ImageTemplateSource.SYSTEM },
     };
   }
 }

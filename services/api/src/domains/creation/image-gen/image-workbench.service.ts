@@ -7,15 +7,10 @@ export class ImageWorkbenchService {
   constructor(private readonly imageWorkbenchRepository: ImageWorkbenchRepository) {}
 
   async ensureWorkbenchTemplate(userId: string): Promise<string> {
-    const existing = await this.imageWorkbenchRepository.findWorkbenchTemplate(userId);
-    if (existing) {
-      if (existing.status !== TemplateStatus.ARCHIVED) {
-        await this.imageWorkbenchRepository.archiveTemplate(existing.id);
-      }
-      return existing.id;
+    const template = await this.imageWorkbenchRepository.ensureWorkbenchTemplate(userId);
+    if (template.status !== TemplateStatus.ARCHIVED) {
+      await this.imageWorkbenchRepository.archiveTemplate(template.id);
     }
-
-    const template = await this.imageWorkbenchRepository.createWorkbenchTemplate(userId);
     return template.id;
   }
 

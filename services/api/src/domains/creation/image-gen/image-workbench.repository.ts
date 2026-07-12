@@ -6,19 +6,34 @@ import {
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
+const IMAGE_WORKBENCH_SYSTEM_KEY = 'image-workbench';
 const IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID = 'system:image-workbench';
+
+const WORKBENCH_TEMPLATE_SELECT = {
+  id: true,
+  status: true,
+  sourceType: true,
+  systemKey: true,
+} satisfies Prisma.image_templatesSelect;
+
+type WorkbenchTemplate = {
+  id: string;
+  status: TemplateStatus;
+  sourceType: ImageTemplateSource;
+  systemKey: string | null;
+};
 
 @Injectable()
 export class ImageWorkbenchRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findWorkbenchTemplate(userId: string) {
+  findWorkbenchTemplate(userId: string): Promise<WorkbenchTemplate | null> {
     return this.prisma.image_templates.findFirst({
       where: {
         authorId: userId,
-        externalId: IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID,
+        systemKey: IMAGE_WORKBENCH_SYSTEM_KEY,
       },
-      select: { id: true, status: true },
+      select: WORKBENCH_TEMPLATE_SELECT,
     });
   }
 
@@ -29,7 +44,7 @@ export class ImageWorkbenchRepository {
     });
   }
 
-  createWorkbenchTemplate(userId: string) {
+  createWorkbenchTemplate(userId: string): Promise<WorkbenchTemplate> {
     return this.prisma.image_templates.create({
       data: {
         title: '专业图片工作台',
@@ -42,7 +57,7 @@ export class ImageWorkbenchRepository {
         status: TemplateStatus.ARCHIVED,
         createdById: userId,
         sourceType: ImageTemplateSource.SYSTEM,
-        systemKey: 'image-workbench',
+        systemKey: IMAGE_WORKBENCH_SYSTEM_KEY,
         externalId: IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID,
         externalMetadata: {
           internal: true,
@@ -50,7 +65,26 @@ export class ImageWorkbenchRepository {
         },
         runtimeReason: '专业图片工作台内部归档模板',
       },
+      select: WORKBENCH_TEMPLATE_SELECT,
     });
+  }
+
+  /**
+   * find-or-create：并发首次访问时,DB 唯一约束 @@unique([authorId, systemKey]) 是唯一性的
+   * 保证——抢输的一方命中 P2002 后重查,返回抢赢方那条,而不是把异常冒泡成 500。
+   */
+  async ensureWorkbenchTemplate(userId: string): Promise<WorkbenchTemplate> {
+    const existing = await this.findWorkbenchTemplate(userId);
+    if (existing) return existing;
+    try {
+      return await this.createWorkbenchTemplate(userId);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const raced = await this.findWorkbenchTemplate(userId);
+        if (raced) return raced;
+      }
+      throw err;
+    }
   }
 
   findHistoryItems(input: {
