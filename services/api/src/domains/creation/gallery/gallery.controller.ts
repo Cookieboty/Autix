@@ -107,10 +107,14 @@ export class GalleryController {
     return this.service.republish(getCurrentUserId(user), id);
   }
 
+  /**
+   * 公开详情聚合：匿名可访问（仅 PUBLISHED），登录态附 viewer.{liked,favorited} 并双写
+   * resource_views（个人浏览历史）；作者本人 / 管理员可预览自己的非公开作品。
+   */
   @Public()
   @Get(':id')
-  getVisible(@OptionalCurrentUser() user: AuthUser | undefined, @Param('id') id: string) {
-    return this.service.getVisible(id, user);
+  getDetail(@OptionalCurrentUser() user: AuthUser | undefined, @Param('id') id: string) {
+    return this.service.getDetail(id, user);
   }
 
   @UseGuards(JwtAuthGuard)

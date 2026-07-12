@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../platform/prisma/prisma.module';
 import { AuthModule } from '../../identity/auth/auth.module';
 import { ResourceMetricsModule } from '../../platform/resource-metrics/resource-metrics.module';
+import { CommonModule } from '../../platform/common/common.module';
 import { StorageModule } from '../../platform/storage/storage.module';
 import { GalleryRepository } from './gallery.repository';
 import { GalleryService } from './gallery.service';
@@ -9,7 +10,7 @@ import { GalleryController } from './gallery.controller';
 import { GalleryAdminController } from './gallery-admin.controller';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ResourceMetricsModule, StorageModule],
+  imports: [PrismaModule, AuthModule, ResourceMetricsModule, CommonModule, StorageModule],
   controllers: [GalleryController, GalleryAdminController],
   providers: [GalleryService, GalleryRepository],
   exports: [GalleryService],

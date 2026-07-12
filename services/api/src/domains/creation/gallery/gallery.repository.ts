@@ -11,6 +11,22 @@ export class GalleryRepository {
     return this.prisma.gallery_posts.findUnique({ where: { id } });
   }
 
+  /**
+   * Plan C Task 7：详情聚合用——一次取回帖子 + 作者身份字段（供 gallery-author.presenter 展示）。
+   * 只 select presenter 需要的字段（displayName←realName 现阶段；status/username/avatar），
+   * 不外泄 email/phone 等 PII。account 分支合入后把 realName 换成 nickname ?? realName。
+   */
+  findByIdWithAuthor(id: string) {
+    return this.prisma.gallery_posts.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: { id: true, status: true, realName: true, username: true, avatar: true },
+        },
+      },
+    });
+  }
+
   create(data: Prisma.gallery_postsUncheckedCreateInput) {
     return this.prisma.gallery_posts.create({ data });
   }

@@ -7,8 +7,10 @@ import {
 import type { AuthUser } from '@autix/domain';
 import { GalleryKind, GalleryStatus, Prisma, ResourceType } from '../../platform/prisma/generated';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
+import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { GalleryRepository } from './gallery.repository';
+import { presentAuthor, type PresentedAuthor } from './gallery-author.presenter';
 import {
   assertInStationMediaUrls,
   assertSource,
@@ -85,6 +87,10 @@ export class GalleryService {
     private readonly repo: GalleryRepository,
     private readonly metrics: ResourceMetricsService,
     private readonly r2: CloudflareR2Service,
+    // Plan C Task 7：详情 viewer 状态批量查询 + 登录态双写 resource_views。可选参数沿用
+    // BaseResourceService 的写法，让既有 3 参构造的纯单测（feed/download/recreate）无需改动；
+    // 生产环境经 DI 恒注入真实实例。
+    private readonly interactions?: ResourceInteractionRepository,
   ) {}
 
   /** 管理端广场列表：页码分页 + 筛选（kind/category/sourceType/标题搜索/仅非我域名），返回 total。 */
@@ -501,17 +507,64 @@ export class GalleryService {
     };
   }
 
-  /** GET /gallery/:id：非 PUBLISHED 仅作者本人或管理员可见。 */
-  async getVisible(id: string, user: AuthUser | undefined) {
-    const post = await this.repo.findById(id);
+  /**
+   * GET /gallery/:id 详情聚合（Plan C Task 7）：
+   * - 可见性：匿名仅 PUBLISHED；作者本人 / 管理员可预览自己（他人-管理员）的非公开作品，
+   *   否则 404（与 getVisible 同规则，不泄漏未公开作品的存在）。
+   * - 聚合：作者身份经 presentAuthor（已注销用户隐私脱敏）；指标读 resource_metrics
+   *   （view/download/reference/like/favorite）；登录态用批量成员查询算出 viewer.{liked,favorited}。
+   * - 双写：登录访问经 interactions.createView 往 resource_views 写一条个人浏览历史；
+   *   匿名不写、viewer 省略（telemetry resource_view_events 是另一条并行链路，与此无关）。
+   */
+  async getDetail(id: string, viewer: AuthUser | undefined) {
+    const post = await this.repo.findByIdWithAuthor(id);
     if (!post) throw new NotFoundException('作品不存在');
     if (post.status !== GalleryStatus.PUBLISHED) {
-      const isOwner = !!user && post.authorId === user.id;
-      if (!isOwner && !isAdminUser(user)) {
+      const isOwner = !!viewer && post.authorId === viewer.id;
+      if (!isOwner && !isAdminUser(viewer)) {
         throw new NotFoundException('作品不存在');
       }
     }
-    return post;
+
+    // displayName←realName now; ←nickname??realName after account branch merges.
+    const author: PresentedAuthor = presentAuthor({
+      id: post.author.id,
+      status: post.author.status,
+      displayName: post.author.realName ?? null,
+      username: post.author.username,
+      avatar: post.author.avatar ?? null,
+    });
+
+    const m = await this.metrics.getMetrics(ResourceType.GALLERY_POST, id);
+    const metrics = {
+      pvCount: m.pvCount,
+      uvCount: m.uvCount,
+      viewCount: m.viewCount,
+      downloadCount: m.downloadCount,
+      referenceCount: m.referenceCount,
+      likeCount: m.likeCount,
+      favoriteCount: m.favoriteCount,
+    };
+
+    if (!viewer) {
+      // 匿名：不写个人历史、不返回 viewer 态。
+      return { post, author, metrics };
+    }
+
+    // 登录态：批量成员查询（单条也传 [id]，Task 8 feed 直接复用同一批量方法，杜绝 N+1）。
+    const [likedIds, favoritedIds] = await Promise.all([
+      this.interactions!.findLikedIds(viewer.id, ResourceType.GALLERY_POST, [id]),
+      this.interactions!.findFavoritedIds(viewer.id, ResourceType.GALLERY_POST, [id]),
+    ]);
+    // 双写 resource_views（个人浏览历史来源）。
+    await this.interactions!.createView(viewer.id, ResourceType.GALLERY_POST, id);
+
+    return {
+      post,
+      author,
+      metrics,
+      viewer: { liked: likedIds.has(id), favorited: favoritedIds.has(id) },
+    };
   }
 
   async report(reporterId: string, postId: string, dto: CreateGalleryReportDto) {
