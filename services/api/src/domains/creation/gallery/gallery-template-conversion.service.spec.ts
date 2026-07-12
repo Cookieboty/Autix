@@ -221,6 +221,19 @@ describe('GalleryTemplateConversionService.convertToTemplate', () => {
     await conv.convertToTemplate(adminId, publishedImageGallery.id);
     expect(auditSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('幂等无条件：转换后作品迁到 HIDDEN，再次转换仍返回同一模板（不因状态门禁抛错）', async () => {
+    const gallery = { ...publishedImageGallery, id: 'gallery-then-hidden' };
+    const { conv, galleryStore, templateStore } = makeConversionService({
+      [gallery.id]: gallery,
+    });
+    const a = await conv.convertToTemplate(adminId, gallery.id);
+    // convertToTemplate 不改动作品状态；模拟作品被合法迁到 HIDDEN（PUBLISHED→HIDDEN）。
+    galleryStore.set(gallery.id, { ...galleryStore.get(gallery.id)!, status: 'HIDDEN' });
+    const b = await conv.convertToTemplate(adminId, gallery.id);
+    expect(b.id).toBe(a.id);
+    expect(templateStore.size).toBe(1);
+  });
 });
 
 describe('GalleryService.remove（管理端）→ 关联模板同事务 ARCHIVED', () => {
@@ -233,6 +246,25 @@ describe('GalleryService.remove（管理端）→ 关联模板同事务 ARCHIVED
 
     const created = await conv.convertToTemplate(adminId, gallery.id);
     await gallerySvc.remove(adminId, gallery.id);
+
+    const tpl = await prisma.image_templates.findUnique({
+      where: { sourceGalleryPostId: gallery.id },
+    });
+    expect(tpl!.status).toBe('ARCHIVED');
+    expect(tpl!.id).toBe(created.id);
+    expect(galleryStore.get(gallery.id)!.status).toBe('REMOVED');
+  });
+
+  it('作者 DELETE（removePost）已转换作品：关联模板同事务 ARCHIVED', async () => {
+    const gallery = { ...publishedImageGallery, id: 'gallery-author-remove-me' };
+    const { prisma, galleryStore } = makeFakePrisma({ [gallery.id]: gallery });
+    const repo = new GalleryRepository(prisma as never);
+    const conv = new GalleryTemplateConversionService(prisma as never, repo);
+    const gallerySvc = new GalleryService(repo as never, {} as never, {} as never);
+
+    const created = await conv.convertToTemplate(adminId, gallery.id);
+    // convertToTemplate 保持作品 PUBLISHED；作者可自删（PUBLISHED→REMOVED, 'author'）。
+    await gallerySvc.removePost(galleryAuthorId, gallery.id);
 
     const tpl = await prisma.image_templates.findUnique({
       where: { sourceGalleryPostId: gallery.id },

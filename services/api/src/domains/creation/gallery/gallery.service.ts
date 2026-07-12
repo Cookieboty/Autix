@@ -443,11 +443,16 @@ export class GalleryService {
     return this.repo.update(id, data);
   }
 
-  /** DELETE /gallery/:id：作者本人 → REMOVED；非法转移/非作者由 assertTransition/getOwned 抛错。 */
+  /**
+   * DELETE /gallery/:id：作者本人 → REMOVED；非法转移/非作者由 assertTransition/getOwned 抛错。
+   * 与管理端 remove 走同一条归档路径（removeAndArchiveTemplate）——convertToTemplate 不改动
+   * 作品状态，作品仍为 PUBLISHED，作者可自删已转换过的作品，故此处也必须在同事务内把关联
+   * 图片模板归档，否则会出现作品 REMOVED 但模板仍 APPROVED、引用已删来源的孤儿状态。
+   */
   async removePost(authorId: string, id: string) {
     const post = await this.getOwned(id, authorId);
     assertTransition(post.status, GalleryStatus.REMOVED, 'author');
-    return this.repo.update(id, { status: GalleryStatus.REMOVED });
+    return this.repo.removeAndArchiveTemplate(id);
   }
 
   /** POST /gallery/:id/unpublish：作者本人自行下架已发布作品，PUBLISHED → UNPUBLISHED。 */

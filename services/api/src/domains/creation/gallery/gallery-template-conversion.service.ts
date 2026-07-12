@@ -31,18 +31,23 @@ export class GalleryTemplateConversionService {
     if (!gallery) {
       throw new NotFoundException('作品不存在');
     }
-    if (gallery.status !== GalleryStatus.PUBLISHED || gallery.kind !== GalleryKind.IMAGE) {
-      throw new BadRequestException('仅已发布的图片作品可转换为模板');
-    }
-    if (!gallery.prompt) {
-      throw new BadRequestException('作品缺少提示词，无法转换为模板');
-    }
 
+    // 幂等无条件优先于状态门禁：已转换过的作品直接返回既有模板，无论其当前状态/kind。
+    // convertToTemplate 不改动作品状态，作品在转换后可能被合法地迁到 HIDDEN 等状态；
+    // 若把这个查询放在门禁之后，重复调用会因门禁 400 而非幂等返回既有模板。
+    // 门禁只约束"新建模板"这一动作。
     const existing = await this.prisma.image_templates.findUnique({
       where: { sourceGalleryPostId: galleryId },
     });
     if (existing) {
       return existing;
+    }
+
+    if (gallery.status !== GalleryStatus.PUBLISHED || gallery.kind !== GalleryKind.IMAGE) {
+      throw new BadRequestException('仅已发布的图片作品可转换为模板');
+    }
+    if (!gallery.prompt) {
+      throw new BadRequestException('作品缺少提示词，无法转换为模板');
     }
 
     const now = new Date();
@@ -52,7 +57,7 @@ export class GalleryTemplateConversionService {
       prompt: gallery.prompt,
       variables: {},
       coverImage: gallery.coverImage ?? gallery.mediaUrls[0] ?? null,
-      exampleImages: gallery.mediaUrls ?? [],
+      exampleImages: gallery.mediaUrls,
       modelHint: gallery.model ?? null,
       sourceType: ImageTemplateSource.GALLERY_CONVERSION,
       sourceGalleryPostId: galleryId,
