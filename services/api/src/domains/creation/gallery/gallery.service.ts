@@ -535,6 +535,11 @@ export class GalleryService {
       avatar: post.author.avatar ?? null,
     });
 
+    // 隐私铁律：剥离 include 进来的原始 author 关系行，只对外暴露 presenter 脱敏结果。
+    // 否则匿名响应会连原始 username（含 deleted_<id>）/ realName / avatar 一并回传，
+    // 使 presentAuthor 形同虚设（ResponseInterceptor 不做字段裁剪）。
+    const { author: _rawAuthor, ...postSummary } = post;
+
     const m = await this.metrics.getMetrics(ResourceType.GALLERY_POST, id);
     const metrics = {
       pvCount: m.pvCount,
@@ -548,7 +553,7 @@ export class GalleryService {
 
     if (!viewer) {
       // 匿名：不写个人历史、不返回 viewer 态。
-      return { post, author, metrics };
+      return { post: postSummary, author, metrics };
     }
 
     // 登录态：批量成员查询（单条也传 [id]，Task 8 feed 直接复用同一批量方法，杜绝 N+1）。
@@ -560,7 +565,7 @@ export class GalleryService {
     await this.interactions!.createView(viewer.id, ResourceType.GALLERY_POST, id);
 
     return {
-      post,
+      post: postSummary,
       author,
       metrics,
       viewer: { liked: likedIds.has(id), favorited: favoritedIds.has(id) },

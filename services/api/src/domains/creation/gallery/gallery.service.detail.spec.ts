@@ -155,4 +155,68 @@ describe('GalleryService.getDetail — 聚合 + 双写', () => {
     } as never);
     expect(res.author.userId).toBe('author-1');
   });
+
+  it('他人（登录非作者非管理员）访问他人的非 PUBLISHED 作品 → 404', async () => {
+    const { service, createViewCalls } = makeDetailService({
+      post: { ...publishedPost(), status: 'PENDING' },
+    });
+    await expect(
+      service.getDetail('p-pub', { id: 'other-user', roles: [] } as never),
+    ).rejects.toThrow(NotFoundException);
+    expect(createViewCalls).toHaveLength(0);
+  });
+});
+
+describe('GalleryService.getDetail — 隐私泄漏守卫（返回体绝无原始作者字段）', () => {
+  it('DELETED 作者：整个响应序列化后不含 username / deleted_ 前缀 / 旧头像 / status', async () => {
+    const { service } = makeDetailService({
+      post: {
+        ...publishedPost(),
+        author: {
+          id: 'author-1',
+          status: 'DELETED',
+          realName: 'Legal Name',
+          username: 'deleted_author-1',
+          avatar: 'stale.png',
+        },
+      },
+    });
+    const res = await service.getDetail('p-pub', { id: 'viewer-9' } as never);
+    // presenter 已脱敏
+    expect(res.author).toEqual({ userId: 'author-1', nickname: '已注销用户', avatar: null });
+    // post 不得再夹带原始 author 关系行
+    expect((res.post as Record<string, unknown>).author).toBeUndefined();
+    const serialized = JSON.stringify(res);
+    expect(serialized).not.toContain('deleted_');
+    expect(serialized).not.toContain('deleted_author-1');
+    expect(serialized).not.toContain('Legal Name');
+    expect(serialized).not.toContain('stale.png');
+  });
+
+  it('ACTIVE 作者：post 本体不夹带原始 author 关系行（username/realName/status 均不在 post 内）', async () => {
+    const { service } = makeDetailService({
+      post: {
+        ...publishedPost(),
+        author: {
+          id: 'author-1',
+          status: 'ACTIVE',
+          realName: 'Secret Legal Name',
+          username: 'raw-username-xyz',
+          avatar: 'author.png',
+        },
+      },
+    });
+    const res = await service.getDetail('p-pub', undefined);
+    // post 不得再夹带原始 author 关系行
+    expect((res.post as Record<string, unknown>).author).toBeUndefined();
+    const postSerialized = JSON.stringify(res.post);
+    expect(postSerialized).not.toContain('Secret Legal Name');
+    expect(postSerialized).not.toContain('raw-username-xyz');
+    // 原始 username 绝不出现在任何位置（ACTIVE 展示用 displayName，不暴露登录名）
+    expect(JSON.stringify(res)).not.toContain('raw-username-xyz');
+    // displayName←realName：realName 仅作为脱敏后的展示昵称出现一次，非原始行泄漏
+    expect(res.author.nickname).toBe('Secret Legal Name');
+    // 保留业务字段（帖子标题）证明只剥离了 author 关系、未误伤 post 本体
+    expect((res.post as Record<string, unknown>).title).toBe('hello');
+  });
 });
