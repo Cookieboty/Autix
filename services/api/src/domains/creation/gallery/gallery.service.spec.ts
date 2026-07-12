@@ -307,6 +307,7 @@ describe('GalleryService.submitDraft — 草稿→提交时快照元数据', () 
     width: 1024,
     height: 768,
     referenceImage: 'https://cdn.example.com/ref.png',
+    generatedImages: ['https://cdn/gen.png'],
   };
 
   function draftPost(): Record<string, unknown> {
@@ -399,6 +400,7 @@ describe('GalleryService.updatePost — 仅在来源/生成引用变动时才重
     width: 512,
     height: 512,
     referenceImage: 'https://cdn.example.com/ref-a.png',
+    generatedImages: ['https://cdn/gen-a.png'],
   };
   const genBImage: MockImageGeneration = {
     userId: authorId,
@@ -407,6 +409,7 @@ describe('GalleryService.updatePost — 仅在来源/生成引用变动时才重
     width: 1024,
     height: 1024,
     referenceImage: 'https://cdn.example.com/ref-b.png',
+    generatedImages: ['https://cdn/gen-b.png'],
   };
 
   /** 已通过 createSubmission(allowPublicReference:true) 写入了一张“非公开可复用”的私有参考图。 */
@@ -479,5 +482,135 @@ describe('GalleryService.updatePost — 仅在来源/生成引用变动时才重
     await expect(
       service.updatePost(authorId, postId, { imageGenerationId: genB } as never),
     ).rejects.toThrow(ForbiddenException);
+  });
+});
+
+describe('GalleryService — Task 4.6：草稿 / 更新路径 bypass 关闭', () => {
+  const authorId = 'user-me';
+
+  const inStationGen: MockImageGeneration = {
+    userId: authorId,
+    resolvedPrompt: 'p',
+    modelUsed: 'm',
+    width: null,
+    height: null,
+    referenceImage: null,
+    generatedImages: ['https://cdn/real.png'],
+  };
+
+  // ── createDraft ──────────────────────────────────────────────────────
+  it('createDraft(USER_UPLOAD, evil.com) → 拒绝，不把外链落进 DRAFT', async () => {
+    const service = makeService({});
+    await expect(
+      service.createDraft(authorId, {
+        kind: 'IMAGE',
+        sourceType: 'USER_UPLOAD',
+        mediaUrls: ['https://evil.com/x.png'],
+      } as never),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('createDraft(FROM_GENERATION, mediaUrls:[evil.com]) → 不采信 DTO，mediaUrls 存为空', async () => {
+    const service = makeService({});
+    const draft = await service.createDraft(authorId, {
+      kind: 'IMAGE',
+      sourceType: 'FROM_GENERATION',
+      imageGenerationId: 'gen-x',
+      mediaUrls: ['https://evil.com/x.png'],
+      coverImage: 'https://evil.com/x.png',
+    } as never);
+    expect(draft.mediaUrls).toEqual([]);
+    expect(draft.coverImage).toBeNull();
+  });
+
+  // ── updateDraft ──────────────────────────────────────────────────────
+  it('updateDraft(USER_UPLOAD, evil.com) → 拒绝', async () => {
+    const draft = {
+      id: 'd0', authorId, kind: 'IMAGE', status: 'DRAFT', sourceType: 'USER_UPLOAD',
+      mediaUrls: [], coverImage: null,
+    };
+    const service = makeService({ posts: { d0: draft } });
+    await expect(
+      service.updateDraft(authorId, 'd0', { mediaUrls: ['https://evil.com/x.png'] } as never),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  // ── submitDraft（强制点：内容变公开） ────────────────────────────────
+  it('submitDraft：USER_UPLOAD 草稿即便已存 evil.com，提交时强制校验 host → 拒绝', async () => {
+    const evilDraft = {
+      id: 'd1', authorId, kind: 'IMAGE', status: 'DRAFT', sourceType: 'USER_UPLOAD',
+      mediaUrls: ['https://evil.com/x.png'], coverImage: null,
+      imageTemplateId: null, videoTemplateId: null,
+      imageGenerationId: null, videoGenerationId: null,
+    };
+    const service = makeService({ posts: { d1: evilDraft } });
+    await expect(service.submitDraft(authorId, 'd1')).rejects.toThrow(BadRequestException);
+  });
+
+  it('submitDraft：FROM_GENERATION 草稿存了 evil.com，提交后媒体=生成记录，不采信草稿', async () => {
+    let captured: Record<string, unknown> | null = null;
+    const evilDraft = {
+      id: 'd2', authorId, kind: 'IMAGE', status: 'DRAFT', sourceType: 'FROM_GENERATION',
+      mediaUrls: ['https://evil.com/x.png'], coverImage: 'https://evil.com/x.png',
+      imageTemplateId: null, videoTemplateId: null,
+      imageGenerationId: 'gen-y', videoGenerationId: null,
+    };
+    const service = makeService({
+      imageGenerations: { 'gen-y': inStationGen },
+      posts: { d2: evilDraft },
+      captureUpdate: (_id, data) => { captured = data; },
+    });
+    await service.submitDraft(authorId, 'd2');
+    expect(captured!.mediaUrls).toEqual(inStationGen.generatedImages);
+    expect(captured!.coverImage).toBe(inStationGen.generatedImages![0]);
+    expect(captured!.status).toBe('PENDING');
+  });
+
+  // ── updatePost（一次请求换外链） ─────────────────────────────────────
+  it('updatePost：USER_UPLOAD 一次请求把 mediaUrls 换成 evil.com → 拒绝', async () => {
+    const post = {
+      id: 'p1', authorId, kind: 'IMAGE', status: 'PENDING', sourceType: 'USER_UPLOAD',
+      mediaUrls: ['https://cdn/a.png'], coverImage: 'https://cdn/a.png',
+      imageTemplateId: null, videoTemplateId: null,
+      imageGenerationId: null, videoGenerationId: null,
+    };
+    const service = makeService({ posts: { p1: post } });
+    await expect(
+      service.updatePost(authorId, 'p1', { mediaUrls: ['https://evil.com/x.png'] } as never),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('updatePost：USER_UPLOAD 只换 coverImage 为 evil.com → 拒绝', async () => {
+    const post = {
+      id: 'p1b', authorId, kind: 'IMAGE', status: 'PENDING', sourceType: 'USER_UPLOAD',
+      mediaUrls: ['https://cdn/a.png'], coverImage: 'https://cdn/a.png',
+      imageTemplateId: null, videoTemplateId: null,
+      imageGenerationId: null, videoGenerationId: null,
+    };
+    const service = makeService({ posts: { p1b: post } });
+    await expect(
+      service.updatePost(authorId, 'p1b', {
+        mediaUrls: ['https://cdn/a.png'],
+        coverImage: 'https://evil.com/x.png',
+      } as never),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('updatePost：FROM_GENERATION 带 mediaUrls:[evil.com] → 用生成记录派生，忽略 DTO', async () => {
+    let captured: Record<string, unknown> | null = null;
+    const post = {
+      id: 'p2', authorId, kind: 'IMAGE', status: 'PENDING', sourceType: 'FROM_GENERATION',
+      mediaUrls: ['https://cdn/old.png'], coverImage: 'https://cdn/old.png',
+      imageTemplateId: null, videoTemplateId: null,
+      imageGenerationId: 'gen-z', videoGenerationId: null,
+    };
+    const service = makeService({
+      imageGenerations: { 'gen-z': inStationGen },
+      posts: { p2: post },
+      captureUpdate: (_id, data) => { captured = data; },
+    });
+    await service.updatePost(authorId, 'p2', { mediaUrls: ['https://evil.com/x.png'] } as never);
+    expect(captured!.mediaUrls).toEqual(inStationGen.generatedImages);
+    expect(captured!.coverImage).toBe(inStationGen.generatedImages![0]);
   });
 });

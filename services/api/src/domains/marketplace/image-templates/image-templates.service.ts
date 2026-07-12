@@ -85,16 +85,25 @@ export class ImageTemplatesService extends BaseResourceService {
     return super.recordView(userId, id);
   }
 
-  // 图片模板 runtime 恒定 CLOUD（生成走云端模型 API）
-  // Task 4.5 站内来源写入守卫：coverImage/exampleImages 必须命中站内存储域名，拒绝任意公网 URL。
-  async create(authorId: string, dto: CreateImageTemplateDto) {
-    const media = [dto.coverImage, ...(dto.exampleImages ?? [])].filter(
+  /**
+   * Task 4.5/4.6 站内来源写入守卫：coverImage/exampleImages 必须命中站内存储域名，
+   * 拒绝任意公网 URL。create 与 update 共用（update 此前 `{...dto}` 透传未守）。
+   */
+  private async assertTemplateMediaInStation(media: {
+    coverImage?: string;
+    exampleImages?: string[];
+  }): Promise<void> {
+    const urls = [media.coverImage, ...(media.exampleImages ?? [])].filter(
       (url): url is string => !!url,
     );
-    if (media.length > 0) {
-      const r2Base = await this.r2.getPublicBaseUrl();
-      assertInStationMediaUrls(media, [r2Base], '封面图/示例图必须来自站内存储');
-    }
+    if (urls.length === 0) return;
+    const r2Base = await this.r2.getPublicBaseUrl();
+    assertInStationMediaUrls(urls, [r2Base], '封面图/示例图必须来自站内存储');
+  }
+
+  // 图片模板 runtime 恒定 CLOUD（生成走云端模型 API）
+  async create(authorId: string, dto: CreateImageTemplateDto) {
+    await this.assertTemplateMediaInStation(dto);
 
     return this.resources.createImageTemplate({
       title: dto.title,
@@ -120,6 +129,7 @@ export class ImageTemplatesService extends BaseResourceService {
   async update(id: string, userId: string, dto: UpdateImageTemplateDto) {
     const tpl = (await this.findById(id)) as { authorId: string };
     if (tpl.authorId !== userId) throw new ForbiddenException('无权修改此模板');
+    await this.assertTemplateMediaInStation(dto);
 
     return this.resources.updateImageTemplate(id, {
       ...dto,

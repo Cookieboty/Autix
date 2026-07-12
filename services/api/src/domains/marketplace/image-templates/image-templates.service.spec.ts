@@ -117,6 +117,7 @@ function createMocks(overrides: BuildOverrides = {}) {
   const resources = {
     delegateFor: jest.fn(() => prisma.image_templates),
     createImageTemplate: jest.fn(async (data: any) => ({ id: 'tpl-new', ...data })),
+    updateImageTemplate: jest.fn(async (id: string, data: any) => ({ id, ...data })),
   };
   const r2 = {
     getPublicBaseUrl: jest.fn().mockResolvedValue(R2_PUBLIC_BASE),
@@ -208,6 +209,36 @@ describe('ImageTemplatesService.create — Task 4.5：站内来源写入守卫',
         coverImage: `${R2_PUBLIC_BASE}/cover.png`,
         exampleImages: [`${R2_PUBLIC_BASE}/ex-1.png`],
       }),
+    );
+  });
+});
+
+describe('ImageTemplatesService.update — Task 4.6：站内来源守卫', () => {
+  it('拒绝非站内 coverImage', async () => {
+    const { service } = createMocks();
+    await expect(
+      service.update('tpl-1', 'author-1', { coverImage: 'https://evil.com/cover.png' }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('拒绝非站内 exampleImages', async () => {
+    const { service } = createMocks();
+    await expect(
+      service.update('tpl-1', 'author-1', {
+        exampleImages: [`${R2_PUBLIC_BASE}/ex-1.png`, 'https://evil.com/ex-2.png'],
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('站内 coverImage/exampleImages 放行', async () => {
+    const { service, resources } = createMocks();
+    await service.update('tpl-1', 'author-1', {
+      coverImage: `${R2_PUBLIC_BASE}/cover.png`,
+      exampleImages: [`${R2_PUBLIC_BASE}/ex-1.png`],
+    });
+    expect(resources.updateImageTemplate).toHaveBeenCalledWith(
+      'tpl-1',
+      expect.objectContaining({ coverImage: `${R2_PUBLIC_BASE}/cover.png` }),
     );
   });
 });

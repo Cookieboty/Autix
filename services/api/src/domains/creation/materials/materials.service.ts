@@ -177,7 +177,15 @@ export class MaterialsService {
     await this.ensureOwned(userId, id);
     const data: Prisma.material_assetsUpdateInput = {};
     if (input.title !== undefined) data.title = this.normalizeTitle(input.title);
-    if (input.thumbnailUrl !== undefined) data.thumbnailUrl = input.thumbnailUrl?.trim() || null;
+    if (input.thumbnailUrl !== undefined) {
+      // Task 4.6：update 也不得把外链缩略图写入（create 已守，update 此前漏守）。
+      const thumbnailUrl = input.thumbnailUrl?.trim() || null;
+      if (thumbnailUrl) {
+        const r2Base = await this.r2Service.getPublicBaseUrl();
+        assertInStationMediaUrls([thumbnailUrl], [r2Base], '素材缩略图必须来自站内存储');
+      }
+      data.thumbnailUrl = thumbnailUrl;
+    }
     if (input.tags !== undefined) data.tags = this.normalizeTags(input.tags);
     if (input.metadata !== undefined) {
       data.metadata = (input.metadata ?? Prisma.JsonNull) as Prisma.InputJsonValue;

@@ -197,7 +197,7 @@ export class GalleryService {
       authorId,
       dto.allowPublicReference,
     );
-    const media = await this.resolveSubmissionMedia(dto, generation);
+    const media = await this.resolveSubmissionMedia(dto.sourceType, dto, generation);
 
     return this.repo.create({
       kind: dto.kind,
@@ -225,18 +225,33 @@ export class GalleryService {
   }
 
   /**
-   * 投稿媒体来源守卫（Task 4.5，落实"所有资源来自站内"）：
-   * - FROM_GENERATION：完全忽略 DTO 的 mediaUrls/coverImage，从服务端生成记录
+   * 站内媒体 host 校验（Task 4.5/4.6，落实"所有资源来自站内"）：
+   * 校验一组 mediaUrls + coverImage 全部命中站内存储域名（CloudflareR2Service.getPublicBaseUrl，
+   * 唯一权威来源）；非站内 → 400。空集合直接放行（无媒体可校验）。
+   */
+  private async validateInStationMedia(
+    mediaUrls: readonly string[],
+    coverImage?: string | null,
+  ): Promise<void> {
+    const candidates = coverImage ? [...mediaUrls, coverImage] : [...mediaUrls];
+    if (candidates.length === 0) return;
+    const r2Base = await this.r2.getPublicBaseUrl();
+    assertInStationMediaUrls(candidates, [r2Base], '仅允许使用站内存储的媒体链接');
+  }
+
+  /**
+   * 投稿媒体来源守卫（Task 4.5，createSubmission 与 submitDraft 共用）：
+   * - FROM_GENERATION：完全忽略传入的 mediaUrls/coverImage，从服务端生成记录
    *   （generatedImages/generatedVideos）派生 —— 与 prompt/model 元数据快照同一原则，
-   *   不信任客户端。生成结果为空时视为无可投稿媒体，直接 400。
-   * - 其余来源（USER_UPLOAD 等）：校验 DTO 提供的 mediaUrls/coverImage 命中站内存储域名
-   *   （CloudflareR2Service.getPublicBaseUrl，唯一权威来源），非站内 → 400。
+   *   不信任客户端存下来的任何东西（DTO 或已落库的 draft 字段）。生成结果为空 → 400。
+   * - 其余来源（USER_UPLOAD 等）：校验 mediaUrls/coverImage 命中站内存储域名，非站内 → 400。
    */
   private async resolveSubmissionMedia(
-    dto: CreateGalleryPostDto,
+    sourceType: string,
+    media: { mediaUrls?: string[] | null; coverImage?: string | null },
     generation: GenerationOwnershipRecord | undefined,
   ): Promise<{ mediaUrls: string[]; coverImage: string | undefined }> {
-    if (dto.sourceType === 'FROM_GENERATION') {
+    if (sourceType === 'FROM_GENERATION') {
       const derived = deriveGenerationMediaUrls({ generatedImages: generation?.mediaUrls });
       if (!derived) {
         throw new BadRequestException('生成结果为空，无法投稿');
@@ -244,25 +259,43 @@ export class GalleryService {
       return derived;
     }
 
-    const mediaUrls = dto.mediaUrls ?? [];
-    const candidates = dto.coverImage ? [...mediaUrls, dto.coverImage] : mediaUrls;
-    if (candidates.length > 0) {
-      const r2Base = await this.r2.getPublicBaseUrl();
-      assertInStationMediaUrls(candidates, [r2Base], '仅允许使用站内存储的媒体链接');
-    }
-    return { mediaUrls, coverImage: dto.coverImage };
+    const mediaUrls = media.mediaUrls ?? [];
+    await this.validateInStationMedia(mediaUrls, media.coverImage);
+    return { mediaUrls, coverImage: media.coverImage ?? undefined };
   }
 
-  /** POST /gallery/drafts：草稿，字段可不完整，不做 assertSource。 */
+  /**
+   * 草稿阶段媒体守卫（createDraft / updateDraft 共用）：草稿不做归属校验，故无法派生
+   * FROM_GENERATION 的站内媒体 —— 一律不持久化任何 DTO 媒体（返回空），提交时（submitDraft）
+   * 再从生成记录派生。非 FROM_GENERATION 则校验 host，拒绝把外链持久化进 DRAFT。
+   */
+  private async resolveDraftMedia(
+    sourceType: string | undefined,
+    media: { mediaUrls?: string[] | null; coverImage?: string | null },
+  ): Promise<{ mediaUrls: string[]; coverImage: string | null }> {
+    if (sourceType === 'FROM_GENERATION') {
+      return { mediaUrls: [], coverImage: null };
+    }
+    const mediaUrls = media.mediaUrls ?? [];
+    await this.validateInStationMedia(mediaUrls, media.coverImage);
+    return { mediaUrls, coverImage: media.coverImage ?? null };
+  }
+
+  /**
+   * POST /gallery/drafts：草稿，字段可不完整，不做 assertSource。
+   * Task 4.6：即便是 DRAFT 也不持久化外链媒体 —— 非 FROM_GENERATION 校验 host，
+   * FROM_GENERATION 不采信 DTO 媒体（提交时再从生成记录派生）。
+   */
   async createDraft(authorId: string, dto: CreateGalleryDraftDto) {
+    const media = await this.resolveDraftMedia(dto.sourceType, dto);
     return this.repo.create({
       kind: dto.kind,
       title: dto.title,
       description: dto.description,
       category: dto.category ?? '',
       tags: dto.tags ?? [],
-      coverImage: dto.coverImage,
-      mediaUrls: dto.mediaUrls ?? [],
+      coverImage: media.coverImage,
+      mediaUrls: media.mediaUrls,
       aspectRatio: dto.aspectRatio,
       durationSec: dto.durationSec,
       sourceType: dto.sourceType,
@@ -284,13 +317,27 @@ export class GalleryService {
     return post;
   }
 
-  /** PATCH /gallery/drafts/:id：作者本人 + 仍为 DRAFT 才可编辑。 */
+  /**
+   * PATCH /gallery/drafts/:id：作者本人 + 仍为 DRAFT 才可编辑。
+   * Task 4.6：编辑草稿时若带 mediaUrls/coverImage，同样禁止持久化外链 ——
+   * 非 FROM_GENERATION 校验 host；FROM_GENERATION 清空媒体（提交时再派生）。
+   */
   async updateDraft(authorId: string, id: string, dto: UpdateGalleryPostDto) {
     const post = await this.getOwned(id, authorId);
     if (post.status !== GalleryStatus.DRAFT) {
       throw new BadRequestException('仅草稿状态可编辑草稿');
     }
-    return this.repo.update(id, { ...dto });
+    const data: Prisma.gallery_postsUncheckedUpdateInput = { ...dto };
+    if (dto.mediaUrls !== undefined || dto.coverImage !== undefined) {
+      const sourceType = dto.sourceType ?? post.sourceType;
+      if (sourceType === 'FROM_GENERATION') {
+        data.mediaUrls = [];
+        data.coverImage = null;
+      } else {
+        await this.validateInStationMedia(dto.mediaUrls ?? [], dto.coverImage);
+      }
+    }
+    return this.repo.update(id, data);
   }
 
   /**
@@ -313,8 +360,17 @@ export class GalleryService {
       authorId,
     );
     const snapshot = await this.buildGenerationSnapshot(generation, authorId, undefined);
+    // Task 4.6：DRAFT→PENDING 是内容变公开的强制点。无论草稿里存了什么，都在此重新
+    // 派生（FROM_GENERATION）/ 重新校验 host（USER_UPLOAD），杜绝草稿携带外链后蒙混过审。
+    const media = await this.resolveSubmissionMedia(
+      post.sourceType,
+      { mediaUrls: post.mediaUrls, coverImage: post.coverImage },
+      generation,
+    );
     return this.repo.update(id, {
       status: GalleryStatus.PENDING,
+      mediaUrls: media.mediaUrls,
+      coverImage: media.coverImage ?? null,
       ...this.metadataFields(snapshot),
     });
   }
@@ -354,6 +410,23 @@ export class GalleryService {
     if (sourceRefChanged) {
       const snapshot = await this.buildGenerationSnapshot(generation, authorId, undefined);
       Object.assign(data, this.metadataFields(snapshot));
+    }
+
+    // Task 4.6：一次请求把 mediaUrls/coverImage 换成 evil.com 必须被拦。
+    // FROM_GENERATION：媒体只能来自生成记录（来源/生成引用变动或本次带媒体时重新派生，
+    // 覆盖 {...dto} 里可能夹带的外链）；其余来源：本次带媒体则强制校验 host。
+    const mediaProvided = dto.mediaUrls !== undefined || dto.coverImage !== undefined;
+    if (merged.sourceType === 'FROM_GENERATION') {
+      if (mediaProvided || sourceRefChanged) {
+        const derived = deriveGenerationMediaUrls({ generatedImages: generation?.mediaUrls });
+        if (!derived) {
+          throw new BadRequestException('生成结果为空，无法更新媒体');
+        }
+        data.mediaUrls = derived.mediaUrls;
+        data.coverImage = derived.coverImage;
+      }
+    } else if (mediaProvided) {
+      await this.validateInStationMedia(dto.mediaUrls ?? [], dto.coverImage);
     }
     if (post.status === GalleryStatus.PUBLISHED || post.status === GalleryStatus.HIDDEN) {
       data.status = GalleryStatus.PENDING;

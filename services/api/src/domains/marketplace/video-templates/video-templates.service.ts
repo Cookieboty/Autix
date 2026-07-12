@@ -92,15 +92,24 @@ export class VideoTemplatesService extends BaseResourceService {
     return super.recordView(userId, id);
   }
 
-  // Task 4.5 站内来源写入守卫：coverImage/exampleMedia 必须命中站内存储域名，拒绝任意公网 URL。
-  async create(authorId: string, dto: CreateVideoTemplateDto) {
-    const media = [dto.coverImage, ...(dto.exampleMedia ?? [])].filter(
+  /**
+   * Task 4.5/4.6 站内来源写入守卫：coverImage/exampleMedia 必须命中站内存储域名，
+   * 拒绝任意公网 URL。create 与 update 共用（update 此前 `{...rest}` 透传未守）。
+   */
+  private async assertTemplateMediaInStation(media: {
+    coverImage?: string;
+    exampleMedia?: string[];
+  }): Promise<void> {
+    const urls = [media.coverImage, ...(media.exampleMedia ?? [])].filter(
       (url): url is string => !!url,
     );
-    if (media.length > 0) {
-      const r2Base = await this.r2.getPublicBaseUrl();
-      assertInStationMediaUrls(media, [r2Base], '封面图/示例素材必须来自站内存储');
-    }
+    if (urls.length === 0) return;
+    const r2Base = await this.r2.getPublicBaseUrl();
+    assertInStationMediaUrls(urls, [r2Base], '封面图/示例素材必须来自站内存储');
+  }
+
+  async create(authorId: string, dto: CreateVideoTemplateDto) {
+    await this.assertTemplateMediaInStation(dto);
 
     return this.resources.createVideoTemplate({
       title: dto.title,
@@ -129,6 +138,7 @@ export class VideoTemplatesService extends BaseResourceService {
   async update(id: string, userId: string, dto: UpdateVideoTemplateDto) {
     const tpl = (await this.findById(id)) as { authorId: string };
     if (tpl.authorId !== userId) throw new ForbiddenException('无权修改此模板');
+    await this.assertTemplateMediaInStation(dto);
 
     const { variables, defaultParams, materialSlots, ...rest } = dto;
 

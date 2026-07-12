@@ -120,6 +120,7 @@ function createMocks(overrides: BuildOverrides = {}) {
   const resources = {
     delegateFor: jest.fn(() => prisma.video_templates),
     createVideoTemplate: jest.fn(async (data: any) => ({ id: 'tpl-new', ...data })),
+    updateVideoTemplate: jest.fn(async (id: string, data: any) => ({ id, ...data })),
   };
   const r2 = {
     getPublicBaseUrl: jest.fn().mockResolvedValue(R2_PUBLIC_BASE),
@@ -401,6 +402,36 @@ describe('VideoTemplatesService.create — Task 4.5：站内来源写入守卫',
         coverImage: `${R2_PUBLIC_BASE}/cover.png`,
         exampleMedia: [`${R2_PUBLIC_BASE}/ex-1.mp4`],
       }),
+    );
+  });
+});
+
+describe('VideoTemplatesService.update — Task 4.6：站内来源守卫', () => {
+  it('拒绝非站内 coverImage', async () => {
+    const { service } = createMocks();
+    await expect(
+      service.update('tpl-1', 'author-1', { coverImage: 'https://evil.com/cover.png' }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('拒绝非站内 exampleMedia', async () => {
+    const { service } = createMocks();
+    await expect(
+      service.update('tpl-1', 'author-1', {
+        exampleMedia: [`${R2_PUBLIC_BASE}/ex-1.mp4`, 'https://evil.com/ex-2.mp4'],
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('站内 coverImage/exampleMedia 放行', async () => {
+    const { service, resources } = createMocks();
+    await service.update('tpl-1', 'author-1', {
+      coverImage: `${R2_PUBLIC_BASE}/cover.png`,
+      exampleMedia: [`${R2_PUBLIC_BASE}/ex-1.mp4`],
+    });
+    expect(resources.updateVideoTemplate).toHaveBeenCalledWith(
+      'tpl-1',
+      expect.objectContaining({ coverImage: `${R2_PUBLIC_BASE}/cover.png` }),
     );
   });
 });

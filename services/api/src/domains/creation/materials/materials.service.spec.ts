@@ -247,3 +247,30 @@ describe('MaterialsService.create — Task 4.5：站内来源写入守卫', () =
     );
   });
 });
+
+describe('MaterialsService.update — Task 4.6：thumbnailUrl 站内守卫', () => {
+  it('拒绝非站内 host 的 thumbnailUrl', async () => {
+    const { service } = buildService();
+    await expect(
+      service.update('u1', 'm1', { thumbnailUrl: 'https://evil.com/thumb.png' }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('站内 thumbnailUrl 放行并写入', async () => {
+    const { service, repo } = buildService();
+    await service.update('u1', 'm1', { thumbnailUrl: `${R2_PUBLIC_BASE}/thumb.png` });
+    expect(repo.update).toHaveBeenCalledWith(
+      'm1',
+      expect.objectContaining({ thumbnailUrl: `${R2_PUBLIC_BASE}/thumb.png` }),
+    );
+  });
+
+  it('thumbnailUrl=null（清空）不触发 host 校验', async () => {
+    const { service, repo } = buildService();
+    await service.update('u1', 'm1', { thumbnailUrl: null });
+    expect(repo.update).toHaveBeenCalledWith(
+      'm1',
+      expect.objectContaining({ thumbnailUrl: null }),
+    );
+  });
+});
