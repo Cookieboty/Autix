@@ -1,5 +1,7 @@
 import { campaignApi } from '@autix/sdk';
-import type { HomeStarterClaimResult, HomeStarterTasksResult } from '@autix/sdk';
+import type { HomeStarterClaimResult, HomeStarterTask, HomeStarterTasksResult } from '@autix/sdk';
+
+export type { HomeStarterClaimResult, HomeStarterTask, HomeStarterTasksResult } from '@autix/sdk';
 
 export const campaignActions = {
   getHomeStarterTasks: async (): Promise<HomeStarterTasksResult> => {
