@@ -39,9 +39,7 @@
     "./theme": "./src/theme.tsx",
     "./video": "./src/video/index.ts",
     "./growth": "./src/growth/index.ts",
-    "./public-home": "./src/public-home/index.ts",
-    "./community": "./src/community/index.ts",
-    "./public-profile": "./src/public-profile/index.ts"
+    "./public-home": "./src/public-home/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
