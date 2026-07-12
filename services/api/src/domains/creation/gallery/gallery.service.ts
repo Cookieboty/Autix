@@ -234,6 +234,24 @@ export class GalleryService {
     return this.repo.update(id, { status: GalleryStatus.REMOVED });
   }
 
+  /** POST /gallery/:id/unpublish：作者本人自行下架已发布作品，PUBLISHED → UNPUBLISHED。 */
+  async unpublish(authorId: string, id: string) {
+    const post = await this.getOwned(id, authorId);
+    assertTransition(post.status, GalleryStatus.UNPUBLISHED, 'author');
+    return this.repo.update(id, { status: GalleryStatus.UNPUBLISHED });
+  }
+
+  /**
+   * POST /gallery/:id/republish：作者本人把已下架作品重新提交审核，UNPUBLISHED → PENDING。
+   * 仅接受 UNPUBLISHED；HIDDEN（管理员处罚下架）不在状态机内 → assertTransition 直接 400，
+   * 防止作者绕开处罚自行"重新发布"。
+   */
+  async republish(authorId: string, id: string) {
+    const post = await this.getOwned(id, authorId);
+    assertTransition(post.status, GalleryStatus.PENDING, 'author');
+    return this.repo.update(id, { status: GalleryStatus.PENDING });
+  }
+
   /**
    * GET /gallery/feed：公开热度 Feed（首页图片/视频画廊消费）。
    * 只返回 PUBLISHED 作品，按 kind 分流（IMAGE/VIDEO），并附带互动指标（无指标行则补零）。
@@ -382,6 +400,18 @@ export class GalleryService {
     assertTransition(post.status, GalleryStatus.HIDDEN, 'admin');
     const updated = await this.repo.update(id, { status: GalleryStatus.HIDDEN });
     await this.repo.writeAuditLog('gallery.hide', adminId, {
+      targetType: 'gallery_post',
+      targetId: id,
+    });
+    return updated;
+  }
+
+  /** 管理端：解封被处罚下架的作品，HIDDEN → PUBLISHED。 */
+  async unhide(adminId: string, id: string) {
+    const post = await this.requirePost(id);
+    assertTransition(post.status, GalleryStatus.PUBLISHED, 'admin');
+    const updated = await this.repo.update(id, { status: GalleryStatus.PUBLISHED });
+    await this.repo.writeAuditLog('gallery.unhide', adminId, {
       targetType: 'gallery_post',
       targetId: id,
     });

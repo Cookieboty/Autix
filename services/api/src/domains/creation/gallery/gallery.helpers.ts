@@ -21,6 +21,11 @@ const TRANSITIONS: Record<string, GalleryActor[]> = {
   'DRAFT->REMOVED': ['author'],
   'PENDING->REMOVED': ['author'],
   'REJECTED->REMOVED': ['author'],
+  // UNPUBLISHED：作者可自行下架已发布作品，也可重新提交进入审核；
+  // 注意 republish 只接受 UNPUBLISHED，HIDDEN（被处罚下架）不在此表中 → 找不到转移项直接 400，
+  // 防止作者绕开管理员处罚自行"重新发布"。'HIDDEN->PUBLISHED' 已在上方以 admin-only 定义（unhide）。
+  'PUBLISHED->UNPUBLISHED': ['author'],
+  'UNPUBLISHED->PENDING': ['author'],
 };
 
 /** 校验状态机转移；非法转移 / 角色无权 → 400。 */
@@ -101,7 +106,7 @@ export function assertSource(
 }
 
 // ── 管理端广场列表：分页 + 筛选 ────────────────────────────────────────────
-const ADMIN_STATUSES: GalleryStatus[] = ['PENDING', 'PUBLISHED', 'HIDDEN', 'REJECTED'];
+const ADMIN_STATUSES: GalleryStatus[] = ['PENDING', 'PUBLISHED', 'HIDDEN', 'REJECTED', 'UNPUBLISHED'];
 const ADMIN_KINDS: GalleryKind[] = ['IMAGE', 'VIDEO'];
 const ADMIN_SOURCE_TYPES: GallerySource[] = [
   'USER_UPLOAD',

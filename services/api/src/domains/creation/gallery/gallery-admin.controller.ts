@@ -73,6 +73,12 @@ export class GalleryAdminController {
     return this.service.hide(getCurrentUserId(user), id);
   }
 
+  /** 解封被处罚下架的作品，HIDDEN → PUBLISHED。 */
+  @Post(':id/unhide')
+  unhide(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.unhide(getCurrentUserId(user), id);
+  }
+
   @Post(':id/remove')
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.remove(getCurrentUserId(user), id);

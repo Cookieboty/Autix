@@ -93,6 +93,20 @@ export class GalleryController {
     return this.service.removePost(getCurrentUserId(user), id);
   }
 
+  /** 作者本人自行下架已发布作品，PUBLISHED → UNPUBLISHED。 */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/unpublish')
+  unpublish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.unpublish(getCurrentUserId(user), id);
+  }
+
+  /** 作者本人把已下架作品重新提交审核，UNPUBLISHED → PENDING（拒绝 HIDDEN，防逃避处罚）。 */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/republish')
+  republish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.republish(getCurrentUserId(user), id);
+  }
+
   @Public()
   @Get(':id')
   getVisible(@OptionalCurrentUser() user: AuthUser | undefined, @Param('id') id: string) {

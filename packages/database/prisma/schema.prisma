@@ -2074,6 +2074,7 @@ enum GalleryStatus {
   REJECTED
   HIDDEN
   REMOVED
+  UNPUBLISHED
 }
 
 enum GallerySource {

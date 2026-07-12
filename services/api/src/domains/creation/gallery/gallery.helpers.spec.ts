@@ -33,6 +33,17 @@ describe('assertTransition (§5.1.1 状态机)', () => {
     expect(() => assertTransition('PENDING', 'REMOVED', 'author')).not.toThrow();
     expect(() => assertTransition('REJECTED', 'REMOVED', 'author')).not.toThrow();
   });
+
+  it('作者 republish 仅接受 UNPUBLISHED，拒绝 HIDDEN', () => {
+    expect(() => assertTransition('UNPUBLISHED', 'PENDING', 'author')).not.toThrow();
+    expect(() => assertTransition('HIDDEN', 'PENDING', 'author')).toThrow(); // 防逃避处罚
+  });
+
+  it('作者 unpublish PUBLISHED→UNPUBLISHED；unhide 仅 admin HIDDEN→PUBLISHED', () => {
+    expect(() => assertTransition('PUBLISHED', 'UNPUBLISHED', 'author')).not.toThrow();
+    expect(() => assertTransition('HIDDEN', 'PUBLISHED', 'admin')).not.toThrow();
+    expect(() => assertTransition('HIDDEN', 'PUBLISHED', 'author')).toThrow();
+  });
 });
 
 describe('assertSource (§6.4 来源强校验)', () => {
