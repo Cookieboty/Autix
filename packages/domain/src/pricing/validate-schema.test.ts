@@ -347,3 +347,98 @@ describe('validateParamsSchema', () => {
     });
   });
 });
+
+describe('validateParamsSchema x-ui role/derivedFrom whitelist', () => {
+  // ajv 对 x-ui 内部是零校验的（validate-params.ts:26 的 addKeyword valid:true）。
+  // 这几条是唯一拦得住 role 拼错的地方 —— 拼错会静默缺省成 'both'，
+  // 把一个纯 wire 参数当成计价参数。
+  const base = (property: Record<string, unknown>) =>
+    ({
+      type: 'object' as const,
+      properties: { size: property },
+    }) as never;
+
+  it('rejects an unknown role', () => {
+    const violations = validateParamsSchema(
+      base({ type: 'string', 'x-ui': { control: 'hidden', role: 'wier' } }),
+    );
+    expect(violations.map((v) => v.code)).toContain('UNKNOWN_X_UI_ROLE');
+  });
+
+  it('accepts each of the four legal roles', () => {
+    for (const role of ['pricing', 'wire', 'both', 'derived'] as const) {
+      const property: Record<string, unknown> = {
+        type: 'string',
+        'x-ui': { control: 'hidden', role },
+      };
+      if (role === 'derived') {
+        (property['x-ui'] as Record<string, unknown>).derivedFrom = {
+          param: 'other',
+          via: 'imagePricingResolution',
+        };
+      }
+      const schema = {
+        type: 'object' as const,
+        properties: {
+          size: property,
+          other: { type: 'string', 'x-ui': { control: 'hidden' } },
+        },
+      } as never;
+      expect(validateParamsSchema(schema).map((v) => v.code)).not.toContain('UNKNOWN_X_UI_ROLE');
+    }
+  });
+
+  it('treats an absent role as legal (defaults to both, backward compatible)', () => {
+    const violations = validateParamsSchema(base({ type: 'string', 'x-ui': { control: 'hidden' } }));
+    expect(violations.map((v) => v.code)).not.toContain('UNKNOWN_X_UI_ROLE');
+  });
+
+  it('rejects role: derived without derivedFrom', () => {
+    const violations = validateParamsSchema(
+      base({ type: 'string', 'x-ui': { control: 'hidden', role: 'derived' } }),
+    );
+    expect(violations.map((v) => v.code)).toContain('DERIVED_NEEDS_DERIVED_FROM');
+  });
+
+  it('rejects an unknown derive function', () => {
+    const violations = validateParamsSchema(
+      base({
+        type: 'string',
+        'x-ui': {
+          control: 'hidden',
+          role: 'derived',
+          derivedFrom: { param: 'other', via: 'notARealFunction' },
+        },
+      }),
+    );
+    expect(violations.map((v) => v.code)).toContain('UNKNOWN_DERIVE_FN');
+  });
+
+  it('rejects derivedFrom pointing at a param that does not exist in the same schema', () => {
+    const violations = validateParamsSchema(
+      base({
+        type: 'string',
+        'x-ui': {
+          control: 'hidden',
+          role: 'derived',
+          derivedFrom: { param: 'ghost', via: 'imagePricingResolution' },
+        },
+      }),
+    );
+    expect(violations.map((v) => v.code)).toContain('DERIVED_FROM_UNKNOWN_PARAM');
+  });
+
+  it('rejects a self-referencing derivedFrom', () => {
+    const violations = validateParamsSchema(
+      base({
+        type: 'string',
+        'x-ui': {
+          control: 'hidden',
+          role: 'derived',
+          derivedFrom: { param: 'size', via: 'imagePricingResolution' },
+        },
+      }),
+    );
+    expect(violations.map((v) => v.code)).toContain('DERIVED_FROM_SELF');
+  });
+});

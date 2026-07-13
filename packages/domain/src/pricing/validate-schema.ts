@@ -1,5 +1,5 @@
 import { affectedParams } from './introspect';
-import type { ParamsSchema, PricingSchema, Term, XUiControl } from './types';
+import type { DeriveFn, ParamsSchema, PricingSchema, Term, XUiControl, XUiRole } from './types';
 
 export interface SchemaViolation {
   code:
@@ -17,13 +17,23 @@ export interface SchemaViolation {
     | 'CHOICE_CONTROL_NEEDS_ENUM'
     | 'RANGE_CONTROL_NEEDS_BOUNDS'
     | 'SWITCH_NEEDS_BOOLEAN'
-    | 'PRICING_REFERENCES_UNKNOWN_PARAM';
+    | 'PRICING_REFERENCES_UNKNOWN_PARAM'
+    | 'UNKNOWN_X_UI_ROLE'
+    | 'UNKNOWN_DERIVE_FN'
+    | 'DERIVED_NEEDS_DERIVED_FROM'
+    | 'DERIVED_FROM_UNKNOWN_PARAM'
+    | 'DERIVED_FROM_SELF';
   message: string;
   termId?: string;
 }
 
 const CHOICE_CONTROLS: XUiControl[] = ['chips', 'select'];
 const RANGE_CONTROLS: XUiControl[] = ['slider', 'stepper'];
+
+/** ajv 对 x-ui 内部零校验（validate-params.ts:26 的 addKeyword valid:true），
+ *  这两张表是唯一拦得住取值拼错的地方。新增 role / 派生函数必须同步这里。 */
+const X_UI_ROLES: XUiRole[] = ['pricing', 'wire', 'both', 'derived'];
+const DERIVE_FNS: DeriveFn[] = ['imagePricingResolution'];
 
 function sourceCount(term: Term): number {
   return (['const', 'table', 'perUnit'] as const).filter((key) => key in term).length;
@@ -166,6 +176,49 @@ export function validateParamsSchema(
       violations.push({ code: 'MISSING_X_UI', message: `参数 ${name} 缺少 x-ui`, termId: name });
       continue;
     }
+
+    // ⚠ 这一段必须在下面 hidden 的 early-continue **之前**：derived 参数的 control
+    // 恰恰就是 hidden（用户不选它，服务端算），放在后面这些校验永远跑不到。
+    if (ui.role !== undefined && !X_UI_ROLES.includes(ui.role)) {
+      violations.push({
+        code: 'UNKNOWN_X_UI_ROLE',
+        message: `参数 ${name} 的 x-ui.role 取值非法：${String(ui.role)}`,
+        termId: name,
+      });
+    }
+
+    if (ui.role === 'derived') {
+      const derivedFrom = ui.derivedFrom;
+      if (!derivedFrom) {
+        violations.push({
+          code: 'DERIVED_NEEDS_DERIVED_FROM',
+          message: `参数 ${name} 声明了 role: derived，但缺少 derivedFrom`,
+          termId: name,
+        });
+      } else {
+        if (!DERIVE_FNS.includes(derivedFrom.via)) {
+          violations.push({
+            code: 'UNKNOWN_DERIVE_FN',
+            message: `参数 ${name} 的派生函数不存在：${String(derivedFrom.via)}`,
+            termId: name,
+          });
+        }
+        if (derivedFrom.param === name) {
+          violations.push({
+            code: 'DERIVED_FROM_SELF',
+            message: `参数 ${name} 的 derivedFrom 指向了自己`,
+            termId: name,
+          });
+        } else if (!(derivedFrom.param in (paramsSchema.properties ?? {}))) {
+          violations.push({
+            code: 'DERIVED_FROM_UNKNOWN_PARAM',
+            message: `参数 ${name} 的 derivedFrom 指向了不存在的参数：${derivedFrom.param}`,
+            termId: name,
+          });
+        }
+      }
+    }
+
     if (ui.control === 'hidden') continue;
 
     if (CHOICE_CONTROLS.includes(ui.control) && !property.enum) {
