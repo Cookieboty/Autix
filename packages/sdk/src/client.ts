@@ -2202,6 +2202,16 @@ export const galleryApi = {
   /** GET /api/gallery/feed?kind=IMAGE|VIDEO —— 公开，只返回已发布(PUBLISHED)作品。 */
   feed: (params?: { kind?: 'IMAGE' | 'VIDEO'; cursor?: string; limit?: number }) =>
     chatApi.get<GalleryFeedResult>('/api/gallery/feed', { params }),
+  // Plan C Task 10：Gallery 的专属受守卫互动路由（仅 PUBLISHED 可点赞/收藏；favorite 经
+  // FavoriteLibraryService 单事务耦合）。like/unlike 为显式 POST/DELETE，返回完整指标；
+  // favorite/unfavorite 为显式 POST/DELETE，返回 { favorited }。通用 /resources 端点已对
+  // GALLERY_POST 返回 400，故这些专属路由是 Gallery 互动的唯一正确入口（供 Task 12 详情视图接入）。
+  like: (id: string) => chatApi.post<ResourceMetrics>(`/api/gallery/${id}/like`),
+  unlike: (id: string) => chatApi.delete<ResourceMetrics>(`/api/gallery/${id}/like`),
+  favorite: (id: string) =>
+    chatApi.post<{ favorited: boolean }>(`/api/gallery/${id}/favorite`),
+  unfavorite: (id: string) =>
+    chatApi.delete<{ favorited: boolean }>(`/api/gallery/${id}/favorite`),
 };
 
 // ── Featured Slots Admin (运营位编排) ────────────────────────────────────

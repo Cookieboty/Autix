@@ -46,10 +46,11 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
 
-  // Plan C Task 10：IMAGE_TEMPLATE / VIDEO_TEMPLATE 的 like/favorite 必须走各自受守卫的
-  // 专属端点（通用端点已对它们 400）。SKILL / MCP / AGENT 继续走通用 resourceMetricsActions。
-  // 专属端点只回 { liked } / { favorited }（非完整指标），故成功后靠乐观增量 + 失效重取
-  // metrics（GET 对全类型仍开放）来同步真实计数；share 无专属路由、始终走通用端点。
+  // Plan C Task 10：IMAGE_TEMPLATE / VIDEO_TEMPLATE / GALLERY_POST 的 like/favorite 必须走各自
+  // 受守卫的专属端点（通用端点已对三者一律 400）。SKILL / MCP / AGENT 继续走通用 resourceMetricsActions。
+  // 专属端点回参形态不一（模板 like 回 { liked }、Gallery like 回完整指标、favorite 回 { favorited }），
+  // 故成功后靠乐观增量 + 失效重取 metrics（GET 对全类型仍开放）来同步真实计数，并在有布尔态时同步本地
+  // liked/favorited；share 无专属路由、始终走通用端点。
   const dedicated = hasDedicatedInteractionRoute(type);
   const dedicatedType = type as DedicatedInteractionType;
 
@@ -80,11 +81,10 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
   );
 
   const likeMutation = useMutation<InteractionResult, unknown, void, OptimisticContext>({
-    // 专属 like 端点为 POST 切换（无 DELETE 反向）——本 mutation 仅在 !liked 时触发（见 toggleLike），
-    // 故 POST 恒切换为已点赞。
+    // 本 mutation 仅在 !liked 时触发（见 toggleLike）。专属路由：模板为 POST 切换、Gallery 为 POST like。
     mutationFn: () =>
       dedicated
-        ? dedicatedInteractionActions.toggleLike(dedicatedType, id)
+        ? dedicatedInteractionActions.like(dedicatedType, id)
         : resourceMetricsActions.like(type, id),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
@@ -102,10 +102,10 @@ export function useResourceInteractions(type: MetricResourceType, id: string) {
   });
 
   const unlikeMutation = useMutation<InteractionResult, unknown, void, OptimisticContext>({
-    // 专属端点无 DELETE unlike——再次 POST 同一 like 端点即切换为未点赞（本 mutation 仅在 liked 时触发）。
+    // 本 mutation 仅在 liked 时触发。专属路由：模板再次 POST like 切换为未点赞、Gallery 为 DELETE unlike。
     mutationFn: () =>
       dedicated
-        ? dedicatedInteractionActions.toggleLike(dedicatedType, id)
+        ? dedicatedInteractionActions.unlike(dedicatedType, id)
         : resourceMetricsActions.unlike(type, id),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
