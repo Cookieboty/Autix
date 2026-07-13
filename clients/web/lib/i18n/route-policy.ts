@@ -62,8 +62,6 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   '/arena/[id]': NOINDEX,
   '/library': NOINDEX,
   '/materials': NOINDEX,
-  '/gallery': NOINDEX,
-  '/gallery/[id]': NOINDEX,
   '/resources': NOINDEX,
   '/profile': NOINDEX,
   '/notifications': NOINDEX,
@@ -103,8 +101,6 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   '/membership/points': NOINDEX,
   '/membership/rewards': NOINDEX,
   '/membership/upgrade': NOINDEX,
-  '/workbench/image': NOINDEX,
-  '/workbench/video': NOINDEX,
 };
 
 export function getPolicy(template: string): Policy {

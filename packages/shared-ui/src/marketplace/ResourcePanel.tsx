@@ -118,8 +118,8 @@ export function ResourcePanel({
     if (!selected) return;
     router.push(
       type === 'image-templates'
-        ? `/workbench/image?templateId=${selected.id}`
-        : `/workbench/video?templateId=${selected.id}`,
+        ? `/ai/image?templateId=${selected.id}`
+        : `/ai/video?templateId=${selected.id}`,
     );
     close();
   };

@@ -1,4 +1,3 @@
-export { VideoWorkbenchWorkspace } from './VideoWorkbenchWorkspace';
 export { VideoPreview } from './VideoPreview';
 export { VideoPlayer } from './VideoPlayer';
 export { MaterialSlot } from './MaterialSlot';

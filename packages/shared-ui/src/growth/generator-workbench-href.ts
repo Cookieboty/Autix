@@ -19,7 +19,7 @@ export type GeneratorWorkbenchDraft = {
 };
 
 export function buildGeneratorWorkbenchHref(draft: GeneratorWorkbenchDraft): string {
-  const base = draft.kind === 'video' ? '/workbench/video' : '/workbench/image';
+  const base = draft.kind === 'video' ? '/ai/video' : '/ai/image';
   const params = new URLSearchParams();
   if (draft.model) params.set('model', draft.model);
   if (draft.templateId) params.set('templateId', draft.templateId);

@@ -255,7 +255,7 @@ export function VideoSidebar({
       setTemplateNotice({
         kind: 'warning',
         message: t('templateWorkflowRedirect'),
-        href: `/workbench/video?templateId=${encodeURIComponent(template.id)}`,
+        href: `/ai/video?templateId=${encodeURIComponent(template.id)}`,
         hrefLabel: t('templateGoToWorkbench'),
       });
       return;

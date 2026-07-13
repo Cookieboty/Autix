@@ -63,9 +63,6 @@ import { AdminUsersPage } from './pages/admin/users';
 import { AdminRolesPage } from './pages/admin/roles';
 import { AdminPermissionsPage } from './pages/admin/permissions';
 
-// Workbench
-import { VideoWorkbenchPage } from './pages/workbench/video';
-import { ImageWorkbenchPage } from './pages/workbench/image';
 
 function NavigationBinder() {
   const navigate = useNavigate();
@@ -116,9 +113,6 @@ function AppRoutes() {
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
 
-          {/* Workbench */}
-          <Route path="/workbench/video" element={<VideoWorkbenchPage />} />
-          <Route path="/workbench/image" element={<ImageWorkbenchPage />} />
 
           {/* Templates (legacy paths,kept until renderer 全量切到 marketplace) */}
           <Route path="/templates" element={<Navigate to="/marketplace/image-templates" replace />} />
