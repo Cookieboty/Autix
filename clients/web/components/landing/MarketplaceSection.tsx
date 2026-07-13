@@ -247,8 +247,7 @@ export function MarketplaceSection() {
 
         <div className="text-center mt-10">
           <Link
-            // TODO(Plan C): 指向 /gallery
-            href="/"
+            href="/gallery"
             className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.03]"
           >
             {t('mktExploreCta')} <ArrowRight className="w-4 h-4" />

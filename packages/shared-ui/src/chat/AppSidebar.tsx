@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   BookOpen,
   Coins,
+  Compass,
   Gift,
   Images,
   ImageIcon,
@@ -180,6 +181,7 @@ export function AppSidebar({
   const isResources = normalizedPathname.startsWith('/resources');
   const isMembership = normalizedPathname.startsWith('/membership');
   const isMaterials = normalizedPathname.startsWith('/materials');
+  const isGallery = normalizedPathname.startsWith('/gallery');
   // const isDraw = normalizedPathname === '/draw';
   const publicHrefs = React.useMemo(
     () => new Set(['/community', '/marketplace/image-templates', '/marketplace/video-templates', '/docs']),
@@ -228,6 +230,12 @@ export function AppSidebar({
       icon: Video,
       href: '/workbench/video',
       active: normalizedPathname === '/workbench/video',
+    },
+    {
+      label: t('gallery'),
+      icon: Compass,
+      href: '/gallery',
+      active: isGallery,
     },
     {
       label: t('materialLibrary'),

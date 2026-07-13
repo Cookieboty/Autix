@@ -17,6 +17,7 @@
     "./metrics": "./src/metrics/index.ts",
     "./library": "./src/library/index.ts",
     "./materials": "./src/materials/index.ts",
+    "./gallery": "./src/gallery/index.ts",
     "./notifications": "./src/notifications/index.ts",
     "./providers": "./src/providers/index.ts",
     "./pricing": "./src/pricing/index.ts",

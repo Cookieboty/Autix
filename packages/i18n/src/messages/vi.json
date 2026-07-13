@@ -468,7 +468,8 @@
     "inviteFriends": "Mời bạn bè",
     "docs": "Tài liệu",
     "myTemplates": "我的模板",
-    "upgrade": "升级会员"
+    "upgrade": "升级会员",
+    "gallery": "Gallery"
   },
   "template": {
     "discover": "Khám phá",
@@ -3475,7 +3476,14 @@
         "ariaLike": "Thích",
         "ariaDownload": "Tải xuống",
         "ariaSelect": "Chọn",
-        "ariaDelete": "Xóa"
+        "ariaDelete": "Xóa",
+        "publishToGalleryTitle": "Đăng {count} ảnh lên gallery",
+        "publishToGalleryDescription": "Bài đăng sẽ được duyệt trước khi hiển thị công khai trên gallery.",
+        "publishCategoryLabel": "Danh mục",
+        "allowPublicReferenceLabel": "Cho phép công khai ảnh tham chiếu",
+        "allowPublicReferenceHint": "Cho phép người khác xem ảnh tham chiếu dùng khi tạo ảnh này — mặc định tắt.",
+        "publishConfirm": "Đăng {count} ảnh",
+        "publishSubmittedToast": "Đã gửi {count} ảnh để duyệt"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -3843,7 +3851,81 @@
     "deleteFolderConfirm": "Xóa thư mục này? {count} tư liệu trong thư mục cũng sẽ bị xóa.",
     "emptyFolder": "Thư mục này chưa có tư liệu",
     "folderNameRequired": "Tên thư mục không được để trống",
-    "duplicateFolderName": "Đã tồn tại thư mục có cùng tên"
+    "duplicateFolderName": "Đã tồn tại thư mục có cùng tên",
+    "loadMore": "Tải thêm",
+    "downloadFailed": "Tải xuống thất bại",
+    "moveRestrictedHint": "Gói thành viên đã hết hạn — chỉ có thể chuyển về thư mục mặc định",
+    "sourceStateActionDisabled": "Nguồn này không còn khả dụng",
+    "librarySource": {
+      "ALL": "Tất cả",
+      "UPLOAD": "Đã tải lên",
+      "FAVORITE": "Đã thích",
+      "HISTORY": "Lịch sử"
+    },
+    "sourceState": {
+      "available": "Khả dụng",
+      "unpublished": "Đã gỡ",
+      "blocked": "Không khả dụng",
+      "missing": "Nguồn tham chiếu đã mất"
+    },
+    "historySaveSuccess": "Đã lưu vào thư viện",
+    "historySaveFailed": "Lưu thất bại",
+    "historyNotSaveable": "Mục này không thể lưu vào thư viện",
+    "historySaved": "Đã lưu",
+    "historySaveToLibrary": "Lưu vào thư viện",
+    "historyEmptyTitle": "Chưa có lịch sử xem",
+    "historyEmptyDescription": "Các mục bạn xem trong gallery hoặc marketplace sẽ hiện ở đây",
+    "resourceType": {
+      "SKILL": "Kỹ năng",
+      "MCP": "MCP",
+      "AGENT": "Tác tử",
+      "IMAGE_TEMPLATE": "Mẫu hình ảnh",
+      "VIDEO_TEMPLATE": "Mẫu video",
+      "GALLERY_POST": "Bài đăng gallery"
+    }
+  },
+  "gallery": {
+    "title": "Gallery",
+    "subtitle": "Khám phá những gì cộng đồng đã đăng",
+    "kindImage": "Hình ảnh",
+    "kindVideo": "Video",
+    "emptyTitle": "Chưa có tác phẩm nào được đăng",
+    "emptyDescription": "Hãy là người đầu tiên đăng tác phẩm của bạn lên gallery",
+    "loadMore": "Tải thêm",
+    "unknownAuthor": "Tác giả ẩn danh",
+    "like": "Thích",
+    "favorite": "Yêu thích",
+    "backToGallery": "Quay lại gallery",
+    "notFoundTitle": "Bài đăng này hiện không khả dụng",
+    "notFoundDescription": "Có thể đã bị gỡ hoặc xoá",
+    "author": "Tác giả",
+    "metricViews": "Lượt xem",
+    "metricLikes": "Lượt thích",
+    "metricFavorites": "Lượt yêu thích",
+    "metricRecreates": "Lượt tái tạo",
+    "recreate": "Tái tạo",
+    "download": "Tải xuống",
+    "unpublish": "Gỡ đăng",
+    "republish": "Đăng lại",
+    "unpublishSuccess": "Đã gỡ bài đăng",
+    "republishSuccess": "Đã gửi để duyệt",
+    "prompt": "Prompt",
+    "copyPrompt": "Sao chép",
+    "copied": "Đã sao chép",
+    "noPrompt": "Không có prompt",
+    "information": "Thông tin",
+    "model": "Mô hình",
+    "auto": "Tự động",
+    "dimensions": "Kích thước",
+    "category": "Danh mục",
+    "status": {
+      "draft": "Bản nháp",
+      "pending": "Đang duyệt",
+      "published": "Đã đăng",
+      "unpublished": "Đã gỡ",
+      "hidden": "Đã ẩn",
+      "rejected": "Đã từ chối"
+    }
   },
   "adminCampaigns": {
     "title": "Trung tâm thưởng chiến dịch",

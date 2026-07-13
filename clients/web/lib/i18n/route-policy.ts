@@ -62,6 +62,8 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   '/arena/[id]': NOINDEX,
   '/library': NOINDEX,
   '/materials': NOINDEX,
+  '/gallery': NOINDEX,
+  '/gallery/[id]': NOINDEX,
   '/resources': NOINDEX,
   '/profile': NOINDEX,
   '/notifications': NOINDEX,

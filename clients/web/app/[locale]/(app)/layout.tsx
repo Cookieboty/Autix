@@ -61,8 +61,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     if ((user as { status?: string } | null)?.status === 'PENDING') { router.replace('/pending'); return; }
     if (chatFeatureLoading) return;
     if (!chatEnabled && isChatFeatureRoute) {
-      // TODO(Plan C): 指向 /gallery
-      router.replace('/');
+      router.replace('/gallery');
       return;
     }
     if (chatEnabled) fetchSessions();

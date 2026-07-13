@@ -468,7 +468,8 @@
     "inviteFriends": "友達を招待",
     "docs": "ドキュメント",
     "myTemplates": "我的模板",
-    "upgrade": "升级会员"
+    "upgrade": "升级会员",
+    "gallery": "ギャラリー"
   },
   "template": {
     "discover": "発見",
@@ -3475,7 +3476,14 @@
         "ariaLike": "いいね",
         "ariaDownload": "ダウンロード",
         "ariaSelect": "選択",
-        "ariaDelete": "削除"
+        "ariaDelete": "削除",
+        "publishToGalleryTitle": "{count}枚の画像をギャラリーに公開",
+        "publishToGalleryDescription": "投稿は審査を通過後にギャラリーへ公開されます。",
+        "publishCategoryLabel": "カテゴリ",
+        "allowPublicReferenceLabel": "参照画像の公開を許可",
+        "allowPublicReferenceHint": "生成に使用した参照画像を他のユーザーに公開します（デフォルトでオフ）。",
+        "publishConfirm": "{count}枚を公開",
+        "publishSubmittedToast": "{count}枚の画像を審査に提出しました"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -3843,7 +3851,81 @@
     "deleteFolderConfirm": "このフォルダーを削除しますか？フォルダー内の {count} 件の素材も同時に削除されます。",
     "emptyFolder": "このフォルダーに素材はありません",
     "folderNameRequired": "フォルダー名を入力してください",
-    "duplicateFolderName": "同じ名前のフォルダーが既に存在します"
+    "duplicateFolderName": "同じ名前のフォルダーが既に存在します",
+    "loadMore": "もっと読み込む",
+    "downloadFailed": "ダウンロードに失敗しました",
+    "moveRestrictedHint": "メンバーシップの期限が切れています。デフォルトフォルダへの移動のみ可能です",
+    "sourceStateActionDisabled": "このソースは利用できなくなりました",
+    "librarySource": {
+      "ALL": "すべて",
+      "UPLOAD": "アップロード",
+      "FAVORITE": "お気に入り",
+      "HISTORY": "履歴"
+    },
+    "sourceState": {
+      "available": "利用可能",
+      "unpublished": "非公開",
+      "blocked": "利用不可",
+      "missing": "参照が見つかりません"
+    },
+    "historySaveSuccess": "素材ライブラリに保存しました",
+    "historySaveFailed": "保存に失敗しました",
+    "historyNotSaveable": "この項目は素材ライブラリに保存できません",
+    "historySaved": "保存済み",
+    "historySaveToLibrary": "素材ライブラリに保存",
+    "historyEmptyTitle": "閲覧履歴はまだありません",
+    "historyEmptyDescription": "ギャラリーやマーケットプレイスで閲覧した項目がここに表示されます",
+    "resourceType": {
+      "SKILL": "スキル",
+      "MCP": "MCP",
+      "AGENT": "エージェント",
+      "IMAGE_TEMPLATE": "画像テンプレート",
+      "VIDEO_TEMPLATE": "動画テンプレート",
+      "GALLERY_POST": "ギャラリー投稿"
+    }
+  },
+  "gallery": {
+    "title": "ギャラリー",
+    "subtitle": "コミュニティが公開した作品を見つけよう",
+    "kindImage": "画像",
+    "kindVideo": "動画",
+    "emptyTitle": "まだ公開された作品がありません",
+    "emptyDescription": "最初にギャラリーへ作品を公開してみましょう",
+    "loadMore": "もっと読み込む",
+    "unknownAuthor": "不明な作者",
+    "like": "いいね",
+    "favorite": "お気に入り",
+    "backToGallery": "ギャラリーに戻る",
+    "notFoundTitle": "この投稿は現在閲覧できません",
+    "notFoundDescription": "非公開になったか削除された可能性があります",
+    "author": "作者",
+    "metricViews": "閲覧数",
+    "metricLikes": "いいね数",
+    "metricFavorites": "お気に入り数",
+    "metricRecreates": "リクリエイト数",
+    "recreate": "リクリエイト",
+    "download": "ダウンロード",
+    "unpublish": "非公開にする",
+    "republish": "再公開",
+    "unpublishSuccess": "非公開にしました",
+    "republishSuccess": "審査に提出しました",
+    "prompt": "プロンプト",
+    "copyPrompt": "コピー",
+    "copied": "コピーしました",
+    "noPrompt": "プロンプトなし",
+    "information": "情報",
+    "model": "モデル",
+    "auto": "自動",
+    "dimensions": "サイズ",
+    "category": "カテゴリ",
+    "status": {
+      "draft": "下書き",
+      "pending": "審査中",
+      "published": "公開済み",
+      "unpublished": "非公開",
+      "hidden": "非表示",
+      "rejected": "却下"
+    }
   },
   "adminCampaigns": {
     "title": "キャンペーン報酬センター",

@@ -468,7 +468,8 @@
     "expandMenu": "展开菜单",
     "collapseMenu": "收起菜单",
     "clipCount": "{count} 片段",
-    "loginResourceHint": "发布和使用资源"
+    "loginResourceHint": "发布和使用资源",
+    "gallery": "广场"
   },
   "template": {
     "discover": "发现",
@@ -3809,7 +3810,14 @@
         "ariaLike": "点赞",
         "ariaDownload": "下载",
         "ariaSelect": "选择",
-        "ariaDelete": "删除"
+        "ariaDelete": "删除",
+        "publishToGalleryTitle": "发布 {count} 张图片到广场",
+        "publishToGalleryDescription": "投稿需经审核通过后才会出现在广场。",
+        "publishCategoryLabel": "分类",
+        "allowPublicReferenceLabel": "允许公开参考图",
+        "allowPublicReferenceHint": "让他人看到生成时使用的参考图，默认关闭。",
+        "publishConfirm": "发布 {count} 张",
+        "publishSubmittedToast": "已提交 {count} 张图片审核"
       },
       "privateFirst": "默认私有",
       "createPrivately": "当前页创作",
@@ -4177,7 +4185,81 @@
     "deleteFolderConfirm": "确定删除该文件夹？将同时删除文件夹内 {count} 个素材。",
     "emptyFolder": "该文件夹暂无素材",
     "folderNameRequired": "文件夹名称不能为空",
-    "duplicateFolderName": "已存在同名文件夹"
+    "duplicateFolderName": "已存在同名文件夹",
+    "loadMore": "加载更多",
+    "downloadFailed": "下载失败",
+    "moveRestrictedHint": "会员已过期，仅可将素材移回默认文件夹",
+    "sourceStateActionDisabled": "该来源已不可用",
+    "librarySource": {
+      "ALL": "全部",
+      "UPLOAD": "上传",
+      "FAVORITE": "收藏",
+      "HISTORY": "历史"
+    },
+    "sourceState": {
+      "available": "可用",
+      "unpublished": "已下架",
+      "blocked": "不可用",
+      "missing": "引用已丢失"
+    },
+    "historySaveSuccess": "已保存到素材库",
+    "historySaveFailed": "保存失败",
+    "historyNotSaveable": "该内容不支持保存到素材库",
+    "historySaved": "已保存",
+    "historySaveToLibrary": "保存到素材库",
+    "historyEmptyTitle": "暂无浏览历史",
+    "historyEmptyDescription": "你在广场或市场浏览过的内容会显示在这里",
+    "resourceType": {
+      "SKILL": "技能",
+      "MCP": "MCP",
+      "AGENT": "智能体",
+      "IMAGE_TEMPLATE": "图片模板",
+      "VIDEO_TEMPLATE": "视频模板",
+      "GALLERY_POST": "广场作品"
+    }
+  },
+  "gallery": {
+    "title": "广场",
+    "subtitle": "发现社区发布的精彩作品",
+    "kindImage": "图片",
+    "kindVideo": "视频",
+    "emptyTitle": "暂无已发布作品",
+    "emptyDescription": "成为第一个发布作品到广场的人",
+    "loadMore": "加载更多",
+    "unknownAuthor": "未知作者",
+    "like": "点赞",
+    "favorite": "收藏",
+    "backToGallery": "返回广场",
+    "notFoundTitle": "该作品当前不可访问",
+    "notFoundDescription": "可能已被下架或删除",
+    "author": "作者",
+    "metricViews": "浏览",
+    "metricLikes": "点赞",
+    "metricFavorites": "收藏",
+    "metricRecreates": "二创",
+    "recreate": "二创",
+    "download": "下载",
+    "unpublish": "下架",
+    "republish": "重新发布",
+    "unpublishSuccess": "已下架",
+    "republishSuccess": "已提交审核",
+    "prompt": "提示词",
+    "copyPrompt": "复制",
+    "copied": "已复制",
+    "noPrompt": "暂无提示词",
+    "information": "信息",
+    "model": "模型",
+    "auto": "自动",
+    "dimensions": "尺寸",
+    "category": "分类",
+    "status": {
+      "draft": "草稿",
+      "pending": "审核中",
+      "published": "已发布",
+      "unpublished": "已下架",
+      "hidden": "已隐藏",
+      "rejected": "已拒绝"
+    }
   },
   "adminCampaigns": {
     "title": "活动奖励中心",

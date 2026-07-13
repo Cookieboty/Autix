@@ -17,11 +17,13 @@ import {
   X,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import type {
   PublicImageHistoryImage,
   PublicImageHistoryItem,
 } from './public-image-generation';
 import type { TemplateDensity } from '../generator-studio-helpers';
+import { PublishToGalleryDialog } from './PublishToGalleryDialog';
 
 export type PendingImageGenerationCard = {
   id: string;
@@ -156,6 +158,7 @@ export function PublicImageHistoryPanel({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [likedKeys, setLikedKeys] = useState<Set<string>>(new Set());
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const { ref: containerRef, width: containerWidth } = useElementWidth<HTMLDivElement>();
 
   const selectionActive = selectedKeys.size > 0;
@@ -251,7 +254,8 @@ export function PublicImageHistoryPanel({
   };
   const clearSelection = () => setSelectedKeys(new Set());
   const publishSelected = () => {
-    // TODO: 后端「发布到广场」接口就绪后接入
+    if (selectedImageList.length === 0) return;
+    setPublishDialogOpen(true);
   };
 
   return (
@@ -432,6 +436,15 @@ export function PublicImageHistoryPanel({
         item={selectedItem}
         locale={locale}
         onClose={() => setSelectedItem(null)}
+      />
+      <PublishToGalleryDialog
+        open={publishDialogOpen}
+        selections={selectedImageList}
+        onClose={() => setPublishDialogOpen(false)}
+        onPublished={(count) => {
+          toast.success(t('publishSubmittedToast', { count }));
+          clearSelection();
+        }}
       />
     </>
   );

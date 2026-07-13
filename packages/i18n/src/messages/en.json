@@ -468,7 +468,8 @@
     "expandMenu": "Expand menu",
     "collapseMenu": "Collapse menu",
     "clipCount": "{count} clips",
-    "loginResourceHint": "Publish and use resources"
+    "loginResourceHint": "Publish and use resources",
+    "gallery": "Gallery"
   },
   "template": {
     "discover": "Discover",
@@ -3809,7 +3810,14 @@
         "ariaLike": "Like",
         "ariaDownload": "Download",
         "ariaSelect": "Select",
-        "ariaDelete": "Delete"
+        "ariaDelete": "Delete",
+        "publishToGalleryTitle": "Publish {count} image(s) to the gallery",
+        "publishToGalleryDescription": "Submitted posts go through review before appearing in the public gallery.",
+        "publishCategoryLabel": "Category",
+        "allowPublicReferenceLabel": "Allow public reference image",
+        "allowPublicReferenceHint": "Let others see the reference image used to generate this — off by default.",
+        "publishConfirm": "Publish {count}",
+        "publishSubmittedToast": "Submitted {count} image(s) for review"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -4177,7 +4185,81 @@
     "deleteFolderConfirm": "Delete this folder? Its {count} item(s) will also be deleted.",
     "emptyFolder": "This folder is empty",
     "folderNameRequired": "Folder name is required",
-    "duplicateFolderName": "A folder with this name already exists"
+    "duplicateFolderName": "A folder with this name already exists",
+    "loadMore": "Load more",
+    "downloadFailed": "Download failed",
+    "moveRestrictedHint": "Membership expired — you can only move items back to the default folder",
+    "sourceStateActionDisabled": "This source is no longer available",
+    "librarySource": {
+      "ALL": "All",
+      "UPLOAD": "Uploaded",
+      "FAVORITE": "Favorited",
+      "HISTORY": "History"
+    },
+    "sourceState": {
+      "available": "Available",
+      "unpublished": "Unpublished",
+      "blocked": "Unavailable",
+      "missing": "Reference lost"
+    },
+    "historySaveSuccess": "Saved to your library",
+    "historySaveFailed": "Failed to save",
+    "historyNotSaveable": "This item can't be saved to your library",
+    "historySaved": "Saved",
+    "historySaveToLibrary": "Save to library",
+    "historyEmptyTitle": "No browsing history yet",
+    "historyEmptyDescription": "Items you view in the gallery or marketplace will show up here",
+    "resourceType": {
+      "SKILL": "Skill",
+      "MCP": "MCP",
+      "AGENT": "Agent",
+      "IMAGE_TEMPLATE": "Image template",
+      "VIDEO_TEMPLATE": "Video template",
+      "GALLERY_POST": "Gallery post"
+    }
+  },
+  "gallery": {
+    "title": "Gallery",
+    "subtitle": "Discover what the community has published",
+    "kindImage": "Image",
+    "kindVideo": "Video",
+    "emptyTitle": "Nothing published yet",
+    "emptyDescription": "Be the first to publish your work to the gallery",
+    "loadMore": "Load more",
+    "unknownAuthor": "Unknown author",
+    "like": "Like",
+    "favorite": "Favorite",
+    "backToGallery": "Back to gallery",
+    "notFoundTitle": "This post isn't available",
+    "notFoundDescription": "It may have been unpublished or removed",
+    "author": "Author",
+    "metricViews": "Views",
+    "metricLikes": "Likes",
+    "metricFavorites": "Favorites",
+    "metricRecreates": "Recreates",
+    "recreate": "Recreate",
+    "download": "Download",
+    "unpublish": "Unpublish",
+    "republish": "Republish",
+    "unpublishSuccess": "Post unpublished",
+    "republishSuccess": "Submitted for review",
+    "prompt": "Prompt",
+    "copyPrompt": "Copy",
+    "copied": "Copied",
+    "noPrompt": "No prompt",
+    "information": "Information",
+    "model": "Model",
+    "auto": "Auto",
+    "dimensions": "Dimensions",
+    "category": "Category",
+    "status": {
+      "draft": "Draft",
+      "pending": "In review",
+      "published": "Published",
+      "unpublished": "Unpublished",
+      "hidden": "Hidden",
+      "rejected": "Rejected"
+    }
   },
   "adminCampaigns": {
     "title": "Campaign Rewards Center",

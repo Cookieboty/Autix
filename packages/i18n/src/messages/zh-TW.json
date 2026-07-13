@@ -468,7 +468,8 @@
     "inviteFriends": "邀請好友",
     "docs": "使用文檔",
     "myTemplates": "我的模板",
-    "upgrade": "升级会员"
+    "upgrade": "升级会员",
+    "gallery": "廣場"
   },
   "template": {
     "discover": "發現",
@@ -3475,7 +3476,14 @@
         "ariaLike": "按讚",
         "ariaDownload": "下載",
         "ariaSelect": "選擇",
-        "ariaDelete": "刪除"
+        "ariaDelete": "刪除",
+        "publishToGalleryTitle": "發布 {count} 張圖片到廣場",
+        "publishToGalleryDescription": "投稿需經審核通過後才會出現在廣場。",
+        "publishCategoryLabel": "分類",
+        "allowPublicReferenceLabel": "允許公開參考圖",
+        "allowPublicReferenceHint": "讓他人看到生成時使用的參考圖，預設關閉。",
+        "publishConfirm": "發布 {count} 張",
+        "publishSubmittedToast": "已提交 {count} 張圖片審核"
       },
       "privateFirst": "預設私有",
       "createPrivately": "目前頁創作",
@@ -3843,7 +3851,81 @@
     "deleteFolderConfirm": "確定刪除此資料夾？將同時刪除資料夾內 {count} 個素材。",
     "emptyFolder": "此資料夾暫無素材",
     "folderNameRequired": "資料夾名稱不能為空",
-    "duplicateFolderName": "已存在相同名稱的資料夾"
+    "duplicateFolderName": "已存在相同名稱的資料夾",
+    "loadMore": "載入更多",
+    "downloadFailed": "下載失敗",
+    "moveRestrictedHint": "會員已過期，僅可將素材移回預設資料夾",
+    "sourceStateActionDisabled": "該來源已不可用",
+    "librarySource": {
+      "ALL": "全部",
+      "UPLOAD": "上傳",
+      "FAVORITE": "收藏",
+      "HISTORY": "歷史"
+    },
+    "sourceState": {
+      "available": "可用",
+      "unpublished": "已下架",
+      "blocked": "不可用",
+      "missing": "引用已遺失"
+    },
+    "historySaveSuccess": "已儲存到素材庫",
+    "historySaveFailed": "儲存失敗",
+    "historyNotSaveable": "該內容不支援儲存到素材庫",
+    "historySaved": "已儲存",
+    "historySaveToLibrary": "儲存到素材庫",
+    "historyEmptyTitle": "尚無瀏覽紀錄",
+    "historyEmptyDescription": "你在廣場或市集瀏覽過的內容會顯示在這裡",
+    "resourceType": {
+      "SKILL": "技能",
+      "MCP": "MCP",
+      "AGENT": "智能體",
+      "IMAGE_TEMPLATE": "圖片範本",
+      "VIDEO_TEMPLATE": "影片範本",
+      "GALLERY_POST": "廣場作品"
+    }
+  },
+  "gallery": {
+    "title": "廣場",
+    "subtitle": "探索社群發布的精彩作品",
+    "kindImage": "圖片",
+    "kindVideo": "影片",
+    "emptyTitle": "尚無已發布作品",
+    "emptyDescription": "成為第一個發布作品到廣場的人",
+    "loadMore": "載入更多",
+    "unknownAuthor": "未知作者",
+    "like": "按讚",
+    "favorite": "收藏",
+    "backToGallery": "返回廣場",
+    "notFoundTitle": "此作品目前無法瀏覽",
+    "notFoundDescription": "可能已被下架或刪除",
+    "author": "作者",
+    "metricViews": "瀏覽",
+    "metricLikes": "按讚",
+    "metricFavorites": "收藏",
+    "metricRecreates": "二創",
+    "recreate": "二創",
+    "download": "下載",
+    "unpublish": "下架",
+    "republish": "重新發布",
+    "unpublishSuccess": "已下架",
+    "republishSuccess": "已提交審核",
+    "prompt": "提示詞",
+    "copyPrompt": "複製",
+    "copied": "已複製",
+    "noPrompt": "尚無提示詞",
+    "information": "資訊",
+    "model": "模型",
+    "auto": "自動",
+    "dimensions": "尺寸",
+    "category": "分類",
+    "status": {
+      "draft": "草稿",
+      "pending": "審核中",
+      "published": "已發布",
+      "unpublished": "已下架",
+      "hidden": "已隱藏",
+      "rejected": "已拒絕"
+    }
   },
   "adminCampaigns": {
     "title": "活動獎勵中心",

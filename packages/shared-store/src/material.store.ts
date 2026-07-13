@@ -7,6 +7,8 @@ import {
   type MaterialAssetSourceType,
   type MaterialAssetType,
   type MaterialEntitlement,
+  type MaterialLibrarySource,
+  type MaterialSourceState,
 } from '@autix/sdk';
 
 export type {
@@ -14,6 +16,8 @@ export type {
   MaterialAssetSourceType,
   MaterialAssetType,
   MaterialEntitlement,
+  MaterialLibrarySource,
+  MaterialSourceState,
 } from '@autix/sdk';
 
 export type MaterialFilterType = MaterialAssetType | 'all';
@@ -45,6 +49,7 @@ interface MaterialState {
     page?: number;
     pageSize?: number;
     folderId?: string;
+    librarySource?: MaterialLibrarySource;
   }) => Promise<MaterialAsset[]>;
   uploadMaterialFiles: (files: MaterialUploadInput[]) => Promise<MaterialAsset[]>;
   deleteMaterial: (id: string) => Promise<void>;
@@ -52,6 +57,13 @@ interface MaterialState {
   moveMaterials: (ids: string[], folderId: string | null) => Promise<void>;
   useMaterial: (id: string) => Promise<MaterialAsset | null>;
   createVideoMaterialUpload: (file: File) => Promise<{ url: string; name: string }>;
+  /** Plan C Task 10：下载前置 sourceState 拦截（blocked/missing → 403），成功返回下载 URL。 */
+  downloadMaterial: (id: string) => Promise<string | null>;
+}
+
+/** blocked/missing/unpublished 素材禁用 use/download，仅 available 可用。 */
+export function isMaterialUsable(sourceState: MaterialSourceState | undefined): boolean {
+  return sourceState === undefined || sourceState === 'available';
 }
 
 const inferContentType = (file: File) => file.type || 'application/octet-stream';
@@ -143,5 +155,9 @@ export const useMaterialStore = create<MaterialState>((set) => ({
     });
     await uploadToPresignedUrl(presign.data.uploadUrl, file, { contentType });
     return { url: presign.data.publicUrl, name: file.name };
+  },
+  downloadMaterial: async (id) => {
+    const res = await materialsApi.download(id);
+    return res.data.downloadUrl;
   },
 }));
