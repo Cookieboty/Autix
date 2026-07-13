@@ -8,21 +8,9 @@ import {
   type ParamsSchema,
   type PricingSchema,
 } from '@autix/domain/pricing';
-import {
-  IMAGE_MODEL_CAPABILITIES,
-  detectImageModelKind,
-  resolveImagePricingResolution,
-  type ImageModelHint,
-  type ImagePricingResolution,
-} from '@autix/domain/image';
-import {
-  VIDEO_MODEL_CAPABILITIES,
-  detectVideoModelKind,
-  type VideoModelHint,
-} from '@autix/domain/video';
+import { buildImageParamsSchema, buildVideoParamsSchema } from './seed-pricing.schemas';
 import { createPrismaClient } from './db';
 
-const JSON_SCHEMA_DRAFT = 'https://json-schema.org/draft/2020-12/schema';
 
 // Prisma 7 要求显式传 driver adapter。项目已有的 createPrismaClient()
 // 封装了 PrismaPg + getDatabaseUrl()，裸 new PrismaClient() 跑不起来。
@@ -248,120 +236,6 @@ const MODEL_PRICING: Record<string, PricingSchema> = {
   },
 };
 
-const IMAGE_RESOLUTION_ORDER: ImagePricingResolution[] = ['512px', '1K', '2K', '4K'];
-
-/**
- * 按图像模型的真实能力（IMAGE_MODEL_CAPABILITIES）生成 model 专属 paramsSchema，
- * 而不是所有图像模型共用一套通用 preset —— 通用 schema 与实际能力有多处冲突：
- *  - gemini flash/pro 无质量轴，通用 schema 却 required quality；
- *  - compatible 的质量是 standard/hd，通用 schema 只收 low/medium/high（运行时 ajv 拒绝）；
- *  - gpt-image / gemini 单张封顶，通用 schema 却允许 4（hold 冻结 4 张、实际出 1 张 → 多扣费）；
- *  - 参考图张数由服务端真实计数决定，通用 schema 的 max 4 会在超过时 400。
- * pricingSchema（MODEL_PRICING 或 preset）引用的参数都被这里生成的属性覆盖，
- * 最后由 assertAllActiveModelsValid 兜底校验。
- */
-function buildImageParamsSchema(model: {
-  provider?: string | null;
-  model: string;
-  metadata: unknown;
-}): ParamsSchema {
-  const kind = detectImageModelKind({
-    provider: model.provider,
-    model: model.model,
-    metadata: model.metadata as ImageModelHint['metadata'],
-  });
-  const cap = IMAGE_MODEL_CAPABILITIES[kind];
-  const properties: ParamsSchema['properties'] = {};
-  const required: string[] = [];
-
-  // quality：仅当模型确有质量档位时给（gemini flash/pro 无质量轴 → 不给该属性，
-  // 运行时发来的空 quality 会被 normalizeImageQuality 归一成 undefined 而丢弃）。
-  if (cap.qualities.length > 0) {
-    const values = cap.qualities;
-    const fallback = values.includes(cap.defaults.quality) ? cap.defaults.quality : values[0];
-    properties.quality = {
-      type: 'string',
-      enum: values,
-      default: fallback,
-      'x-ui': {
-        control: 'chips',
-        labelKey: 'pricing.params.quality',
-        // 每个档位的显示名走 i18n(pricing.options.<value>)，SchemaForm 才不会显示裸 value token。
-        optionLabelKeys: Object.fromEntries(values.map((v) => [v, `pricing.options.${v}`])),
-        order: 10,
-      },
-    };
-    required.push('quality');
-  }
-
-  // resolution：模型真实可达的档位（对每个 size 求 resolveImagePricingResolution 去重）。
-  // compatible 的所有尺寸都落在 1K，所以只有 1K 一档。
-  const tiers = IMAGE_RESOLUTION_ORDER.filter((tier) =>
-    cap.sizes.some((size) => resolveImagePricingResolution(size.value) === tier),
-  );
-  if (tiers.length > 0) {
-    const defaultTier = resolveImagePricingResolution(cap.defaults.size);
-    const resolutionDefault = defaultTier && tiers.includes(defaultTier) ? defaultTier : tiers[0];
-    properties.resolution = {
-      type: 'string',
-      enum: [...tiers],
-      default: resolutionDefault,
-      'x-ui': { control: 'chips', labelKey: 'pricing.params.resolution', order: 20 },
-    };
-    required.push('resolution');
-  }
-
-  // 生成张数(quantity)不进图像 schema：按业务要求，张数由业务逻辑在下单时吃掉，
-  // schema 只描述「一张」的参数与价格。故这里不再生成 quantity 属性/控件。
-
-  // 隐藏计价参数：按真实上传张数收费。刻意不设 maximum —— 张数来自服务端计数而非
-  // 用户任填，设上限只会在参考图偏多时 ajv 400；hold 本就按真实数量扣费。
-  properties.referenceImages = {
-    type: 'integer',
-    minimum: 0,
-    default: 0,
-    'x-ui': { control: 'hidden' },
-  };
-
-  return { $schema: JSON_SCHEMA_DRAFT, type: 'object', required, properties };
-}
-
-/**
- * 按视频模型的真实能力（VIDEO_MODEL_CAPABILITIES）生成 model 专属 paramsSchema。
- * 只覆盖 resolution 的可选集合与默认值（如 Seedance 2.0 Fast 只有 480p/720p，通用
- * schema 却显示 1080p/4K，导致前端报价与后端钳制后的实际价格不一致），seconds/ratio
- * 沿用通用 preset。allOf（4k 时最长秒数约束）只在支持 4k 的模型上保留。
- */
-function buildVideoParamsSchema(model: {
-  provider?: string | null;
-  model: string;
-  metadata: unknown;
-}): ParamsSchema {
-  const kind = detectVideoModelKind({
-    provider: model.provider,
-    model: model.model,
-    metadata: model.metadata as VideoModelHint['metadata'],
-  });
-  const cap = VIDEO_MODEL_CAPABILITIES[kind];
-  const base = MODEL_PRESETS.video.paramsSchema;
-  const resolutions = [...cap.resolutions];
-  const defaultResolution = resolutions.includes(cap.defaultResolution)
-    ? cap.defaultResolution
-    : resolutions[0];
-  const has4k = resolutions.includes('4k');
-
-  const schema: ParamsSchema = {
-    $schema: base.$schema,
-    type: 'object',
-    required: [...(base.required ?? [])],
-    properties: {
-      ...base.properties,
-      resolution: { ...base.properties.resolution, enum: resolutions, default: defaultResolution },
-    },
-  };
-  if (has4k && base.allOf) schema.allOf = base.allOf;
-  return schema;
-}
 
 /** 按 preset 归类为对应 model 生成 paramsSchema（text 无能力差异，沿用通用 preset）。 */
 function paramsSchemaFor(
