@@ -69,11 +69,17 @@ export function buildImageConversationSummary(
   return lines.join('\n').slice(0, 12000);
 }
 
+/** 「不做调优」的中性档位。必须与 buildImageWorkbenchPrompt 的判据用同一个 token。
+ *  历史上这里错写成中文 UI 字面量 '忠实原文'，而前端发的是 PROMPT_TUNING_VALUES
+ *  里的 'faithful' —— 守卫因此恒为真，faithful 模式仍会被多调一次 prompt-optimize
+ *  LLM 并多扣一笔钱。 */
+const PROMPT_TUNING_NEUTRAL = 'faithful';
+
 export function shouldTuneWorkbenchPrompt(settings?: ImageGenerationSettings): boolean {
   if (!settings) return false;
   if (settings.skipPromptTuning === true) return false;
   const promptTuning = String(settings.promptTuning ?? '');
-  return Boolean(promptTuning && promptTuning !== '忠实原文');
+  return Boolean(promptTuning && promptTuning !== PROMPT_TUNING_NEUTRAL);
 }
 
 export function formatPromptImageRef(

@@ -68,9 +68,9 @@ describe('image generation flow helpers', () => {
 
   it('keeps workbench image references and prompt tuning decisions stable', () => {
     expect(shouldTuneWorkbenchPrompt()).toBe(false);
-    expect(shouldTuneWorkbenchPrompt({ promptTuning: '忠实原文' })).toBe(false);
-    expect(shouldTuneWorkbenchPrompt({ promptTuning: '更专业' })).toBe(true);
-    expect(shouldTuneWorkbenchPrompt({ promptTuning: '更专业', skipPromptTuning: true })).toBe(false);
+    expect(shouldTuneWorkbenchPrompt({ promptTuning: 'faithful' })).toBe(false);
+    expect(shouldTuneWorkbenchPrompt({ promptTuning: 'photoDetail' })).toBe(true);
+    expect(shouldTuneWorkbenchPrompt({ promptTuning: 'photoDetail', skipPromptTuning: true })).toBe(false);
 
     expect(
       formatPromptImageRef(
@@ -672,5 +672,36 @@ describe('image generation flow helpers', () => {
       preview: '',
       reason: 'bad image',
     });
+  });
+});
+
+describe('shouldTuneWorkbenchPrompt', () => {
+  it('returns false for the faithful token the frontend actually sends', () => {
+    // 前端发的是 PROMPT_TUNING_VALUES 里的 'faithful'（英文 token），不是中文 UI 文案。
+    // 选了 faithful 就不该再调一次 prompt-optimize LLM，否则多扣一笔钱。
+    expect(shouldTuneWorkbenchPrompt({ promptTuning: 'faithful' })).toBe(false);
+  });
+
+  it('returns true for a real tuning mode', () => {
+    expect(shouldTuneWorkbenchPrompt({ promptTuning: 'photoDetail' })).toBe(true);
+    expect(shouldTuneWorkbenchPrompt({ promptTuning: 'auto' })).toBe(true);
+  });
+
+  it('returns false when skipPromptTuning is set', () => {
+    expect(
+      shouldTuneWorkbenchPrompt({ promptTuning: 'photoDetail', skipPromptTuning: true }),
+    ).toBe(false);
+  });
+
+  it('returns false when promptTuning is absent', () => {
+    expect(shouldTuneWorkbenchPrompt({})).toBe(false);
+    expect(shouldTuneWorkbenchPrompt(undefined)).toBe(false);
+  });
+
+  it('no longer treats the legacy Chinese literal as the neutral value', () => {
+    // 变异测试：旧实现判 `!== '忠实原文'`，对前端发的每一个 token 都恒为真。
+    // '忠实原文' 不在 PROMPT_TUNING_VALUES 里，是非法值，仍应视为「要调优」——
+    // 但它绝不能是唯一被豁免的值。
+    expect(shouldTuneWorkbenchPrompt({ promptTuning: '忠实原文' })).toBe(true);
   });
 });
