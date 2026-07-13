@@ -541,7 +541,6 @@
   },
   "sidebar": {
     "newSession": "Phiên mới",
-    "arena": "Arena",
     "templateMarket": "Chợ template",
     "templateReview": "Duyệt template",
     "library": "Thư viện",
@@ -728,36 +727,6 @@
     "sendToCurrentConversation": "Gửi vào cuộc trò chuyện hiện tại",
     "generatedImageAlt": "Ảnh đã tạo {index}",
     "sendGeneratedResultMessage": "Tôi đã tạo kết quả bằng mẫu ảnh. Hãy tiếp tục thảo luận dựa trên các nội dung này.\n\nPrompt: {prompt}\n\n{images}"
-  },
-  "arena": {
-    "title": "Arena",
-    "description": "Chọn 2-4 mô hình và so sánh phản hồi song song",
-    "subDescription": "Phản hồi của mỗi mô hình sẽ hiển thị kèm thời gian và số token sử dụng",
-    "newComparison": "So sánh mới",
-    "selectOrCreate": "Chọn hoặc tạo một phép so sánh để bắt đầu",
-    "clearAllMessages": "Xóa tất cả tin nhắn?",
-    "clear": "Xóa",
-    "selectModel": "Chọn mô hình",
-    "noModels": "Không có mô hình, nhấn để cấu hình",
-    "minModelsRequired": "Vui lòng chọn ít nhất 2 mô hình để so sánh",
-    "requestFailed": "Yêu cầu thất bại",
-    "selectModelsHint": "Chọn 2-4 mô hình cùng loại để so sánh",
-    "noCategoryModels": "Không có mô hình trong danh mục này",
-    "searchPlaceholder": "Tìm kiếm mô hình",
-    "noSearchResults": "Không tìm thấy mô hình phù hợp",
-    "newBattle": "Trận đấu mới"
-  },
-  "arenaParams": {
-    "eyebrow": "Tham số mô hình",
-    "title": "Cài đặt tham số",
-    "description": "Điều chỉnh tham số mô hình để kiểm soát hành vi tạo nội dung",
-    "enabledNote": "Chỉ các tham số được bật mới được gửi đến mô hình",
-    "resetDefault": "Đặt lại mặc định",
-    "chatParams": "Tham số chat",
-    "chatParamsDesc": "Kiểm soát tính ngẫu nhiên và độ dài của văn bản tạo ra",
-    "imageParams": "Tham số hình ảnh",
-    "imageParamsDesc": "Kiểm soát kích thước, chất lượng và phong cách hình ảnh",
-    "noParams": "Không có tham số có thể cấu hình cho mô hình này"
   },
   "document": {
     "uploadFile": "Tải lên tệp",

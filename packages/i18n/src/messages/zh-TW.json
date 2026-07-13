@@ -541,7 +541,6 @@
   },
   "sidebar": {
     "newSession": "新建會話",
-    "arena": "練武場",
     "templateMarket": "範本市場",
     "templateReview": "範本審核",
     "library": "資料庫",
@@ -728,36 +727,6 @@
     "sendToCurrentConversation": "傳送到目前對話",
     "generatedImageAlt": "生成圖 {index}",
     "sendGeneratedResultMessage": "我用圖片範本生成了結果，繼續基於這些內容討論。\n\n提示詞：{prompt}\n\n{images}"
-  },
-  "arena": {
-    "title": "練武場",
-    "description": "選擇 2-4 個模型，輸入訊息進行多模型對比",
-    "subDescription": "每個模型的回答將並排顯示，附帶回應耗時和 token 消耗",
-    "newComparison": "新對比",
-    "selectOrCreate": "選擇或建立一個對比開始",
-    "clearAllMessages": "清空所有訊息？",
-    "clear": "清空",
-    "selectModel": "選擇模型",
-    "noModels": "暫無模型，點擊設定",
-    "minModelsRequired": "請至少選擇 2 個模型進行對比",
-    "requestFailed": "請求失敗",
-    "selectModelsHint": "選擇 2-4 個同類模型進行對比",
-    "noCategoryModels": "此分類暫無模型",
-    "searchPlaceholder": "搜尋模型",
-    "noSearchResults": "找不到符合的模型",
-    "newBattle": "新建對戰"
-  },
-  "arenaParams": {
-    "eyebrow": "模型參數",
-    "title": "參數設定",
-    "description": "調整模型參數以控制產生行為",
-    "enabledNote": "僅啟用的參數會傳送給模型",
-    "resetDefault": "重置預設",
-    "chatParams": "對話參數 Chat",
-    "chatParamsDesc": "控制文字產生的隨機性和長度",
-    "imageParams": "圖片參數 Image",
-    "imageParamsDesc": "控制圖片產生的尺寸、品質和風格",
-    "noParams": "此模型暫無可設定參數"
   },
   "document": {
     "uploadFile": "上傳檔案",

@@ -573,51 +573,6 @@ export const materialFoldersApi = {
   remove: (id: string) => chatApi.delete(`/api/material-folders/${id}`),
 };
 
-// ── Arena ────────────────────────────────────────────────────────────────
-export interface ArenaSession {
-  id: string;
-  userId: string;
-  title: string;
-  selectedModelIds?: string[];
-  createdAt: string;
-  updatedAt: string;
-  turns?: ArenaTurn[];
-}
-
-export interface ArenaTurn {
-  id: string;
-  sessionId: string;
-  userMessage: string;
-  images?: string[];
-  createdAt: string;
-  responses: ArenaResponseRecord[];
-}
-
-export interface ArenaResponseRecord {
-  id: string;
-  turnId: string;
-  modelConfigId: string;
-  content: string;
-  images?: string[];
-  durationMs: number | null;
-  promptTokens: number | null;
-  completionTokens: number | null;
-  totalTokens: number | null;
-  status: string;
-  error: string | null;
-  createdAt: string;
-}
-
-export const arenaApi = {
-  getSessions: () => chatApi.get<ArenaSession[]>('/api/arena'),
-  createSession: (title?: string) => chatApi.post<ArenaSession>('/api/arena', { title }),
-  getSession: (id: string) => chatApi.get<ArenaSession>(`/api/arena/${id}`),
-  deleteSession: (id: string) => chatApi.delete(`/api/arena/${id}`),
-  clearTurns: (id: string) => chatApi.delete(`/api/arena/${id}/turns`),
-  updateSelectedModels: (id: string, modelIds: string[]) =>
-    chatApi.patch(`/api/arena/${id}/models`, { modelIds }),
-};
-
 // ── Artifacts ────────────────────────────────────────────────────────────
 export interface Artifact {
   id: string;

@@ -541,7 +541,6 @@
   },
   "sidebar": {
     "newSession": "New Session",
-    "arena": "Arena",
     "templateMarket": "Template Market",
     "templateReview": "Template Review",
     "myTemplates": "My Templates",
@@ -741,36 +740,6 @@
     "sendToCurrentConversation": "Send to current conversation",
     "generatedImageAlt": "Generated image {index}",
     "sendGeneratedResultMessage": "I generated results with an image template. Continue the discussion based on these outputs.\n\nPrompt: {prompt}\n\n{images}"
-  },
-  "arena": {
-    "title": "Arena",
-    "description": "Select 2-4 models and compare their responses side by side",
-    "subDescription": "Each model's response will be displayed with timing and token usage",
-    "newComparison": "New Comparison",
-    "selectOrCreate": "Select or create a comparison to start",
-    "clearAllMessages": "Clear all messages?",
-    "clear": "Clear",
-    "selectModel": "Select Model",
-    "noModels": "No models, click to configure",
-    "minModelsRequired": "Please select at least 2 models for comparison",
-    "requestFailed": "Request failed",
-    "selectModelsHint": "Select 2-4 models of the same type for comparison",
-    "noCategoryModels": "No models in this category",
-    "searchPlaceholder": "Search models",
-    "noSearchResults": "No matching models",
-    "newBattle": "New Battle"
-  },
-  "arenaParams": {
-    "eyebrow": "Model Parameters",
-    "title": "Parameter Settings",
-    "description": "Adjust model parameters to control generation behavior",
-    "enabledNote": "Only enabled parameters will be sent to the model",
-    "resetDefault": "Reset to Default",
-    "chatParams": "Chat Parameters",
-    "chatParamsDesc": "Control text generation randomness and length",
-    "imageParams": "Image Parameters",
-    "imageParamsDesc": "Control image size, quality, and style",
-    "noParams": "No configurable parameters for this model"
   },
   "document": {
     "uploadFile": "Upload File",

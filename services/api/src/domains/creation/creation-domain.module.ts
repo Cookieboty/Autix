@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ArenaModule } from './arena/arena.module';
 import { ArtifactModule } from './artifact/artifact.module';
 import { CanvasModule } from './canvas/canvas.module';
 import { ConversationModule } from './conversation/conversation.module';
@@ -19,7 +18,6 @@ import { VideoModule } from './video/video.module';
     MessageModule,
     LlmModule,
     ArtifactModule,
-    ArenaModule,
     DocumentModule,
     CanvasModule,
     GalleryModule,
@@ -34,7 +32,6 @@ import { VideoModule } from './video/video.module';
     MessageModule,
     LlmModule,
     ArtifactModule,
-    ArenaModule,
     DocumentModule,
     CanvasModule,
     GalleryModule,

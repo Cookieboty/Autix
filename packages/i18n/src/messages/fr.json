@@ -541,7 +541,6 @@
   },
   "sidebar": {
     "newSession": "Nouvelle session",
-    "arena": "Arena",
     "templateMarket": "Marché de templates",
     "templateReview": "Révision de templates",
     "library": "Bibliothèque",
@@ -728,36 +727,6 @@
     "sendToCurrentConversation": "Envoyer à la conversation actuelle",
     "generatedImageAlt": "Image générée {index}",
     "sendGeneratedResultMessage": "J’ai généré des résultats avec un modèle image. Continuons la discussion à partir de ces contenus.\n\nPrompt : {prompt}\n\n{images}"
-  },
-  "arena": {
-    "title": "Arena",
-    "description": "Sélectionnez 2 à 4 modèles et comparez leurs réponses côte à côte",
-    "subDescription": "La réponse de chaque modèle sera affichée avec le temps et l'utilisation de tokens",
-    "newComparison": "Nouvelle comparaison",
-    "selectOrCreate": "Sélectionnez ou créez une comparaison pour commencer",
-    "clearAllMessages": "Effacer tous les messages ?",
-    "clear": "Effacer",
-    "selectModel": "Sélectionner un modèle",
-    "noModels": "Aucun modèle, cliquez pour configurer",
-    "minModelsRequired": "Veuillez sélectionner au moins 2 modèles pour la comparaison",
-    "requestFailed": "La requête a échoué",
-    "selectModelsHint": "Sélectionnez 2 à 4 modèles du même type pour comparer",
-    "noCategoryModels": "Aucun modèle dans cette catégorie",
-    "searchPlaceholder": "Rechercher des modèles",
-    "noSearchResults": "Aucun modèle correspondant",
-    "newBattle": "Nouveau duel"
-  },
-  "arenaParams": {
-    "eyebrow": "Paramètres du modèle",
-    "title": "Réglages des paramètres",
-    "description": "Ajustez les paramètres du modèle pour contrôler le comportement de génération",
-    "enabledNote": "Seuls les paramètres activés seront envoyés au modèle",
-    "resetDefault": "Réinitialiser par défaut",
-    "chatParams": "Paramètres de chat",
-    "chatParamsDesc": "Contrôlez l'aléatoire et la longueur de la génération de texte",
-    "imageParams": "Paramètres d'image",
-    "imageParamsDesc": "Contrôlez la taille, la qualité et le style de l'image",
-    "noParams": "Aucun paramètre configurable pour ce modèle"
   },
   "document": {
     "uploadFile": "Importer un fichier",

@@ -253,7 +253,6 @@ const apiDomainModules: Record<string, string[]> = {
   admin: ['admin'],
   billing: ['campaign', 'invite', 'membership', 'order', 'points'],
   creation: [
-    'arena',
     'artifact',
     'canvas',
     'conversation',

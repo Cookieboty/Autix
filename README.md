@@ -16,8 +16,8 @@ Bun Workspaces + Turborepo 单仓多包，包含 Web 前端、桌面端、统一
 | `packages/domain` | 前后端共享领域契约、业务枚举、纯规则和协议类型 | — |
 | `packages/sdk` | 类型安全前端 API Client | — |
 | `packages/platform` | Web/Desktop 运行时适配（存储、导航、环境注入） | — |
-| `packages/shared-ui` | 跨端共享 React 组件库（HeroUI 封装：chat / arena / artifact / template / admin / docs / models / ...） | — |
-| `packages/shared-store` | 跨端 Zustand stores（auth / chat / arena / artifact / template / ...） | — |
+| `packages/shared-ui` | 跨端共享 React 组件库（HeroUI 封装：chat / artifact / template / admin / docs / models / ...） | — |
+| `packages/shared-store` | 跨端 Zustand stores（auth / chat / artifact / template / ...） | — |
 | `packages/database` | 统一 Prisma Schema + 迁移 + 种子 | — |
 | `packages/types` | 共享 TypeScript 类型 | — |
 | `packages/i18n` | 国际化配置（zh-CN / en / ja / fr / ru / vi / zh-TW） | — |
@@ -165,10 +165,6 @@ SSE 流式推送 Markdown
 
 模型按场景返回结构化的 UI 组件指令（`form` / `selection` / `card` / `table` / `confirmation` / `steps` / `action_buttons` / `text`），前端按 schema 渲染交互组件，让对话能直接驱动表单、确认、进度、表格。
 
-### 多模型对战（Arena）
-
-同一 Prompt 同时打到多个模型，并排查看响应、做 A/B 评估。对应 `arena_sessions / arena_turns / arena_responses`。
-
 ### 提示词模板（Template）
 
 社区/个人提示词模板的发布、订阅、运行；运行结果记录到 `template_generations / generation_turns`。
@@ -230,7 +226,6 @@ bun run --filter @autix/api seed:resources
 - 会话与产物：`conversations` / `messages` / `artifacts` / `artifact_versions`
 - 知识库：`documents` / `document_chunks`（pgvector）
 - 模型与任务：`model_configs` / `task_events`
-- 多模型对战：`arena_sessions` / `arena_turns` / `arena_responses`
 - 提示词模板：`prompt_templates` / `template_generations` / `generation_turns`
 - 会员积分：`membership_levels` / `membership_plans` / `user_memberships` / `points_packages` / `user_points` / `points_records`
 - 订单与邀请：`orders` / `invite_codes` / `invite_records` / `task_point_costs`

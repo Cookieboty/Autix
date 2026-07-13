@@ -21,10 +21,6 @@ template.delete_forbidden: "Not authorized to delete this template"
 template.generation_not_found: "Generation record not found"
 template.generation_forbidden: "Access denied"
 
-arena.session_not_found: "Arena session not found"
-arena.session_forbidden: "Not authorized to operate this session"
-arena.session_view_forbidden: "Not authorized to view this session"
-arena.session_delete_forbidden: "Not authorized to delete this session"
 
 model.not_found: "Model config not found: {{id}}"
 

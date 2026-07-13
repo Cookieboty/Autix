@@ -26,7 +26,6 @@ import { ResetPasswordPage } from './pages/reset-password';
 
 // Chat 业务
 import { ChatPage } from './pages/chat';
-import { ArenaPage } from './pages/arena';
 import { LibraryPage } from './pages/library';
 import { NotificationsPage } from './pages/notifications';
 
@@ -111,8 +110,6 @@ function AppRoutes() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:id" element={<ChatPage />} />
           <Route path="/c/:id" element={<ChatPage />} />
-          <Route path="/arena" element={<ArenaPage />} />
-          <Route path="/arena/:id" element={<ArenaPage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
 

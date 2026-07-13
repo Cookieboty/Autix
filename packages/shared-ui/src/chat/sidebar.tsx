@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Store, Swords, type LucideIcon } from 'lucide-react';
+import { Store, type LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
@@ -91,8 +91,6 @@ export function ChatSidebar({
     }
     setPendingDelete(null);
   };
-
-  const isArena = pathname.startsWith('/arena');
   const isMarketplace = pathname.startsWith('/marketplace') || pathname.startsWith('/community');
   const isChatRoute = pathname.startsWith('/c/') || pathname.startsWith('/chat');
 
@@ -147,7 +145,6 @@ export function ChatSidebar({
   };
 
   const defaultNavItems: SidebarNavItem[] = [
-    { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
     { label: t('marketplace'), icon: Store, href: '/community', active: isMarketplace },
   ];
   const navItems = customNavItems ?? defaultNavItems;

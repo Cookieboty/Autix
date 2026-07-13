@@ -173,7 +173,7 @@ __tests__ 或 test/*          纯函数/关键行为测试
 ```txt
 identity     auth/user/role/permission/session
 billing      membership/points/order/campaign/invite
-creation     conversation/message/llm/artifact/arena/image/video/materials
+creation     conversation/message/llm/artifact/image/video/materials
 marketplace  agents/skills/mcp/templates/acquisitions
 admin        audit/batch/migration
 platform     storage/mail/sse/i18n/system-settings

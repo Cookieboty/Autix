@@ -13,19 +13,14 @@ import {
 
 export type { ModelConfigItem } from '@autix/sdk';
 export {
-  getDefaultChatParams,
-  getDefaultImageParams,
-  getEffectiveParams,
   getModelCategory,
   hasChatCapability,
   hasImageCapability,
   isVideoModel,
   ALL_CATEGORIES,
   CATEGORY_LABELS,
-  CHAT_PARAM_DEFS,
-  IMAGE_SELECT_DEFS,
 } from '@autix/domain';
-export type { ModelCategory, ModelParams, ModelParamsConfig } from '@autix/domain';
+export type { ModelCategory } from '@autix/domain';
 
 export async function listAvailableModels(): Promise<ModelConfigItem[]> {
   const res = await getAvailableModels();

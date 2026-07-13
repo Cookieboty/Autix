@@ -541,7 +541,6 @@
   },
   "sidebar": {
     "newSession": "新しいセッション",
-    "arena": "Arena",
     "templateMarket": "テンプレートマーケット",
     "templateReview": "テンプレート審査",
     "library": "ライブラリ",
@@ -728,36 +727,6 @@
     "sendToCurrentConversation": "現在の会話に送信",
     "generatedImageAlt": "生成画像 {index}",
     "sendGeneratedResultMessage": "画像テンプレートで結果を生成しました。これらの内容をもとに続けて相談します。\n\nPrompt: {prompt}\n\n{images}"
-  },
-  "arena": {
-    "title": "Arena",
-    "description": "2〜4 つのモデルを選択して、回答を並べて比較",
-    "subDescription": "各モデルの回答が応答時間とトークン使用量とともに表示されます",
-    "newComparison": "新しい比較",
-    "selectOrCreate": "比較を選択または作成して開始",
-    "clearAllMessages": "すべてのメッセージを消去しますか？",
-    "clear": "消去",
-    "selectModel": "モデルを選択",
-    "noModels": "モデルなし、クリックして設定",
-    "minModelsRequired": "比較には少なくとも 2 つのモデルを選択してください",
-    "requestFailed": "リクエストに失敗しました",
-    "selectModelsHint": "同じタイプのモデルを 2〜4 つ選択して比較",
-    "noCategoryModels": "このカテゴリにはモデルがありません",
-    "searchPlaceholder": "モデルを検索",
-    "noSearchResults": "一致するモデルが見つかりません",
-    "newBattle": "新しい対戦"
-  },
-  "arenaParams": {
-    "eyebrow": "モデルパラメータ",
-    "title": "パラメータ設定",
-    "description": "モデルパラメータを調整して生成動作を制御",
-    "enabledNote": "有効なパラメータのみがモデルに送信されます",
-    "resetDefault": "デフォルトに戻す",
-    "chatParams": "チャットパラメータ",
-    "chatParamsDesc": "テキスト生成のランダム性と長さを制御",
-    "imageParams": "画像パラメータ",
-    "imageParamsDesc": "画像のサイズ、品質、スタイルを制御",
-    "noParams": "このモデルには設定可能なパラメータがありません"
   },
   "document": {
     "uploadFile": "ファイルをアップロード",

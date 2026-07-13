@@ -37,22 +37,15 @@ export type { ApiResponse } from '@autix/domain';
 export {
   ALL_CATEGORIES,
   CATEGORY_LABELS,
-  CHAT_PARAM_DEFS,
   checkAdmin,
-  getEffectiveParams,
-  getDefaultChatParams,
-  getDefaultImageParams,
   getModelCategory,
   hasChatCapability,
   hasImageCapability,
   hasPermission,
-  IMAGE_SELECT_DEFS,
   isVideoModel,
 } from '@autix/domain';
 export type {
   Menu,
   ModelCategory,
-  ModelParams,
-  ModelParamsConfig,
   SystemInfo,
 } from '@autix/domain';

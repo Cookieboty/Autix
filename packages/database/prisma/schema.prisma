@@ -98,7 +98,6 @@ model User {
   conversations                  conversations[]              @relation("ConversationUser")
   documents                      documents[]                  @relation("DocumentUser")
   taskEvents                     task_events[]                @relation("TaskEventUser")
-  arenaSessions                  arena_sessions[]             @relation("ArenaSessionUser")
   imageTemplates                 image_templates[]            @relation("ImageTemplateAuthor")
   videoTemplates                 video_templates[]            @relation("VideoTemplateAuthor")
   skills                         skills[]                     @relation("SkillAuthor")
@@ -701,49 +700,6 @@ enum BatchJobType {
   REJECT
   REVISE
   DELETE
-}
-
-model arena_sessions {
-  id               String        @id @default(cuid())
-  userId           String
-  title            String        @default("新对比")
-  selectedModelIds String[]      @default([])
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  user             User          @relation("ArenaSessionUser", fields: [userId], references: [id], onDelete: Cascade)
-  turns            arena_turns[]
-
-  @@index([userId])
-}
-
-model arena_turns {
-  id          String            @id @default(cuid())
-  sessionId   String
-  session     arena_sessions    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  userMessage String
-  images      String[]          @default([])
-  createdAt   DateTime          @default(now())
-  responses   arena_responses[]
-
-  @@index([sessionId])
-}
-
-model arena_responses {
-  id               String      @id @default(cuid())
-  turnId           String
-  turn             arena_turns @relation(fields: [turnId], references: [id], onDelete: Cascade)
-  modelConfigId    String
-  content          String      @default("")
-  images           String[]    @default([])
-  durationMs       Int?
-  promptTokens     Int?
-  completionTokens Int?
-  totalTokens      Int?
-  status           String      @default("pending")
-  error            String?
-  createdAt        DateTime    @default(now())
-
-  @@index([turnId])
 }
 
 // ── Multi-Resource Marketplace ──────────────────────────────────────────────

@@ -8,7 +8,6 @@ import { resolveSiteUrl } from '@/lib/i18n/site-url';
  * URL, so they must not appear here either.
  */
 const AUTHED_SEGMENTS = [
-  'arena',
   'c',
   'chat',
   'draw',

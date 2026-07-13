@@ -145,7 +145,6 @@ export function AppSidebar({
 
   const normalizedPathname = normalizePathname(pathname);
   // 练武场/资源市场/绘制 菜单暂时隐藏（/draw 页面已注释），保留 active 判定以便日后恢复
-  // const isArena = normalizedPathname.startsWith('/arena');
   // const isMarketplace =
   //   normalizedPathname.startsWith('/marketplace') ||
   //   normalizedPathname.startsWith('/community');
@@ -200,7 +199,6 @@ export function AppSidebar({
             action: isAuthenticated ? handleNewChat : () => requestLogin(),
           },
           // 练武场菜单暂时隐藏
-          // { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
         ]
       : []),
     // 资源市场菜单暂时隐藏

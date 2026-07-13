@@ -78,7 +78,7 @@ export function MainLayout() {
   const systemNav = useSystemNavItems(location.pathname);
   const adminNav = useAdminNavItems(location.pathname);
 
-  // user 视角下让 AppSidebar 用内置默认 nav（New session / Arena / Marketplace + Bell），
+  // user 视角下让 AppSidebar 用内置默认 nav（New session / Marketplace + Bell），
   // 与 chat-web 行为完全一致；system/admin 视角才传 customNavItems。
   const customNavItems =
     currentView === 'system'

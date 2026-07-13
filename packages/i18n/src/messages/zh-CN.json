@@ -541,7 +541,6 @@
   },
   "sidebar": {
     "newSession": "新建会话",
-    "arena": "练武场",
     "templateMarket": "模板市场",
     "templateReview": "模板审核",
     "myTemplates": "我的模板",
@@ -741,36 +740,6 @@
     "sendToCurrentConversation": "发送到当前会话",
     "generatedImageAlt": "生成图 {index}",
     "sendGeneratedResultMessage": "我用图片模板生成了结果，继续基于这些内容讨论。\n\n提示词：{prompt}\n\n{images}"
-  },
-  "arena": {
-    "title": "练武场",
-    "description": "选择 2-4 个模型，输入消息进行多模型对比",
-    "subDescription": "每个模型的回答将并排显示，附带响应耗时和 token 消耗",
-    "newComparison": "新对比",
-    "selectOrCreate": "选择或创建一个对比开始",
-    "clearAllMessages": "清空所有消息？",
-    "clear": "清空",
-    "selectModel": "选择模型",
-    "noModels": "暂无模型，点击配置",
-    "minModelsRequired": "请至少选择 2 个模型进行对比",
-    "requestFailed": "请求失败",
-    "selectModelsHint": "选择 2-4 个同类模型进行对比",
-    "noCategoryModels": "此分类暂无模型",
-    "searchPlaceholder": "搜索模型",
-    "noSearchResults": "未找到匹配的模型",
-    "newBattle": "新建对战"
-  },
-  "arenaParams": {
-    "eyebrow": "模型参数",
-    "title": "参数配置",
-    "description": "调整模型参数以控制生成行为",
-    "enabledNote": "仅启用的参数会发送给模型",
-    "resetDefault": "重置默认",
-    "chatParams": "对话参数 Chat",
-    "chatParamsDesc": "控制文本生成的随机性和长度",
-    "imageParams": "图片参数 Image",
-    "imageParamsDesc": "控制图片生成的尺寸、质量和风格",
-    "noParams": "此模型暂无可配置参数"
   },
   "document": {
     "uploadFile": "上传文件",

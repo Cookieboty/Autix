@@ -49,7 +49,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   const isWorkbenchRoute =
     pathname === '/workbench/image' || pathname === '/workbench/video' || pathname === '/draw';
   const isChatFeatureRoute =
-    pathname === '/chat' || pathname.startsWith('/c/') || pathname.startsWith('/arena');
+    pathname === '/chat' || pathname.startsWith('/c/');
   const [sidebarOpen, setSidebarOpen] = useState(() => !isWorkbenchRoute);
 
   useEffect(() => {

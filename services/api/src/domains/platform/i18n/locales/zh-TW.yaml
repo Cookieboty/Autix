@@ -21,10 +21,6 @@ template.delete_forbidden: "無權刪除此範本"
 template.generation_not_found: "生成記錄不存在"
 template.generation_forbidden: "無權存取"
 
-arena.session_not_found: "Arena session 不存在"
-arena.session_forbidden: "無權操作此 session"
-arena.session_view_forbidden: "無權存取此 session"
-arena.session_delete_forbidden: "無權刪除此 session"
 
 model.not_found: "模型設定不存在: {{id}}"
 

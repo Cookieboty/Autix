@@ -11,7 +11,6 @@
     "./image": "./src/next-compat.tsx",
     "./ui": "./src/ui/index.ts",
     "./chat": "./src/chat/index.ts",
-    "./arena": "./src/arena/index.ts",
     "./artifact": "./src/artifact/index.ts",
     "./template": "./src/template/index.ts",
     "./metrics": "./src/metrics/index.ts",

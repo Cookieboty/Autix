@@ -5,7 +5,6 @@ import { ROUTE_POLICY } from '@/lib/i18n/route-policy';
 const { default: robots } = await import('@/app/robots');
 
 const AUTHED_SEGMENTS = [
-  'arena',
   'c',
   'chat',
   'draw',
