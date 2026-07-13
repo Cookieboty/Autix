@@ -43,11 +43,40 @@ function toViolation(error: ErrorObject): ParamViolation {
   };
 }
 
+/**
+ * ajv strict 编译冒烟。**它自己绝不抛。**
+ *
+ * 保存路径此前根本不跑 ajv（只跑 validate-schema.ts 的结构校验），于是一份 strict
+ * 编译不过的 schema（典型：`allOf[].then` 分支漏写 `type`）能存进库、dry-run 还显示
+ * 正常，直到真实下单时 `compile()` 抛出未捕获异常 → **500**，而不是 400。
+ *
+ * 把编译搬到保存期跑一遍，并把异常收成 violation，坏 schema 就变成保存时的 400。
+ */
+export function compileParamsSchema(schema: ParamsSchema): ParamViolation[] {
+  try {
+    compile(schema);
+    return [];
+  } catch (error) {
+    return [
+      {
+        // 根级错误，无 JSON Pointer。
+        path: '',
+        message: `paramsSchema 无法被 ajv 编译：${error instanceof Error ? error.message : String(error)}`,
+      },
+    ];
+  }
+}
+
 /** 返回空数组表示合法。后端在扣费前必须调用它——前端的校验只是体验优化。 */
 export function validateParams(
   schema: ParamsSchema,
   params: Record<string, unknown>,
 ): ParamViolation[] {
+  // 坏 schema 在这里也必须是 violation 而不是异常：这个函数跑在扣费链路上，
+  // 让 compile() 的异常穿出去就是一个 500。
+  const compileViolations = compileParamsSchema(schema);
+  if (compileViolations.length > 0) return compileViolations;
+
   const validate = compile(schema);
   if (validate(params)) return [];
   return (validate.errors ?? []).map(toViolation);

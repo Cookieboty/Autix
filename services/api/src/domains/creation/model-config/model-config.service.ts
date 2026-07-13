@@ -9,6 +9,7 @@ import { invalidateModelCache } from '../llm/model.factory';
 import { ModelConfigRepository } from './model-config.repository';
 import { MembershipService } from '../../billing/membership/membership.service';
 import {
+  compileParamsSchema,
   validateParamsSchema,
   validatePricingSchema,
   type ParamsSchema,
@@ -401,6 +402,22 @@ export class ModelConfigService {
     if (violations.length > 0) {
       throw new BadRequestException({ message: 'schema 校验失败', violations });
     }
+
+    this.assertParamsSchemaCompiles(paramsSchema);
+  }
+
+  /**
+   * 墙 2：结构校验放行 ≠ ajv 能编译。
+   *
+   * 保存路径此前根本不跑 ajv —— 一份 strict 编译不过的 schema（典型：allOf 的 then
+   * 分支漏写 type）能存进库、dry-run 还显示正常，直到真实下单时 compile() 抛出
+   * 未捕获异常 → 500 而不是 400。在保存期编译一次，把它变成保存时的 400。
+   */
+  private assertParamsSchemaCompiles(paramsSchema: ParamsSchema) {
+    const violations = compileParamsSchema(paramsSchema);
+    if (violations.length > 0) {
+      throw new BadRequestException({ message: 'paramsSchema 无法编译', violations });
+    }
   }
 
   private assertValidDescription(description: LocalizedText) {
@@ -461,6 +478,12 @@ export class ModelConfigService {
 
     if (violations.length > 0) {
       throw new BadRequestException({ message: 'schema 校验失败', violations });
+    }
+
+    // admin 改 schema 走的恰恰是 update —— 只在 create 路径接冒烟等于没接。
+    // 只编译真的被改动的那份：没改的那份已经在库里，存进去时编译过了。
+    if (dto.paramsSchema !== undefined) {
+      this.assertParamsSchemaCompiles(dto.paramsSchema);
     }
   }
 

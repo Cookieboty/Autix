@@ -646,3 +646,56 @@ describe('toClientModelConfig', () => {
     expect(toClientModelConfig({ id: 'm1', metadata: [1, 2] } as never).metadata).toEqual({});
   });
 });
+
+describe('ModelConfigService ajv compile smoke on save', () => {
+  // 这份 schema validateParamsSchema 会放行（每个 property 都有 x-ui、chips 有 enum、
+  // slider 有 min/max），但 ajv strict 编译不过：allOf 的 then 分支漏写了 type。
+  // 不跑编译冒烟就会存进库，直到真实下单才 500。
+  const UNCOMPILABLE_PARAMS_SCHEMA = {
+    type: 'object',
+    properties: {
+      resolution: { type: 'string', enum: ['1K', '4K'], 'x-ui': { control: 'chips' } },
+      seconds: { type: 'integer', minimum: 1, maximum: 16, 'x-ui': { control: 'slider' } },
+    },
+    allOf: [
+      {
+        if: { properties: { resolution: { const: '4K' } } },
+        then: { properties: { seconds: { maximum: 8 } } }, // ← 漏了 type
+      },
+    ],
+  } as never;
+
+  const PRICING = { terms: [{ id: 'base', op: 'add', const: 10 }] } as never;
+
+  it('rejects a structurally-valid but uncompilable paramsSchema at create time', async () => {
+    const { service } = createService();
+    await expect(
+      service.createSystemModel(
+        {
+          name: 'bad',
+          model: 'bad',
+          paramsSchema: UNCOMPILABLE_PARAMS_SCHEMA,
+          pricingSchema: PRICING,
+        } as never,
+        'admin-1',
+      ),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects it at update time too — admin 改 schema 走的恰恰是 update', async () => {
+    const { service, prisma } = createService();
+    // updateSystemModel → repository.findPublicModel → prisma.model_configs.findFirst
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'model-1',
+      visibility: 'public',
+      paramsSchema: { type: 'object', properties: {} },
+      pricingSchema: PRICING,
+    } as never);
+
+    await expect(
+      service.updateSystemModel('model-1', {
+        paramsSchema: UNCOMPILABLE_PARAMS_SCHEMA,
+      } as never),
+    ).rejects.toThrow(BadRequestException);
+  });
+});
