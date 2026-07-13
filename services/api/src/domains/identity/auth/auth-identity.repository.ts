@@ -534,11 +534,6 @@ export class AuthIdentityRepository {
         where: { userId: input.userId },
         select: { resourceType: true, resourceId: true },
       });
-      const follows = await tx.creator_follows.findMany({
-        where: { OR: [{ followerId: input.userId }, { creatorUserId: input.userId }] },
-        select: { followerId: true, creatorUserId: true },
-      });
-
       const affectedResources = new Map(
         [...likes, ...favorites].map((item) => [
           `${item.resourceType}:${item.resourceId}`,
@@ -559,22 +554,6 @@ export class AuthIdentityRepository {
           FOR UPDATE OF metrics
         `);
       }
-      const affectedCreatorIds = new Set(
-        follows.flatMap((follow) => [follow.followerId, follow.creatorUserId]),
-      );
-      affectedCreatorIds.add(input.userId);
-      const affectedCreatorRows = [...affectedCreatorIds];
-      if (affectedCreatorRows.length > 0) {
-        const values = Prisma.join(affectedCreatorRows.map((userId) => Prisma.sql`(${userId})`));
-        await tx.$queryRaw(Prisma.sql`
-          SELECT profiles."userId"
-          FROM "creator_profiles" profiles
-          JOIN (VALUES ${values}) AS affected("userId")
-            ON affected."userId" = profiles."userId"
-          FOR UPDATE OF profiles
-        `);
-      }
-
       await tx.userRole.deleteMany({ where: { userId: input.userId } });
       // spec 删除矩阵 §1 RateLimitCounter：先捕获 session id，供事务末尾 best-effort 清理
       // 该用户全部 session 维度的限流计数（session 维度键不含 userId，LIKE %userId% 覆盖不到）。
@@ -595,9 +574,6 @@ export class AuthIdentityRepository {
       await tx.video_project_shares.deleteMany({ where: { userId: input.userId } });
       await tx.resource_likes.deleteMany({ where: { userId: input.userId } });
       await tx.resource_favorites.deleteMany({ where: { userId: input.userId } });
-      await tx.creator_follows.deleteMany({
-        where: { OR: [{ followerId: input.userId }, { creatorUserId: input.userId }] },
-      });
       await tx.resource_views.updateMany({
         where: { userId: input.userId },
         data: { userId: null },
@@ -616,15 +592,8 @@ export class AuthIdentityRepository {
         where: { userId: input.userId },
         data: { userId: null },
       });
-      await tx.gallery_posts.updateMany({
-        where: { authorId: input.userId },
-        data: { authorSnapshot: { displayName: 'Deleted user', avatar: null } },
-      });
-      await tx.$executeRaw`
-        UPDATE "growth_events"
-        SET "userId" = NULL, "anonymousId" = NULL, "metadata" = NULL
-        WHERE "userId" = ${input.userId}
-      `;
+      // gallery_posts 不再写作者快照：作者身份改由 presentAuthor 依据 User.status==='DELETED'
+      // 实时脱敏（见 creation/gallery/gallery-author.presenter.ts），快照字段已随之下线。
       await tx.$executeRaw`UPDATE "task_events" SET "metadata" = NULL WHERE "userId" = ${input.userId}`;
       await tx.$executeRaw`UPDATE "batch_jobs" SET "metadata" = NULL, "errorLog" = NULL WHERE "userId" = ${input.userId}`;
       // 保留财务和风控主状态作为审计锚点，但删除无法证明不含 PII 的自由文本/JSON 载荷。
@@ -718,36 +687,6 @@ export class AuthIdentityRepository {
             AND affected."resourceId" = metrics."resourceId"
         `);
       }
-      if (affectedCreatorRows.length > 0) {
-        const values = Prisma.join(affectedCreatorRows.map((userId) => Prisma.sql`(${userId})`));
-        await tx.$executeRaw(Prisma.sql`
-          UPDATE "creator_profiles" profiles
-          SET "followerCount" = (
-                SELECT COUNT(*)::integer FROM "creator_follows" follows
-                WHERE follows."creatorUserId" = profiles."userId"
-              ),
-              "followingCount" = (
-                SELECT COUNT(*)::integer FROM "creator_follows" follows
-                WHERE follows."followerId" = profiles."userId"
-              )
-          FROM (VALUES ${values}) AS affected("userId")
-          WHERE affected."userId" = profiles."userId"
-        `);
-      }
-
-      await tx.creator_profiles.updateMany({
-        where: { userId: input.userId },
-        data: {
-          handle: `deleted-${input.userId}`.slice(0, 80),
-          displayName: 'Deleted user',
-          avatar: null,
-          bio: null,
-          externalLinks: undefined,
-          followerCount: 0,
-          followingCount: 0,
-        },
-      });
-      await tx.$executeRaw`UPDATE "creator_profiles" SET "externalLinks" = NULL WHERE "userId" = ${input.userId}`;
       // 删除矩阵 §1：best-effort 清理限流计数。
       // - userId 维度：dimension 含 userId，用 LIKE 覆盖（含 email-change:user / otp-*:user / stepup-pwd:user 等）。
       // - session 维度：dimension 为 otp-request/verify:session:<sid>，不含 userId，用捕获的 session id 精确删除。

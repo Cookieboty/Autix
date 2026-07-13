@@ -2,11 +2,8 @@
  * Plan C Task 7：作者信息 presenter（纯函数，可脱离 Prisma / Nest 单测）。
  *
  * 输入 AuthorSource 刻意与 Prisma `User` 解耦：
- * - `status` 类型为 string（非 UserStatus 枚举）——当前分支的枚举还没有 DELETED
- *   （它在 account 分支 feat/creative-canvas 上），用 string 让 'DELETED' 分支今日即可
- *   编译并被单测覆盖，待枚举补上后自动生效，无需改本文件。
- * - `displayName` 是"人类可读名"的抽象槽位：现阶段由 getDetail 映射自 User.realName
- *   （当前唯一的人名字段）；account 分支合入后改为 nickname ?? realName。
+ * - `status` 类型为 string（非 UserStatus 枚举），保持纯函数可脱离 Prisma 单测。
+ * - `displayName` 是"人类可读名"的抽象槽位，由 getDetail 映射自 nickname ?? realName。
  */
 export interface AuthorSource {
   id: string;

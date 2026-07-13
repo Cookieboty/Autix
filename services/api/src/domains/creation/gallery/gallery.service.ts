@@ -552,11 +552,10 @@ export class GalleryService {
       }
     }
 
-    // displayName←realName now; ←nickname??realName after account branch merges.
     const author: PresentedAuthor = presentAuthor({
       id: post.author.id,
       status: post.author.status,
-      displayName: post.author.realName ?? null,
+      displayName: post.author.nickname ?? post.author.realName ?? null,
       username: post.author.username,
       avatar: post.author.avatar ?? null,
     });

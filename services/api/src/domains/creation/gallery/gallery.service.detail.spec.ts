@@ -113,6 +113,17 @@ describe('GalleryService.getDetail — 聚合 + 双写', () => {
     expect(favoritedIdsCalls[0]).toEqual(['viewer-9', ResourceType.GALLERY_POST, ['p-pub']]);
   });
 
+  it('displayName 优先取 nickname，其次才回退 realName', async () => {
+    const { service } = makeDetailService({
+      post: {
+        ...publishedPost(),
+        author: { ...authorRow, nickname: 'Nick', realName: 'Real Author' },
+      },
+    });
+    const res = await service.getDetail('p-pub', undefined);
+    expect(res.author.nickname).toBe('Nick');
+  });
+
   it('匿名访问 PUBLISHED：不写 resource_views、viewer 省略', async () => {
     const { service, createViewCalls, likedIdsCalls } = makeDetailService({});
     const res = await service.getDetail('p-pub', undefined);

@@ -21,7 +21,14 @@ export class GalleryRepository {
       where: { id },
       include: {
         author: {
-          select: { id: true, status: true, realName: true, username: true, avatar: true },
+          select: {
+            id: true,
+            status: true,
+            nickname: true,
+            realName: true,
+            username: true,
+            avatar: true,
+          },
         },
       },
     });
