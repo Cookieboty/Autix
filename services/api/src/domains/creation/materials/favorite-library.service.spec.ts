@@ -207,11 +207,12 @@ function makeFakePrisma(seed: {
         materialStore.set(row.id, row);
         return row;
       },
+      // 通用 where 匹配（仅比对 where 中出现的键）：deleteMaterial 用 id/userId/deletedAt 三键，
+      // Task 11 saveHistoryMaterial 的幂等回读用 userId/librarySource/sourceResourceType/sourceId。
       findFirst: async ({ where }: any) => {
         for (const row of materialStore.values()) {
-          if (row.id === where.id && row.userId === where.userId && row.deletedAt === where.deletedAt) {
-            return row;
-          }
+          const matches = Object.entries(where).every(([key, value]) => (row as any)[key] === value);
+          if (matches) return row;
         }
         return null;
       },
@@ -503,6 +504,44 @@ describe('FavoriteLibraryService.assertUsable', () => {
     await expect(
       fav.assertUsable({ id: 'm4', librarySource: 'FAVORITE', sourceResourceType: 'GALLERY_POST' as never, sourceId: 'g-published' }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('FavoriteLibraryService.saveHistoryMaterial — Plan C Task 11', () => {
+  it('落 librarySource=HISTORY 素材，快照取自 resolveResourceSnapshot（同 favorite() 一套解析）', async () => {
+    const { prisma, materialStore } = makeFakePrisma({
+      galleries: { [gId]: publishedGallery },
+    });
+    const fav = new FavoriteLibraryService(prisma as never);
+
+    const material = await fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, gId);
+
+    expect(material.librarySource).toBe('HISTORY');
+    expect(material.sourceResourceType).toBe('GALLERY_POST');
+    expect(material.sourceId).toBe(gId);
+    expect(material.title).toBe(publishedGallery.title);
+    expect(countMaterials(materialStore, userId, 'HISTORY', 'GALLERY_POST', gId)).toBe(1);
+  });
+
+  it('重复保存同一资源 → 幂等返回已存在的那一行，不 500、不重复插入', async () => {
+    const { prisma, materialStore } = makeFakePrisma({
+      galleries: { [gId]: publishedGallery },
+    });
+    const fav = new FavoriteLibraryService(prisma as never);
+
+    const first = await fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, gId);
+    const second = await fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, gId);
+
+    expect(second.id).toBe(first.id);
+    expect(countMaterials(materialStore, userId, 'HISTORY', 'GALLERY_POST', gId)).toBe(1);
+  });
+
+  it('资源已不存在 → NotFoundException（不落孤儿素材行）', async () => {
+    const { prisma } = makeFakePrisma({});
+    const fav = new FavoriteLibraryService(prisma as never);
+    await expect(
+      fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, 'does-not-exist'),
+    ).rejects.toThrow(NotFoundException);
   });
 });
 

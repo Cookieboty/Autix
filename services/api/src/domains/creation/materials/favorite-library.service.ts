@@ -205,6 +205,51 @@ export class FavoriteLibraryService {
     });
   }
 
+  // ── Plan C Task 11：从浏览历史保存素材 ───────────────────────────────────
+
+  /**
+   * 落 librarySource=HISTORY 的素材行。反伪造校验（用户确有对应 resource_views 记录、
+   * resourceType 属可映射类型）由调用方 MaterialsService.saveFromHistory 前置完成，这里
+   * 只负责：resolveResourceSnapshot 复用 favorite() 同一套快照解析（资源不存在 → 404）+
+   * 幂等落库（撞 @@unique([userId,librarySource,sourceResourceType,sourceId]) 时返回已存在的
+   * 那一行，不 500、不重复插入——对齐 createFavoriteMaterial 的 P2002 幂等惯例）。
+   */
+  async saveHistoryMaterial(userId: string, resourceType: ResourceType, resourceId: string) {
+    const snapshot = await this.resolveResourceSnapshot(this.prisma, resourceType, resourceId);
+    if (!snapshot) throw new NotFoundException('资源不存在');
+
+    try {
+      return await this.prisma.material_assets.create({
+        data: {
+          userId,
+          type: snapshot.type,
+          title: snapshot.title,
+          url: snapshot.url,
+          thumbnailUrl: snapshot.thumbnailUrl,
+          sourceType: snapshot.sourceType,
+          librarySource: 'HISTORY',
+          sourceResourceType: resourceType,
+          sourceId: resourceId,
+          tags: [],
+          folderId: null,
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const existing = await this.prisma.material_assets.findFirst({
+          where: {
+            userId,
+            librarySource: 'HISTORY',
+            sourceResourceType: resourceType,
+            sourceId: resourceId,
+          },
+        });
+        if (existing) return existing;
+      }
+      throw err;
+    }
+  }
+
   // ── 删除联动：FAVORITE 取消收藏 / UPLOAD·HISTORY 软删 ────────────────────
 
   async deleteMaterial(userId: string, materialId: string): Promise<void> {

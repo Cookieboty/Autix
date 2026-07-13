@@ -39,6 +39,7 @@ export class MaterialsController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('folderId') folderId?: string,
+    @Query('librarySource') librarySource?: string,
   ) {
     const userId = getCurrentUserId(user);
     return this.materialsService.list(userId, {
@@ -47,6 +48,7 @@ export class MaterialsController {
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
       folderId,
+      librarySource,
     });
   }
 
@@ -63,6 +65,16 @@ export class MaterialsController {
   create(@CurrentUser() user: AuthUser, @Body() body: MaterialCreateInput) {
     const userId = getCurrentUserId(user);
     return this.materialsService.create(userId, body);
+  }
+
+  /** Plan C Task 11：从浏览历史保存素材——反伪造 + 类型校验见 MaterialsService.saveFromHistory。 */
+  @Post('save-from-history')
+  saveFromHistory(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { resourceType?: string; resourceId?: string },
+  ) {
+    const userId = getCurrentUserId(user);
+    return this.materialsService.saveFromHistory(userId, body.resourceType ?? '', body.resourceId ?? '');
   }
 
   @Patch(':id')

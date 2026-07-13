@@ -5,7 +5,14 @@ import { MaterialsService } from './materials.service';
 const R2_PUBLIC_BASE = 'https://cdn.autix.test';
 
 function buildService(
-  overrides: { repo?: any; folders?: any; membership?: any; r2?: any; favoriteLibrary?: any } = {},
+  overrides: {
+    repo?: any;
+    folders?: any;
+    membership?: any;
+    r2?: any;
+    favoriteLibrary?: any;
+    activityRepository?: any;
+  } = {},
 ) {
   const repo = {
     findMany: jest.fn().mockResolvedValue([[], 0]),
@@ -39,7 +46,13 @@ function buildService(
     deleteMaterial: jest.fn().mockResolvedValue(undefined),
     deleteMaterials: jest.fn().mockResolvedValue({ count: 0 }),
     assertUsable: jest.fn().mockResolvedValue(undefined),
+    deriveSourceState: jest.fn().mockResolvedValue(new Map()),
+    saveHistoryMaterial: jest.fn().mockResolvedValue({ id: 'hist-1', librarySource: 'HISTORY' }),
     ...(overrides.favoriteLibrary ?? {}),
+  };
+  const activityRepository = {
+    hasViewed: jest.fn().mockResolvedValue(true),
+    ...(overrides.activityRepository ?? {}),
   };
   const service = new MaterialsService(
     repo as never,
@@ -47,8 +60,9 @@ function buildService(
     r2 as never,
     foldersService as never,
     favoriteLibrary as never,
+    activityRepository as never,
   );
-  return { service, repo, foldersService, membership, r2, favoriteLibrary };
+  return { service, repo, foldersService, membership, r2, favoriteLibrary, activityRepository };
 }
 
 describe('MaterialsService folder support', () => {
@@ -381,5 +395,89 @@ describe('MaterialsService.update — Task 4.6：thumbnailUrl 站内守卫', () 
       'm1',
       expect.objectContaining({ thumbnailUrl: null }),
     );
+  });
+});
+
+describe('MaterialsService.list — Plan C Task 11：librarySource 筛选 + sourceState 批量回填', () => {
+  const items = [
+    { id: 'm1', librarySource: 'FAVORITE', sourceResourceType: 'GALLERY_POST', sourceId: 'g1' },
+    { id: 'm2', librarySource: 'UPLOAD', sourceResourceType: null, sourceId: null },
+  ];
+
+  it('传 librarySource 时 where.librarySource 归一化为大写枚举值', async () => {
+    const { service, repo } = buildService();
+    await service.list('u1', { librarySource: 'history' });
+    const where = repo.findMany.mock.calls[0][0].where;
+    expect(where.librarySource).toBe('HISTORY');
+  });
+
+  it('不传 librarySource 时 where 不含 librarySource 键', async () => {
+    const { service, repo } = buildService();
+    await service.list('u1', {});
+    const where = repo.findMany.mock.calls[0][0].where;
+    expect('librarySource' in where).toBe(false);
+  });
+
+  it('librarySource 传非法值 → BadRequestException', async () => {
+    const { service } = buildService();
+    await expect(service.list('u1', { librarySource: 'bogus' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('列表项批量带回 sourceState（一次 deriveSourceState 调用，覆盖全部 items——不 N+1）', async () => {
+    const stateMap = new Map([
+      ['m1', 'blocked'],
+      ['m2', 'available'],
+    ]);
+    const { service, favoriteLibrary } = buildService({
+      repo: { findMany: jest.fn().mockResolvedValue([items, items.length]) },
+      favoriteLibrary: { deriveSourceState: jest.fn().mockResolvedValue(stateMap) },
+    });
+
+    const result = await service.list('u1', {});
+
+    expect(favoriteLibrary.deriveSourceState).toHaveBeenCalledTimes(1);
+    expect(favoriteLibrary.deriveSourceState).toHaveBeenCalledWith(items);
+    expect(result.items).toEqual([
+      { ...items[0], sourceState: 'blocked' },
+      { ...items[1], sourceState: 'available' },
+    ]);
+  });
+});
+
+describe('MaterialsService.saveFromHistory — Plan C Task 11：反伪造 + 类型校验', () => {
+  it('resourceType 不属可映射类型（如 SKILL）→ BadRequestException，不查 resource_views', async () => {
+    const { service, activityRepository } = buildService();
+    await expect(service.saveFromHistory('u1', 'SKILL', 'r1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(activityRepository.hasViewed).not.toHaveBeenCalled();
+  });
+
+  it('resourceId 为空 → BadRequestException', async () => {
+    const { service } = buildService();
+    await expect(service.saveFromHistory('u1', 'GALLERY_POST', '  ')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('用户未浏览过该资源（hasViewed=false）→ BadRequestException，不落素材（反伪造历史保存）', async () => {
+    const { service, favoriteLibrary, activityRepository } = buildService({
+      activityRepository: { hasViewed: jest.fn().mockResolvedValue(false) },
+    });
+    await expect(service.saveFromHistory('u1', 'GALLERY_POST', 'g1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(activityRepository.hasViewed).toHaveBeenCalledWith('u1', 'GALLERY_POST', 'g1');
+    expect(favoriteLibrary.saveHistoryMaterial).not.toHaveBeenCalled();
+  });
+
+  it('校验通过 → 落 librarySource=HISTORY（委托 FavoriteLibraryService.saveHistoryMaterial）', async () => {
+    const { service, favoriteLibrary, activityRepository } = buildService();
+    const result = await service.saveFromHistory('u1', 'GALLERY_POST', 'g1');
+    expect(activityRepository.hasViewed).toHaveBeenCalledWith('u1', 'GALLERY_POST', 'g1');
+    expect(favoriteLibrary.saveHistoryMaterial).toHaveBeenCalledWith('u1', 'GALLERY_POST', 'g1');
+    expect(result).toEqual({ id: 'hist-1', librarySource: 'HISTORY' });
   });
 });

@@ -5,9 +5,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '../../platform/prisma/generated';
+import { Prisma, ResourceType } from '../../platform/prisma/generated';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
+import { MarketplaceActivityRepository } from '../../marketplace/marketplace-activity.repository';
 import { assertInStationMediaUrls } from '../gallery/gallery.helpers';
 import { FavoriteLibraryService } from './favorite-library.service';
 import { MaterialsRepository } from './materials.repository';
@@ -26,6 +27,16 @@ const SOURCE_TYPES = new Set<MaterialAssetSourceType>([
   'image_generation',
   'video_generation',
   'external',
+]);
+
+export type MaterialLibrarySource = 'UPLOAD' | 'FAVORITE' | 'HISTORY';
+const LIBRARY_SOURCES = new Set<MaterialLibrarySource>(['UPLOAD', 'FAVORITE', 'HISTORY']);
+
+/** Plan C Task 11：能落 librarySource=HISTORY 素材的资源类型——只有这三类会被映射进素材库。 */
+const HISTORY_MAPPABLE_TYPES = new Set<ResourceType>([
+  ResourceType.IMAGE_TEMPLATE,
+  ResourceType.VIDEO_TEMPLATE,
+  ResourceType.GALLERY_POST,
 ]);
 
 export interface MaterialCreateInput {
@@ -60,6 +71,7 @@ export class MaterialsService {
     @Inject(MATERIAL_FOLDERS_SERVICE)
     private readonly foldersService: MaterialFoldersService,
     private readonly favoriteLibrary: FavoriteLibraryService,
+    private readonly activityRepository: MarketplaceActivityRepository,
   ) {}
 
   async getEntitlement(userId: string) {
@@ -88,7 +100,14 @@ export class MaterialsService {
 
   async list(
     userId: string,
-    opts: { type?: string; search?: string; page?: number; pageSize?: number; folderId?: string },
+    opts: {
+      type?: string;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+      folderId?: string;
+      librarySource?: string;
+    },
   ) {
     const page = Math.max(1, opts.page ?? 1);
     const pageSize = Math.min(80, Math.max(1, opts.pageSize ?? 30));
@@ -105,6 +124,9 @@ export class MaterialsService {
     } else if (opts.folderId) {
       where.folderId = opts.folderId;
     }
+    if (opts.librarySource) {
+      where.librarySource = this.normalizeLibrarySource(opts.librarySource);
+    }
     const search = opts.search?.trim();
     if (search) {
       where.OR = [
@@ -119,7 +141,43 @@ export class MaterialsService {
       this.getEntitlement(userId),
     ]);
 
-    return { items, total, page, pageSize, hasMore: skip + items.length < total, entitlement };
+    // Plan C Task 11：批量推导每个素材背后引用资源的可用性（一次 deriveSourceState 调用，
+    // 不逐条查询——见 FavoriteLibraryService.deriveSourceState 的批量实现，避免列表页 N+1）。
+    const stateMap = await this.favoriteLibrary.deriveSourceState(items);
+    const itemsWithState = items.map((item) => ({
+      ...item,
+      sourceState: stateMap.get(item.id) ?? 'available',
+    }));
+
+    return {
+      items: itemsWithState,
+      total,
+      page,
+      pageSize,
+      hasMore: skip + items.length < total,
+      entitlement,
+    };
+  }
+
+  /**
+   * Plan C Task 11：从浏览历史保存素材。先校验 resourceType 属可映射类型，再校验用户
+   * 确有对应 resource_views 记录（防伪造历史保存——不能凭空对没浏览过的资源发起保存），
+   * 最后才落 librarySource=HISTORY（幂等由 FavoriteLibraryService.saveHistoryMaterial 兜底）。
+   */
+  async saveFromHistory(userId: string, resourceType: string, resourceId: string) {
+    const normalizedType = resourceType as ResourceType;
+    if (!HISTORY_MAPPABLE_TYPES.has(normalizedType)) {
+      throw new BadRequestException('该资源类型不支持保存到素材库');
+    }
+    const trimmedId = String(resourceId ?? '').trim();
+    if (!trimmedId) throw new BadRequestException('资源 ID 不能为空');
+
+    const viewed = await this.activityRepository.hasViewed(userId, normalizedType, trimmedId);
+    if (!viewed) {
+      throw new BadRequestException('未浏览过该资源，无法保存到素材库');
+    }
+
+    return this.favoriteLibrary.saveHistoryMaterial(userId, normalizedType, trimmedId);
   }
 
   async createUploadUrl(
@@ -266,6 +324,12 @@ export class MaterialsService {
     const type = String(value ?? '').toLowerCase() as MaterialAssetSourceType;
     if (!SOURCE_TYPES.has(type)) throw new BadRequestException('不支持的素材来源');
     return type;
+  }
+
+  private normalizeLibrarySource(value: string): MaterialLibrarySource {
+    const source = String(value ?? '').toUpperCase() as MaterialLibrarySource;
+    if (!LIBRARY_SOURCES.has(source)) throw new BadRequestException('不支持的素材库来源筛选');
+    return source;
   }
 
   private normalizeTitle(value: string): string {
