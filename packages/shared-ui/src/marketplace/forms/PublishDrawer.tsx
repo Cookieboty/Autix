@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Sparkles,
   Wrench,
-  ImageIcon,
-  Video,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -15,8 +13,6 @@ import {
   DrawerHero,
   DrawerFooterRow,
 } from '../../drawer-shell';
-import { ImageTemplateForm } from './ImageTemplateForm';
-import { VideoTemplateForm } from './VideoTemplateForm';
 import { SkillForm } from './SkillForm';
 import { McpForm } from './McpForm';
 // import { AgentForm } from './AgentForm';
@@ -28,13 +24,12 @@ interface TypeOption {
   color: string;
 }
 
+// 图片/视频模板创建已收口到 /admin/*-templates，普通用户不再可从此入口创建模板。
 const TYPES: TypeOption[] = [
   { slug: 'skills', labelKey: 'tabSkill', icon: Sparkles, color: '#7c3aed' },
   { slug: 'mcp', labelKey: 'tabMcp', icon: Wrench, color: '#0891b2' },
-  // 暂时移除 agents 发布入口，保留图片与视频模板
+  // 暂时移除 agents 发布入口，保留 skills 与 mcp
   // { slug: 'agents', labelKey: 'tabAgent', icon: Bot, color: '#0ea5e9' },
-  { slug: 'image-templates', labelKey: 'tabImage', icon: ImageIcon, color: '#22c55e' },
-  { slug: 'video-templates', labelKey: 'tabVideo', icon: Video, color: '#f59e0b' },
 ];
 
 export interface PublishDrawerProps {
@@ -46,7 +41,7 @@ export interface PublishDrawerProps {
 
 export function PublishDrawer({
   open,
-  initialType = 'image-templates',
+  initialType = 'skills',
   onClose,
   onSaved,
 }: PublishDrawerProps) {
@@ -127,12 +122,7 @@ export function PublishDrawer({
       {/* {activeType === 'agents' && (
         <AgentForm key="agent" onSaved={handleSaved} />
       )} */}
-      {activeType === 'image-templates' && (
-        <ImageTemplateForm key="image" onSaved={handleSaved} />
-      )}
-      {activeType === 'video-templates' && (
-        <VideoTemplateForm key="video" onSaved={handleSaved} />
-      )}
+      {/* 图片/视频模板创建已收口到 /admin/*-templates，普通用户不再可从发布抽屉创建模板 */}
     </DrawerShell>
   );
 }

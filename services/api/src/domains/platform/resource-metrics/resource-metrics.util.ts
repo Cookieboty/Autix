@@ -15,6 +15,7 @@ export interface ResourceMetricsSnapshot {
   commentCount: number;
   shareCount: number;
   referenceCount: number;
+  downloadCount: number;
   citationCount: number;
   hotScore: number;
   hotScoreVersion: string | null;
@@ -45,6 +46,7 @@ export function buildDefaultMetrics(
     commentCount: 0,
     shareCount: 0,
     referenceCount: 0,
+    downloadCount: 0,
     citationCount: 0,
     hotScore: 0,
     hotScoreVersion: null,

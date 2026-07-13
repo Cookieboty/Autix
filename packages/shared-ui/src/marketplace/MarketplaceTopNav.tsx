@@ -29,26 +29,25 @@ const TYPES: {
   { slug: 'video-templates', labelKey: 'topNavVideo' },
 ];
 
+// 图片/视频模板创建已收口到 /admin/*-templates，普通用户可发布的类型仅剩 skills/mcp。
 const VALID_PUBLISH_TYPES: MarketplaceTypeSlug[] = [
-  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
-  // 'skills',
-  // 'mcp',
+  'skills',
+  'mcp',
+  // 暂时移除 agents 发布入口
   // 'agents',
-  'image-templates',
-  'video-templates',
 ];
 
 function slugToType(slug: string): MarketplaceTypeSlug {
   return (VALID_PUBLISH_TYPES as string[]).includes(slug)
     ? (slug as MarketplaceTypeSlug)
-    : 'image-templates';
+    : 'skills';
 }
 
 export function MarketplaceTopNav({
   currentSlug = '',
   onSearch,
   onPublished,
-  homeHref = '/community',
+  homeHref = '/',
 }: {
   currentSlug?: string;
   onSearch?: (q: string) => void;

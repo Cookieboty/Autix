@@ -10,17 +10,12 @@ import {
   RefreshCw,
   ImageOff,
   Flame,
-  Upload,
   Search,
 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   useGalleryAdminList,
   useGalleryCategories,
   useGalleryModeration,
-  useImportGalleryMutation,
-  useGalleryBatchJobPoller,
-  galleryAdminQueryKeys,
   type GalleryAdminKind,
   type GalleryAdminListParams,
   type GalleryAdminSourceType,
@@ -48,22 +43,6 @@ import {
 } from '../../ui/dialog';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../../ui/empty';
 import { BoostDialog } from '../boosts/BoostDialog';
-import { TemplateImportDialog } from '../TemplateImportDialog';
-
-/** 广场作品 JSON 导入模板：与后端 GET /api/admin/gallery/import-template 返回结构保持一致。 */
-const GALLERY_IMPORT_TEMPLATE = [
-  {
-    kind: 'IMAGE',
-    title: '',
-    description: '',
-    category: '',
-    tags: [],
-    coverImage: '',
-    mediaUrls: [],
-    aspectRatio: '',
-    durationSec: 0,
-  },
-];
 
 const SOURCE_LABEL_KEY: Record<GalleryPostAdminItem['sourceType'], string> = {
   USER_UPLOAD: 'gallery.sources.USER_UPLOAD',
@@ -106,10 +85,6 @@ const TABS: { value: GalleryAdminTab; labelKey: string }[] = [
 export function GalleryModerationView() {
   const t = useTranslations('adminOperations');
   const [tab, setTab] = useState<GalleryAdminTab>('PENDING');
-  const [importOpen, setImportOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const importGalleryMutation = useImportGalleryMutation();
-  const pollBatchJob = useGalleryBatchJobPoller();
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
@@ -121,15 +96,6 @@ export function GalleryModerationView() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="cursor-pointer"
-            onClick={() => setImportOpen(true)}
-          >
-            <Upload className="h-3.5 w-3.5 mr-1" />
-            {t('gallery.import')}
-          </Button>
           <div className="inline-flex items-center gap-1 rounded-md border bg-muted/40 p-1">
             {TABS.map((tabOption) => (
               <button
@@ -151,17 +117,6 @@ export function GalleryModerationView() {
 
       {/* key=tab 让切 tab 时面板重挂载，筛选/页码回到初始，避免串状态 */}
       <GalleryPanel key={tab} status={tab} />
-
-      <TemplateImportDialog
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        onImported={() => {
-          void queryClient.invalidateQueries({ queryKey: galleryAdminQueryKeys.root() });
-        }}
-        importFn={(items) => importGalleryMutation.mutateAsync(items).then((r) => r.data)}
-        pollJob={pollBatchJob}
-        template={GALLERY_IMPORT_TEMPLATE}
-      />
     </div>
   );
 }

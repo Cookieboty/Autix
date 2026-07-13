@@ -28,11 +28,14 @@ export default async function PublicImagePage({ params, searchParams }: Props) {
   const model = Array.isArray(sp?.model) ? sp?.model[0] : sp?.model;
   const modeParam = Array.isArray(sp?.mode) ? sp?.mode[0] : sp?.mode;
   const initialMode = modeParam === 'templates' ? 'templates' : undefined;
+  // Plan C Task 12：广场详情页「recreate」跳转带 prompt query（?prompt=...），预填生成器输入框。
+  const prompt = Array.isArray(sp?.prompt) ? sp?.prompt[0] : sp?.prompt;
   return (
     <PublicGeneratorStudioView
       kind="image"
       initialModel={model}
       initialMode={initialMode}
+      initialPrompt={prompt}
     />
   );
 }

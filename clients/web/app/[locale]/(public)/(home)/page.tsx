@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import type { SupportedLanguage } from '@autix/i18n';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { PublicHomeView } from '@autix/shared-ui/public-home';
-import { getPublicHome } from '@/lib/public-growth';
+import { PublicHomeView, type PublicHomeData } from '@autix/shared-ui/public-home';
+import { getHomeHeroSlots } from '@/lib/home';
 import { buildAlternates } from '@/lib/i18n/build-alternates';
 
 export async function generateMetadata({
@@ -22,6 +22,7 @@ export default async function HomePage({
 }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const home = await getPublicHome(locale);
+  const heroSlots = await getHomeHeroSlots(locale);
+  const home: PublicHomeData = { heroSlots: heroSlots ?? [] };
   return <PublicHomeView home={home} />;
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, GalleryKind, GalleryStatus } from '../../platform/prisma/generated';
+import { Prisma, GalleryKind, GalleryStatus, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
 /** gallery_posts / gallery_reports 的数据访问层。所有状态迁移由 service 层用 assertTransition 校验后再调用这里。 */
@@ -12,15 +12,18 @@ export class GalleryRepository {
   }
 
   /**
-   * 媒体迁移 worker 取一批待迁移作品：mediaMigrated=false 且尝试次数未达上限。
-   * 只取迁移所需字段，按 id 升序稳定分页。
+   * Plan C Task 7：详情聚合用——一次取回帖子 + 作者身份字段（供 gallery-author.presenter 展示）。
+   * 只 select presenter 需要的字段（displayName←realName 现阶段；status/username/avatar），
+   * 不外泄 email/phone 等 PII。account 分支合入后把 realName 换成 nickname ?? realName。
    */
-  findPostsPendingMediaMigration(maxAttempts: number, take: number) {
-    return this.prisma.gallery_posts.findMany({
-      where: { mediaMigrated: false, mediaMigrationAttempts: { lt: maxAttempts } },
-      orderBy: { id: 'asc' },
-      take,
-      select: { id: true, coverImage: true, mediaUrls: true, mediaMigrationAttempts: true },
+  findByIdWithAuthor(id: string) {
+    return this.prisma.gallery_posts.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: { id: true, status: true, realName: true, username: true, avatar: true },
+        },
+      },
     });
   }
 
@@ -30,6 +33,19 @@ export class GalleryRepository {
 
   update(id: string, data: Prisma.gallery_postsUncheckedUpdateInput) {
     return this.prisma.gallery_posts.update({ where: { id }, data });
+  }
+
+  /**
+   * 媒体外链 → R2 迁移 worker 的取件队列：未搬运且未达尝试上限的作品，先到先搬。
+   * 命中 @@index([mediaMigrated, mediaMigrationAttempts])。
+   */
+  async findPostsPendingMediaMigration(maxAttempts: number, take: number) {
+    return this.prisma.gallery_posts.findMany({
+      where: { mediaMigrated: false, mediaMigrationAttempts: { lt: maxAttempts } },
+      orderBy: { createdAt: 'asc' },
+      take,
+      select: { id: true, coverImage: true, mediaUrls: true, mediaMigrationAttempts: true },
+    });
   }
 
   /** 待审列表（PENDING，createdAt 升序，游标为上一页最后一条的 id）。 */
@@ -109,17 +125,91 @@ export class GalleryRepository {
     return this.prisma.gallery_reports.update({ where: { id }, data });
   }
 
+  /**
+   * 归属校验 + 元数据快照共用的查询：一次查询同时拿到 userId（归属判定）与
+   * resolvedPrompt/modelUsed/width/height/referenceImage（快照来源），避免重复查库。
+   */
   findImageGenerationOwner(id: string) {
     return this.prisma.image_generations.findUnique({
       where: { id },
-      select: { userId: true },
+      select: {
+        userId: true,
+        resolvedPrompt: true,
+        modelUsed: true,
+        width: true,
+        height: true,
+        referenceImage: true,
+        // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
+        generatedImages: true,
+      },
     });
   }
 
   findVideoGenerationOwner(id: string) {
     return this.prisma.video_generations.findUnique({
       where: { id },
-      select: { userId: true },
+      select: {
+        userId: true,
+        resolvedPrompt: true,
+        modelUsed: true,
+        referenceImage: true,
+        // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
+        generatedVideos: true,
+      },
+    });
+  }
+
+  /**
+   * 参考图授权判定用：参考图 URL 是否命中"公开可复用站内资源"——
+   * 用户自有素材 / 已发布(PUBLISHED)画廊作品 / 已通过(APPROVED)模板 三者之一即视为可复用。
+   * 均为按 URL 精确匹配的直接查询（非模糊启发式）；未命中任何一项时由调用方按 allowPublicReference 兜底。
+   */
+  async isReferenceImagePubliclyReusable(url: string, authorId: string): Promise<boolean> {
+    const [ownMaterial, publishedPost, approvedTemplate] = await Promise.all([
+      this.prisma.material_assets.findFirst({
+        where: {
+          userId: authorId,
+          deletedAt: null,
+          OR: [{ url }, { thumbnailUrl: url }],
+        },
+        select: { id: true },
+      }),
+      this.prisma.gallery_posts.findFirst({
+        where: {
+          status: GalleryStatus.PUBLISHED,
+          OR: [{ coverImage: url }, { mediaUrls: { has: url } }],
+        },
+        select: { id: true },
+      }),
+      this.prisma.image_templates.findFirst({
+        where: {
+          status: TemplateStatus.APPROVED,
+          OR: [{ coverImage: url }, { exampleImages: { has: url } }],
+        },
+        select: { id: true },
+      }),
+    ]);
+    return !!(ownMaterial || publishedPost || approvedTemplate);
+  }
+
+  /**
+   * Plan C Task 9：管理端 REMOVE 与"归档其转换出的图片模板"必须原子——同一事务内
+   * 先把作品 status→REMOVED，再把 sourceGalleryPostId 命中该作品的 image_templates
+   * 批量 status→ARCHIVED（已是 ARCHIVED 的跳过，避免无意义写）。没有关联模板时
+   * updateMany 影响 0 行，语义上等价于普通 remove。仅此路径触发归档——author 自行
+   * unpublish（PUBLISHED→UNPUBLISHED）不经过这里，不会归档任何模板。
+   */
+  removeAndArchiveTemplate(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.gallery_posts.update({
+        where: { id },
+        data: { status: GalleryStatus.REMOVED },
+      });
+      await tx.image_templates.updateMany({
+        where: { sourceGalleryPostId: id, status: { not: TemplateStatus.ARCHIVED } },
+        data: { status: TemplateStatus.ARCHIVED },
+      });
+      return updated;
     });
   }
 

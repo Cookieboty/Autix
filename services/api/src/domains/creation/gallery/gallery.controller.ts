@@ -38,15 +38,18 @@ export class GalleryController {
   /**
    * 公开热度 Feed：kind=IMAGE|VIDEO 分流，只返回 PUBLISHED 作品。
    * 注意：必须声明在 GET :id 之前，否则 /gallery/feed 会被 :id 路由吞掉。
+   * Plan C Task 8：可选登录态注入（与 getDetail 同一 @OptionalCurrentUser 模式）——
+   * feed 本身仍公开匿名可访问，登录态则附本页每项的 liked/favorited（批量 overlay，防 N+1）。
    */
   @Public()
   @Get('feed')
   feed(
+    @OptionalCurrentUser() user: AuthUser | undefined,
     @Query('kind') kind?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.service.listFeed(kind, cursor, limit ? Number(limit) : 24);
+    return this.service.listFeed(kind, cursor, limit ? Number(limit) : 24, user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -93,10 +96,28 @@ export class GalleryController {
     return this.service.removePost(getCurrentUserId(user), id);
   }
 
+  /** 作者本人自行下架已发布作品，PUBLISHED → UNPUBLISHED。 */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/unpublish')
+  unpublish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.unpublish(getCurrentUserId(user), id);
+  }
+
+  /** 作者本人把已下架作品重新提交审核，UNPUBLISHED → PENDING（拒绝 HIDDEN，防逃避处罚）。 */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/republish')
+  republish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.republish(getCurrentUserId(user), id);
+  }
+
+  /**
+   * 公开详情聚合：匿名可访问（仅 PUBLISHED），登录态附 viewer.{liked,favorited} 并双写
+   * resource_views（个人浏览历史）；作者本人 / 管理员可预览自己的非公开作品。
+   */
   @Public()
   @Get(':id')
-  getVisible(@OptionalCurrentUser() user: AuthUser | undefined, @Param('id') id: string) {
-    return this.service.getVisible(id, user);
+  getDetail(@OptionalCurrentUser() user: AuthUser | undefined, @Param('id') id: string) {
+    return this.service.getDetail(id, user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -120,7 +141,21 @@ export class GalleryController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id/favorite')
   unfavorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.metrics.unfavorite(getCurrentUserId(user), ResourceType.GALLERY_POST, id);
+    return this.service.unfavorite(getCurrentUserId(user), id);
+  }
+
+  /** 仅已发布作品可下载；同步事务记一次下载事件 + INCR downloadCount，返回下载 URL。 */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/download')
+  download(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.download(getCurrentUserId(user), id);
+  }
+
+  /** 仅已发布作品可"再创作"；返回该作品自身的创作快照（prompt/model/referenceImage）并记一次引用。 */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/recreate')
+  recreate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.recreate(getCurrentUserId(user), id);
   }
 
   @UseGuards(JwtAuthGuard)

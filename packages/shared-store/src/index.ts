@@ -41,13 +41,25 @@ export * from './marketplace.actions';
 export * from './marketplace.queries';
 export * from './profile-resources.actions';
 export * from './profile-resources.queries';
-export * from './public-growth.actions';
-export * from './public-growth.queries';
+export * from './campaign.actions';
+export * from './campaign.queries';
 export * from './public-generator.actions';
 export * from './public-gallery.actions';
-export * from './public-profile.queries';
+export * from './gallery.actions';
+export * from './gallery.queries';
+// Generic content-shape types (not tied to the deleted public-growth API/store),
+// still consumed by kept @autix/shared-ui views (growth/home/generator/*,
+// MediaBlocks, GrowthInteractions). Sourced directly from @autix/sdk now that
+// public-growth.actions/queries.ts (the former re-export path) are deleted.
+export type {
+  PublicGrowthCollection,
+  PublicGrowthFeature,
+  PublicGrowthMediaItem,
+  PublicGrowthPage,
+} from '@autix/sdk';
 export * from './material.store';
 export * from './material-folder.store';
+export * from './material-history.store';
 export * from './resource.store';
 export * from './resource-panel.store';
 export * from './resource-metrics.actions';

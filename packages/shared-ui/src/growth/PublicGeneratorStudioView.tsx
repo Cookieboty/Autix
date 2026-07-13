@@ -38,11 +38,14 @@ export function PublicGeneratorStudioView({
   examples,
   initialModel,
   initialMode,
+  initialPrompt,
 }: {
   kind: GeneratorKind;
   examples?: PublicGrowthMediaItem[] | null;
   initialModel?: string | null;
   initialMode?: ImageStudioMode;
+  /** Plan C Task 12：广场「recreate」跳转预填——目前仅 image studio 接线，video 暂未接。 */
+  initialPrompt?: string | null;
 }) {
   const t = useTranslations('publicGrowth');
   const items = useMemo(
@@ -194,6 +197,7 @@ export function PublicGeneratorStudioView({
           modelsLoading={imageModelsLoading}
           onModelChange={setSelectedImageModelId}
           initialMode={initialMode}
+          initialPrompt={initialPrompt}
         />
       )}
       </div>

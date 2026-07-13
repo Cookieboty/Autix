@@ -64,6 +64,15 @@ interface ResourceState {
   currentResource: AnyResourceItem | null;
   detailLoading: boolean;
 
+  /**
+   * Plan C Task 10 之后 favorite/unfavorite 对全部 5 类 marketplace 资源都已改为显式
+   * POST=favorite/DELETE=unfavorite（幂等，非服务端切换）——但 getById 未回传 viewer 态，
+   * 前端无法在首次加载时知道"当前用户是否已收藏"。这里只能维护一份纯本地、默认空的
+   * 已收藏集合（同 useResourceInteractions 对非 dedicated 类型的既有限制：不代表服务端
+   * 真实状态，只保证同一会话内 toggleFavorite 的方向正确、不会一路把计数只加不减）。
+   */
+  favoritedIds: Set<string>;
+
   setCategory: (category: string) => void;
   setSearch: (search: string) => void;
   setSort: (sort: 'newest' | 'popular' | 'likes') => void;
@@ -92,6 +101,7 @@ export const useResourceStore = create<ResourceState>((set, get) => ({
   search: '',
   sort: 'newest',
   currentSlug: null,
+  favoritedIds: new Set<string>(),
 
   currentResource: null,
   detailLoading: false,
@@ -155,23 +165,34 @@ export const useResourceStore = create<ResourceState>((set, get) => ({
 
   toggleFavorite: async (slug, id) => {
     const api = API_BY_SLUG[slug];
-    const res = await api.favorite(id);
-    const delta = res.data.favorited ? 1 : -1;
+    // 方向性调用：favorite/unfavorite 现为幂等 POST/DELETE，不是服务端切换——必须按本地
+    // 已知的收藏态决定调用哪个端点，否则重复点击只会一路 POST favorite，计数只加不减。
+    const wasFavorited = get().favoritedIds.has(id);
+    const res = wasFavorited ? await api.unfavorite(id) : await api.favorite(id);
+    const nowFavorited = res.data.favorited;
+    const delta = nowFavorited === wasFavorited ? 0 : nowFavorited ? 1 : -1;
+
     const updateFavoriteCount = (item: AnyResourceItem): AnyResourceItem =>
       ({
         ...item,
         favoriteCount: Math.max(0, item.favoriteCount + delta),
       }) as AnyResourceItem;
 
-    set((state) => ({
-      currentResource:
-        state.currentResource?.id === id
-          ? updateFavoriteCount(state.currentResource)
-          : state.currentResource,
-      items: state.items.map((item) =>
-        item.id === id ? updateFavoriteCount(item) : item,
-      ),
-    }));
+    set((state) => {
+      const favoritedIds = new Set(state.favoritedIds);
+      if (nowFavorited) favoritedIds.add(id);
+      else favoritedIds.delete(id);
+      return {
+        favoritedIds,
+        currentResource:
+          state.currentResource?.id === id
+            ? updateFavoriteCount(state.currentResource)
+            : state.currentResource,
+        items: state.items.map((item) =>
+          item.id === id ? updateFavoriteCount(item) : item,
+        ),
+      };
+    });
   },
 
   acquire: async (slug, resourceId) => {

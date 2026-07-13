@@ -95,6 +95,17 @@ export class ResourceMetricsService {
   }
 
   /**
+   * 供其它域调用（Plan C Task 5：gallery.service.download）：记录一次下载事件并
+   * INCR downloadCount。同步事务、非幂等——每次调用都真实插事件 + 真实自增
+   * （与 like/favorite 的去重语义不同，见 repository.recordDownload 注释）。
+   */
+  async recordDownload(type: ResourceType, resourceId: string, userId: string) {
+    this.assertMetricType(type);
+    const row = await this.repo.recordDownload(type, resourceId, userId);
+    return row ?? buildDefaultMetrics(type, resourceId);
+  }
+
+  /**
    * 幂等的热度重算（gallery-design.md §9.1）：仅重算近 `activeSinceDays` 天内有活动的资源，
    * 对每行用 `computeHotScore` 重新算出 hotScore 并整体 SET（含刷新 hotScoreVersion），
    * 同一批输入重复执行结果一致。供 cron 调用（见 resource-metrics.cron.ts）。

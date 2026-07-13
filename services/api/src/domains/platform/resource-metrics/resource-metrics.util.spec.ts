@@ -35,6 +35,7 @@ describe('buildDefaultMetrics', () => {
       commentCount: 0,
       shareCount: 0,
       referenceCount: 0,
+      downloadCount: 0,
       citationCount: 0,
       hotScore: 0,
       hotScoreVersion: null,

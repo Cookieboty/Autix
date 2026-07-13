@@ -1,6 +1,7 @@
 import {
   buildGallerySubmissionDto,
   deriveAspectRatioFromSize,
+  deriveGenerationMediaUrls,
   GALLERY_AUTO_SUBMISSION_CATEGORY,
 } from './image-gen-gallery-submission';
 
@@ -71,5 +72,33 @@ describe('buildGallerySubmissionDto (公开生成 → 画廊自动投稿映射)'
     expect(
       buildGallerySubmissionDto({ images: [{ url: 'https://cdn/a.png' }], generationId: null }),
     ).toBeNull();
+  });
+});
+
+describe('deriveGenerationMediaUrls (Task 4.5：FROM_GENERATION 媒体从生成记录派生，不信任 DTO)', () => {
+  it('图片生成：从 generatedImages 派生 mediaUrls，coverImage 取第一张', () => {
+    const derived = deriveGenerationMediaUrls({
+      generatedImages: ['https://cdn/a.png', 'https://cdn/b.png'],
+    });
+    expect(derived).toEqual({
+      mediaUrls: ['https://cdn/a.png', 'https://cdn/b.png'],
+      coverImage: 'https://cdn/a.png',
+    });
+  });
+
+  it('视频生成：generatedImages 为空时回退 generatedVideos', () => {
+    const derived = deriveGenerationMediaUrls({
+      generatedImages: [],
+      generatedVideos: ['https://cdn/v.mp4'],
+    });
+    expect(derived).toEqual({
+      mediaUrls: ['https://cdn/v.mp4'],
+      coverImage: 'https://cdn/v.mp4',
+    });
+  });
+
+  it('两者均为空/未提供时返回 null（无可投稿媒体，调用方应拒绝而非放行）', () => {
+    expect(deriveGenerationMediaUrls({})).toBeNull();
+    expect(deriveGenerationMediaUrls({ generatedImages: [], generatedVideos: [] })).toBeNull();
   });
 });

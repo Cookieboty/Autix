@@ -75,17 +75,6 @@ export default function MarketplaceListPageContent() {
           ? (item) => setDockTemplate(item)
           : undefined
       }
-      onUseTemplateInWorkbench={
-        slug === 'image-templates' || slug === 'video-templates'
-          ? (item) => {
-              router.push(
-                slug === 'video-templates'
-                  ? `/workbench/video?templateId=${item.id}`
-                  : `/workbench/image?templateId=${item.id}`,
-              );
-            }
-          : undefined
-      }
       onCloseChatDock={() => setDockTemplate(null)}
     />
   );

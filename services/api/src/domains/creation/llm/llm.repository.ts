@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import {
   AgentKind,
+  ImageTemplateSource,
   MessageRole,
+  Prisma,
   ResourceType,
   TemplateStatus,
   type AgentRunDepthMode,
   type AgentRunStatus,
-  type Prisma,
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
@@ -14,7 +15,7 @@ const ACTIVE_AGENT_RUN_STATUSES: AgentRunStatus[] = [
   'pending', 'running', 'paused_user_confirm', 'paused_user_stop', 'paused_failure',
 ];
 
-const CHAT_IMAGE_TOOL_TEMPLATE_EXTERNAL_ID = 'system:chat-image-tool';
+const CHAT_IMAGE_TOOL_SYSTEM_KEY = 'chat-image-tool';
 
 type PersistedImageItemBase = {
   url: string;
@@ -279,43 +280,48 @@ export class LlmRepository {
     variables: Prisma.JsonValue;
     modelHint: string | null;
   }> {
-    const existing = await this.prisma.image_templates.findFirst({
-      where: {
-        authorId: userId,
-        externalId: CHAT_IMAGE_TOOL_TEMPLATE_EXTERNAL_ID,
-      },
-      select: {
-        id: true,
-        title: true,
-        prompt: true,
-        variables: true,
-        modelHint: true,
-      },
-    });
+    const select = {
+      id: true,
+      title: true,
+      prompt: true,
+      variables: true,
+      modelHint: true,
+    } as const;
+    const where = {
+      authorId: userId,
+      systemKey: CHAT_IMAGE_TOOL_SYSTEM_KEY,
+    };
+
+    const existing = await this.prisma.image_templates.findFirst({ where, select });
     if (existing) return existing;
 
-    return this.prisma.image_templates.create({
-      data: {
-        title: '对话图片工具',
-        description: '对话中由主 LLM 调用图片工具时使用的内部直通模板',
-        category: 'chat-image',
-        prompt: '{{prompt}}',
-        variables: [{ key: 'prompt', label: 'Prompt', type: 'textarea', default: '' }],
-        tags: ['chat-image-tool'],
-        authorId: userId,
-        status: TemplateStatus.ARCHIVED,
-        externalId: CHAT_IMAGE_TOOL_TEMPLATE_EXTERNAL_ID,
-        externalMetadata: { internal: true, chatImageTool: true },
-        runtimeReason: '对话图片工具内部直通模板',
-      },
-      select: {
-        id: true,
-        title: true,
-        prompt: true,
-        variables: true,
-        modelHint: true,
-      },
-    });
+    // find-or-create：并发首次访问靠 @@unique([authorId, systemKey]) 收敛,
+    // 抢输一方命中 P2002 后重查抢赢那条,而不是把异常冒泡成 500。
+    try {
+      return await this.prisma.image_templates.create({
+        data: {
+          title: '对话图片工具',
+          description: '对话中由主 LLM 调用图片工具时使用的内部直通模板',
+          category: 'chat-image',
+          prompt: '{{prompt}}',
+          variables: [{ key: 'prompt', label: 'Prompt', type: 'textarea', default: '' }],
+          tags: ['chat-image-tool'],
+          authorId: userId,
+          status: TemplateStatus.ARCHIVED,
+          createdById: userId,
+          sourceType: ImageTemplateSource.SYSTEM,
+          systemKey: CHAT_IMAGE_TOOL_SYSTEM_KEY,
+          runtimeReason: '对话图片工具内部直通模板',
+        },
+        select,
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const raced = await this.prisma.image_templates.findFirst({ where, select });
+        if (raced) return raced;
+      }
+      throw err;
+    }
   }
 
   async createCompletedImageGenerationResult<
@@ -328,6 +334,8 @@ export class LlmRepository {
     variables: Prisma.InputJsonValue;
     referenceImage?: string;
     generatedImages: string[];
+    width?: number | null;
+    height?: number | null;
     durationMs: number;
     conversationId?: string;
     conversationContent: string;
@@ -349,6 +357,8 @@ export class LlmRepository {
           variables: input.variables,
           referenceImage: input.referenceImage,
           generatedImages: input.generatedImages,
+          width: input.width ?? null,
+          height: input.height ?? null,
           status: 'completed',
           durationMs: input.durationMs,
         },

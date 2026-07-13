@@ -31,11 +31,6 @@ describe('sitemap', () => {
     expect(urls).not.toContain('https://example.com/ja/docs');
   });
 
-  it('neutral 路由只出裸路径', () => {
-    expect(urls).toContain('https://example.com/community');
-    expect(urls).not.toContain('https://example.com/ja/community');
-  });
-
   it('noindex 路由完全不出现', () => {
     expect(urls.some((u) => u.includes('/share/video'))).toBe(false);
     expect(urls.some((u) => u.includes('/admin'))).toBe(false);

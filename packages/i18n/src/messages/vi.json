@@ -592,7 +592,8 @@
     "inviteFriends": "Mời bạn bè",
     "docs": "Tài liệu",
     "myTemplates": "我的模板",
-    "upgrade": "升级会员"
+    "upgrade": "升级会员",
+    "gallery": "Gallery"
   },
   "template": {
     "discover": "Khám phá",
@@ -3604,7 +3605,14 @@
         "ariaLike": "Thích",
         "ariaDownload": "Tải xuống",
         "ariaSelect": "Chọn",
-        "ariaDelete": "Xóa"
+        "ariaDelete": "Xóa",
+        "publishToGalleryTitle": "Đăng {count} ảnh lên gallery",
+        "publishToGalleryDescription": "Bài đăng sẽ được duyệt trước khi hiển thị công khai trên gallery.",
+        "publishCategoryLabel": "Danh mục",
+        "allowPublicReferenceLabel": "Cho phép công khai ảnh tham chiếu",
+        "allowPublicReferenceHint": "Cho phép người khác xem ảnh tham chiếu dùng khi tạo ảnh này — mặc định tắt.",
+        "publishConfirm": "Đăng {count} ảnh",
+        "publishSubmittedToast": "Đã gửi {count} ảnh để duyệt"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -3772,67 +3780,6 @@
         }
       }
     },
-    "community": {
-      "indexPromo": "Explore public collections built from approved creator work",
-      "eyebrow": "Community",
-      "title": "Find the work worth remixing.",
-      "description": "Community pages collect published images, videos, templates, and creator surfaces without exposing private generation history.",
-      "feedEyebrow": "Feed",
-      "feedTitle": "Latest published works",
-      "create": "Create",
-      "openCommunity": "Open community",
-      "collectionPromo": "{title}: published public works and reusable directions",
-      "kind": {
-        "community": "Community",
-        "preset": "Preset",
-        "viralPreset": "Viral preset",
-        "feature": "Feature"
-      }
-    },
-    "presets": {
-      "promo": "Reusable presets for image, video, and growth pages",
-      "viralPromo": "Viral presets for fast campaign testing",
-      "eyebrow": "Presets",
-      "viralEyebrow": "Viral presets",
-      "title": "Reusable starts for every visual direction.",
-      "viralTitle": "Start with formats that travel.",
-      "description": "Tags, templates, and public examples help creators move from idea to publishable output faster.",
-      "picksEyebrow": "Picks",
-      "picksTitle": "Preset cards and published examples",
-      "usePreset": "Use preset",
-      "detailPromo": "{title}: use this preset as a private generation start",
-      "premiumBadge": "Pro-ready preset"
-    },
-    "creation": {
-      "promo": "Use public creation pages to share approved images and videos",
-      "fallbackCreatorName": "Amux Studio creator",
-      "fallbackCreatorSubtitle": "Public profile",
-      "views": "Views",
-      "likes": "Likes",
-      "shares": "Shares",
-      "prompt": "Prompt",
-      "promptHidden": "Prompt hidden",
-      "promptHiddenDescription": "The creator has kept this prompt private. Use the template or start from a new prompt.",
-      "copyLink": "Copy link",
-      "copied": "Copied",
-      "useThis": "Use this",
-      "likeOrFollow": "Like or follow",
-      "publishedOnly": "Published works appear only after creator action."
-    },
-    "profile": {
-      "promo": "Creator profile: @{handle}",
-      "followCreator": "Follow creator",
-      "followers": "Followers",
-      "published": "Published",
-      "publicHandle": "Public handle supports /@{handle}",
-      "worksEyebrow": "Works",
-      "worksTitle": "Published creations"
-    },
-    "growthPage": {
-      "promo": "{title}: explore workflows, examples, and public pages",
-      "fallbackEyebrow": "Amux Studio growth",
-      "fallbackCta": "Start creating"
-    },
     "metadata": {
       "home": {
         "title": "Amux Studio - AI image, video, presets, and public creator pages",
@@ -3850,28 +3797,6 @@
         "title": "Pricing - Amux Studio",
         "description": "Amux Studio plans and credits for AI image generation, AI video projects, and public growth pages."
       },
-      "community": {
-        "title": "Community - Amux Studio",
-        "description": "Explore public Amux Studio collections, creator-approved images, videos, and reusable creative directions."
-      },
-      "presets": {
-        "title": "Presets - Amux Studio",
-        "description": "Browse reusable Amux Studio presets for AI image, video, campaign, and public growth workflows."
-      },
-      "viralPresets": {
-        "title": "Viral Presets - Amux Studio",
-        "description": "Explore Amux Studio viral preset formats for short-form video, campaign hooks, and shareable images."
-      },
-      "collectionTitle": "{title} - Amux Studio Community",
-      "collectionFallbackTitle": "Amux Studio Community",
-      "collectionDescription": "Amux Studio public community collection.",
-      "presetTitle": "{name} - Amux Studio Preset",
-      "presetDescription": "Amux Studio public preset page for reusable AI image and video workflows.",
-      "publicCreationTitleFallback": "Public creation - Amux Studio",
-      "publicCreationDescription": "A public Amux Studio AI creation.",
-      "creatorDescription": "Amux Studio public creator profile.",
-      "growthPageTitleFallback": "Amux Studio growth page",
-      "growthPageDescription": "Amux Studio public growth page for AI creative workflows.",
       "videoShareTitle": "{title} - Amux Studio video",
       "videoShareFallbackTitle": "Amux Studio video share",
       "videoShareDescriptionWithModel": "A shared Amux Studio video project generated with {model}.",
@@ -3958,20 +3883,6 @@
           "description": "Compose, remix, and reuse visual systems across images and video."
         }
       },
-      "collections": {
-        "seedance": {
-          "title": "Seedance Video",
-          "description": "Video experiments, camera motion, and launch-ready reels."
-        },
-        "marketing": {
-          "title": "Marketing Studio",
-          "description": "Product ads, social hooks, and campaign systems."
-        },
-        "soulCinema": {
-          "title": "Soul Cinema",
-          "description": "Cinematic portraits, scenes, and creator-led visual worlds."
-        }
-      },
       "page": {
         "description": "A focused public page for turning Amux Studio workflows into shareable acquisition surfaces.",
         "sections": {
@@ -3988,16 +3899,8 @@
             "body": "Published work can appear in collections, creator profiles, share pages, and the homepage."
           }
         }
-      },
-      "collection": {
-        "description": "A public collection of published Amux Studio works and reusable ideas."
-      },
-      "creator": {
-        "bio": "Public creator profile preview for shared Amux Studio work."
       }
     },
-    "collection": {},
-    "account": {},
     "common": {
       "discountBadge": "Giảm {percent}%"
     }
@@ -4077,7 +3980,81 @@
     "deleteFolderConfirm": "Xóa thư mục này? {count} tư liệu trong thư mục cũng sẽ bị xóa.",
     "emptyFolder": "Thư mục này chưa có tư liệu",
     "folderNameRequired": "Tên thư mục không được để trống",
-    "duplicateFolderName": "Đã tồn tại thư mục có cùng tên"
+    "duplicateFolderName": "Đã tồn tại thư mục có cùng tên",
+    "loadMore": "Tải thêm",
+    "downloadFailed": "Tải xuống thất bại",
+    "moveRestrictedHint": "Gói thành viên đã hết hạn — chỉ có thể chuyển về thư mục mặc định",
+    "sourceStateActionDisabled": "Nguồn này không còn khả dụng",
+    "librarySource": {
+      "ALL": "Tất cả",
+      "UPLOAD": "Đã tải lên",
+      "FAVORITE": "Đã thích",
+      "HISTORY": "Lịch sử"
+    },
+    "sourceState": {
+      "available": "Khả dụng",
+      "unpublished": "Đã gỡ",
+      "blocked": "Không khả dụng",
+      "missing": "Nguồn tham chiếu đã mất"
+    },
+    "historySaveSuccess": "Đã lưu vào thư viện",
+    "historySaveFailed": "Lưu thất bại",
+    "historyNotSaveable": "Mục này không thể lưu vào thư viện",
+    "historySaved": "Đã lưu",
+    "historySaveToLibrary": "Lưu vào thư viện",
+    "historyEmptyTitle": "Chưa có lịch sử xem",
+    "historyEmptyDescription": "Các mục bạn xem trong gallery hoặc marketplace sẽ hiện ở đây",
+    "resourceType": {
+      "SKILL": "Kỹ năng",
+      "MCP": "MCP",
+      "AGENT": "Tác tử",
+      "IMAGE_TEMPLATE": "Mẫu hình ảnh",
+      "VIDEO_TEMPLATE": "Mẫu video",
+      "GALLERY_POST": "Bài đăng gallery"
+    }
+  },
+  "gallery": {
+    "title": "Gallery",
+    "subtitle": "Khám phá những gì cộng đồng đã đăng",
+    "kindImage": "Hình ảnh",
+    "kindVideo": "Video",
+    "emptyTitle": "Chưa có tác phẩm nào được đăng",
+    "emptyDescription": "Hãy là người đầu tiên đăng tác phẩm của bạn lên gallery",
+    "loadMore": "Tải thêm",
+    "unknownAuthor": "Tác giả ẩn danh",
+    "like": "Thích",
+    "favorite": "Yêu thích",
+    "backToGallery": "Quay lại gallery",
+    "notFoundTitle": "Bài đăng này hiện không khả dụng",
+    "notFoundDescription": "Có thể đã bị gỡ hoặc xoá",
+    "author": "Tác giả",
+    "metricViews": "Lượt xem",
+    "metricLikes": "Lượt thích",
+    "metricFavorites": "Lượt yêu thích",
+    "metricRecreates": "Lượt tái tạo",
+    "recreate": "Tái tạo",
+    "download": "Tải xuống",
+    "unpublish": "Gỡ đăng",
+    "republish": "Đăng lại",
+    "unpublishSuccess": "Đã gỡ bài đăng",
+    "republishSuccess": "Đã gửi để duyệt",
+    "prompt": "Prompt",
+    "copyPrompt": "Sao chép",
+    "copied": "Đã sao chép",
+    "noPrompt": "Không có prompt",
+    "information": "Thông tin",
+    "model": "Mô hình",
+    "auto": "Tự động",
+    "dimensions": "Kích thước",
+    "category": "Danh mục",
+    "status": {
+      "draft": "Bản nháp",
+      "pending": "Đang duyệt",
+      "published": "Đã đăng",
+      "unpublished": "Đã gỡ",
+      "hidden": "Đã ẩn",
+      "rejected": "Đã từ chối"
+    }
   },
   "adminCampaigns": {
     "title": "Trung tâm thưởng chiến dịch",
@@ -5297,5 +5274,12 @@
       "save": "Lưu",
       "dryRunTotal": "Tổng: {total}"
     }
+  },
+  "cookieConsent": {
+    "message": "Chúng tôi sử dụng cookie để cải thiện trải nghiệm của bạn và phân tích việc sử dụng trang web.",
+    "accept": "Chấp nhận",
+    "reject": "Từ chối",
+    "learnMore": "Chính sách bảo mật",
+    "ariaLabel": "Sự đồng ý về cookie"
   }
 }

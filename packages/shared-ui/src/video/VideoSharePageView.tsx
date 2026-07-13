@@ -242,7 +242,7 @@ export function VideoSharePageView({ code }: { code: string }) {
           <h1 className="text-base font-semibold">{t('unavailableTitle')}</h1>
           <p className="mt-2 text-sm leading-6 text-white/60">{t('loadFailed')}</p>
           <Button asChild className="mt-5">
-            <Link href="/workbench/video">{t('goCreate')}</Link>
+            <Link href="/video">{t('goCreate')}</Link>
           </Button>
         </section>
       </main>

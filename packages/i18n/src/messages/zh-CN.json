@@ -592,7 +592,8 @@
     "expandMenu": "展开菜单",
     "collapseMenu": "收起菜单",
     "clipCount": "{count} 片段",
-    "loginResourceHint": "发布和使用资源"
+    "loginResourceHint": "发布和使用资源",
+    "gallery": "广场"
   },
   "template": {
     "discover": "发现",
@@ -3940,7 +3941,14 @@
         "ariaLike": "点赞",
         "ariaDownload": "下载",
         "ariaSelect": "选择",
-        "ariaDelete": "删除"
+        "ariaDelete": "删除",
+        "publishToGalleryTitle": "发布 {count} 张图片到广场",
+        "publishToGalleryDescription": "投稿需经审核通过后才会出现在广场。",
+        "publishCategoryLabel": "分类",
+        "allowPublicReferenceLabel": "允许公开参考图",
+        "allowPublicReferenceHint": "让他人看到生成时使用的参考图，默认关闭。",
+        "publishConfirm": "发布 {count} 张",
+        "publishSubmittedToast": "已提交 {count} 张图片审核"
       },
       "privateFirst": "默认私有",
       "createPrivately": "当前页创作",
@@ -4108,67 +4116,6 @@
         }
       }
     },
-    "community": {
-      "indexPromo": "探索由创作者审核作品组成的公开集合",
-      "eyebrow": "社区",
-      "title": "找到值得 Remix 的作品。",
-      "description": "社区页收集已发布的图片、视频、模板和创作者入口，同时不暴露私有生成历史。",
-      "feedEyebrow": "Feed",
-      "feedTitle": "最新发布作品",
-      "create": "创作",
-      "openCommunity": "打开社区",
-      "collectionPromo": "{title}：已发布公开作品与可复用方向",
-      "kind": {
-        "community": "社区",
-        "preset": "预设",
-        "viralPreset": "爆款预设",
-        "feature": "功能"
-      }
-    },
-    "presets": {
-      "promo": "面向图片、视频和增长页的可复用预设",
-      "viralPromo": "用于快速测试活动的爆款预设",
-      "eyebrow": "预设",
-      "viralEyebrow": "爆款预设",
-      "title": "每种视觉方向都能从可复用起点开始。",
-      "viralTitle": "从更容易传播的格式开始。",
-      "description": "标签、模板和公开示例帮助创作者更快从想法走向可发布产物。",
-      "picksEyebrow": "精选",
-      "picksTitle": "预设卡片与已发布示例",
-      "usePreset": "使用预设",
-      "detailPromo": "{title}：把这个预设作为私密生成起点",
-      "premiumBadge": "Pro-ready 预设"
-    },
-    "creation": {
-      "promo": "用公开作品页分享已确认的图片和视频",
-      "fallbackCreatorName": "Amux Studio 创作者",
-      "fallbackCreatorSubtitle": "公开主页",
-      "views": "浏览",
-      "likes": "点赞",
-      "shares": "分享",
-      "prompt": "提示词",
-      "promptHidden": "提示词已隐藏",
-      "promptHiddenDescription": "创作者已将这个提示词保持私密。你可以使用模板，或从新的提示词开始。",
-      "copyLink": "复制链接",
-      "copied": "已复制",
-      "useThis": "使用这个",
-      "likeOrFollow": "点赞或关注",
-      "publishedOnly": "作品只会在创作者主动发布后出现。"
-    },
-    "profile": {
-      "promo": "创作者主页：@{handle}",
-      "followCreator": "关注创作者",
-      "followers": "关注者",
-      "published": "已发布",
-      "publicHandle": "公开 handle 支持 /@{handle}",
-      "worksEyebrow": "作品",
-      "worksTitle": "已发布作品"
-    },
-    "growthPage": {
-      "promo": "{title}：探索工作流、示例和公开页面",
-      "fallbackEyebrow": "Amux Studio 增长",
-      "fallbackCta": "开始创作"
-    },
     "metadata": {
       "home": {
         "title": "Amux Studio - AI 图片、视频、预设和公开创作者页面",
@@ -4186,28 +4133,6 @@
         "title": "价格 - Amux Studio",
         "description": "Amux Studio 面向 AI 图片生成、AI 视频项目和公开增长页面的套餐与积分。"
       },
-      "community": {
-        "title": "社区 - Amux Studio",
-        "description": "探索 Amux Studio 公开集合、创作者确认的图片、视频和可复用创意方向。"
-      },
-      "presets": {
-        "title": "预设 - Amux Studio",
-        "description": "浏览面向 AI 图片、视频、活动和公开增长工作流的可复用 Amux Studio 预设。"
-      },
-      "viralPresets": {
-        "title": "爆款预设 - Amux Studio",
-        "description": "探索适用于短视频、活动钩子和可分享图片的 Amux Studio 爆款预设格式。"
-      },
-      "collectionTitle": "{title} - Amux Studio 社区",
-      "collectionFallbackTitle": "Amux Studio 社区",
-      "collectionDescription": "Amux Studio 公开社区集合。",
-      "presetTitle": "{name} - Amux Studio 预设",
-      "presetDescription": "面向可复用 AI 图片和视频工作流的 Amux Studio 公开预设页面。",
-      "publicCreationTitleFallback": "公开作品 - Amux Studio",
-      "publicCreationDescription": "一个公开的 Amux Studio AI 作品。",
-      "creatorDescription": "Amux Studio 公开创作者主页。",
-      "growthPageTitleFallback": "Amux Studio 增长页",
-      "growthPageDescription": "面向 AI 创意工作流的 Amux Studio 公开增长页。",
       "videoShareTitle": "{title} - Amux Studio 视频",
       "videoShareFallbackTitle": "Amux Studio 视频分享",
       "videoShareDescriptionWithModel": "一个使用 {model} 生成的 Amux Studio 分享视频项目。",
@@ -4294,20 +4219,6 @@
           "description": "在图片和视频之间组合、Remix 并复用视觉系统。"
         }
       },
-      "collections": {
-        "seedance": {
-          "title": "Seedance 视频",
-          "description": "视频实验、镜头运动和发布可用的短片。"
-        },
-        "marketing": {
-          "title": "营销工作室",
-          "description": "产品广告、社交钩子和活动系统。"
-        },
-        "soulCinema": {
-          "title": "灵魂电影",
-          "description": "电影感人像、场景和创作者主导的视觉世界。"
-        }
-      },
       "page": {
         "description": "一个将 Amux Studio 工作流转化为可分享获客表面的聚焦公开页。",
         "sections": {
@@ -4324,16 +4235,8 @@
             "body": "已发布作品可以出现在集合、创作者主页、分享页和首页。"
           }
         }
-      },
-      "collection": {
-        "description": "一个包含已发布 Amux Studio 作品和可复用想法的公开集合。"
-      },
-      "creator": {
-        "bio": "用于预览已分享 Amux Studio 作品的公开创作者主页。"
       }
     },
-    "collection": {},
-    "account": {},
     "common": {
       "discountBadge": "立减{percent}%"
     }
@@ -4413,7 +4316,81 @@
     "deleteFolderConfirm": "确定删除该文件夹？将同时删除文件夹内 {count} 个素材。",
     "emptyFolder": "该文件夹暂无素材",
     "folderNameRequired": "文件夹名称不能为空",
-    "duplicateFolderName": "已存在同名文件夹"
+    "duplicateFolderName": "已存在同名文件夹",
+    "loadMore": "加载更多",
+    "downloadFailed": "下载失败",
+    "moveRestrictedHint": "会员已过期，仅可将素材移回默认文件夹",
+    "sourceStateActionDisabled": "该来源已不可用",
+    "librarySource": {
+      "ALL": "全部",
+      "UPLOAD": "上传",
+      "FAVORITE": "收藏",
+      "HISTORY": "历史"
+    },
+    "sourceState": {
+      "available": "可用",
+      "unpublished": "已下架",
+      "blocked": "不可用",
+      "missing": "引用已丢失"
+    },
+    "historySaveSuccess": "已保存到素材库",
+    "historySaveFailed": "保存失败",
+    "historyNotSaveable": "该内容不支持保存到素材库",
+    "historySaved": "已保存",
+    "historySaveToLibrary": "保存到素材库",
+    "historyEmptyTitle": "暂无浏览历史",
+    "historyEmptyDescription": "你在广场或市场浏览过的内容会显示在这里",
+    "resourceType": {
+      "SKILL": "技能",
+      "MCP": "MCP",
+      "AGENT": "智能体",
+      "IMAGE_TEMPLATE": "图片模板",
+      "VIDEO_TEMPLATE": "视频模板",
+      "GALLERY_POST": "广场作品"
+    }
+  },
+  "gallery": {
+    "title": "广场",
+    "subtitle": "发现社区发布的精彩作品",
+    "kindImage": "图片",
+    "kindVideo": "视频",
+    "emptyTitle": "暂无已发布作品",
+    "emptyDescription": "成为第一个发布作品到广场的人",
+    "loadMore": "加载更多",
+    "unknownAuthor": "未知作者",
+    "like": "点赞",
+    "favorite": "收藏",
+    "backToGallery": "返回广场",
+    "notFoundTitle": "该作品当前不可访问",
+    "notFoundDescription": "可能已被下架或删除",
+    "author": "作者",
+    "metricViews": "浏览",
+    "metricLikes": "点赞",
+    "metricFavorites": "收藏",
+    "metricRecreates": "二创",
+    "recreate": "二创",
+    "download": "下载",
+    "unpublish": "下架",
+    "republish": "重新发布",
+    "unpublishSuccess": "已下架",
+    "republishSuccess": "已提交审核",
+    "prompt": "提示词",
+    "copyPrompt": "复制",
+    "copied": "已复制",
+    "noPrompt": "暂无提示词",
+    "information": "信息",
+    "model": "模型",
+    "auto": "自动",
+    "dimensions": "尺寸",
+    "category": "分类",
+    "status": {
+      "draft": "草稿",
+      "pending": "审核中",
+      "published": "已发布",
+      "unpublished": "已下架",
+      "hidden": "已隐藏",
+      "rejected": "已拒绝"
+    }
   },
   "adminCampaigns": {
     "title": "活动奖励中心",
@@ -5297,5 +5274,12 @@
       "save": "保存",
       "dryRunTotal": "总计：{total}"
     }
+  },
+  "cookieConsent": {
+    "message": "我们使用 Cookie 来提升你的体验并分析网站使用情况。",
+    "accept": "接受",
+    "reject": "拒绝",
+    "learnMore": "隐私政策",
+    "ariaLabel": "Cookie 同意"
   }
 }

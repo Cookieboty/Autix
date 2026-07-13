@@ -21,6 +21,11 @@ const TRANSITIONS: Record<string, GalleryActor[]> = {
   'DRAFT->REMOVED': ['author'],
   'PENDING->REMOVED': ['author'],
   'REJECTED->REMOVED': ['author'],
+  // UNPUBLISHED：作者可自行下架已发布作品，也可重新提交进入审核；
+  // 注意 republish 只接受 UNPUBLISHED，HIDDEN（被处罚下架）不在此表中 → 找不到转移项直接 400，
+  // 防止作者绕开管理员处罚自行"重新发布"。'HIDDEN->PUBLISHED' 已在上方以 admin-only 定义（unhide）。
+  'PUBLISHED->UNPUBLISHED': ['author'],
+  'UNPUBLISHED->PENDING': ['author'],
 };
 
 /** 校验状态机转移；非法转移 / 角色无权 → 400。 */
@@ -95,25 +100,68 @@ export function assertSource(
       }
       return;
 
-    case 'ADMIN_CURATED':
-      if (actor !== 'admin') {
-        throw new BadRequestException('ADMIN_CURATED 仅管理员可创建');
-      }
-      return;
-
     default:
       throw new BadRequestException(`未知来源类型: ${p.sourceType as string}`);
   }
 }
 
+// ── 站内来源写入守卫（Task 4.5：落实"所有资源来自站内"） ──────────────────
+/**
+ * 校验一个 URL 是否命中允许的站内存储域名（origin 精确匹配：protocol+host 相等，
+ * 且 pathname 落在 base 的路径前缀内）。用 URL 解析而非裸字符串 `startsWith`，
+ * 避免 `https://mycdn.com.evil.com/x.png` 这类前缀绕过（该串按字符串确实以
+ * `https://mycdn.com` 开头，但 host 完全不同）。
+ * 传入的 base 是 CloudflareR2Service.getPublicBaseUrl() 的返回值（唯一权威来源，
+ * 见 system-settings `storage.r2PublicUrl` / env `DOMAIN`|`R2_PUBLIC_URL`）。
+ */
+export function isInStationMediaUrl(
+  url: string,
+  allowedBaseUrls: readonly (string | null | undefined)[],
+): boolean {
+  if (!url) return false;
+  let target: URL;
+  try {
+    target = new URL(url);
+  } catch {
+    return false;
+  }
+  return allowedBaseUrls.some((base) => {
+    if (!base) return false;
+    let b: URL;
+    try {
+      b = new URL(base);
+    } catch {
+      return false;
+    }
+    if (target.protocol !== b.protocol || target.host !== b.host) return false;
+    const basePath = b.pathname === '/' ? '' : b.pathname;
+    return target.pathname.startsWith(basePath);
+  });
+}
+
+/**
+ * 校验一组 URL 全部命中站内存储域名；任意一个非站内即 400（fail-closed）。
+ * gallery（USER_UPLOAD）/ materials.create / 管理端模板创建共用同一判定。
+ */
+export function assertInStationMediaUrls(
+  urls: readonly string[],
+  allowedBaseUrls: readonly (string | null | undefined)[],
+  message = '仅允许使用站内存储的媒体链接',
+): void {
+  for (const url of urls) {
+    if (!isInStationMediaUrl(url, allowedBaseUrls)) {
+      throw new BadRequestException(message);
+    }
+  }
+}
+
 // ── 管理端广场列表：分页 + 筛选 ────────────────────────────────────────────
-const ADMIN_STATUSES: GalleryStatus[] = ['PENDING', 'PUBLISHED', 'HIDDEN', 'REJECTED'];
+const ADMIN_STATUSES: GalleryStatus[] = ['PENDING', 'PUBLISHED', 'HIDDEN', 'REJECTED', 'UNPUBLISHED'];
 const ADMIN_KINDS: GalleryKind[] = ['IMAGE', 'VIDEO'];
 const ADMIN_SOURCE_TYPES: GallerySource[] = [
   'USER_UPLOAD',
   'FROM_GENERATION',
   'FROM_TEMPLATE',
-  'ADMIN_CURATED',
 ];
 
 export const ADMIN_GALLERY_DEFAULT_PAGE_SIZE = 20;

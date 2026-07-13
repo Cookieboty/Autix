@@ -20,6 +20,12 @@ function makeService(overrides: {
   nextCursor?: string | null;
   metricsMap?: Map<string, { likeCount: number; favoriteCount: number; viewCount: number; referenceCount: number }>;
   captureKind?: (kind: GalleryKind) => void;
+  interactions?: {
+    likedIds?: string[];
+    favoritedIds?: string[];
+    likedIdsCalls?: unknown[][];
+    favoritedIdsCalls?: unknown[][];
+  };
 }) {
   const repo = {
     findPublishedFeed: async (kind: GalleryKind) => {
@@ -30,7 +36,19 @@ function makeService(overrides: {
   const metrics = {
     getMetricsMap: async () => overrides.metricsMap ?? new Map(),
   };
-  return new GalleryService(repo as never, metrics as never, {} as never);
+  const interactions = overrides.interactions
+    ? {
+        findLikedIds: async (...args: unknown[]) => {
+          overrides.interactions!.likedIdsCalls?.push(args);
+          return new Set(overrides.interactions!.likedIds ?? []);
+        },
+        findFavoritedIds: async (...args: unknown[]) => {
+          overrides.interactions!.favoritedIdsCalls?.push(args);
+          return new Set(overrides.interactions!.favoritedIds ?? []);
+        },
+      }
+    : undefined;
+  return new GalleryService(repo as never, metrics as never, {} as never, interactions as never);
 }
 
 describe('GalleryService.listFeed', () => {
@@ -109,5 +127,96 @@ describe('GalleryService.listFeed', () => {
     const svc = new GalleryService(repo as never, metrics as never, {} as never);
     await svc.listFeed('IMAGE', undefined, 24);
     expect(seenType).toBe(ResourceType.GALLERY_POST);
+  });
+});
+
+/**
+ * Plan C Task 8：feed 登录态批量 overlay（防 N+1）。
+ * 登录态：拿到本页 items 后，收集 ids，各跑一次批量查询（findLikedIds/findFavoritedIds），
+ * 逐项 overlay boolean liked/favorited —— 无论页面有多少条，都必须恰好 2 次查询，
+ * 证明不是逐条查（N+1）。匿名：跳过 overlay，不跑批量查询，字段省略（undefined）。
+ */
+describe('GalleryService.listFeed — viewer 态批量 overlay（防 N+1）', () => {
+  it('登录态：每项回显 boolean favorited/liked', async () => {
+    const likedIdsCalls: unknown[][] = [];
+    const favoritedIdsCalls: unknown[][] = [];
+    const svc = makeService({
+      feedItems: [buildPost('a', GalleryKind.IMAGE)],
+      interactions: {
+        likedIds: ['a'],
+        favoritedIds: [],
+        likedIdsCalls,
+        favoritedIdsCalls,
+      },
+    });
+
+    const res = await svc.listFeed('IMAGE', undefined, 20, { id: 'viewer-9' } as never);
+
+    expect(typeof res.items[0]!.favorited).toBe('boolean');
+    expect(typeof res.items[0]!.liked).toBe('boolean');
+    expect(res.items[0]!.liked).toBe(true);
+    expect(res.items[0]!.favorited).toBe(false);
+  });
+
+  it('匿名：不回显 favorited/liked（undefined），且不跑批量查询', async () => {
+    const likedIdsCalls: unknown[][] = [];
+    const favoritedIdsCalls: unknown[][] = [];
+    const svc = makeService({
+      feedItems: [buildPost('a', GalleryKind.IMAGE)],
+      interactions: { likedIdsCalls, favoritedIdsCalls },
+    });
+
+    const res = await svc.listFeed('IMAGE', undefined, 20, undefined);
+
+    expect(res.items[0]!.favorited).toBeUndefined();
+    expect(res.items[0]!.liked).toBeUndefined();
+    expect(likedIdsCalls).toHaveLength(0);
+    expect(favoritedIdsCalls).toHaveLength(0);
+  });
+
+  it('无 N+1：无论本页多少条，批量查询恰好各跑 1 次（共 2 次），一次性传入本页全部 ids', async () => {
+    const likedIdsCalls: unknown[][] = [];
+    const favoritedIdsCalls: unknown[][] = [];
+    const svc = makeService({
+      feedItems: [
+        buildPost('a', GalleryKind.IMAGE),
+        buildPost('b', GalleryKind.IMAGE),
+        buildPost('c', GalleryKind.IMAGE),
+      ],
+      interactions: {
+        likedIds: ['a', 'c'],
+        favoritedIds: ['b'],
+        likedIdsCalls,
+        favoritedIdsCalls,
+      },
+    });
+
+    const res = await svc.listFeed('IMAGE', undefined, 20, { id: 'viewer-9' } as never);
+
+    // 固定 2 查：不管页大小是 3 条还是更多，findLikedIds/findFavoritedIds 各恰好调用 1 次。
+    expect(likedIdsCalls).toHaveLength(1);
+    expect(favoritedIdsCalls).toHaveLength(1);
+    expect(likedIdsCalls[0]).toEqual(['viewer-9', ResourceType.GALLERY_POST, ['a', 'b', 'c']]);
+    expect(favoritedIdsCalls[0]).toEqual(['viewer-9', ResourceType.GALLERY_POST, ['a', 'b', 'c']]);
+
+    expect(res.items.map((i) => ({ id: i.post.id, liked: i.liked, favorited: i.favorited }))).toEqual([
+      { id: 'a', liked: true, favorited: false },
+      { id: 'b', liked: false, favorited: true },
+      { id: 'c', liked: true, favorited: false },
+    ]);
+  });
+
+  it('空 feed（0 条）登录态也不跑批量查询（无 id 可查）', async () => {
+    const likedIdsCalls: unknown[][] = [];
+    const favoritedIdsCalls: unknown[][] = [];
+    const svc = makeService({
+      feedItems: [],
+      interactions: { likedIdsCalls, favoritedIdsCalls },
+    });
+
+    await svc.listFeed('IMAGE', undefined, 20, { id: 'viewer-9' } as never);
+
+    expect(likedIdsCalls).toHaveLength(0);
+    expect(favoritedIdsCalls).toHaveLength(0);
   });
 });

@@ -27,7 +27,7 @@ const FOOTER_GROUPS: Array<{ titleKey: string; links: FooterLink[] }> = [
     links: [
       { labelKey: 'explore', href: '/' },
       { labelKey: 'pricing', href: '/pricing' },
-      { labelKey: 'community', href: '/community' },
+      { labelKey: 'community', href: '/' },
       { labelKey: 'canvas', href: '/draw' },
       { labelKey: 'marketingStudio', href: '/marketing-studio' },
       { labelKey: 'cinemaStudio', href: '/original-series' },
@@ -62,7 +62,7 @@ const FOOTER_GROUPS: Array<{ titleKey: string; links: FooterLink[] }> = [
     links: [
       { labelKey: 'presets', href: '/presets' },
       { labelKey: 'viralPresets', href: '/viral-presets' },
-      { labelKey: 'community', href: '/community' },
+      { labelKey: 'community', href: '/' },
       { labelKey: 'membership', href: '/membership' },
       { labelKey: 'pricing', href: '/pricing' },
     ],
@@ -157,7 +157,7 @@ export function MobilePublicTabs() {
     { label: t('home'), href: '/', icon: Home },
     { label: t('image'), href: '/ai/image', icon: ImageIcon },
     { label: t('video'), href: '/ai/video', icon: Video },
-    { label: t('community'), href: '/community', icon: Compass },
+    { label: t('community'), href: '/', icon: Compass },
     { label: t('me'), href: '/profile', icon: UserRound, auth: true },
   ];
 
