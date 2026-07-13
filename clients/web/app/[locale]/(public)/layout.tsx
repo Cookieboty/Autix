@@ -22,13 +22,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
 
   // 直接由 next/navigation 的 pathname 推导并传给导航（SSR/首帧即正确），
   // 避免导航内部依赖自定义适配器 usePathname 时首帧误判成首页背景、产生一瞬闪烁。
-  const navKind = isImage
-    ? 'image'
-    : isVideo
-      ? 'video'
-      : pathname.startsWith('/community')
-        ? 'community'
-        : 'home';
+  const navKind = isImage ? 'image' : isVideo ? 'video' : 'home';
   const navVariant = isFunctionPage ? 'fluid' : 'contained';
 
   return (

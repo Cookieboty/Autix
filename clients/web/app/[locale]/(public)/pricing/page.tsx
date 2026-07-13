@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import type { SupportedLanguage } from '@autix/i18n';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { PublicPricingView } from '@autix/shared-ui/growth';
-import { getPublicMembershipLevels, getPublicPointsPackages } from '@/lib/public-growth';
+import { getPublicMembershipLevels, getPublicPointsPackages } from '@/lib/billing';
 import { buildAlternates } from '@/lib/i18n/build-alternates';
 
 export async function generateMetadata({

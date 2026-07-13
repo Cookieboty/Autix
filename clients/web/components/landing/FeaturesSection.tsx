@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Link } from '@/i18n/navigation';
-import { Archive, ArrowRight, Download, ImageIcon, LayoutTemplate, RefreshCw, Sparkles, Users, Video } from 'lucide-react';
+import { Archive, ArrowRight, Download, LayoutTemplate, RefreshCw, Sparkles, Users, Video } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { VIDEO_DEMO_CDN } from '@/lib/constants';
@@ -135,17 +135,10 @@ export function FeaturesSection() {
             transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
           >
             <WorkbenchCta
-              icon={<ImageIcon className="size-5" />}
-              title={t('workbenchImageTitle')}
-              desc={t('workbenchImageDesc')}
-              href="/workbench/image"
-              cta={t('workbenchImageCta')}
-            />
-            <WorkbenchCta
               icon={<Video className="size-5" />}
               title={t('workbenchVideoTitle')}
               desc={t('workbenchVideoDesc')}
-              href="/workbench/video"
+              href="/video"
               cta={t('workbenchVideoCta')}
             />
           </motion.div>

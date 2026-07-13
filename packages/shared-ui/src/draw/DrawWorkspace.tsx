@@ -1872,7 +1872,7 @@ export function DrawWorkspace({
         await updateVideoNodeData(view.id, { projectId: ensured.projectId });
       }
       if (typeof window !== 'undefined') {
-        window.location.assign(`/workbench/video?projectId=${encodeURIComponent(ensured.projectId)}`);
+        window.location.assign(`/ai/video?projectId=${encodeURIComponent(ensured.projectId)}`);
       }
     } catch (error) {
       toast.error(errorMessage(error, t));

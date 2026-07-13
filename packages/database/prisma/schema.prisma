@@ -100,6 +100,10 @@ model User {
   taskEvents                     task_events[]                @relation("TaskEventUser")
   imageTemplates                 image_templates[]            @relation("ImageTemplateAuthor")
   videoTemplates                 video_templates[]            @relation("VideoTemplateAuthor")
+  imageTemplatesCreated          image_templates[]            @relation("ImageTemplateCreatedBy")
+  imageTemplatesReviewed         image_templates[]            @relation("ImageTemplateReviewer")
+  videoTemplatesCreated          video_templates[]            @relation("VideoTemplateCreatedBy")
+  videoTemplatesReviewed         video_templates[]            @relation("VideoTemplateReviewer")
   skills                         skills[]                     @relation("SkillAuthor")
   mcpServers                     mcp_servers[]                @relation("McpServerAuthor")
   agents                         agents[]                     @relation("AgentAuthor")
@@ -129,10 +133,7 @@ model User {
   materialAssets                 material_assets[]            @relation("MaterialAssetUser")
   materialFolders                material_folders[]           @relation("MaterialFolderUser")
   canvasBoards                   canvas_boards[]              @relation("CanvasBoardUser")
-  creatorProfile                 creator_profiles?            @relation("CreatorProfileUser")
-  creatorFollows                 creator_follows[]            @relation("CreatorFollowFollower")
-  creatorFollowers               creator_follows[]            @relation("CreatorFollowCreator")
-  growthEvents                   growth_events[]              @relation("GrowthEventUser")
+  galleryPosts                   gallery_posts[]              @relation("GalleryPostAuthor")
   createdAt                      DateTime                     @default(now())
   updatedAt                      DateTime                     @updatedAt
   lastLoginAt                    DateTime?
@@ -733,12 +734,28 @@ enum TemplateStatus {
   ARCHIVED
 }
 
+enum ImageTemplateSource {
+  ADMIN_CREATED
+  GALLERY_CONVERSION
+  SYSTEM
+}
+
+enum VideoTemplateSource {
+  ADMIN_CREATED
+  SYSTEM
+}
+
 enum McpTransport {
   stdio
   sse
   http
 }
 
+/// Plan C Task 10：favoriteCount 已删（收藏改走 FavoriteLibraryService + resource_metrics 单一来源，
+/// 列表/详情展示改读 resource_metrics.favoriteCount）。likeCount/useCount 暂保留——它们仍是
+/// base-resource.service.like() 与 template-generation.repository 生成计数、以及
+/// marketplace-query.repository 首页/热门/编辑精选排序的直接读写列，全量迁到 resource_metrics
+/// 需要同时重做这三处排序/写入路径，超出本任务范围，留作后续任务。
 model image_templates {
   id            String   @id @default(cuid())
   title         String   @db.VarChar(200)
@@ -764,30 +781,34 @@ model image_templates {
   authorId      String
   useCount      Int     @default(0)
   likeCount     Int     @default(0)
-  favoriteCount Int     @default(0)
   isHot         Boolean @default(false)
-
-  originalUrl      String?
-  authorName       String? @db.VarChar(200)
-  authorUrl        String?
-  sourcePlatform   String? @db.VarChar(100)
-  externalId       String? @db.VarChar(100)
-  externalSlug     String?
-  externalMetadata Json?
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
 
+  sourceType          ImageTemplateSource @default(ADMIN_CREATED)
+  sourceGalleryPostId String?             @unique
+  sourceGalleryPost   gallery_posts?      @relation("ImageTemplateSourceGallery", fields: [sourceGalleryPostId], references: [id], onDelete: Restrict)
+  createdById         String
+  createdBy           User                @relation("ImageTemplateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedById        String?
+  reviewedAt          DateTime?
+  reviewedBy          User?               @relation("ImageTemplateReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  systemKey           String?
+
   generations image_generations[]
   author      User                @relation("ImageTemplateAuthor", fields: [authorId], references: [id], onDelete: Restrict)
 
+  @@unique([authorId, systemKey])
   @@index([authorId])
   @@index([status])
   @@index([category])
   @@index([useCount])
   @@index([publishedAt])
   @@index([isHot])
+  @@index([sourceType])
+  @@index([createdById])
 }
 
 model video_templates {
@@ -819,30 +840,32 @@ model video_templates {
   authorId      String
   useCount      Int     @default(0)
   likeCount     Int     @default(0)
-  favoriteCount Int     @default(0)
   isHot         Boolean @default(false)
-
-  originalUrl      String?
-  authorName       String? @db.VarChar(200)
-  authorUrl        String?
-  sourcePlatform   String? @db.VarChar(100)
-  externalId       String? @db.VarChar(100)
-  externalSlug     String?
-  externalMetadata Json?
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
 
+  sourceType   VideoTemplateSource @default(ADMIN_CREATED)
+  createdById  String
+  createdBy    User                @relation("VideoTemplateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewedBy   User?               @relation("VideoTemplateReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  systemKey    String?
+
   generations video_generations[]
   author      User                @relation("VideoTemplateAuthor", fields: [authorId], references: [id], onDelete: Restrict)
 
+  @@unique([authorId, systemKey])
   @@index([authorId])
   @@index([status])
   @@index([category])
   @@index([useCount])
   @@index([publishedAt])
   @@index([isHot])
+  @@index([sourceType])
+  @@index([createdById])
 }
 
 model skills {
@@ -998,6 +1021,8 @@ model image_generations {
   variables       Json?
   referenceImage  String?
   generatedImages String[]        @default([])
+  width           Int?
+  height          Int?
   status          String          @default("pending")
   error           String?
   durationMs      Int?
@@ -1105,178 +1130,6 @@ model conversation_resources {
 
   @@unique([conversationId, resourceType, resourceId])
   @@index([conversationId])
-}
-
-// ── Public Growth Pages & Community ────────────────────────────────────────
-
-enum GrowthPageStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-enum HomeSectionType {
-  MEDIA_RAIL
-  FEATURE_MATRIX
-  PRODUCT_BANNER
-  MASONRY
-  TAG_RAIL
-  CTA_BAND
-}
-
-enum PublicCreationSourceType {
-  IMAGE_GENERATION
-  VIDEO_GENERATION
-  VIDEO_PROJECT
-  MANUAL
-}
-
-enum PublicCreationMediaType {
-  image
-  video
-}
-
-enum PublicPromptVisibility {
-  hidden
-  public
-}
-
-enum PublicCreationStatus {
-  DRAFT
-  PUBLISHED
-  APPROVED
-  HIDDEN
-  REMOVED
-}
-
-enum PublicCollectionKind {
-  COMMUNITY
-  PRESET
-  VIRAL_PRESET
-  FEATURE
-}
-
-enum PublicCollectionStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-model growth_pages {
-  id          String           @id @default(cuid())
-  slug        String           @unique @db.VarChar(120)
-  title       String           @db.VarChar(200)
-  description String?
-  heroMedia   String?
-  status      GrowthPageStatus @default(DRAFT)
-  seo         Json?
-  config      Json?
-  publishedAt DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@index([status, publishedAt])
-}
-
-model home_sections {
-  id        String               @id @default(cuid())
-  key       String               @unique @db.VarChar(120)
-  type      HomeSectionType
-  title     String               @db.VarChar(200)
-  subtitle  String?
-  sort      Int                  @default(0)
-  isActive  Boolean              @default(true)
-  layout    String?              @db.VarChar(80)
-  config    Json?
-  items     home_section_items[]
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-
-  @@index([isActive, sort])
-}
-
-model home_section_items {
-  id           String        @id @default(cuid())
-  sectionId    String
-  section      home_sections @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  title        String        @db.VarChar(200)
-  subtitle     String?
-  mediaUrl     String?
-  posterUrl    String?
-  href         String?
-  badge        String?       @db.VarChar(80)
-  resourceType ResourceType?
-  resourceId   String?
-  sort         Int           @default(0)
-  config       Json?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  @@index([sectionId, sort])
-  @@index([resourceType, resourceId])
-}
-
-model creator_profiles {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation("CreatorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
-  handle         String   @unique @db.VarChar(80)
-  displayName    String   @db.VarChar(120)
-  avatar         String?
-  bio            String?
-  externalLinks  Json?
-  followerCount  Int      @default(0)
-  followingCount Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([displayName])
-}
-
-model creator_follows {
-  id            String   @id @default(cuid())
-  followerId    String
-  follower      User     @relation("CreatorFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
-  creatorUserId String
-  creatorUser   User     @relation("CreatorFollowCreator", fields: [creatorUserId], references: [id], onDelete: Cascade)
-  createdAt     DateTime @default(now())
-
-  @@unique([followerId, creatorUserId])
-  @@index([creatorUserId, createdAt])
-}
-
-model public_collections {
-  id          String                 @id @default(cuid())
-  slug        String                 @unique @db.VarChar(120)
-  kind        PublicCollectionKind
-  title       String                 @db.VarChar(200)
-  description String?
-  heroMedia   String?
-  tags        String[]               @default([])
-  sortConfig  Json?
-  status      PublicCollectionStatus @default(DRAFT)
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-
-  @@index([kind, status])
-  @@index([status, createdAt])
-}
-
-model growth_events {
-  id          String   @id @default(cuid())
-  eventName   String   @db.VarChar(120)
-  path        String   @db.VarChar(500)
-  userId      String?
-  user        User?    @relation("GrowthEventUser", fields: [userId], references: [id], onDelete: SetNull)
-  anonymousId String?  @db.VarChar(120)
-  source      String?  @db.VarChar(120)
-  metadata    Json?
-  createdAt   DateTime @default(now())
-
-  @@index([eventName, createdAt])
-  @@index([path, createdAt])
-  @@index([userId, createdAt])
-  @@index([anonymousId, createdAt])
 }
 
 // ── Membership & Points ───────────────────────────────────────────────────
@@ -2010,31 +1863,41 @@ model video_clip_generations {
   @@index([seedanceTaskId])
 }
 
-model material_assets {
-  id           String            @id @default(cuid())
-  userId       String
-  user         User              @relation("MaterialAssetUser", fields: [userId], references: [id], onDelete: Cascade)
-  type         String            @db.VarChar(24)
-  title        String            @db.VarChar(200)
-  url          String
-  thumbnailUrl String?
-  mimeType     String?           @db.VarChar(120)
-  size         Int?
-  storageKey   String?           @db.VarChar(500)
-  sourceType   String            @db.VarChar(40)
-  sourceId     String?
-  tags         String[]          @default([])
-  metadata     Json?
-  folderId     String?
-  folder       material_folders? @relation("MaterialAssetFolder", fields: [folderId], references: [id], onDelete: SetNull)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  deletedAt    DateTime?
+enum MaterialLibrarySource {
+  UPLOAD
+  FAVORITE
+  HISTORY
+}
 
+model material_assets {
+  id                 String                @id @default(cuid())
+  userId             String
+  user               User                  @relation("MaterialAssetUser", fields: [userId], references: [id], onDelete: Cascade)
+  type               String                @db.VarChar(24)
+  title              String                @db.VarChar(200)
+  url                String?
+  thumbnailUrl       String?
+  mimeType           String?               @db.VarChar(120)
+  size               Int?
+  storageKey         String?               @db.VarChar(500)
+  sourceType         String                @db.VarChar(40)
+  librarySource      MaterialLibrarySource
+  sourceResourceType ResourceType?
+  sourceId           String?
+  tags               String[]              @default([])
+  metadata           Json?
+  folderId           String?
+  folder             material_folders?     @relation("MaterialAssetFolder", fields: [folderId], references: [id], onDelete: SetNull)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  deletedAt          DateTime?
+
+  @@unique([userId, librarySource, sourceResourceType, sourceId])
   @@index([userId, createdAt])
   @@index([userId, type])
   @@index([userId, deletedAt])
   @@index([userId, folderId, deletedAt])
+  @@index([userId, librarySource, deletedAt, createdAt])
 }
 
 model material_folders {
@@ -2187,13 +2050,13 @@ enum GalleryStatus {
   REJECTED
   HIDDEN
   REMOVED
+  UNPUBLISHED
 }
 
 enum GallerySource {
   USER_UPLOAD
   FROM_GENERATION
   FROM_TEMPLATE
-  ADMIN_CURATED
 }
 
 enum FeaturedSlotKind {
@@ -2227,11 +2090,12 @@ model gallery_posts {
   aspectRatio String?  @db.VarChar(20)
   durationSec Int?
 
-  // 作品创作元数据（导入 / 生成来源填充）：提示词、生成模型、原始像素宽高。
-  prompt String?
-  model  String? @db.VarChar(100)
-  width  Int?
-  height Int?
+  // 作品创作元数据（导入 / 生成来源填充）：提示词、生成模型、原始像素宽高、参考图。
+  prompt         String?
+  model          String? @db.VarChar(100)
+  width          Int?
+  height         Int?
+  referenceImage String?
 
   sourceType        GallerySource @default(USER_UPLOAD)
   imageTemplateId   String?
@@ -2246,17 +2110,19 @@ model gallery_posts {
   isFeatured   Boolean       @default(false)
   isPinned     Boolean       @default(false)
 
-  authorId       String?
-  authorSnapshot Json?
+  authorId String
+  author   User   @relation("GalleryPostAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  // 媒体外链 → R2 迁移由独立后台 worker 异步完成（存量外链导入内容 mediaMigrated=false 排队搬运）。
+  // 新投稿的媒体已由站内来源守卫保证是站内 URL，故默认 true（无需搬运）。
+  mediaMigrated          Boolean @default(true)
+  mediaMigrationAttempts Int     @default(0)
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
 
-  // 媒体外链 → R2 迁移由独立后台 worker 异步完成（导入时先落原始外链，mediaMigrated=false 排队）。
-  // 默认 true：普通用户投稿/正常创建的作品媒体本就归属自己，不进迁移队列。
-  mediaMigrated          Boolean @default(true)
-  mediaMigrationAttempts Int     @default(0)
+  sourceForImageTemplate image_templates? @relation("ImageTemplateSourceGallery")
 
   @@index([status, publishedAt(sort: Desc), id(sort: Desc)])
   @@index([status, kind, publishedAt(sort: Desc), id(sort: Desc)])
@@ -2308,6 +2174,7 @@ model resource_metrics {
   shareCount     Int @default(0)
   referenceCount Int @default(0)
   citationCount  Int @default(0)
+  downloadCount  Int @default(0)
 
   hotScore        Float     @default(0)
   hotScoreVersion String?
@@ -2340,6 +2207,18 @@ model resource_view_events {
 
   @@unique([resourceType, resourceId, viewerKey, minuteBucket, scope])
   @@index([resourceType, resourceId, dayBucket])
+}
+
+/// 资源下载事件流水（追加式）：与 resource_metrics.downloadCount 配合，前者是明细/审计，后者是聚合计数。
+model resource_download_events {
+  id           String       @id @default(cuid())
+  resourceType ResourceType
+  resourceId   String
+  userId       String
+  createdAt    DateTime     @default(now())
+
+  @@index([resourceType, resourceId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model resource_uv_days {

@@ -41,15 +41,4 @@ export class MaterialFoldersRepository {
   update(id: string, data: Prisma.material_foldersUpdateInput) {
     return this.prisma.material_folders.update({ where: { id }, data });
   }
-
-  async softDeleteWithAssets(userId: string, id: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const now = new Date();
-      await tx.material_assets.updateMany({
-        where: { userId, folderId: id, deletedAt: null },
-        data: { deletedAt: now },
-      });
-      await tx.material_folders.update({ where: { id }, data: { deletedAt: now } });
-    });
-  }
 }

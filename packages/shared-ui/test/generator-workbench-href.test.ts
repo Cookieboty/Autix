@@ -16,7 +16,7 @@ describe('buildGeneratorWorkbenchHref', () => {
       templateId: 'tpl_1',
       draftId: 'draft_1',
     });
-    expect(href.startsWith('/workbench/image?')).toBe(true);
+    expect(href.startsWith('/ai/image?')).toBe(true);
     const q = new URLSearchParams(href.split('?')[1]);
     expect(q.get('model')).toBe('gpt-image-1');
     expect(q.get('prompt')).toBe('a cat');
@@ -61,7 +61,7 @@ describe('buildGeneratorWorkbenchHref', () => {
 
   test('empty draft still routes with source only', () => {
     expect(buildGeneratorWorkbenchHref({ kind: 'image' })).toBe(
-      '/workbench/image?source=public-generator',
+      '/ai/image?source=public-generator',
     );
   });
 

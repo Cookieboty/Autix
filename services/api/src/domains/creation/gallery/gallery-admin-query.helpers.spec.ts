@@ -23,10 +23,14 @@ describe('normalizeAdminGalleryQuery', () => {
   it('非法枚举回退 undefined，合法枚举保留', () => {
     expect(normalizeAdminGalleryQuery({ status: 'BOGUS', kind: 'gif' }).status).toBeUndefined();
     expect(normalizeAdminGalleryQuery({ kind: 'gif' }).kind).toBeUndefined();
-    const q = normalizeAdminGalleryQuery({ status: 'PUBLISHED', kind: 'VIDEO', sourceType: 'ADMIN_CURATED' });
+    const q = normalizeAdminGalleryQuery({ status: 'PUBLISHED', kind: 'VIDEO', sourceType: 'FROM_TEMPLATE' });
     expect(q.status).toBe('PUBLISHED');
     expect(q.kind).toBe('VIDEO');
-    expect(q.sourceType).toBe('ADMIN_CURATED');
+    expect(q.sourceType).toBe('FROM_TEMPLATE');
+  });
+
+  it('已删除的 ADMIN_CURATED 来源不再被接受，回退 undefined', () => {
+    expect(normalizeAdminGalleryQuery({ sourceType: 'ADMIN_CURATED' }).sourceType).toBeUndefined();
   });
 
   it('page 至少为 1，pageSize 夹在 1..100', () => {

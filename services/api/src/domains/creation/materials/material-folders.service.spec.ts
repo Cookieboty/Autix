@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MaterialFoldersService } from './material-folders.service';
 
-function buildService(overrides: { repo?: any; canUse?: boolean } = {}) {
+function buildService(overrides: { repo?: any; canUse?: boolean; favoriteLibrary?: any } = {}) {
   const repo = {
     findManyByUser: jest.fn().mockResolvedValue([]),
     countAssetsGroupedByFolder: jest.fn().mockResolvedValue([]),
@@ -9,7 +9,6 @@ function buildService(overrides: { repo?: any; canUse?: boolean } = {}) {
     findActiveByName: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockImplementation((d: any) => ({ id: 'f-new', ...d })),
     update: jest.fn().mockImplementation((id: string, d: any) => ({ id, ...d })),
-    softDeleteWithAssets: jest.fn().mockResolvedValue(undefined),
     ...(overrides.repo ?? {}),
   };
   const materialsService = {
@@ -18,8 +17,12 @@ function buildService(overrides: { repo?: any; canUse?: boolean } = {}) {
       return { canUse: true };
     }),
   };
-  const service = new MaterialFoldersService(repo as never, materialsService as never);
-  return { service, repo, materialsService };
+  const favoriteLibrary = {
+    deleteFolder: jest.fn().mockResolvedValue(undefined),
+    ...(overrides.favoriteLibrary ?? {}),
+  };
+  const service = new MaterialFoldersService(repo as never, materialsService as never, favoriteLibrary as never);
+  return { service, repo, materialsService, favoriteLibrary };
 }
 
 describe('MaterialFoldersService', () => {
@@ -103,11 +106,11 @@ describe('MaterialFoldersService', () => {
     await expect(service.update('u1', 'f1', { name: 'Taken' })).rejects.toThrow(ConflictException);
   });
 
-  it('remove 走级联软删(仅归属)', async () => {
-    const { service, repo, materialsService } = buildService();
+  it('remove 走 FavoriteLibraryService.deleteFolder(仅归属，FAVORITE 联动取消收藏)', async () => {
+    const { service, repo, materialsService, favoriteLibrary } = buildService();
     repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
     await service.remove('u1', 'f1');
-    expect(repo.softDeleteWithAssets).toHaveBeenCalledWith('u1', 'f1');
+    expect(favoriteLibrary.deleteFolder).toHaveBeenCalledWith('u1', 'f1');
     expect(materialsService.assertCanAddOrUse).not.toHaveBeenCalled();
   });
 });

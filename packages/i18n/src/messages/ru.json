@@ -591,7 +591,8 @@
     "inviteFriends": "Пригласить друзей",
     "docs": "Документация",
     "myTemplates": "我的模板",
-    "upgrade": "升级会员"
+    "upgrade": "升级会员",
+    "gallery": "Галерея"
   },
   "template": {
     "discover": "Обзор",
@@ -3548,7 +3549,14 @@
         "ariaLike": "Лайк",
         "ariaDownload": "Скачать",
         "ariaSelect": "Выбрать",
-        "ariaDelete": "Удалить"
+        "ariaDelete": "Удалить",
+        "publishToGalleryTitle": "Опубликовать {count} изображение(й) в галерее",
+        "publishToGalleryDescription": "Публикации проходят проверку, прежде чем появиться в общей галерее.",
+        "publishCategoryLabel": "Категория",
+        "allowPublicReferenceLabel": "Разрешить публичное референс-изображение",
+        "allowPublicReferenceHint": "Позволяет другим видеть референс-изображение, использованное при генерации — по умолчанию выключено.",
+        "publishConfirm": "Опубликовать {count}",
+        "publishSubmittedToast": "Отправлено {count} изображение(й) на проверку"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -3716,67 +3724,6 @@
         }
       }
     },
-    "community": {
-      "indexPromo": "Explore public collections built from approved creator work",
-      "eyebrow": "Community",
-      "title": "Find the work worth remixing.",
-      "description": "Community pages collect published images, videos, templates, and creator surfaces without exposing private generation history.",
-      "feedEyebrow": "Feed",
-      "feedTitle": "Latest published works",
-      "create": "Create",
-      "openCommunity": "Open community",
-      "collectionPromo": "{title}: published public works and reusable directions",
-      "kind": {
-        "community": "Community",
-        "preset": "Preset",
-        "viralPreset": "Viral preset",
-        "feature": "Feature"
-      }
-    },
-    "presets": {
-      "promo": "Reusable presets for image, video, and growth pages",
-      "viralPromo": "Viral presets for fast campaign testing",
-      "eyebrow": "Presets",
-      "viralEyebrow": "Viral presets",
-      "title": "Reusable starts for every visual direction.",
-      "viralTitle": "Start with formats that travel.",
-      "description": "Tags, templates, and public examples help creators move from idea to publishable output faster.",
-      "picksEyebrow": "Picks",
-      "picksTitle": "Preset cards and published examples",
-      "usePreset": "Use preset",
-      "detailPromo": "{title}: use this preset as a private generation start",
-      "premiumBadge": "Pro-ready preset"
-    },
-    "creation": {
-      "promo": "Use public creation pages to share approved images and videos",
-      "fallbackCreatorName": "Amux Studio creator",
-      "fallbackCreatorSubtitle": "Public profile",
-      "views": "Views",
-      "likes": "Likes",
-      "shares": "Shares",
-      "prompt": "Prompt",
-      "promptHidden": "Prompt hidden",
-      "promptHiddenDescription": "The creator has kept this prompt private. Use the template or start from a new prompt.",
-      "copyLink": "Copy link",
-      "copied": "Copied",
-      "useThis": "Use this",
-      "likeOrFollow": "Like or follow",
-      "publishedOnly": "Published works appear only after creator action."
-    },
-    "profile": {
-      "promo": "Creator profile: @{handle}",
-      "followCreator": "Follow creator",
-      "followers": "Followers",
-      "published": "Published",
-      "publicHandle": "Public handle supports /@{handle}",
-      "worksEyebrow": "Works",
-      "worksTitle": "Published creations"
-    },
-    "growthPage": {
-      "promo": "{title}: explore workflows, examples, and public pages",
-      "fallbackEyebrow": "Amux Studio growth",
-      "fallbackCta": "Start creating"
-    },
     "metadata": {
       "home": {
         "title": "Amux Studio - AI image, video, presets, and public creator pages",
@@ -3794,28 +3741,6 @@
         "title": "Pricing - Amux Studio",
         "description": "Amux Studio plans and credits for AI image generation, AI video projects, and public growth pages."
       },
-      "community": {
-        "title": "Community - Amux Studio",
-        "description": "Explore public Amux Studio collections, creator-approved images, videos, and reusable creative directions."
-      },
-      "presets": {
-        "title": "Presets - Amux Studio",
-        "description": "Browse reusable Amux Studio presets for AI image, video, campaign, and public growth workflows."
-      },
-      "viralPresets": {
-        "title": "Viral Presets - Amux Studio",
-        "description": "Explore Amux Studio viral preset formats for short-form video, campaign hooks, and shareable images."
-      },
-      "collectionTitle": "{title} - Amux Studio Community",
-      "collectionFallbackTitle": "Amux Studio Community",
-      "collectionDescription": "Amux Studio public community collection.",
-      "presetTitle": "{name} - Amux Studio Preset",
-      "presetDescription": "Amux Studio public preset page for reusable AI image and video workflows.",
-      "publicCreationTitleFallback": "Public creation - Amux Studio",
-      "publicCreationDescription": "A public Amux Studio AI creation.",
-      "creatorDescription": "Amux Studio public creator profile.",
-      "growthPageTitleFallback": "Amux Studio growth page",
-      "growthPageDescription": "Amux Studio public growth page for AI creative workflows.",
       "videoShareTitle": "{title} - Amux Studio video",
       "videoShareFallbackTitle": "Amux Studio video share",
       "videoShareDescriptionWithModel": "A shared Amux Studio video project generated with {model}.",
@@ -3902,20 +3827,6 @@
           "description": "Compose, remix, and reuse visual systems across images and video."
         }
       },
-      "collections": {
-        "seedance": {
-          "title": "Seedance Video",
-          "description": "Video experiments, camera motion, and launch-ready reels."
-        },
-        "marketing": {
-          "title": "Marketing Studio",
-          "description": "Product ads, social hooks, and campaign systems."
-        },
-        "soulCinema": {
-          "title": "Soul Cinema",
-          "description": "Cinematic portraits, scenes, and creator-led visual worlds."
-        }
-      },
       "page": {
         "description": "A focused public page for turning Amux Studio workflows into shareable acquisition surfaces.",
         "sections": {
@@ -3932,16 +3843,8 @@
             "body": "Published work can appear in collections, creator profiles, share pages, and the homepage."
           }
         }
-      },
-      "collection": {
-        "description": "A public collection of published Amux Studio works and reusable ideas."
-      },
-      "creator": {
-        "bio": "Public creator profile preview for shared Amux Studio work."
       }
     },
-    "collection": {},
-    "account": {},
     "common": {
       "discountBadge": "-{percent}%"
     }
@@ -4021,7 +3924,81 @@
     "deleteFolderConfirm": "Удалить эту папку? Также будут удалены {count} материалов из папки.",
     "emptyFolder": "В этой папке нет материалов",
     "folderNameRequired": "Название папки не может быть пустым",
-    "duplicateFolderName": "Папка с таким названием уже существует"
+    "duplicateFolderName": "Папка с таким названием уже существует",
+    "loadMore": "Загрузить ещё",
+    "downloadFailed": "Не удалось скачать",
+    "moveRestrictedHint": "Срок членства истёк — можно переместить только обратно в папку по умолчанию",
+    "sourceStateActionDisabled": "Этот источник больше недоступен",
+    "librarySource": {
+      "ALL": "Все",
+      "UPLOAD": "Загруженные",
+      "FAVORITE": "Избранное",
+      "HISTORY": "История"
+    },
+    "sourceState": {
+      "available": "Доступно",
+      "unpublished": "Снято с публикации",
+      "blocked": "Недоступно",
+      "missing": "Источник утерян"
+    },
+    "historySaveSuccess": "Сохранено в библиотеку",
+    "historySaveFailed": "Не удалось сохранить",
+    "historyNotSaveable": "Этот элемент нельзя сохранить в библиотеку",
+    "historySaved": "Сохранено",
+    "historySaveToLibrary": "Сохранить в библиотеку",
+    "historyEmptyTitle": "История просмотров пуста",
+    "historyEmptyDescription": "Здесь появятся материалы, которые вы просматривали в галерее или на маркетплейсе",
+    "resourceType": {
+      "SKILL": "Навык",
+      "MCP": "MCP",
+      "AGENT": "Агент",
+      "IMAGE_TEMPLATE": "Шаблон изображения",
+      "VIDEO_TEMPLATE": "Шаблон видео",
+      "GALLERY_POST": "Публикация галереи"
+    }
+  },
+  "gallery": {
+    "title": "Галерея",
+    "subtitle": "Откройте для себя работы сообщества",
+    "kindImage": "Изображение",
+    "kindVideo": "Видео",
+    "emptyTitle": "Пока ничего не опубликовано",
+    "emptyDescription": "Станьте первым, кто опубликует работу в галерее",
+    "loadMore": "Загрузить ещё",
+    "unknownAuthor": "Неизвестный автор",
+    "like": "Нравится",
+    "favorite": "В избранное",
+    "backToGallery": "Назад в галерею",
+    "notFoundTitle": "Эта публикация недоступна",
+    "notFoundDescription": "Возможно, она была снята с публикации или удалена",
+    "author": "Автор",
+    "metricViews": "Просмотры",
+    "metricLikes": "Лайки",
+    "metricFavorites": "В избранном",
+    "metricRecreates": "Повторов",
+    "recreate": "Повторить",
+    "download": "Скачать",
+    "unpublish": "Снять с публикации",
+    "republish": "Опубликовать снова",
+    "unpublishSuccess": "Публикация снята",
+    "republishSuccess": "Отправлено на проверку",
+    "prompt": "Промпт",
+    "copyPrompt": "Копировать",
+    "copied": "Скопировано",
+    "noPrompt": "Нет промпта",
+    "information": "Информация",
+    "model": "Модель",
+    "auto": "Авто",
+    "dimensions": "Размеры",
+    "category": "Категория",
+    "status": {
+      "draft": "Черновик",
+      "pending": "На проверке",
+      "published": "Опубликовано",
+      "unpublished": "Снято с публикации",
+      "hidden": "Скрыто",
+      "rejected": "Отклонено"
+    }
   },
   "adminCampaigns": {
     "title": "Центр наград кампаний",
@@ -5241,5 +5218,12 @@
       "save": "Сохранить",
       "dryRunTotal": "Итого: {total}"
     }
+  },
+  "cookieConsent": {
+    "message": "Мы используем файлы cookie, чтобы улучшить ваш опыт и анализировать использование сайта.",
+    "accept": "Принять",
+    "reject": "Отклонить",
+    "learnMore": "Политика конфиденциальности",
+    "ariaLabel": "Согласие на использование cookie"
   }
 }

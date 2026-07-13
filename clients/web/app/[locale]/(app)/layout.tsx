@@ -46,8 +46,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   const hydrated = useAuthStore((s) => s.hydrated);
   const fetchSessions = useChatStore((s) => s.fetchSessions);
   const { enabled: chatEnabled, loading: chatFeatureLoading } = useSystemFeatureFlag('chatEnabled', false);
-  const isWorkbenchRoute =
-    pathname === '/workbench/image' || pathname === '/workbench/video' || pathname === '/draw';
+  const isWorkbenchRoute = pathname === '/draw';
   const isChatFeatureRoute =
     pathname === '/chat' || pathname.startsWith('/c/');
   const [sidebarOpen, setSidebarOpen] = useState(() => !isWorkbenchRoute);
@@ -61,7 +60,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     if ((user as { status?: string } | null)?.status === 'PENDING') { router.replace('/pending'); return; }
     if (chatFeatureLoading) return;
     if (!chatEnabled && isChatFeatureRoute) {
-      router.replace('/community');
+      router.replace('/materials');
       return;
     }
     if (chatEnabled) fetchSessions();

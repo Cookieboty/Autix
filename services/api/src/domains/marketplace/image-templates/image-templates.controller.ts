@@ -5,14 +5,14 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Param,
   Patch,
   Post,
-  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { TemplateStatus, ResourceType, type Prisma } from '../../platform/prisma/generated';
+import { TemplateStatus, ResourceType } from '../../platform/prisma/generated';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import {
   CurrentUser,
@@ -22,7 +22,6 @@ import {
 import { AdminGuard } from '../../identity/auth/admin.guard';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import { BatchJobService } from '../../admin/admin/batch-job.service';
-import type { ResourcePayload } from '../../admin/admin/resource-migration.service';
 import {
   ImageTemplatesService,
   type CreateImageTemplateDto,
@@ -44,7 +43,6 @@ export class ImageTemplatesController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('authorId') authorId?: string,
-    @Query('status') status?: TemplateStatus,
   ) {
     return this.service.findAll({
       category,
@@ -53,7 +51,6 @@ export class ImageTemplatesController {
       page: page ? +page : undefined,
       pageSize: pageSize ? +pageSize : undefined,
       authorId,
-      status,
     });
   }
 
@@ -64,35 +61,10 @@ export class ImageTemplatesController {
     @Param('id') id: string,
   ) {
     const userId = user?.id;
-    const tpl = await this.service.findById(id);
+    const tpl = await this.service.findPublicVisibleById(id);
+    if (!tpl) throw new NotFoundException('模板不存在');
     await this.service.recordView(userId, id).catch(() => undefined);
     return tpl;
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post()
-  create(@CurrentUser() user: AuthUser, @Body() body: CreateImageTemplateDto) {
-    const userId = getCurrentUserId(user);
-    return this.service.create(userId, body);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Put(':id')
-  update(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-    @Body() body: UpdateImageTemplateDto,
-  ) {
-    const userId = getCurrentUserId(user);
-    return this.service.update(id, userId, body);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    const userId = getCurrentUserId(user);
-    await this.service.remove(id, userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -107,6 +79,13 @@ export class ImageTemplatesController {
   favorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const userId = getCurrentUserId(user);
     return this.service.favorite(userId, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/favorite')
+  unfavorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
+    return this.service.unfavorite(userId, id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -173,6 +152,29 @@ export class ImageTemplatesAdminController {
     private readonly batchJobService: BatchJobService,
   ) {}
 
+  @Post()
+  create(@CurrentUser() user: AuthUser, @Body() body: CreateImageTemplateDto) {
+    const adminId = getCurrentUserId(user);
+    return this.service.create(adminId, body);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: UpdateImageTemplateDto,
+  ) {
+    const adminId = getCurrentUserId(user);
+    return this.service.update(id, adminId, body);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const adminId = getCurrentUserId(user);
+    await this.service.remove(id, adminId);
+  }
+
   @Get()
   findForReview(
     @Query('status') status?: TemplateStatus,
@@ -184,56 +186,6 @@ export class ImageTemplatesAdminController {
       page: page ? +page : undefined,
       pageSize: pageSize ? +pageSize : undefined,
     });
-  }
-
-  @Post('import')
-  importTemplates(
-    @CurrentUser() user: AuthUser,
-    @Body() body: { items: ResourcePayload[] },
-  ) {
-    const userId = getCurrentUserId(user);
-    return this.batchJobService.createAndProcess(
-      userId,
-      'IMPORT',
-      ResourceType.IMAGE_TEMPLATE,
-      { items: body.items ?? [] },
-    );
-  }
-
-  @Get('import-template')
-  getImportTemplate() {
-    return [
-      {
-        title: '',
-        description: '',
-        category: '',
-        prompt: '',
-        variables: {},
-        coverImage: '',
-        exampleImages: [],
-        modelHint: '',
-        tags: [],
-        pointsCost: 0,
-        originalUrl: '',
-        authorName: '',
-        authorUrl: '',
-        sourcePlatform: '',
-        externalId: '',
-        externalSlug: '',
-        externalMetadata: {},
-      },
-    ];
-  }
-
-  @Get('export')
-  exportTemplates(
-    @Query('status') status?: TemplateStatus,
-    @Query('category') category?: string,
-  ) {
-    const where: Prisma.image_templatesWhereInput = {};
-    if (status) where.status = status;
-    if (category) where.category = category;
-    return this.service.exportForAdmin(where);
   }
 
   @Post('batch-review')

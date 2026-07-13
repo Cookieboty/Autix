@@ -40,10 +40,6 @@ function createRepository(proofCount = 1) {
       findMany: jest.fn().mockResolvedValue([{ resourceType: 'AGENT', resourceId: 'r2' }]),
       count: jest.fn().mockResolvedValue(3),
     }),
-    creator_follows: model({
-      findMany: jest.fn().mockResolvedValue([{ followerId: 'u1', creatorUserId: 'u2' }]),
-      count: jest.fn().mockResolvedValue(4),
-    }),
     userRole: model(),
     userSession: model(),
     userAccount: model(),
@@ -57,9 +53,7 @@ function createRepository(proofCount = 1) {
     resource_view_events: model(),
     resource_uv_days: model(),
     gallery_comments: model(),
-    gallery_posts: model(),
     resource_metrics: model(),
-    creator_profiles: model(),
     user: model(),
   };
   const prisma = {
@@ -95,8 +89,8 @@ describe('AuthIdentityRepository.anonymizeUserImmediately', () => {
         expect.objectContaining({ storageKey: 'avatars/u1/pending.png', reason: 'PENDING_UPLOAD_EXPIRED' }),
       ]),
     });
-    // User row + one set-based resource lock + one set-based creator lock.
-    expect(tx.$queryRaw).toHaveBeenCalledTimes(3);
+    // User row + one set-based resource lock（creator 锁随 creator_profiles 表下线一并移除）。
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
     const rawSql = tx.$executeRaw.mock.calls
       .map(([query]: [{ strings?: readonly string[] } | TemplateStringsArray]) => {
         const strings = Array.isArray(query)

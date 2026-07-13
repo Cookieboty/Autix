@@ -168,7 +168,7 @@ export class ImageGenerationFlowService {
   ): Promise<ResolvedImageRequest> {
     const template = (await this.imageTemplatesService.findById(
       input.templateId,
-    )) as { prompt: string; title?: string | null; externalId?: string | null };
+    )) as { prompt: string; title?: string | null };
     const variables = input.variables ?? {};
     const mode = resolveImageRequestMode(input);
     const modelConfig = await this.modelConfigService.getConfigForOrchestrator(
@@ -608,7 +608,7 @@ export class ImageGenerationFlowService {
         persistedRequest,
         uploadedImages,
         Date.now() - startedAt,
-        { confirmHoldId: holdId, membershipLevel, heldImageCount: normalizedCount },
+        { confirmHoldId: holdId, membershipLevel, heldImageCount: normalizedCount, appliedSettings },
       );
 
       const generationId = resolvePersistedGenerationId(
@@ -669,7 +669,12 @@ export class ImageGenerationFlowService {
     request: ResolvedImageRequest,
     images: string[],
     durationMs: number,
-    options?: { confirmHoldId?: string | null; membershipLevel?: number; heldImageCount?: number },
+    options?: {
+      confirmHoldId?: string | null;
+      membershipLevel?: number;
+      heldImageCount?: number;
+      appliedSettings?: AppliedImageSettings;
+    },
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
@@ -706,6 +711,7 @@ export class ImageGenerationFlowService {
           durationMs,
           sourceImages: normalizedSourceImages,
           referenceImages: normalizedReferenceImages,
+          appliedSettings: options?.appliedSettings,
         }),
         options?.confirmHoldId
           ? async (tx) => {

@@ -6,12 +6,10 @@ import {
   Coins,
   Gift,
   Images,
-  ImageIcon,
   Plus,
   ShieldCheck,
   ShoppingBag,
   Trophy,
-  Video,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '../theme';
@@ -144,10 +142,10 @@ export function AppSidebar({
   };
 
   const normalizedPathname = normalizePathname(pathname);
-  // 练武场/资源市场/绘制 菜单暂时隐藏（/draw 页面已注释），保留 active 判定以便日后恢复
+  // 资源市场/绘制 菜单暂时隐藏（/draw 页面已注释），保留 active 判定以便日后恢复
   // const isMarketplace =
   //   normalizedPathname.startsWith('/marketplace') ||
-  //   normalizedPathname.startsWith('/community');
+  //   normalizedPathname.startsWith('/');
   const isChatRoute =
     normalizedPathname.startsWith('/c/') || normalizedPathname.startsWith('/chat');
   const isAuthenticated = Boolean(user);
@@ -165,7 +163,7 @@ export function AppSidebar({
 
   const handleLogout = () => {
     logout();
-    router.push('/community');
+    router.push('/');
   };
 
   const userAny = user as
@@ -181,7 +179,7 @@ export function AppSidebar({
   const isMaterials = normalizedPathname.startsWith('/materials');
   // const isDraw = normalizedPathname === '/draw';
   const publicHrefs = React.useMemo(
-    () => new Set(['/community', '/marketplace/image-templates', '/marketplace/video-templates', '/docs']),
+    () => new Set(['/', '/marketplace/image-templates', '/marketplace/video-templates', '/docs']),
     [],
   );
   const requestLogin = React.useCallback(() => {
@@ -198,35 +196,16 @@ export function AppSidebar({
             active: false,
             action: isAuthenticated ? handleNewChat : () => requestLogin(),
           },
-          // 练武场菜单暂时隐藏
         ]
       : []),
     // 资源市场菜单暂时隐藏
     // {
     //   label: t('marketplace'),
     //   icon: Store,
-    //   href: '/community',
+    //   href: '/',
     //   active: isMarketplace,
     // },
-    {
-      label: t('imageWorkbench'),
-      icon: ImageIcon,
-      href: '/workbench/image',
-      active: normalizedPathname === '/workbench/image',
-    },
-    // 绘制菜单暂时隐藏（/draw 页面已注释）
-    // {
-    //   label: t('drawWorkspace'),
-    //   icon: Brush,
-    //   href: '/draw',
-    //   active: isDraw,
-    // },
-    {
-      label: t('videoWorkbench'),
-      icon: Video,
-      href: '/workbench/video',
-      active: normalizedPathname === '/workbench/video',
-    },
+    // 图片/视频工作台、广场菜单及对应页面已移除
     {
       label: t('materialLibrary'),
       icon: Images,
@@ -236,7 +215,7 @@ export function AppSidebar({
     {
       label: t('myContent'),
       icon: BookOpen,
-      href: '/resources?tab=acquired',
+      href: '/resources?tab=generations',
       active: isResources,
     },
   ];
@@ -293,10 +272,10 @@ export function AppSidebar({
       <Sidebar variant="inset" collapsible="icon" {...sidebarProps}>
         <AppSidebarHeader
           brandLabel={brandLabel}
-          homeHref={chatEnabled ? '/chat' : '/community'}
+          homeHref="/"
           collapseLabel={t('collapseSidebar')}
           expandLabel={t('expandSidebar')}
-          onNavigateHome={() => router.push(chatEnabled ? '/chat' : '/community')}
+          onNavigateHome={() => router.push('/')}
         />
 
         <SidebarContent className="group-data-[collapsible=icon]:gap-1">

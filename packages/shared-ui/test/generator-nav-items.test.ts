@@ -44,11 +44,9 @@ describe('buildGeneratorNavItems', () => {
     expect(items[0]?.active).toBe(true);
   });
 
-  test('ends with the community entry after video', () => {
+  test('ends with the video entry; community entry is gone', () => {
     const items = buildGeneratorNavItems('image');
-    const communityIndex = items.findIndex((i) => i.key === 'community');
-    const videoIndex = items.findIndex((i) => i.key === 'video');
-    expect(communityIndex).toBeGreaterThan(videoIndex);
-    expect(items[items.length - 1]?.key).toBe('community');
+    expect(items.some((i) => i.key === 'community')).toBe(false);
+    expect(items[items.length - 1]?.key).toBe('video');
   });
 });

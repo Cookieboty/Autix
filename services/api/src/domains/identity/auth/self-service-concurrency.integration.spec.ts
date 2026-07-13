@@ -143,16 +143,6 @@ describeDatabase('user self-service PostgreSQL concurrency', () => {
         accessToken: 'sensitive-token',
       },
     });
-    await prisma.creator_profiles.create({
-      data: {
-        userId: user.id,
-        handle: `${user.id}-handle`,
-        displayName: 'Sensitive Creator',
-        avatar: 'https://example.com/sensitive.png',
-        bio: 'Sensitive Bio',
-        externalLinks: { website: 'https://sensitive.example.com' },
-      },
-    });
     await prisma.user_risk_profiles.create({
       data: {
         userId: user.id,
@@ -206,13 +196,6 @@ describeDatabase('user self-service PostgreSQL concurrency', () => {
     expect(await prisma.step_up_proofs.count({ where: { userId: user.id } })).toBe(0);
     expect(await prisma.pending_uploads.count({ where: { ownerUserId: user.id } })).toBe(0);
 
-    const creator = await prisma.creator_profiles.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(creator).toMatchObject({
-      displayName: 'Deleted user',
-      avatar: null,
-      bio: null,
-      externalLinks: null,
-    });
     const risk = await prisma.user_risk_profiles.findUniqueOrThrow({ where: { userId: user.id } });
     expect(risk.topSignals).toBeNull();
     expect(risk.blockedReason).toBeNull();

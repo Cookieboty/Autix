@@ -1,8 +1,4 @@
-import {
-  GalleryStatus,
-  ResourceType,
-  TemplateStatus,
-} from '../../platform/prisma/generated';
+import { ResourceType, TemplateStatus } from '../../platform/prisma/generated';
 import { BatchJobRepository } from './batch-job.repository';
 import { BatchJobService } from './batch-job.service';
 
@@ -17,7 +13,6 @@ interface TplRecord {
 function makeMockPrisma() {
   const jobs = new Map<string, any>();
   const imageStore = new Map<string, TplRecord>();
-  const galleryStore = new Map<string, TplRecord>();
   let jobSeq = 0;
 
   const tplDelegate = (store: Map<string, TplRecord>) => ({
@@ -50,15 +45,6 @@ function makeMockPrisma() {
   const prisma = {
     _jobs: jobs,
     _imageStore: imageStore,
-    _galleryStore: galleryStore,
-    gallery_posts: {
-      create: async ({ data }: { data: any }) => {
-        const id = `gallery-${galleryStore.size + 1}`;
-        const rec = { id, ...data };
-        galleryStore.set(id, rec);
-        return rec;
-      },
-    },
     batch_jobs: {
       create: async ({ data }: { data: any }) => {
         const id = `job-${++jobSeq}`;
@@ -76,9 +62,6 @@ function makeMockPrisma() {
       findMany: async () => [...jobs.values()],
       count: async () => jobs.size,
     },
-    user: {
-      findUnique: async () => ({ username: 'admin', realName: 'Admin User', avatar: null }),
-    },
     image_templates: tplDelegate(imageStore),
     video_templates: tplDelegate(new Map()),
   };
@@ -87,16 +70,11 @@ function makeMockPrisma() {
 
 const noopSse = { emit: async () => undefined };
 
-function makeService(overrides?: { migration?: any; prisma?: any }) {
+function makeService(overrides?: { prisma?: any }) {
   const prisma = overrides?.prisma ?? makeMockPrisma();
-  const migration =
-    overrides?.migration ??
-    {
-      migrateMediaFields: async (data: Record<string, any>) => ({ data, errors: [] }),
-    };
   const repository = new BatchJobRepository(prisma as any);
-  const service = new BatchJobService(repository, noopSse as any, migration as any, prisma as any);
-  return { service, prisma, migration };
+  const service = new BatchJobService(repository, noopSse as any);
+  return { service, prisma };
 }
 
 describe('BatchJobService', () => {
@@ -104,137 +82,14 @@ describe('BatchJobService', () => {
     const { service, prisma } = makeService();
     const { jobId } = await service.createAndProcess(
       'user-1',
-      'IMPORT',
+      'DELETE',
       ResourceType.IMAGE_TEMPLATE,
-      { items: [{ title: 'A' }] },
+      { ids: ['a'] },
     );
     expect(jobId).toBeTruthy();
     const job = await prisma.batch_jobs.findUnique({ where: { id: jobId } });
     expect(job.userId).toBe('user-1');
     expect(job.total).toBe(1);
-  });
-
-  it('processImport creates templates and counts failures', async () => {
-    const failingMigration = {
-      migrateMediaFields: async (data: Record<string, any>) => {
-        if (data.title === 'BAD') throw new Error('migration boom');
-        return { data, errors: data.title === 'WARN' ? ['cover: 404'] : [] };
-      },
-    };
-    const { service, prisma } = makeService({ migration: failingMigration });
-    prisma._jobs.set('job-x', { id: 'job-x' });
-
-    await (service as any).processImport('job-x', ResourceType.IMAGE_TEMPLATE, 'user-1', [
-      { title: 'A' },
-      { title: 'WARN' },
-      { title: 'BAD' },
-    ]);
-
-    const created = [...prisma._imageStore.values()];
-    // A and WARN succeed (2 created), BAD fails during migration
-    expect(created.length).toBe(2);
-    const sample = created.find((c) => c.title === 'A');
-    expect(sample?.status).toBe(TemplateStatus.PENDING);
-    expect(sample?.authorId).toBe('user-1');
-
-    const job = prisma._jobs.get('job-x');
-    expect(job.processed).toBe(2);
-    expect(job.failed).toBe(1);
-    // both WARN (migrate warning) and BAD (failure) appear in errorLog
-    expect(job.errorLog.length).toBe(2);
-  });
-
-  it('processImport updates existing record when externalId+sourcePlatform match', async () => {
-    const { service, prisma } = makeService();
-    prisma._jobs.set('job-dup', { id: 'job-dup' });
-
-    // First import
-    await (service as any).processImport('job-dup', ResourceType.IMAGE_TEMPLATE, 'user-1', [
-      { title: 'Original', externalId: 'ext-1', sourcePlatform: 'civitai' },
-    ]);
-    expect(prisma._imageStore.size).toBe(1);
-    const original = [...prisma._imageStore.values()][0];
-    expect(original.title).toBe('Original');
-    expect(original.status).toBe(TemplateStatus.PENDING);
-
-    // Simulate approval
-    original.status = TemplateStatus.APPROVED;
-
-    // Second import with same externalId+sourcePlatform → should update, not create
-    prisma._jobs.set('job-dup2', { id: 'job-dup2' });
-    await (service as any).processImport('job-dup2', ResourceType.IMAGE_TEMPLATE, 'user-1', [
-      { title: 'Updated', externalId: 'ext-1', sourcePlatform: 'civitai' },
-    ]);
-    expect(prisma._imageStore.size).toBe(1);
-    const updated = prisma._imageStore.get(original.id);
-    expect(updated?.title).toBe('Updated');
-    // status should NOT be reset
-    expect(updated?.status).toBe(TemplateStatus.APPROVED);
-  });
-
-  it('processImport creates new record when externalId is absent', async () => {
-    const { service, prisma } = makeService();
-    prisma._jobs.set('job-no-ext', { id: 'job-no-ext' });
-
-    await (service as any).processImport('job-no-ext', ResourceType.IMAGE_TEMPLATE, 'user-1', [
-      { title: 'No ExtId A' },
-      { title: 'No ExtId B' },
-    ]);
-    expect(prisma._imageStore.size).toBe(2);
-  });
-
-  it('processImport randomizes gallery publishedAt within the previous 7 days by default', async () => {
-    const { service, prisma } = makeService();
-    prisma._jobs.set('job-gallery-random', { id: 'job-gallery-random' });
-    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-
-    const before = Date.now();
-    try {
-      await (service as any).processImport(
-        'job-gallery-random',
-        ResourceType.GALLERY_POST,
-        'admin-1',
-        [{ title: 'Gallery Random', kind: 'IMAGE', mediaUrls: ['https://example.com/a.jpg'] }],
-      );
-    } finally {
-      randomSpy.mockRestore();
-    }
-    const after = Date.now();
-
-    const created = [...prisma._galleryStore.values()];
-    expect(created.length).toBe(1);
-    const post = created[0];
-    expect(post.status).toBe(GalleryStatus.PUBLISHED);
-    expect(post.authorId).toBe('admin-1');
-    const publishedAt = post.publishedAt;
-    expect(publishedAt).toBeInstanceOf(Date);
-    expect(publishedAt.getTime()).toBeGreaterThanOrEqual(before - sevenDaysMs);
-    expect(publishedAt.getTime()).toBeLessThanOrEqual(after);
-    expect(publishedAt.getTime()).toBeGreaterThanOrEqual(before - sevenDaysMs * 0.5 - 1000);
-    expect(publishedAt.getTime()).toBeLessThanOrEqual(after - sevenDaysMs * 0.5 + 1000);
-  });
-
-  it('gallery 导入的发布人固定为当前上传用户，忽略导入文件里的作者字段', async () => {
-    const { service, prisma } = makeService();
-    prisma._jobs.set('job-gallery-author', { id: 'job-gallery-author' });
-
-    await (service as any).processImport('job-gallery-author', ResourceType.GALLERY_POST, 'admin-1', [
-      {
-        title: 'Author From Uploader',
-        kind: 'IMAGE',
-        mediaUrls: ['https://example.com/a.jpg'],
-        // 导入文件里的作者信息必须被忽略
-        authorId: 'file-author-999',
-        authorName: 'Someone Else',
-        authorSnapshot: { displayName: 'Someone Else', at: '2020-01-01T00:00:00.000Z' },
-      },
-    ]);
-
-    const post = [...prisma._galleryStore.values()][0];
-    expect(post.authorId).toBe('admin-1');
-    expect(post.authorSnapshot).toMatchObject({ displayName: 'Admin User' });
-    expect(post.authorSnapshot.displayName).not.toBe('Someone Else');
   });
 
   it('processBatchReview maps approve/reject/revise to the right status', async () => {

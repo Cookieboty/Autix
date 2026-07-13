@@ -28,14 +28,44 @@ function parseResourceType(typeStr: string): ResourceType {
 }
 
 /**
- * P1-1：通用互动的写路径（like/favorite/share）禁止直接作用于 GALLERY_POST——
- * gallery.service.ts 在 /gallery/:id/like|favorite 前会先校验作品存在且 PUBLISHED，
- * 若走这条通用路径会绕过该校验，允许对不存在/DRAFT/HIDDEN 的作品留下孤立指标行。
- * 读路径（GET metrics）不受影响，仍对全部类型开放。
+ * 拥有专属受守卫路由的资源类型：这些类型的 like/favorite 写路径**必须**走各自的
+ * 专属端点，那里才有存在性/可见性校验：
+ *   - GALLERY_POST      → /gallery/:id/like|favorite（仅 PUBLISHED）
+ *   - IMAGE_TEMPLATE    → /marketplace/image-templates/:id/favorite（公开可见守卫，Plan B Task 5）
+ *   - VIDEO_TEMPLATE    → /marketplace/video-templates/:id/favorite（同上）
+ * 走通用 /resources/:type/:id/like|favorite 会绕过这些守卫，允许对不存在/未过审/
+ * DRAFT/HIDDEN/SYSTEM 的资源留下孤立/被放大的指标行。
+ *
+ * 安全修复（Plan C Task 10 复审）：Plan C Task 10 把模板 favoriteCount 展示改读
+ * resource_metrics（正是本通用端点写入的表），使该越权从"孤立指标"升级为"可对
+ * 非 APPROVED / SYSTEM 模板刷高展示计数"的实时漏洞。原 assertNotGalleryWrite 只挡
+ * GALLERY_POST，故扩展为 assertNotDedicatedResource，同样拦下两类模板。
+ *
+ * SKILL/MCP/AGENT 无专属可见性守卫、本就合法复用通用端点，继续放行。
+ * 读路径（GET metrics）与 share（无专属分享路由，且仅计数）不受影响。
  */
-function assertNotGalleryWrite(type: ResourceType): void {
+const DEDICATED_ROUTE_RESOURCE_TYPES = new Set<ResourceType>([
+  ResourceType.GALLERY_POST,
+  ResourceType.IMAGE_TEMPLATE,
+  ResourceType.VIDEO_TEMPLATE,
+]);
+
+function assertNotDedicatedResource(type: ResourceType): void {
+  if (DEDICATED_ROUTE_RESOURCE_TYPES.has(type)) {
+    throw new BadRequestException(
+      `${type} 互动请走其专属端点（/gallery|/marketplace/image-templates|/marketplace/video-templates 的 :id/like|favorite）`,
+    );
+  }
+}
+
+/**
+ * P1-1：share 为公开、无专属分享路由的纯计数写入，仅沿用原 GALLERY_POST 拦截
+ * （gallery 分享另有其入口），不扩展到模板——模板没有替代分享路由，扩展会直接
+ * 断掉模板分享功能。
+ */
+function assertNotGalleryShare(type: ResourceType): void {
   if (type === ResourceType.GALLERY_POST) {
-    throw new BadRequestException('gallery 互动请走 /gallery/:id/like|favorite');
+    throw new BadRequestException('gallery 互动请走 /gallery 专属端点');
   }
 }
 
@@ -59,7 +89,7 @@ export class ResourceMetricsController {
   ) {
     const userId = getCurrentUserId(user);
     const type = parseResourceType(typeStr);
-    assertNotGalleryWrite(type);
+    assertNotDedicatedResource(type);
     return this.service.like(userId, type, id);
   }
 
@@ -72,7 +102,7 @@ export class ResourceMetricsController {
   ) {
     const userId = getCurrentUserId(user);
     const type = parseResourceType(typeStr);
-    assertNotGalleryWrite(type);
+    assertNotDedicatedResource(type);
     return this.service.unlike(userId, type, id);
   }
 
@@ -85,7 +115,7 @@ export class ResourceMetricsController {
   ) {
     const userId = getCurrentUserId(user);
     const type = parseResourceType(typeStr);
-    assertNotGalleryWrite(type);
+    assertNotDedicatedResource(type);
     return this.service.favorite(userId, type, id);
   }
 
@@ -98,7 +128,7 @@ export class ResourceMetricsController {
   ) {
     const userId = getCurrentUserId(user);
     const type = parseResourceType(typeStr);
-    assertNotGalleryWrite(type);
+    assertNotDedicatedResource(type);
     return this.service.unfavorite(userId, type, id);
   }
 
@@ -108,7 +138,7 @@ export class ResourceMetricsController {
   @HttpCode(HttpStatus.OK)
   share(@Param('type') typeStr: string, @Param('id') id: string) {
     const type = parseResourceType(typeStr);
-    assertNotGalleryWrite(type);
+    assertNotGalleryShare(type);
     return this.service.share(type, id);
   }
 }

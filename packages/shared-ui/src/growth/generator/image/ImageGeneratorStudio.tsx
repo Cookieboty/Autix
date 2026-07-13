@@ -60,6 +60,7 @@ export function ImageGeneratorStudio({
   modelsLoading,
   onModelChange,
   initialMode = 'history',
+  initialPrompt,
 }: {
   items: PublicGrowthMediaItem[];
   imageCapability: ImageModelCapability;
@@ -70,6 +71,8 @@ export function ImageGeneratorStudio({
   modelsLoading: boolean;
   onModelChange: (modelId: string) => void;
   initialMode?: ImageStudioMode;
+  /** Plan C Task 12：广场「recreate」跳转预填 prompt——复用 appliedTemplate 机制，仅挂载时应用一次。 */
+  initialPrompt?: string | null;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const [mode, setMode] = useState<ImageStudioMode>(initialMode);
@@ -170,6 +173,17 @@ export function ImageGeneratorStudio({
       cancelled = true;
     };
   }, [isAuthenticated]);
+
+  // 广场「recreate」跳转预填：挂载时若带 initialPrompt 则应用一次（不随后续 props 变化重复触发）。
+  useEffect(() => {
+    if (!initialPrompt) return;
+    setAppliedTemplate({
+      id: `recreate-init-${Date.now()}`,
+      title: initialPrompt.slice(0, 40),
+      prompt: initialPrompt,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const useTemplatePrompt = (template: ImageTemplate) => {
     const prompt = resolveTemplatePrompt(template) || template.prompt;

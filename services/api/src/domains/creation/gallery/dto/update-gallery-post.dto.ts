@@ -59,7 +59,7 @@ export class UpdateGalleryPostDto {
   durationSec?: number;
 
   @IsOptional()
-  @IsIn(['USER_UPLOAD', 'FROM_GENERATION', 'FROM_TEMPLATE', 'ADMIN_CURATED'])
+  @IsIn(['USER_UPLOAD', 'FROM_GENERATION', 'FROM_TEMPLATE'])
   sourceType?: GallerySource;
 
   @IsOptional()

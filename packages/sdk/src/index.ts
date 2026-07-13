@@ -13,7 +13,6 @@ export * from './modules/materials.api';
 export * from './modules/canvas.api';
 export * from './modules/document.api';
 export * from './modules/admin.api';
-export * from './modules/public-growth.api';
 export * from './modules/security.api';
 
 export { chatApi, userApi } from './client';

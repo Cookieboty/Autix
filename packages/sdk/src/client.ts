@@ -396,7 +396,19 @@ export interface MaterialAsset {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+  /** Plan C Task 1/10：素材库来源维度——上传 / 收藏耦合 / 浏览历史保存，四元唯一含 sourceResourceType+sourceId。 */
+  librarySource: MaterialLibrarySource;
+  sourceResourceType?: MetricResourceType | null;
+  /**
+   * Plan C Task 11：list() 才附带的派生字段（deriveSourceState 批量计算）——
+   * 'available'（可用）/'unpublished'（Gallery 已下架）/'blocked'（来源不可公开访问）/'missing'（引用已丢失）。
+   * UPLOAD 素材恒 'available'（不引用外部资源）。create/update 等单条写接口不返回该字段。
+   */
+  sourceState?: MaterialSourceState;
 }
+
+export type MaterialLibrarySource = 'UPLOAD' | 'FAVORITE' | 'HISTORY';
+export type MaterialSourceState = 'available' | 'unpublished' | 'blocked' | 'missing';
 
 export interface MaterialEntitlement {
   canAdd: boolean;
@@ -451,10 +463,36 @@ export interface MaterialFolderSidebar {
   rootAssetCount: number;
 }
 
+/** Plan C Task 11：GET /materials/history 单条——原始浏览历史三元组，无标题/封面等预览信息。 */
+export interface MaterialHistoryItem {
+  id: string;
+  resourceType: MetricResourceType;
+  resourceId: string;
+  viewedAt: string;
+}
+
+export interface MaterialHistoryResult {
+  items: MaterialHistoryItem[];
+  nextCursor: string | null;
+}
+
 export const materialsApi = {
   entitlement: () => chatApi.get<MaterialEntitlement>('/api/materials/entitlement'),
-  list: (params?: { type?: MaterialAssetType | 'all'; search?: string; page?: number; pageSize?: number; folderId?: string }) =>
-    chatApi.get<MaterialListResult>('/api/materials', { params }),
+  list: (params?: {
+    type?: MaterialAssetType | 'all';
+    search?: string;
+    page?: number;
+    pageSize?: number;
+    folderId?: string;
+    /** Plan C Task 12：素材库来源筛选——不传即"全部"。 */
+    librarySource?: MaterialLibrarySource;
+  }) => chatApi.get<MaterialListResult>('/api/materials', { params }),
+  /** Plan C Task 11：去重后的浏览历史（按 resourceType+resourceId 取最近一次），游标分页。 */
+  history: (params?: { cursor?: string; take?: number }) =>
+    chatApi.get<MaterialHistoryResult>('/api/materials/history', { params }),
+  /** Plan C Task 11：从浏览历史保存素材——反伪造校验见后端 saveFromHistory（未浏览过则 400）。 */
+  saveFromHistory: (resourceType: MetricResourceType, resourceId: string) =>
+    chatApi.post<MaterialAsset>('/api/materials/save-from-history', { resourceType, resourceId }),
   uploadUrl: (data: { fileName: string; contentType: string; folder?: string }) =>
     chatApi.post<{ uploadUrl: string; publicUrl: string; key: string }>('/api/materials/upload', data),
   create: (data: MaterialCreateInput) => chatApi.post<MaterialAsset>('/api/materials', data),
@@ -465,6 +503,8 @@ export const materialsApi = {
   batchMove: (ids: string[], folderId: string | null) =>
     chatApi.post<{ count: number }>('/api/materials/batch-move', { ids, folderId }),
   use: (id: string) => chatApi.post<MaterialAsset>(`/api/materials/${id}/use`, {}),
+  /** Plan C Task 10：下载前置 sourceState 拦截（blocked/missing → 403），不要求会员。 */
+  download: (id: string) => chatApi.post<{ downloadUrl: string | null }>(`/api/materials/${id}/download`, {}),
 };
 
 // ─── Creative Canvas ──────────────────────────────────────────────────────
@@ -890,6 +930,11 @@ function makeResourceApi<TResource>(slug: MarketplaceTypeSlug) {
     like: (id: string) => chatApi.post<{ liked: boolean }>(`${base}/${id}/like`),
     favorite: (id: string) =>
       chatApi.post<{ favorited: boolean }>(`${base}/${id}/favorite`),
+    // Plan C Task 10：模板收藏改为显式 POST=favorite / DELETE=unfavorite（不再 POST toggle），
+    // 与 gallery 一致。dedicated 路由带公开可见守卫，是模板收藏的唯一正确入口
+    // （通用 /resources/:type/:id/favorite 已对模板类型 400，见 resource-metrics.controller）。
+    unfavorite: (id: string) =>
+      chatApi.delete<{ favorited: boolean }>(`${base}/${id}/favorite`),
   };
 }
 
@@ -1250,12 +1295,6 @@ function makeAdminApi<TResource>(slug: MarketplaceTypeSlug) {
       id: string,
       data: { runtimeRequirement: RuntimeReq; runtimeReason?: string },
     ) => chatApi.patch<TResource>(`${base}/${id}/runtime`, data),
-    importTemplates: (items: Record<string, any>[]) =>
-      chatApi.post<{ jobId: string }>(`${base}/import`, { items }),
-    importTemplate: () =>
-      chatApi.get<Record<string, any>[]>(`${base}/import-template`),
-    exportTemplates: (params?: { status?: string; category?: string }) =>
-      chatApi.get<TResource[]>(`${base}/export`, { params }),
     batchReview: (
       ids: string[],
       action: 'approve' | 'reject' | 'revise',
@@ -1422,80 +1461,6 @@ export interface PublicGrowthPage {
     href?: string;
   }>;
 }
-
-export interface PublicGrowthHomeSection {
-  key: string;
-  type: string;
-  title: string;
-  subtitle?: string | null;
-  layout?: string | null;
-  items: PublicGrowthMediaItem[];
-}
-
-export interface PublicGrowthHome {
-  promo: {
-    label: string;
-    href: string;
-  };
-  mediaRail: PublicGrowthMediaItem[];
-  featureMatrix: PublicGrowthFeature[];
-  banner: PublicGrowthFeature;
-  masonryItems: PublicGrowthMediaItem[];
-  tagRail: Array<{ label: string; href: string }>;
-  sections: PublicGrowthHomeSection[];
-  collections: PublicGrowthCollection[];
-}
-
-export interface PublicCollectionDetail {
-  collection: PublicGrowthCollection;
-  items: PublicGrowthMediaItem[];
-}
-
-export interface PublicCreatorProfile {
-  userId: string;
-  handle: string;
-  displayName: string;
-  avatar?: string | null;
-  bio?: string | null;
-  followerCount: number;
-  followingCount: number;
-  externalLinks?: Record<string, unknown> | null;
-}
-
-export interface PublicCreatorDetail {
-  profile: PublicCreatorProfile;
-}
-
-export interface PublicGrowthEventInput {
-  eventName: string;
-  path: string;
-  anonymousId?: string;
-  source?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export const publicGrowthApi = {
-  home: (params?: { locale?: string }) =>
-    chatApi.get<PublicGrowthHome>('/api/public/home', { params }),
-  page: (slug: string, params?: { locale?: string }) =>
-    chatApi.get<PublicGrowthPage>(`/api/public/pages/${encodeURIComponent(slug)}`, { params }),
-  collections: (params?: { kind?: PublicCollectionKind; locale?: string }) =>
-    chatApi.get<PublicGrowthCollection[]>('/api/public/collections', { params }),
-  collection: (slug: string, params?: { locale?: string }) =>
-    chatApi.get<PublicCollectionDetail>(
-      `/api/public/collections/${encodeURIComponent(slug)}`,
-      { params },
-    ),
-  creator: (handle: string) =>
-    chatApi.get<PublicCreatorDetail>(`/api/public/creators/${encodeURIComponent(handle)}`),
-  followCreator: (handle: string) =>
-    chatApi.post<{ followed: boolean; followerCount: number }>(
-      `/api/public/creators/${encodeURIComponent(handle)}/follow`,
-      {},
-    ),
-  event: (data: PublicGrowthEventInput) =>
-    chatApi.post('/api/public/events', data),
-};
 
 // ── Acquisitions (Skills/MCP/Agents 一次性获取) ──────────────────────────
 export interface UserResourceAcquisition {
@@ -2199,10 +2164,6 @@ export const galleryAdminApi = {
     chatApi.post<GalleryPostAdminItem>(`/api/admin/gallery/${id}/remove`, {}),
   resolveReport: (reportId: string, status: 'RESOLVED' | 'DISMISSED') =>
     chatApi.post(`/api/admin/gallery/reports/${reportId}/resolve`, { status }),
-  importGallery: (items: Record<string, any>[]) =>
-    chatApi.post<{ jobId: string }>('/api/admin/gallery/import', { items }),
-  getGalleryImportTemplate: () =>
-    chatApi.get<Record<string, any>[]>('/api/admin/gallery/import-template'),
 };
 
 // ── Gallery 公开热度 Feed (首页图片/视频画廊消费) ───────────────────────────
@@ -2235,6 +2196,9 @@ export interface GalleryFeedItem {
     viewCount: number;
     referenceCount: number;
   };
+  /** Plan C Task 8：登录态附本页每项的 viewer 态；匿名访问时省略（不是 false，是 undefined）。 */
+  liked?: boolean;
+  favorited?: boolean;
 }
 
 export interface GalleryFeedResult {
@@ -2242,10 +2206,131 @@ export interface GalleryFeedResult {
   nextCursor: string | null;
 }
 
+// ── Gallery 详情 / 发布 / 下架 / recreate / download (Task 12 前端接线) ─────────
+
+export type GallerySourceTypeInput = 'USER_UPLOAD' | 'FROM_GENERATION' | 'FROM_TEMPLATE';
+
+/** POST /gallery 请求体：先审后发投稿。FROM_GENERATION 的 mediaUrls/coverImage 由服务端从生成记录派生，无需携带。 */
+export interface CreateGalleryPostInput {
+  kind: 'IMAGE' | 'VIDEO';
+  title?: string;
+  description?: string;
+  category: string;
+  tags?: string[];
+  coverImage?: string;
+  mediaUrls?: string[];
+  aspectRatio?: string;
+  durationSec?: number;
+  sourceType: GallerySourceTypeInput;
+  imageTemplateId?: string;
+  videoTemplateId?: string;
+  imageGenerationId?: string;
+  videoGenerationId?: string;
+  /** FROM_GENERATION 投稿时是否允许把生成参考图一并公开快照，见后端 CreateGalleryPostDto。 */
+  allowPublicReference?: boolean;
+}
+
+/**
+ * gallery_posts 全字段（不含 author 关联行）——POST /gallery、POST /gallery/:id/{unpublish,republish}
+ * 均直接回这条原始行（repo.create / repo.update 的结果），与 GalleryPostAdminItem（管理端裁剪视图）不同。
+ */
+export interface GalleryDetailPost {
+  id: string;
+  kind: 'IMAGE' | 'VIDEO';
+  title: string | null;
+  description: string | null;
+  category: string;
+  tags: string[];
+  coverImage: string | null;
+  mediaUrls: string[];
+  aspectRatio: string | null;
+  durationSec: number | null;
+  prompt: string | null;
+  model: string | null;
+  width: number | null;
+  height: number | null;
+  referenceImage: string | null;
+  sourceType: GallerySourceTypeInput | 'ADMIN_CURATED';
+  imageTemplateId: string | null;
+  videoTemplateId: string | null;
+  imageGenerationId: string | null;
+  videoGenerationId: string | null;
+  status: GalleryAdminStatus | 'DRAFT' | 'UNPUBLISHED';
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  rejectReason: string | null;
+  isFeatured: boolean;
+  isPinned: boolean;
+  authorId: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+}
+
+/** GET /gallery/:id 详情聚合里的作者：presentAuthor 脱敏结果（已注销用户不回传 username/PII）。 */
+export interface GalleryDetailAuthor {
+  userId: string;
+  nickname: string;
+  avatar: string | null;
+}
+
+export interface GalleryDetailMetrics {
+  pvCount: number;
+  uvCount: number;
+  viewCount: number;
+  downloadCount: number;
+  referenceCount: number;
+  likeCount: number;
+  favoriteCount: number;
+}
+
+export interface GalleryDetailResult {
+  post: GalleryDetailPost;
+  author: GalleryDetailAuthor;
+  metrics: GalleryDetailMetrics;
+  /** 仅登录态返回；匿名详情省略该字段。 */
+  viewer?: { liked: boolean; favorited: boolean };
+}
+
+export interface GalleryRecreateResult {
+  prompt: string | null;
+  model: string | null;
+  /** null 时不含该字段（brief 约定），非引用授权/无参考图时同样不返回。 */
+  referenceImage?: string;
+}
+
 export const galleryApi = {
   /** GET /api/gallery/feed?kind=IMAGE|VIDEO —— 公开，只返回已发布(PUBLISHED)作品。 */
   feed: (params?: { kind?: 'IMAGE' | 'VIDEO'; cursor?: string; limit?: number }) =>
     chatApi.get<GalleryFeedResult>('/api/gallery/feed', { params }),
+  /** GET /api/gallery/feed 的别名，命名对齐 Task 12 brief 的 galleryApi.getFeed。 */
+  getFeed: (params?: { kind?: 'IMAGE' | 'VIDEO'; cursor?: string; limit?: number }) =>
+    chatApi.get<GalleryFeedResult>('/api/gallery/feed', { params }),
+  /** GET /api/gallery/:id —— 公开详情聚合（匿名仅 PUBLISHED；作者/管理员可预览非公开态）。 */
+  getDetail: (id: string) => chatApi.get<GalleryDetailResult>(`/api/gallery/${id}`),
+  /** POST /api/gallery —— 先审后发投稿（直接进 PENDING，非直接可见）。 */
+  publish: (data: CreateGalleryPostInput) =>
+    chatApi.post<GalleryDetailPost>('/api/gallery', data),
+  /** POST /api/gallery/:id/unpublish —— 作者本人下架已发布作品，PUBLISHED → UNPUBLISHED。 */
+  unpublish: (id: string) =>
+    chatApi.post<GalleryDetailPost>(`/api/gallery/${id}/unpublish`, {}),
+  /** POST /api/gallery/:id/republish —— 作者本人把已下架作品重新提交审核，UNPUBLISHED → PENDING。 */
+  republish: (id: string) =>
+    chatApi.post<GalleryDetailPost>(`/api/gallery/${id}/republish`, {}),
+  /** POST /api/gallery/:id/recreate —— 仅已发布作品；返回该作品创作快照并记一次引用。 */
+  recreate: (id: string) => chatApi.post<GalleryRecreateResult>(`/api/gallery/${id}/recreate`, {}),
+  /** POST /api/gallery/:id/download —— 仅已发布作品；同步记一次下载事件 + INCR downloadCount。 */
+  download: (id: string) => chatApi.post<{ downloadUrl: string }>(`/api/gallery/${id}/download`, {}),
+  // Plan C Task 10：Gallery 的专属受守卫互动路由（仅 PUBLISHED 可点赞/收藏；favorite 经
+  // FavoriteLibraryService 单事务耦合）。like/unlike 为显式 POST/DELETE，返回完整指标；
+  // favorite/unfavorite 为显式 POST/DELETE，返回 { favorited }。通用 /resources 端点已对
+  // GALLERY_POST 返回 400，故这些专属路由是 Gallery 互动的唯一正确入口（供 Task 12 详情视图接入）。
+  like: (id: string) => chatApi.post<ResourceMetrics>(`/api/gallery/${id}/like`),
+  unlike: (id: string) => chatApi.delete<ResourceMetrics>(`/api/gallery/${id}/like`),
+  favorite: (id: string) =>
+    chatApi.post<{ favorited: boolean }>(`/api/gallery/${id}/favorite`),
+  unfavorite: (id: string) =>
+    chatApi.delete<{ favorited: boolean }>(`/api/gallery/${id}/favorite`),
 };
 
 // ── Featured Slots Admin (运营位编排) ────────────────────────────────────

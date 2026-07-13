@@ -36,10 +36,7 @@ describe('MarketplaceQueryRepository', () => {
     expect(prisma.image_templates.findMany).toHaveBeenCalledWith({
       where: {
         status: TemplateStatus.APPROVED,
-        OR: [
-          { externalId: null },
-          { externalId: { not: 'system:image-workbench' } },
-        ],
+        sourceType: { not: 'SYSTEM' },
       },
       orderBy: [
         { isHot: 'desc' },

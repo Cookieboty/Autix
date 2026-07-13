@@ -11,8 +11,6 @@ export default function AdminTemplatesPage() {
         resourceSwitcher: true,
         batchActions: true,
         hot: true,
-        importExport: true,
-        sourceInfo: true,
       }}
       />
   );

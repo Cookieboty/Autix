@@ -9,7 +9,8 @@ export type GalleryStatus =
   | 'PUBLISHED'
   | 'REJECTED'
   | 'HIDDEN'
-  | 'REMOVED';
+  | 'REMOVED'
+  | 'UNPUBLISHED';
 
 export type GallerySource =
   | 'USER_UPLOAD'
