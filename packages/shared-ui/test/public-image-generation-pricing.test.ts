@@ -6,7 +6,7 @@ import {
 import type { ModelConfigItem } from '@autix/shared-store';
 
 describe('buildPublicImageEstimateInput', () => {
-  test('wraps quality/resolution/quantity/referenceImages into params, modelConfigId at top level', () => {
+  test('wraps quality/resolution/referenceImages into params, modelConfigId at top level', () => {
     const model = { id: 'model-1', provider: 'compatible', model: 'compatible-image' } as unknown as ModelConfigItem;
 
     const input = buildPublicImageEstimateInput({
@@ -22,7 +22,6 @@ describe('buildPublicImageEstimateInput', () => {
       params: {
         quality: 'high',
         resolution: '1K',
-        quantity: 3,
         referenceImages: 1,
       },
     });

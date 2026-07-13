@@ -324,19 +324,18 @@ describe('image generation flow helpers', () => {
       referenceImages: [{ url: 'https://img.test/ref.png' }],
     };
 
-    expect(buildImageGenerationEstimateInput(request, 3)).toEqual({
+    // quantity 不再进计价 params —— schema 不声明它，也没有任何计价 term 引用它。
+    expect(buildImageGenerationEstimateInput(request)).toEqual({
       taskType: 'image_generation',
       modelConfigId: 'image-model-1',
       params: {
         quality: 'hd',
         resolution: '1K',
-        quantity: 3,
         referenceImages: 1,
       },
     });
-    expect(buildImageGenerationEstimateInput(request, 3, 2)).toMatchObject({
+    expect(buildImageGenerationEstimateInput(request, 2)).toMatchObject({
       taskType: 'image_generation',
-      params: expect.objectContaining({ quantity: 3 }),
       membershipLevel: 2,
     });
     expect(

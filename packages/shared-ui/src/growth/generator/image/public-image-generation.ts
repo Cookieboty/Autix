@@ -58,12 +58,6 @@ export function buildPublicImageGenerationSettings(input: {
   };
 }
 
-function normalizeImageQuantity(value: unknown) {
-  const quantity = Number(value);
-  if (!Number.isFinite(quantity) || quantity <= 0) return 1;
-  return Math.max(1, Math.floor(quantity));
-}
-
 export function buildPublicImageEstimateInput({
   settings,
   model,
@@ -82,7 +76,6 @@ export function buildPublicImageEstimateInput({
     params: {
       ...(settings.quality ? { quality: String(settings.quality) } : {}),
       ...(pricingResolution ? { resolution: pricingResolution } : {}),
-      quantity: normalizeImageQuantity(settings.count),
       referenceImages,
     },
   };

@@ -9,12 +9,6 @@ export function resolveImagePricingTaskType(_settings: ImageStudioModelSettings)
   return 'image_generation';
 }
 
-function normalizeImageQuantity(value: unknown) {
-  const quantity = Number(value);
-  if (!Number.isFinite(quantity) || quantity <= 0) return 1;
-  return Math.max(1, Math.floor(quantity));
-}
-
 export function buildImageWorkbenchEstimateInput({
   settings,
   model,
@@ -33,7 +27,6 @@ export function buildImageWorkbenchEstimateInput({
     params: {
       ...(settings.quality ? { quality: String(settings.quality) } : {}),
       ...(pricingResolution ? { resolution: pricingResolution } : {}),
-      quantity: normalizeImageQuantity(settings.count),
       referenceImages,
     },
   };

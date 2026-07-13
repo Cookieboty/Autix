@@ -35,7 +35,6 @@ export function buildImageEstimateInput(params: {
     params: {
       ...(params.quality ? { quality: params.quality } : {}),
       ...(pricingResolution ? { resolution: pricingResolution } : {}),
-      quantity: 1,
       referenceImages: params.referenceImageCount,
     },
   };

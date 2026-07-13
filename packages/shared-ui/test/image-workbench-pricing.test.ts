@@ -16,7 +16,7 @@ const settings: ImageStudioModelSettings = {
 };
 
 describe('buildImageWorkbenchEstimateInput', () => {
-  test('wraps quality/resolution/quantity/referenceImages into params, modelConfigId at top level', () => {
+  test('wraps quality/resolution/referenceImages into params, modelConfigId at top level', () => {
     const model = { id: 'model-1', provider: 'compatible', model: 'compatible-image' } as unknown as ModelConfigItem;
 
     const input = buildImageWorkbenchEstimateInput({
@@ -32,7 +32,6 @@ describe('buildImageWorkbenchEstimateInput', () => {
       params: {
         quality: 'high',
         resolution: '1K',
-        quantity: 2,
         referenceImages: 2,
       },
     });

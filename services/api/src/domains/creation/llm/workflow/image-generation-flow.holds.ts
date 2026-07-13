@@ -109,9 +109,15 @@ export function buildPromptOptimizeHoldCreateInput(input: {
   };
 }
 
+/**
+ * 计价入参。**不含张数**：pricingSchema 只描述「一张」的参数与价格，多图的
+ * 「单张价 × 张数」由 image-generation-flow.service 在 createHold 时算
+ * （见该处注释）。此前这里往 params 里塞了一个 quantity —— schema 不声明它、
+ * 没有任何计价 term 引用它，是纯死参数，只因 schema 没写 additionalProperties:false
+ * 才没报错。
+ */
 export function buildImageGenerationEstimateInput(
   request: ResolvedImageRequest,
-  quantity: number,
   membershipLevel?: number,
 ) {
   const pricingResolution = resolveImagePricingResolution(request.settings?.size);
@@ -121,8 +127,6 @@ export function buildImageGenerationEstimateInput(
     params: {
       quality: normalizeImageQuality(request.settings?.quality),
       ...(pricingResolution ? { resolution: pricingResolution } : {}),
-      // FIX-24: 按真实数量计费（hold 用请求数量、settle 用实际产图数量），不再硬编码 1。
-      quantity: Math.max(1, quantity),
       referenceImages:
         (request.sourceImages?.length ?? 0) +
         (request.referenceImages?.length ?? 0),

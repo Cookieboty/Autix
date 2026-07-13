@@ -16,14 +16,17 @@ const settings: ImageStudioModelSettings = {
 };
 
 describe('image workbench count', () => {
-  test('uses settings count for pricing quantity', () => {
+  test('does NOT send count into pricing params — quantity 是死参数', () => {
+    // pricingSchema 只描述「一张」的参数与价格，schema 里根本没有 quantity 属性、
+    // 也没有任何计价 term 引用它。张数由业务逻辑在下单时吃掉（hold = 单张价 × 张数）。
+    // 变异测试：若有人把 quantity 加回去，这条会红。
     expect(
       buildImageWorkbenchEstimateInput({
         settings,
         selectedModelId: 'compatible-image',
         referenceImages: 0,
-      }).params.quantity,
-    ).toBe(3);
+      }).params,
+    ).not.toHaveProperty('quantity');
   });
 
   test('sends count in generation settings', () => {

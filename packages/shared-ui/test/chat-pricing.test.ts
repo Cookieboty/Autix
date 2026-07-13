@@ -33,7 +33,6 @@ describe('chat pricing helpers', () => {
       params: {
         quality: 'hd',
         resolution: '1K',
-        quantity: 1,
         referenceImages: 2,
       },
     });

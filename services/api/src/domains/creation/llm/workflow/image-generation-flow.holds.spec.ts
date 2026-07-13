@@ -63,11 +63,14 @@ describe('buildImageGenerationEstimateInput', () => {
       referenceImages: [],
     } as never;
 
-    const input = buildImageGenerationEstimateInput(request, 2, 3);
+    const input = buildImageGenerationEstimateInput(request, 3);
 
     expect(input.taskType).toBe('image_generation');
     expect(input.modelConfigId).toBe('model-1');
-    expect(input.params).toMatchObject({ quality: 'high', quantity: 2, referenceImages: 1 });
+    // 张数不进计价 params：pricingSchema 只描述「一张」的价格，多图的
+    // 「单张价 × 张数」由 flow.service 在 createHold 时算。
+    expect(input.params).toMatchObject({ quality: 'high', referenceImages: 1 });
+    expect('quantity' in input.params).toBe(false);
     expect(input.membershipLevel).toBe(3);
   });
 
@@ -77,7 +80,7 @@ describe('buildImageGenerationEstimateInput', () => {
       settings: { quality: 'high', size: '1024x1024' },
     } as never;
 
-    const input = buildImageGenerationEstimateInput(request, 1);
+    const input = buildImageGenerationEstimateInput(request);
 
     expect('membershipLevel' in input).toBe(false);
   });

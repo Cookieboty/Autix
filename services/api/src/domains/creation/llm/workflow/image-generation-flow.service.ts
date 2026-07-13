@@ -581,7 +581,7 @@ export class ImageGenerationFlowService {
     assertImageHardLimits({ size: request.settings?.size, count: normalizedCount });
 
     const estimate = await this.pointsService.estimateCost(
-      buildImageGenerationEstimateInput(request, normalizedCount, membershipLevel),
+      buildImageGenerationEstimateInput(request, membershipLevel),
     );
 
     const { hold } = await this.pointsService.createHold(
