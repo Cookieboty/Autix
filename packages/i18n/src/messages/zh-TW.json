@@ -5143,5 +5143,12 @@
       "save": "儲存",
       "dryRunTotal": "總計：{total}"
     }
+  },
+  "cookieConsent": {
+    "message": "我們使用 Cookie 來提升您的體驗並分析網站使用情況。",
+    "accept": "接受",
+    "reject": "拒絕",
+    "learnMore": "隱私政策",
+    "ariaLabel": "Cookie 同意"
   }
 }

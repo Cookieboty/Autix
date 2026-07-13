@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
-import { Bookmark, Clock, Sparkles, Star, Upload } from 'lucide-react';
+import { Bookmark, Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type {
   MeTab,
@@ -59,10 +59,8 @@ export type ProfileResourceRowLabels = {
   generationRecord: string;
 };
 
+// 只保留生成历史与浏览历史:我的资源/我的发布/我的收藏 tab 已移除(收藏入口收敛到素材库)。
 export const DEFAULT_PROFILE_RESOURCE_TABS: ProfileResourcesTab[] = [
-  { key: 'acquired', labelKey: 'tabAcquired', icon: <Sparkles className="h-3.5 w-3.5" /> },
-  { key: 'favorites', labelKey: 'tabFavorites', icon: <Star className="h-3.5 w-3.5" /> },
-  { key: 'published', labelKey: 'tabPublished', icon: <Upload className="h-3.5 w-3.5" /> },
   { key: 'generations', labelKey: 'tabGenerations', icon: <Clock className="h-3.5 w-3.5" /> },
   { key: 'history', labelKey: 'tabHistory', icon: <Bookmark className="h-3.5 w-3.5" /> },
 ];

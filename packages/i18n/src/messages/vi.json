@@ -5143,5 +5143,12 @@
       "save": "Lưu",
       "dryRunTotal": "Tổng: {total}"
     }
+  },
+  "cookieConsent": {
+    "message": "Chúng tôi sử dụng cookie để cải thiện trải nghiệm của bạn và phân tích việc sử dụng trang web.",
+    "accept": "Chấp nhận",
+    "reject": "Từ chối",
+    "learnMore": "Chính sách bảo mật",
+    "ariaLabel": "Sự đồng ý về cookie"
   }
 }

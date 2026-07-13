@@ -5143,5 +5143,12 @@
       "save": "Save",
       "dryRunTotal": "Total: {total}"
     }
+  },
+  "cookieConsent": {
+    "message": "We use cookies to enhance your experience and analyze site usage.",
+    "accept": "Accept",
+    "reject": "Reject",
+    "learnMore": "Privacy Policy",
+    "ariaLabel": "Cookie consent"
   }
 }

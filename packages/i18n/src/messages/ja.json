@@ -5143,5 +5143,12 @@
       "save": "保存",
       "dryRunTotal": "合計: {total}"
     }
+  },
+  "cookieConsent": {
+    "message": "当サイトでは、体験の向上とサイト利用状況の分析のために Cookie を使用しています。",
+    "accept": "同意する",
+    "reject": "拒否する",
+    "learnMore": "プライバシーポリシー",
+    "ariaLabel": "Cookie の同意"
   }
 }

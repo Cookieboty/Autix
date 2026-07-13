@@ -19,7 +19,7 @@ export default function ResourcesPage() {
   const searchParams = useSearchParams();
 
   const PAGE_SIZE = 30;
-  const initialTab = (searchParams?.get('tab') as MeTab) || 'acquired';
+  const initialTab = (searchParams?.get('tab') as MeTab) || 'generations';
   const [tab, setTab] = useState<MeTab>(initialTab);
   const [page, setPage] = useState(1);
   const { items, total, isInitialLoading } = useProfileResourcesController(tab, {

@@ -2140,6 +2140,11 @@ model gallery_posts {
   authorId String
   author   User   @relation("GalleryPostAuthor", fields: [authorId], references: [id], onDelete: Restrict)
 
+  // 媒体外链 → R2 迁移由独立后台 worker 异步完成（存量外链导入内容 mediaMigrated=false 排队搬运）。
+  // 新投稿的媒体已由站内来源守卫保证是站内 URL，故默认 true（无需搬运）。
+  mediaMigrated          Boolean @default(true)
+  mediaMigrationAttempts Int     @default(0)
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
@@ -2153,6 +2158,7 @@ model gallery_posts {
   @@index([authorId])
   @@index([imageTemplateId])
   @@index([videoTemplateId])
+  @@index([mediaMigrated, mediaMigrationAttempts])
 }
 
 model gallery_comments {

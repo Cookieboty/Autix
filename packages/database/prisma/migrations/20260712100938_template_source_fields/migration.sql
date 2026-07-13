@@ -5,19 +5,28 @@ CREATE TYPE "ImageTemplateSource" AS ENUM ('ADMIN_CREATED', 'GALLERY_CONVERSION'
 CREATE TYPE "VideoTemplateSource" AS ENUM ('ADMIN_CREATED', 'SYSTEM');
 
 -- AlterTable
-ALTER TABLE "image_templates" ADD COLUMN     "createdById" TEXT NOT NULL,
+-- createdById 对存量行无来源，回填为既有 authorId(NOT NULL, 已指向 users)后再收紧为 NOT NULL
+ALTER TABLE "image_templates" ADD COLUMN     "createdById" TEXT,
 ADD COLUMN     "reviewedAt" TIMESTAMP(3),
 ADD COLUMN     "reviewedById" TEXT,
 ADD COLUMN     "sourceGalleryPostId" TEXT,
 ADD COLUMN     "sourceType" "ImageTemplateSource" NOT NULL DEFAULT 'ADMIN_CREATED',
 ADD COLUMN     "systemKey" TEXT;
 
+UPDATE "image_templates" SET "createdById" = "authorId" WHERE "createdById" IS NULL;
+
+ALTER TABLE "image_templates" ALTER COLUMN "createdById" SET NOT NULL;
+
 -- AlterTable
-ALTER TABLE "video_templates" ADD COLUMN     "createdById" TEXT NOT NULL,
+ALTER TABLE "video_templates" ADD COLUMN     "createdById" TEXT,
 ADD COLUMN     "reviewedAt" TIMESTAMP(3),
 ADD COLUMN     "reviewedById" TEXT,
 ADD COLUMN     "sourceType" "VideoTemplateSource" NOT NULL DEFAULT 'ADMIN_CREATED',
 ADD COLUMN     "systemKey" TEXT;
+
+UPDATE "video_templates" SET "createdById" = "authorId" WHERE "createdById" IS NULL;
+
+ALTER TABLE "video_templates" ALTER COLUMN "createdById" SET NOT NULL;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "image_templates_sourceGalleryPostId_key" ON "image_templates"("sourceGalleryPostId");

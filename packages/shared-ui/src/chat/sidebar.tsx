@@ -93,7 +93,7 @@ export function ChatSidebar({
   };
 
   const isArena = pathname.startsWith('/arena');
-  const isMarketplace = pathname.startsWith('/marketplace') || pathname.startsWith('/community');
+  const isMarketplace = pathname.startsWith('/marketplace');
   const isChatRoute = pathname.startsWith('/c/') || pathname.startsWith('/chat');
 
   useEffect(() => {
@@ -124,7 +124,7 @@ export function ChatSidebar({
 
   const handleLogout = () => {
     logout();
-    router.push('/community');
+    router.push('/');
   };
 
   const displayName = (user as any)?.realName || (user as any)?.username || t('defaultUser');
@@ -148,7 +148,7 @@ export function ChatSidebar({
 
   const defaultNavItems: SidebarNavItem[] = [
     { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
-    { label: t('marketplace'), icon: Store, href: '/community', active: isMarketplace },
+    { label: t('marketplace'), icon: Store, href: '/', active: isMarketplace },
   ];
   const navItems = customNavItems ?? defaultNavItems;
   const isAuthenticated = Boolean(user);
@@ -181,7 +181,7 @@ export function ChatSidebar({
               action();
               return;
             }
-            if (!isAuthenticated && href && href !== '/community') {
+            if (!isAuthenticated && href && href !== '/') {
               openAuthModal({ mode: 'entry' });
               return;
             }

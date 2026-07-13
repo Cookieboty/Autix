@@ -15,7 +15,6 @@ export type PublicGeneratorAppNavKind = 'home' | 'image' | 'video' | 'community'
 function deriveNavKind(pathname: string): PublicGeneratorAppNavKind {
   if (pathname.startsWith('/ai/image')) return 'image';
   if (pathname.startsWith('/ai/video')) return 'video';
-  if (pathname.startsWith('/community')) return 'community';
   return 'home';
 }
 

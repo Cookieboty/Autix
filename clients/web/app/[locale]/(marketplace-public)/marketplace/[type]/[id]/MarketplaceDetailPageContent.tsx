@@ -211,26 +211,7 @@ export default function MarketplaceDetailPageContent() {
     }
   }
 
-  function applyToWorkbench() {
-    if (!ensureAuthed()) return;
-    if (type === 'IMAGE_TEMPLATE') {
-      router.push(`/workbench/image?templateId=${encodeURIComponent(id)}`);
-      return;
-    }
-    if (type === 'VIDEO_TEMPLATE') {
-      router.push(`/workbench/video?templateId=${encodeURIComponent(id)}`);
-    }
-  }
-
   const actions: ResourceDetailAction[] = [];
-  if (isTemplateResource) {
-    actions.push({
-      id: 'workbench',
-      label: t('detail.workbench'),
-      disabled: desktopBlocked,
-      onClick: applyToWorkbench,
-    });
-  }
   if (chatEnabled) {
     actions.push({
       id: 'chat',

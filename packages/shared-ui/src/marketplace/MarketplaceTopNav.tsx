@@ -47,7 +47,7 @@ export function MarketplaceTopNav({
   currentSlug = '',
   onSearch,
   onPublished,
-  homeHref = '/community',
+  homeHref = '/',
 }: {
   currentSlug?: string;
   onSearch?: (q: string) => void;

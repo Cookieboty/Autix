@@ -35,6 +35,19 @@ export class GalleryRepository {
     return this.prisma.gallery_posts.update({ where: { id }, data });
   }
 
+  /**
+   * 媒体外链 → R2 迁移 worker 的取件队列：未搬运且未达尝试上限的作品，先到先搬。
+   * 命中 @@index([mediaMigrated, mediaMigrationAttempts])。
+   */
+  async findPostsPendingMediaMigration(maxAttempts: number, take: number) {
+    return this.prisma.gallery_posts.findMany({
+      where: { mediaMigrated: false, mediaMigrationAttempts: { lt: maxAttempts } },
+      orderBy: { createdAt: 'asc' },
+      take,
+      select: { id: true, coverImage: true, mediaUrls: true, mediaMigrationAttempts: true },
+    });
+  }
+
   /** 待审列表（PENDING，createdAt 升序，游标为上一页最后一条的 id）。 */
   async findPendingPage(cursor: string | undefined, take: number) {
     return this.findByStatusPage(GalleryStatus.PENDING, cursor, take);

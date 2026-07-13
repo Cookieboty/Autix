@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { Providers } from '@/components/providers';
+import { CookieConsent } from '@/components/CookieConsent';
 import { PlatformBinder } from '@/components/PlatformBinder';
 import { WebLocaleRouting } from '@/components/WebLocaleRouting';
 import { routing } from '@/i18n/routing';
@@ -78,6 +79,7 @@ export default async function RootLayout({
               <PlatformBinder>
                 <Suspense fallback={null}>{children}</Suspense>
               </PlatformBinder>
+              <CookieConsent />
             </Providers>
           </WebLocaleRouting>
         </NextIntlClientProvider>
