@@ -31,7 +31,6 @@ import { NotificationsPage } from './pages/notifications';
 
 // Templates (legacy 路径,通过 redirect 兼容)
 import { TemplateDetailPage } from './pages/templates';
-import { TemplatesWorkspacePage } from './pages/templates/workspace';
 
 // Marketplace (多资源)
 import { MarketplaceHomePage } from './pages/marketplace';
@@ -121,14 +120,12 @@ function AppRoutes() {
           <Route path="/templates" element={<Navigate to="/marketplace/image-templates" replace />} />
           <Route path="/templates/mine" element={<Navigate to="/profile?tab=published" replace />} />
           <Route path="/templates/submit" element={<Navigate to="/marketplace/image-templates" replace />} />
-          <Route path="/templates/workspace/:id" element={<TemplatesWorkspacePage />} />
           <Route path="/templates/:id" element={<TemplateDetailPage />} />
 
           {/* Marketplace 多资源 */}
           <Route path="/marketplace" element={<MarketplaceHomePage />} />
           <Route path="/marketplace/:type" element={<MarketplaceListPage />} />
           <Route path="/marketplace/:type/:id" element={<MarketplaceDetailPage />} />
-          <Route path="/marketplace/image-templates/:id/workspace" element={<TemplatesWorkspacePage />} />
           <Route path="/profile" element={<ProfilePage />} />
 
           {/* Membership */}

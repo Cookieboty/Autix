@@ -716,31 +716,6 @@
     "templatesFound": "{count} templates found",
     "viewSource": "View Source"
   },
-  "templateWorkspace": {
-    "backToDetail": "Back to Details",
-    "templateLabel": "Template",
-    "modelLabel": "Model",
-    "customModelPlaceholder": "Enter custom model name...",
-    "currentPrompt": "Current Prompt",
-    "variablesLabel": "Variables",
-    "generateResults": "Generated Results",
-    "regenerate": "Regenerate",
-    "generating": "Generating...",
-    "clickToGenerate": "Click the button below to start generating",
-    "generateNow": "Generate Now",
-    "multiTurnRefine": "Multi-turn Refinement",
-    "refinePlaceholder": "Describe modifications, e.g.: brighter background, change hair color...",
-    "generatedNumber": "Generated {n}",
-    "imageNumber": "Image {n}",
-    "you": "You",
-    "ai": "AI",
-    "refinedPromptPrefix": "Refined Prompt:",
-    "regeneratedMessage": "Images have been regenerated based on your request",
-    "generationFailed": "Generation failed",
-    "sendToCurrentConversation": "Send to current conversation",
-    "generatedImageAlt": "Generated image {index}",
-    "sendGeneratedResultMessage": "I generated results with an image template. Continue the discussion based on these outputs.\n\nPrompt: {prompt}\n\n{images}"
-  },
   "document": {
     "uploadFile": "Upload File",
     "processing": "Processing"

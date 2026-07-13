@@ -716,31 +716,6 @@
     "templatesFound": "发现 {count} 个模板",
     "viewSource": "查看来源"
   },
-  "templateWorkspace": {
-    "backToDetail": "返回详情",
-    "templateLabel": "模板",
-    "modelLabel": "模型",
-    "customModelPlaceholder": "输入自定义模型名...",
-    "currentPrompt": "当前 Prompt",
-    "variablesLabel": "变量",
-    "generateResults": "生成结果",
-    "regenerate": "重新生成",
-    "generating": "正在生成中...",
-    "clickToGenerate": "点击下方按钮开始生成",
-    "generateNow": "立即生成",
-    "multiTurnRefine": "多轮微调",
-    "refinePlaceholder": "描述修改要求，如: 背景更亮一些、换个发色...",
-    "generatedNumber": "生成 {n}",
-    "imageNumber": "图片 {n}",
-    "you": "You",
-    "ai": "AI",
-    "refinedPromptPrefix": "优化后的 Prompt:",
-    "regeneratedMessage": "已根据您的要求重新生成图片",
-    "generationFailed": "生成失败",
-    "sendToCurrentConversation": "发送到当前会话",
-    "generatedImageAlt": "生成图 {index}",
-    "sendGeneratedResultMessage": "我用图片模板生成了结果，继续基于这些内容讨论。\n\n提示词：{prompt}\n\n{images}"
-  },
   "document": {
     "uploadFile": "上传文件",
     "processing": "处理中"

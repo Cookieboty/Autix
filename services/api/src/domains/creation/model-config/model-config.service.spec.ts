@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { ModelConfigRepository } from './model-config.repository';
-import { ModelConfigService } from './model-config.service';
+import { ModelConfigService, toClientModelConfig } from './model-config.service';
 import type { LocalizedText } from '@autix/domain/model';
 
 /**
@@ -584,5 +584,65 @@ describe('ModelConfigService.updateSystemModel — schema validation scope', () 
       where: { id: 'model-1' },
       data: expect.objectContaining({ priority: 5 }),
     });
+  });
+});
+
+describe('toClientModelConfig', () => {
+  const record = {
+    id: 'm1',
+    name: 'GPT Image 2',
+    model: 'gpt-image-2',
+    provider: 'gateway',
+    type: 'general',
+    capabilities: ['image'],
+    isDefault: true,
+    visibility: 'public',
+    paramsSchema: { type: 'object', properties: {} },
+    pricingSchema: { terms: [] },
+    description: { en: 'x' },
+    apiKey: 'sk-column-secret',
+    baseUrl: 'https://internal-gateway.local',
+    metadata: {
+      modelFamily: 'gpt-image',
+      protocolKey: 'openai-images',
+      operations: ['generate', 'edit'],
+      limits: { maxCount: 1 },
+      apiKey: 'sk-metadata-secret',
+      baseUrl: 'https://internal-gateway.local',
+      someFutureInternalField: 'must-not-leak',
+    },
+  } as never;
+
+  it('never returns apiKey or baseUrl, from either the column or metadata', () => {
+    const dto = toClientModelConfig(record);
+    const meta = dto.metadata as Record<string, unknown>;
+    expect(dto.apiKey).toBeUndefined();
+    expect(dto.baseUrl).toBeUndefined();
+    expect(meta.apiKey).toBeUndefined();
+    expect(meta.baseUrl).toBeUndefined();
+  });
+
+  it('drops unknown metadata fields by default (whitelist, not blacklist)', () => {
+    // 这是白名单相对黑名单的全部意义：将来新增的内部字段默认不外泄，
+    // 不需要有人记得去补一条 strip。
+    const dto = toClientModelConfig(record);
+    const meta = dto.metadata as Record<string, unknown>;
+    expect(meta.someFutureInternalField).toBeUndefined();
+  });
+
+  it('keeps the fields the frontend actually needs', () => {
+    const dto = toClientModelConfig(record);
+    const meta = dto.metadata as Record<string, unknown>;
+    expect(meta.modelFamily).toBe('gpt-image');
+    expect(meta.protocolKey).toBe('openai-images');
+    expect(meta.operations).toEqual(['generate', 'edit']);
+    expect(meta.limits).toEqual({ maxCount: 1 });
+    expect(dto.paramsSchema).toEqual({ type: 'object', properties: {} });
+  });
+
+  it('yields an empty metadata object when metadata is absent or not an object', () => {
+    expect(toClientModelConfig({ id: 'm1' } as never).metadata).toEqual({});
+    expect(toClientModelConfig({ id: 'm1', metadata: 'nope' } as never).metadata).toEqual({});
+    expect(toClientModelConfig({ id: 'm1', metadata: [1, 2] } as never).metadata).toEqual({});
   });
 });

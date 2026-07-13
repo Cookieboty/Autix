@@ -8,13 +8,10 @@ import {
   Logger,
   Param,
   Post,
-  Req,
-  Res,
   UseGuards,
   BadRequestException,
   Query,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
@@ -23,15 +20,6 @@ import type { AuthUser } from '@autix/domain';
 import { mergeAnnotationDataUrls } from './image-merge-annotation';
 import { GalleryService } from '../gallery/gallery.service';
 import { buildGallerySubmissionDto, deriveAspectRatioFromSize } from './image-gen-gallery-submission';
-
-function extractAmuxHeaders(req: Request) {
-  const baseUrl = req.headers['x-amux-base-url'] as string | undefined;
-  const apiKey = req.headers['x-amux-api-key'] as string | undefined;
-  if (!baseUrl || !apiKey) {
-    throw new BadRequestException('Missing X-Amux-Base-Url or X-Amux-Api-Key headers');
-  }
-  return { baseUrl: baseUrl.replace(/\/$/, ''), apiKey };
-}
 
 @UseGuards(JwtAuthGuard)
 @Controller('image-gen')
@@ -229,82 +217,5 @@ export class ImageGenController {
         `gallery auto-submit failed: user=${userId} reason=${err instanceof Error ? err.message : String(err)}`,
       );
     }
-  }
-
-  @Post('generate')
-  async generate(@Req() req: Request, @Res() res: Response) {
-    const { baseUrl, apiKey } = extractAmuxHeaders(req);
-    const upstream = await fetch(`${baseUrl}/v1/images/generations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(req.body),
-    });
-
-    res.status(upstream.status);
-    const contentType = upstream.headers.get('content-type');
-    if (contentType) res.setHeader('Content-Type', contentType);
-
-    const data = await upstream.arrayBuffer();
-    res.send(Buffer.from(data));
-  }
-
-  @Post('chat')
-  async chat(@Req() req: Request, @Res() res: Response) {
-    const { baseUrl, apiKey } = extractAmuxHeaders(req);
-    const body = req.body;
-    const isStream = body?.stream === true;
-
-    const upstream = await fetch(`${baseUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    res.status(upstream.status);
-
-    if (isStream && upstream.body) {
-      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.flushHeaders();
-
-      const reader = upstream.body.getReader();
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(value);
-        }
-      } finally {
-        res.end();
-      }
-      return;
-    }
-
-    const contentType = upstream.headers.get('content-type');
-    if (contentType) res.setHeader('Content-Type', contentType);
-    const data = await upstream.arrayBuffer();
-    res.send(Buffer.from(data));
-  }
-
-  @Get('models')
-  async models(@Req() req: Request, @Res() res: Response) {
-    const { baseUrl, apiKey } = extractAmuxHeaders(req);
-    const upstream = await fetch(`${baseUrl}/v1/models`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-
-    res.status(upstream.status);
-    const contentType = upstream.headers.get('content-type');
-    if (contentType) res.setHeader('Content-Type', contentType);
-
-    const data = await upstream.arrayBuffer();
-    res.send(Buffer.from(data));
   }
 }

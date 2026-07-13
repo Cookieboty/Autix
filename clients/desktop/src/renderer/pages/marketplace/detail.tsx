@@ -91,9 +91,7 @@ export function MarketplaceDetailPage() {
   const isAcquirable = ACQUIRABLE_SLUGS.has(slug);
 
   let primaryLabel = t('detail.primary.acquireAndActivateCurrentSession');
-  if (slug === 'image-templates' || slug === 'video-templates') {
-    primaryLabel = t('detail.primary.generateAndReturnToSession');
-  } else if (!acquired && !isFree) {
+  if (!acquired && !isFree) {
     primaryLabel = t('detail.primary.acquireWithPoints', { points: resource.pointsCost });
   }
 
@@ -101,14 +99,6 @@ export function MarketplaceDetailPage() {
 
   async function handlePrimary() {
     if (desktopBlocked || !resource) return;
-    if (slug === 'image-templates') {
-      navigate(`/marketplace/image-templates/${resourceId}/workspace${activeSessionId ? `?conversationId=${activeSessionId}` : ''}`);
-      return;
-    }
-    if (slug === 'video-templates') {
-      navigate(`/marketplace/video-templates/${resourceId}/workspace${activeSessionId ? `?conversationId=${activeSessionId}` : ''}`);
-      return;
-    }
 
     setAcquiring(true);
     setError(null);

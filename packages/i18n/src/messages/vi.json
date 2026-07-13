@@ -703,31 +703,6 @@
     "templatesFound": "Tìm thấy {count} mẫu",
     "viewSource": "Xem nguồn"
   },
-  "templateWorkspace": {
-    "backToDetail": "Quay lại chi tiết",
-    "templateLabel": "Template",
-    "modelLabel": "Mô hình",
-    "customModelPlaceholder": "Nhập tên mô hình tùy chỉnh...",
-    "currentPrompt": "Prompt hiện tại",
-    "variablesLabel": "Biến",
-    "generateResults": "Kết quả tạo",
-    "regenerate": "Tạo lại",
-    "generating": "Đang tạo...",
-    "clickToGenerate": "Nhấn nút bên dưới để bắt đầu tạo",
-    "generateNow": "Tạo ngay",
-    "multiTurnRefine": "Tinh chỉnh nhiều lượt",
-    "refinePlaceholder": "Mô tả chỉnh sửa, ví dụ: nền sáng hơn, đổi màu tóc...",
-    "generatedNumber": "Kết quả {n}",
-    "imageNumber": "Hình ảnh {n}",
-    "you": "Bạn",
-    "ai": "AI",
-    "refinedPromptPrefix": "Prompt đã tinh chỉnh:",
-    "regeneratedMessage": "Hình ảnh đã được tạo lại theo yêu cầu của bạn",
-    "generationFailed": "Tạo thất bại",
-    "sendToCurrentConversation": "Gửi vào cuộc trò chuyện hiện tại",
-    "generatedImageAlt": "Ảnh đã tạo {index}",
-    "sendGeneratedResultMessage": "Tôi đã tạo kết quả bằng mẫu ảnh. Hãy tiếp tục thảo luận dựa trên các nội dung này.\n\nPrompt: {prompt}\n\n{images}"
-  },
   "document": {
     "uploadFile": "Tải lên tệp",
     "processing": "Đang xử lý"

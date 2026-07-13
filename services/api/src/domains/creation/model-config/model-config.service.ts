@@ -69,6 +69,12 @@ type ModelConfigResponseWithMetadata = {
   metadata?: Prisma.JsonValue | null;
 };
 
+/**
+ * 管理员路径的脱敏：只摘掉 apiKey 列。
+ *
+ * 后台需要看到 baseUrl / 内部 metadata 等配置字段才能配模型，所以它**不用**下面
+ * 那个面向用户的白名单 DTO。两条路径的口径不同，是有意为之。
+ */
 function stripModelConfigCredentials<T extends ModelConfigResponseWithMetadata>(record: T) {
   const { apiKey: _apiKey, ...rest } = record;
   return {
@@ -81,6 +87,64 @@ function stripMetadataCredentials(value: Prisma.JsonValue | null | undefined) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
   const { apiKey: _apiKey, ...rest } = value as Record<string, unknown>;
   return rest as Prisma.JsonObject;
+}
+
+/** 面向客户端的 metadata 白名单。**未列出的字段一律不返回**——包括将来新增的
+ *  未知字段。这是白名单相对黑名单的全部意义：不需要有人记得去补 strip。 */
+const CLIENT_METADATA_FIELDS = [
+  'modelFamily',
+  'protocolKey',
+  'operations',
+  'limits',
+] as const;
+
+/** 面向客户端的模型字段白名单。apiKey 列、baseUrl 列、以及任何内部字段都不在其中。 */
+const CLIENT_MODEL_FIELDS = [
+  'id',
+  'name',
+  'model',
+  'provider',
+  'type',
+  'priority',
+  'isDefault',
+  'visibility',
+  'capabilities',
+  'paramsSchema',
+  'pricingSchema',
+  'schemaVersion',
+  'description',
+  'allowedMembershipLevels',
+] as const;
+
+function pick(source: object, keys: readonly string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (key in source) out[key] = (source as Record<string, unknown>)[key];
+  }
+  return out;
+}
+
+/**
+ * 把一条 model_configs 记录投影成面向客户端的形状。
+ *
+ * ⚠ 安全底线（spec 口径 6）：API 密钥永不对任何用户暴露。这里用**白名单**而非
+ * 黑名单——历史上的 stripMetadataCredentials 只剥 metadata.apiKey、漏了
+ * metadata.baseUrl，而面向登录用户的 findAvailableModels 干脆一次都没调它。
+ * 白名单让这两类错误都不可能再发生。
+ *
+ * 投影只在 **HTTP 边界（controller）** 上做，不在 service 方法里做：
+ * findAvailableModels / findDefaultByTypeForUser 同时被 image-generation-flow、
+ * video、orchestrator 等内部服务调用，它们**需要**完整记录里的 apiKey / baseUrl
+ * 才能调上游。在 service 里脱敏会直接打断生成链路。
+ */
+export function toClientModelConfig(record: object): Record<string, unknown> {
+  const base = pick(record, CLIENT_MODEL_FIELDS);
+  const rawMeta = (record as { metadata?: unknown }).metadata;
+  base.metadata =
+    rawMeta && typeof rawMeta === 'object' && !Array.isArray(rawMeta)
+      ? pick(rawMeta as object, CLIENT_METADATA_FIELDS)
+      : {};
+  return base;
 }
 
 @Injectable()

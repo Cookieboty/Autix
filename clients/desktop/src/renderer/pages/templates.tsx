@@ -24,7 +24,6 @@ export function TemplateDetailPage() {
     <TemplateDetailView
       templateId={id}
       onBackToList={() => navigate('/templates')}
-      onOpenWorkspace={(generationId) => navigate(`/templates/workspace/${generationId}`)}
     />
   );
 }

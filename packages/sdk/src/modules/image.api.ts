@@ -1,6 +1,5 @@
 export {
   generationApi,
-  imageGenApi,
   imageGenerationApi,
   imageTemplateApi,
   imageWorkbenchApi,

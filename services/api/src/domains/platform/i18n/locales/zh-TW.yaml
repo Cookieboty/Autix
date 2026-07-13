@@ -27,4 +27,3 @@ model.not_found: "模型設定不存在: {{id}}"
 task.not_found: "任務不存在"
 task.already_read: "任務不存在或已讀"
 
-image_gen.missing_headers: "缺少 X-Amux-Base-Url 或 X-Amux-Api-Key 請求標頭"

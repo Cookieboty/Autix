@@ -703,31 +703,6 @@
     "templatesFound": "發現 {count} 個範本",
     "viewSource": "查看來源"
   },
-  "templateWorkspace": {
-    "backToDetail": "返回詳情",
-    "templateLabel": "範本",
-    "modelLabel": "模型",
-    "customModelPlaceholder": "輸入自訂模型名...",
-    "currentPrompt": "目前 Prompt",
-    "variablesLabel": "變數",
-    "generateResults": "產生結果",
-    "regenerate": "重新產生",
-    "generating": "正在產生中...",
-    "clickToGenerate": "點擊下方按鈕開始產生",
-    "generateNow": "立即產生",
-    "multiTurnRefine": "多輪微調",
-    "refinePlaceholder": "描述修改要求，如：背景更亮一些、換個髮色...",
-    "generatedNumber": "產生 {n}",
-    "imageNumber": "圖片 {n}",
-    "you": "You",
-    "ai": "AI",
-    "refinedPromptPrefix": "優化後的 Prompt：",
-    "regeneratedMessage": "已根據您的要求重新產生圖片",
-    "generationFailed": "產生失敗",
-    "sendToCurrentConversation": "傳送到目前對話",
-    "generatedImageAlt": "生成圖 {index}",
-    "sendGeneratedResultMessage": "我用圖片範本生成了結果，繼續基於這些內容討論。\n\n提示詞：{prompt}\n\n{images}"
-  },
   "document": {
     "uploadFile": "上傳檔案",
     "processing": "處理中"

@@ -126,12 +126,6 @@ export function ResourcePanel({
 
   const activate = async () => {
     if (!selected) return;
-    if (isTemplate) {
-      if (!conversationId) return;
-      router.push(`/marketplace/${type}/${selected.id}/workspace?conversationId=${conversationId}`);
-      close();
-      return;
-    }
     if (!conversationId) return;
     if (cannotRunOnWeb) return;
     setBusy(true);

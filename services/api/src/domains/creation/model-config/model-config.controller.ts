@@ -15,7 +15,7 @@ import {
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { AdminGuard } from '../../identity/auth/admin.guard';
-import { ModelConfigService } from './model-config.service';
+import { ModelConfigService, toClientModelConfig } from './model-config.service';
 import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsObject, Min } from 'class-validator';
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { Public } from '../../identity/auth/decorators/public.decorator';
@@ -162,22 +162,30 @@ class UpdateModelConfigDto {
 export class ModelConfigController {
   constructor(private readonly modelConfigService: ModelConfigService) {}
 
+  // 面向用户的三个端点一律走白名单 DTO —— 未列出的字段（含将来新增的未知字段）
+  // 一律不返回。service 方法本身返回的是完整记录：它们同时被 image-generation-flow /
+  // video / orchestrator 等内部服务调用，那些调用方需要 apiKey / baseUrl 才能调上游。
+  // 脱敏因此只能做在 HTTP 边界上，不能做进 service。
+
   @Get('available')
   async findAvailable(@CurrentUser() user: AuthUser) {
     const userId = getCurrentUserId(user);
-    return this.modelConfigService.findAvailableGeneralModels(userId);
+    const models = await this.modelConfigService.findAvailableGeneralModels(userId);
+    return models.map(toClientModelConfig);
   }
 
   @Public()
   @Get('public/available')
   async findPublicAvailable() {
-    return this.modelConfigService.findAvailablePublicModels();
+    const models = await this.modelConfigService.findAvailablePublicModels();
+    return models.map(toClientModelConfig);
   }
 
   @Get('default/:type')
   async findDefault(@CurrentUser() user: AuthUser, @Param('type') type: ModelType) {
     const userId = getCurrentUserId(user);
-    return this.modelConfigService.findDefaultByTypeForUser(type, userId);
+    const model = await this.modelConfigService.findDefaultByTypeForUser(type, userId);
+    return model ? toClientModelConfig(model) : null;
   }
 
   @Get('system')

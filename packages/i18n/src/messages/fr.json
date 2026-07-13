@@ -703,31 +703,6 @@
     "templatesFound": "{count} modèles trouvés",
     "viewSource": "Voir la source"
   },
-  "templateWorkspace": {
-    "backToDetail": "Retour aux détails",
-    "templateLabel": "Template",
-    "modelLabel": "Modèle",
-    "customModelPlaceholder": "Saisissez un nom de modèle personnalisé...",
-    "currentPrompt": "Prompt actuel",
-    "variablesLabel": "Variables",
-    "generateResults": "Résultats générés",
-    "regenerate": "Régénérer",
-    "generating": "Génération...",
-    "clickToGenerate": "Cliquez sur le bouton ci-dessous pour lancer la génération",
-    "generateNow": "Générer maintenant",
-    "multiTurnRefine": "Affinage multi-tours",
-    "refinePlaceholder": "Décrivez les modifications, ex. : arrière-plan plus lumineux, changer la couleur des cheveux...",
-    "generatedNumber": "Généré {n}",
-    "imageNumber": "Image {n}",
-    "you": "Vous",
-    "ai": "IA",
-    "refinedPromptPrefix": "Prompt affiné :",
-    "regeneratedMessage": "Les images ont été régénérées selon votre demande",
-    "generationFailed": "Échec de la génération",
-    "sendToCurrentConversation": "Envoyer à la conversation actuelle",
-    "generatedImageAlt": "Image générée {index}",
-    "sendGeneratedResultMessage": "J’ai généré des résultats avec un modèle image. Continuons la discussion à partir de ces contenus.\n\nPrompt : {prompt}\n\n{images}"
-  },
   "document": {
     "uploadFile": "Importer un fichier",
     "processing": "Traitement"

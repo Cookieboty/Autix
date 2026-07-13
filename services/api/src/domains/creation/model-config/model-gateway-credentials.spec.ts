@@ -22,47 +22,37 @@ afterEach(() => {
 });
 
 describe('resolveApiKey', () => {
-  it('prefers a non-empty model_configs value over metadata and env', () => {
+  it('prefers a non-empty model_configs value over env', () => {
     process.env.AMUX_API_KEY = 'env-key';
-    expect(
-      resolveApiKey({ apiKey: 'db-key', metadata: { apiKey: 'metadata-key' } }),
-    ).toBe('db-key');
+    expect(resolveApiKey({ apiKey: 'db-key' })).toBe('db-key');
   });
 
-  it('falls back to metadata override when the db value is null', () => {
-    process.env.AMUX_API_KEY = 'env-key';
-    expect(resolveApiKey({ apiKey: null, metadata: { apiKey: 'metadata-key' } })).toBe(
-      'metadata-key',
-    );
+  it('NEVER reads metadata.apiKey — metadata is not a credential channel', () => {
+    // 安全底线（spec 口径 6）：metadata 会被下发到客户端，绝不能兼作凭据来源。
+    // 只要这个字段还能被当作凭据读，它就还是一条泄漏路径 —— 所以是删除，不是脱敏。
+    delete process.env.AMUX_API_KEY;
+    expect(resolveApiKey({ apiKey: null, metadata: { apiKey: 'metadata-key' } })).toBeUndefined();
   });
 
-  it('treats an empty string db value as unset and falls through to metadata', () => {
+  it('does not let metadata.apiKey shadow the system gateway env', () => {
+    // 变异测试：旧实现的解析链是「列 → metadata → env」，metadata 会盖住 env。
+    // 若有人把 metadata 那一环加回去，这条会红。
     process.env.AMUX_API_KEY = 'env-key';
-    expect(resolveApiKey({ apiKey: '', metadata: { apiKey: 'metadata-key' } })).toBe(
-      'metadata-key',
-    );
+    expect(resolveApiKey({ apiKey: null, metadata: { apiKey: 'metadata-key' } })).toBe('env-key');
   });
 
-  it('treats an empty string metadata value as unset and falls through to env', () => {
+  it('treats an empty string db value as unset and falls through to env', () => {
     process.env.AMUX_API_KEY = 'env-key';
-    expect(resolveApiKey({ apiKey: '', metadata: { apiKey: '' } })).toBe('env-key');
+    expect(resolveApiKey({ apiKey: '   ' })).toBe('env-key');
   });
 
-  it('falls back to the AMUX_API_KEY env var when db and metadata are both unset', () => {
+  it('falls back to the AMUX_API_KEY env var when the column is unset', () => {
     process.env.AMUX_API_KEY = 'env-key';
     expect(resolveApiKey({ apiKey: null, metadata: undefined })).toBe('env-key');
-    // A broken implementation that returns the raw null instead of the env
-    // fallback would fail the assertion above (it would resolve to
-    // `undefined`, not `'env-key'`).
   });
 
   it('returns undefined when nothing is configured anywhere', () => {
     expect(resolveApiKey({ apiKey: null, metadata: null })).toBeUndefined();
-  });
-
-  it('ignores non-string metadata.apiKey values', () => {
-    process.env.AMUX_API_KEY = 'env-key';
-    expect(resolveApiKey({ apiKey: null, metadata: { apiKey: 123 } })).toBe('env-key');
   });
 });
 

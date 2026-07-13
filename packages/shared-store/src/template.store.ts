@@ -16,8 +16,6 @@ interface TemplateState {
   sort: 'newest' | 'popular' | 'likes';
 
   currentTemplate: PromptTemplate | null;
-  currentGeneration: TemplateGeneration | null;
-  generating: boolean;
 
   setCategory: (category: string) => void;
   setSearch: (search: string) => void;
@@ -28,17 +26,6 @@ interface TemplateState {
   updateTemplate: (id: string, data: Partial<PromptTemplate>) => Promise<void>;
   likeTemplate: (id: string) => Promise<void>;
 
-  createGeneration: (
-    templateId: string,
-    data: {
-      modelUsed: string;
-      variables: Record<string, string>;
-      referenceImage?: string;
-    },
-  ) => Promise<TemplateGeneration>;
-  fetchGeneration: (id: string) => Promise<void>;
-  setCurrentGeneration: (gen: TemplateGeneration | null) => void;
-  setGenerating: (v: boolean) => void;
 }
 
 export const useTemplateStore = create<TemplateState>((set, get) => ({
@@ -50,8 +37,6 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   search: '',
   sort: 'newest',
   currentTemplate: null,
-  currentGeneration: null,
-  generating: false,
 
   setCategory: (category) => {
     set({ category });
@@ -119,20 +104,6 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
     }
   },
 
-  createGeneration: async (templateId, data) => {
-    const res = await templateApi.createGeneration(templateId, data);
-    const gen = res.data as TemplateGeneration;
-    set({ currentGeneration: gen });
-    return gen;
-  },
-
-  fetchGeneration: async (id) => {
-    const res = await generationApi.getById(id);
-    set({ currentGeneration: res.data as TemplateGeneration });
-  },
-
-  setCurrentGeneration: (gen) => set({ currentGeneration: gen }),
-  setGenerating: (v) => set({ generating: v }),
 }));
 
 export type { PromptTemplate, TemplateGeneration, TemplateStatus } from '@autix/sdk';

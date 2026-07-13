@@ -703,31 +703,6 @@
     "templatesFound": "Найдено шаблонов: {count}",
     "viewSource": "Открыть источник"
   },
-  "templateWorkspace": {
-    "backToDetail": "Вернуться к деталям",
-    "templateLabel": "Шаблон",
-    "modelLabel": "Модель",
-    "customModelPlaceholder": "Введите имя пользовательской модели...",
-    "currentPrompt": "Текущий промпт",
-    "variablesLabel": "Переменные",
-    "generateResults": "Результаты генерации",
-    "regenerate": "Перегенерировать",
-    "generating": "Генерация...",
-    "clickToGenerate": "Нажмите кнопку ниже, чтобы начать генерацию",
-    "generateNow": "Сгенерировать сейчас",
-    "multiTurnRefine": "Многоэтапная доработка",
-    "refinePlaceholder": "Опишите изменения, например: сделать фон ярче, изменить цвет волос...",
-    "generatedNumber": "Результат {n}",
-    "imageNumber": "Изображение {n}",
-    "you": "Вы",
-    "ai": "ИИ",
-    "refinedPromptPrefix": "Улучшенный промпт:",
-    "regeneratedMessage": "Изображения перегенерированы по вашему запросу",
-    "generationFailed": "Ошибка генерации",
-    "sendToCurrentConversation": "Отправить в текущий диалог",
-    "generatedImageAlt": "Сгенерированное изображение {index}",
-    "sendGeneratedResultMessage": "Я сгенерировал результат с помощью шаблона изображения. Продолжим обсуждение на основе этих материалов.\n\nПромпт: {prompt}\n\n{images}"
-  },
   "document": {
     "uploadFile": "Загрузить файл",
     "processing": "Обработка"

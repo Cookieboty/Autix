@@ -2448,29 +2448,6 @@ export interface AdminUserPointsDetail {
   records: PointsRecord[];
 }
 
-// ── Image Generation ────────────────────────────────────────────────────
-export const imageGenApi = {
-  generate: (
-    body: Record<string, unknown>,
-    amuxConfig: { baseUrl: string; apiKey: string },
-  ) =>
-    chatApi.post('/api/image-gen/generate', body, {
-      headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
-      timeout: LLM_REQUEST_TIMEOUT_MS,
-    }),
-
-  chat: (body: Record<string, unknown>, amuxConfig: { baseUrl: string; apiKey: string }) =>
-    chatApi.post('/api/image-gen/chat', body, {
-      headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
-      timeout: LLM_REQUEST_TIMEOUT_MS,
-    }),
-
-  models: (amuxConfig: { baseUrl: string; apiKey: string }) =>
-    chatApi.get('/api/image-gen/models', {
-      headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
-    }),
-};
-
 // ── Agent Run API ──────────────────────────────────────────────────────
 export const agentRunApi = {
   getActive: (conversationId: string) =>

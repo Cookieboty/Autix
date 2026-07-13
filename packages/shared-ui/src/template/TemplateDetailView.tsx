@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Pencil, Play } from 'lucide-react';
+import { ArrowLeft, Pencil } from 'lucide-react';
 import { useAuthStore, useTemplateStore } from '@autix/shared-store';
 import { Button } from '../ui';
 import { InteractionActions, MetricsBar } from '../metrics';
@@ -18,13 +18,11 @@ const TEMPLATE_RESOURCE_TYPE = 'IMAGE_TEMPLATE' as const;
 export interface TemplateDetailViewProps {
   templateId?: string;
   onBackToList: () => void;
-  onOpenWorkspace: (generationId: string) => void;
 }
 
 export function TemplateDetailView({
   templateId,
   onBackToList,
-  onOpenWorkspace,
 }: TemplateDetailViewProps) {
   const t = useTranslations('template');
   const tCommon = useTranslations('common');
@@ -32,7 +30,6 @@ export function TemplateDetailView({
   const {
     currentTemplate: tpl,
     fetchTemplate,
-    createGeneration,
   } = useTemplateStore();
 
   const [variables, setVariables] = useState<Record<string, string>>({});
@@ -64,14 +61,6 @@ export function TemplateDetailView({
       </div>
     );
   }
-
-  const handleGenerate = async () => {
-    const gen = await createGeneration(tpl.id, {
-      modelUsed: modelUsed || 'gpt-image-2',
-      variables,
-    });
-    onOpenWorkspace(gen.id);
-  };
 
   const userId = (user as { id?: string } | null)?.id;
 
@@ -130,9 +119,6 @@ export function TemplateDetailView({
                 <Pencil className="w-4 h-4 mr-1" /> {tCommon('edit')}
               </Button>
             )}
-            <Button className="cursor-pointer" onClick={handleGenerate}>
-              <Play className="w-4 h-4 mr-1" /> {t('selectTemplateGenerate')}
-            </Button>
           </div>
         </div>
 

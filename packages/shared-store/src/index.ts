@@ -61,7 +61,6 @@ export * from './video-project.store';
 export * from './draw-board.actions';
 export * from './video-workbench.actions';
 export * from './video-share.actions';
-export * from './template-workspace.actions';
 export * from './ui.store';
 
 import { useAuthStore } from './auth.store';

@@ -703,31 +703,6 @@
     "templatesFound": "{count} 件のテンプレートが見つかりました",
     "viewSource": "ソースを表示"
   },
-  "templateWorkspace": {
-    "backToDetail": "詳細に戻る",
-    "templateLabel": "テンプレート",
-    "modelLabel": "モデル",
-    "customModelPlaceholder": "カスタムモデル名を入力...",
-    "currentPrompt": "現在のプロンプト",
-    "variablesLabel": "変数",
-    "generateResults": "生成結果",
-    "regenerate": "再生成",
-    "generating": "生成中...",
-    "clickToGenerate": "下のボタンをクリックして生成を開始",
-    "generateNow": "今すぐ生成",
-    "multiTurnRefine": "マルチターン調整",
-    "refinePlaceholder": "修正内容を記述、例：背景を明るく、髪の色を変更...",
-    "generatedNumber": "生成 {n}",
-    "imageNumber": "画像 {n}",
-    "you": "You",
-    "ai": "AI",
-    "refinedPromptPrefix": "改善されたプロンプト：",
-    "regeneratedMessage": "ご要望に基づいて画像を再生成しました",
-    "generationFailed": "生成に失敗しました",
-    "sendToCurrentConversation": "現在の会話に送信",
-    "generatedImageAlt": "生成画像 {index}",
-    "sendGeneratedResultMessage": "画像テンプレートで結果を生成しました。これらの内容をもとに続けて相談します。\n\nPrompt: {prompt}\n\n{images}"
-  },
   "document": {
     "uploadFile": "ファイルをアップロード",
     "processing": "処理中"
