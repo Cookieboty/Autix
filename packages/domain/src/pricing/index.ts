@@ -1,5 +1,6 @@
 export * from './apply-param-defaults';
 export * from './constraints';
+export * from './derive';
 export * from './evaluate';
 export * from './introspect';
 export * from './predicate';
