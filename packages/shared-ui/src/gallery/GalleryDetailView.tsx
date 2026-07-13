@@ -245,47 +245,51 @@ export function GalleryDetailView({ id }: { id: string }) {
             <StatCell label={t('metricRecreates')} value={referenceCount} />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant={liked ? 'default' : 'outline'}
-              onClick={handleLike}
-              disabled={isLiking}
-            >
-              {isLiking ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Heart className={cn('size-4', liked && 'fill-current')} />
-              )}
-              {t('like')}
-            </Button>
-            <Button
-              type="button"
-              variant={favorited ? 'default' : 'outline'}
-              onClick={handleFavorite}
-              disabled={isFavoriting}
-            >
-              {isFavoriting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Bookmark className={cn('size-4', favorited && 'fill-current')} />
-              )}
-              {t('favorite')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleRecreate} disabled={isRecreating}>
-              {isRecreating ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-              {t('recreate')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleDownload} disabled={isDownloading}>
-              {isDownloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-              {t('download')}
-              {downloadCount > 0 ? (
-                <span className="text-xs font-normal text-muted-foreground">
-                  {formatMetric(downloadCount)}
-                </span>
-              ) : null}
-            </Button>
-          </div>
+          {/* 后端 like/favorite/recreate/download 均只放行 PUBLISHED；作者预览自己未发布的作品时
+              不渲染这些按钮，否则每次点击必然 400。状态 Badge 已说明当前处于未发布态。 */}
+          {post.status === 'PUBLISHED' ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={liked ? 'default' : 'outline'}
+                onClick={handleLike}
+                disabled={isLiking}
+              >
+                {isLiking ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Heart className={cn('size-4', liked && 'fill-current')} />
+                )}
+                {t('like')}
+              </Button>
+              <Button
+                type="button"
+                variant={favorited ? 'default' : 'outline'}
+                onClick={handleFavorite}
+                disabled={isFavoriting}
+              >
+                {isFavoriting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Bookmark className={cn('size-4', favorited && 'fill-current')} />
+                )}
+                {t('favorite')}
+              </Button>
+              <Button type="button" variant="outline" onClick={handleRecreate} disabled={isRecreating}>
+                {isRecreating ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                {t('recreate')}
+              </Button>
+              <Button type="button" variant="outline" onClick={handleDownload} disabled={isDownloading}>
+                {isDownloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                {t('download')}
+                {downloadCount > 0 ? (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {formatMetric(downloadCount)}
+                  </span>
+                ) : null}
+              </Button>
+            </div>
+          ) : null}
 
           {isOwner ? (
             <div className="flex flex-wrap gap-2 border-t border-border pt-4">
