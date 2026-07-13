@@ -38,6 +38,45 @@ export interface TaskEstimateResult {
  * ceil(pointCostWeight * basePerCall) formula — that engine is being deleted, not
  * mirrored here.
  */
+/** 冻进 PricingSnapshot 的 role。缺省（未写 role）= 'both' → 保留，向后兼容存量 schema。 */
+const PRICING_ROLES = new Set(['pricing', 'both', 'derived']);
+
+/**
+ * 把参数收缩成「真正参与计价的那一份」，用于冻进 `PricingSnapshot.params`。
+ *
+ * 两个**正交**的过滤，缺一不可：
+ *
+ * 1. **role**（墙 7）——只留 pricing / both / derived。`role: 'wire'` 的参数（size、
+ *    seed、negativePrompt…）不参与计价。`applyParamDefaults` 会给所有带 `default` 的
+ *    属性填值，不滤掉它们就会被冻进快照；而 `quote.ts` 的 `mergeParamsAndUsage` 有
+ *    「params/usage key 冲突即 throw」的断言 —— 快照里塞不该有的 key 是在埋雷。
+ *
+ * 2. **valueSource**（spec §3.1.1.65）——剥掉 `usage` 参数。文本模型的
+ *    inputTokens/outputTokens 只有结算时才知道真值，冻一个估算值（或 default 的 0）
+ *    进去，会让每次结算都按 0 token 计价。这是真实发生过的线上 bug。
+ *
+ *    这也是一道独立于 `applyParamDefaults` 的防御（后者已经拒绝为这类属性**填**默认值）：
+ *    它还覆盖「调用方显式传了一个 token 估算值来影响本次报价」的情况 —— 那个值参与了
+ *    本次 quote，但不该活到快照里被结算时重新计价。
+ *
+ * ⚠ 两者是**叠加**不是**取代**：一个 role: 'both' 且 valueSource: 'usage' 的属性
+ * 必须被剥掉。
+ */
+export function stripNonPricingParams(
+  paramsSchema: ParamsSchema,
+  params: Record<string, unknown>,
+): Record<string, unknown> {
+  const stripped: Record<string, unknown> = { ...params };
+  for (const [name, property] of Object.entries(paramsSchema.properties ?? {})) {
+    const ui = property['x-ui'];
+    const role = ui?.role ?? 'both';
+    if (!PRICING_ROLES.has(role) || ui?.valueSource === 'usage') {
+      delete stripped[name];
+    }
+  }
+  return stripped;
+}
+
 @Injectable()
 export class TaskPricingEstimatorService {
   constructor(private readonly repo: TaskPricingRepository) {}
@@ -125,7 +164,7 @@ export class TaskPricingEstimatorService {
     // direct cause of the under-charging bug this fix exists for. If a caller did
     // pass a token estimate in `params` above, it was already used by quoteTask
     // to compute `result` — it just does not survive into the frozen snapshot.
-    const frozenParams = this.stripUsageSourceParams(paramsSchema, params);
+    const frozenParams = stripNonPricingParams(paramsSchema, params);
 
     const pricingSnapshot: PricingSnapshot = {
       schemaVersion: model.schemaVersion,
@@ -215,32 +254,6 @@ export class TaskPricingEstimatorService {
       throw new BadRequestException({ message: errorMessage, violations });
     }
     return candidate;
-  }
-
-  /**
-   * Removes properties whose paramsSchema declares `x-ui.valueSource === 'usage'`
-   * (e.g. text's `inputTokens`/`outputTokens`) before the params are frozen into
-   * `PricingSnapshot.params`. These values are determined at settlement, not at
-   * order time, so they must never be part of the immutable snapshot — settlement
-   * always supplies the real value via `usage` (see `quoteTaskFromSnapshot`).
-   *
-   * This is a defensive strip independent of `applyParamDefaults` (which already
-   * refuses to *fill* a default for these properties): it also covers the case
-   * where a caller explicitly passed a token estimate in `params` to influence
-   * this estimate's `result.total`, without that value leaking into what gets
-   * frozen and later re-priced at settlement.
-   */
-  private stripUsageSourceParams(
-    paramsSchema: ParamsSchema,
-    params: Record<string, unknown>,
-  ): Record<string, unknown> {
-    const stripped: Record<string, unknown> = { ...params };
-    for (const [name, property] of Object.entries(paramsSchema.properties)) {
-      if (property['x-ui']?.valueSource === 'usage') {
-        delete stripped[name];
-      }
-    }
-    return stripped;
   }
 
   /**

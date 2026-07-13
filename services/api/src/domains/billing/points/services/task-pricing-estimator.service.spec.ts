@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { MODEL_PRESETS, quoteTaskFromSnapshot } from '@autix/domain/pricing';
-import { TaskPricingEstimatorService } from './task-pricing-estimator.service';
+import { stripNonPricingParams, TaskPricingEstimatorService } from './task-pricing-estimator.service';
 import type { TaskPricingRepository } from '../repositories/task-pricing.repository';
 
 const PARAMS_SCHEMA = {
@@ -669,5 +669,78 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
         referenceImages: 1,
       });
     });
+  });
+});
+
+describe('stripNonPricingParams', () => {
+  const SCHEMA = {
+    type: 'object',
+    properties: {
+      quality: { type: 'string', 'x-ui': { control: 'chips', role: 'both' } },
+      resolution: {
+        type: 'string',
+        'x-ui': {
+          control: 'hidden',
+          role: 'derived',
+          derivedFrom: { param: 'size', via: 'imagePricingResolution' },
+        },
+      },
+      referenceImages: { type: 'integer', 'x-ui': { control: 'hidden', role: 'pricing' } },
+      size: { type: 'string', 'x-ui': { control: 'hidden', role: 'wire' } },
+      seed: { type: 'string', 'x-ui': { control: 'text', role: 'wire' } },
+      legacy: { type: 'string', 'x-ui': { control: 'text' } }, // 无 role → 缺省 both
+      inputTokens: { type: 'integer', 'x-ui': { control: 'hidden', valueSource: 'usage' } },
+    },
+  } as never;
+
+  const PARAMS = {
+    quality: 'high',
+    resolution: '2K',
+    referenceImages: 2,
+    size: '2048x2048@2K',
+    seed: 'abc',
+    legacy: 'keep-me',
+    inputTokens: 0,
+  };
+
+  it('keeps pricing / both / derived params', () => {
+    const frozen = stripNonPricingParams(SCHEMA, PARAMS);
+    expect(frozen.quality).toBe('high');
+    expect(frozen.resolution).toBe('2K');
+    expect(frozen.referenceImages).toBe(2);
+  });
+
+  it('drops role: wire params — they do not affect price', () => {
+    // 墙 7：applyParamDefaults 会给所有带 default 的属性填值，size/seed 会被冻进
+    // PricingSnapshot.params。快照里塞不该有的 key 是在给 quote.ts 的
+    // mergeParamsAndUsage「params/usage key 冲突即 throw」断言埋雷。
+    const frozen = stripNonPricingParams(SCHEMA, PARAMS);
+    expect('size' in frozen).toBe(false);
+    expect('seed' in frozen).toBe(false);
+  });
+
+  it('treats an absent role as both — 存量 schema 一个字都不用改', () => {
+    expect(stripNonPricingParams(SCHEMA, PARAMS).legacy).toBe('keep-me');
+  });
+
+  it('STILL drops valueSource: usage params — role 与 valueSource 是正交的两个轴', () => {
+    // 删掉这条过滤会复活「frozen inputTokens:0 → 每次结算按 0 token 计价」
+    // 那个真实的线上 bug（spec §3.1.1.65）。
+    expect('inputTokens' in stripNonPricingParams(SCHEMA, PARAMS)).toBe(false);
+  });
+
+  it('drops a usage param even when it also declares a pricing role', () => {
+    // 变异测试：如果实现把 role 过滤写成「取代」valueSource 过滤（而不是「叠加」），
+    // 这条会红 —— 一个 role:'both' + valueSource:'usage' 的属性会被错误地冻进快照。
+    const schema = {
+      type: 'object',
+      properties: {
+        outputTokens: {
+          type: 'integer',
+          'x-ui': { control: 'hidden', role: 'both', valueSource: 'usage' },
+        },
+      },
+    } as never;
+    expect('outputTokens' in stripNonPricingParams(schema, { outputTokens: 0 })).toBe(false);
   });
 });
