@@ -211,8 +211,15 @@ export class FavoriteLibraryService {
    * 落 librarySource=HISTORY 的素材行。反伪造校验（用户确有对应 resource_views 记录、
    * resourceType 属可映射类型）由调用方 MaterialsService.saveFromHistory 前置完成，这里
    * 只负责：resolveResourceSnapshot 复用 favorite() 同一套快照解析（资源不存在 → 404）+
-   * 幂等落库（撞 @@unique([userId,librarySource,sourceResourceType,sourceId]) 时返回已存在的
-   * 那一行，不 500、不重复插入——对齐 createFavoriteMaterial 的 P2002 幂等惯例）。
+   * 幂等落库（撞 @@unique([userId,librarySource,sourceResourceType,sourceId]) 时不 500、不重复插入）。
+   *
+   * P2002 冲突分两种，必须区别对待——HISTORY 素材是**软删**（deletedAt 置位），而唯一约束
+   * **没有** `WHERE deletedAt IS NULL` 的偏索引（无 migration 可加，见 Task 11 约束），
+   * 所以它同样会撞上已软删的旧行：
+   *   - 冲突行仍存活（deletedAt=null）→ 幂等返回该行；
+   *   - 冲突行已软删（deletedAt!=null）→ **复活**它（deletedAt 清空 + 刷新快照字段）再返回。
+   * 若这里直接返回软删行，save-from-history 会报成功但素材永远不会重新出现在
+   * MaterialsService.list()（它按 deletedAt:null 过滤）里——即"删除→再保存"的幻影成功。
    */
   async saveHistoryMaterial(userId: string, resourceType: ResourceType, resourceId: string) {
     const snapshot = await this.resolveResourceSnapshot(this.prisma, resourceType, resourceId);
@@ -244,7 +251,20 @@ export class FavoriteLibraryService {
             sourceId: resourceId,
           },
         });
-        if (existing) return existing;
+        if (!existing) throw err;
+        if (existing.deletedAt === null) return existing;
+        // 复活软删行：一并刷新快照，避免复活出一条标题/封面早已过期的僵尸素材。
+        return await this.prisma.material_assets.update({
+          where: { id: existing.id },
+          data: {
+            deletedAt: null,
+            type: snapshot.type,
+            title: snapshot.title,
+            url: snapshot.url,
+            thumbnailUrl: snapshot.thumbnailUrl,
+            sourceType: snapshot.sourceType,
+          },
+        });
       }
       throw err;
     }

@@ -52,6 +52,7 @@ function buildService(
   };
   const activityRepository = {
     hasViewed: jest.fn().mockResolvedValue(true),
+    listHistory: jest.fn().mockResolvedValue({ items: [], nextCursor: null }),
     ...(overrides.activityRepository ?? {}),
   };
   const service = new MaterialsService(
@@ -479,5 +480,90 @@ describe('MaterialsService.saveFromHistory — Plan C Task 11：反伪造 + 类�
     expect(activityRepository.hasViewed).toHaveBeenCalledWith('u1', 'GALLERY_POST', 'g1');
     expect(favoriteLibrary.saveHistoryMaterial).toHaveBeenCalledWith('u1', 'GALLERY_POST', 'g1');
     expect(result).toEqual({ id: 'hist-1', librarySource: 'HISTORY' });
+  });
+});
+
+describe('MaterialsService.listHistory — Plan C Task 11：GET /materials/history 游标分页', () => {
+  const viewedAt = new Date('2026-07-01T10:00:00.000Z');
+  const nextCursor = { viewedAt, resourceType: 'GALLERY_POST', resourceId: 'g1' };
+
+  it('无 cursor → 以 undefined 游标查询，take 默认 30', async () => {
+    const { service, activityRepository } = buildService();
+    await service.listHistory('u1', {});
+    expect(activityRepository.listHistory).toHaveBeenCalledWith('u1', undefined, 30);
+  });
+
+  it('take 归一化：越界收敛到 [1,100]，非数字回落默认值（NaN 绝不进 SQL 的 LIMIT）', async () => {
+    const { service, activityRepository } = buildService();
+    await service.listHistory('u1', { take: 999 });
+    expect(activityRepository.listHistory).toHaveBeenLastCalledWith('u1', undefined, 100);
+    await service.listHistory('u1', { take: 0 });
+    expect(activityRepository.listHistory).toHaveBeenLastCalledWith('u1', undefined, 1);
+    await service.listHistory('u1', { take: Number('abc') });
+    expect(activityRepository.listHistory).toHaveBeenLastCalledWith('u1', undefined, 30);
+  });
+
+  it('nextCursor 编码为不透明串；把它回传能解码回同一个三元组（游标往返闭环）', async () => {
+    const { service, activityRepository } = buildService({
+      activityRepository: {
+        hasViewed: jest.fn(),
+        listHistory: jest.fn().mockResolvedValue({ items: [], nextCursor }),
+      },
+    });
+
+    const page1 = await service.listHistory('u1', {});
+    expect(typeof page1.nextCursor).toBe('string');
+    expect(page1.nextCursor).not.toContain('g1'); // 不透明：不是明文三元组
+
+    await service.listHistory('u1', { cursor: page1.nextCursor! });
+    const passed = activityRepository.listHistory.mock.calls[1][1];
+    expect(passed.resourceType).toBe('GALLERY_POST');
+    expect(passed.resourceId).toBe('g1');
+    expect(passed.viewedAt.getTime()).toBe(viewedAt.getTime());
+  });
+
+  it('nextCursor 为 null 时透传 null（无下一页）', async () => {
+    const { service } = buildService();
+    await expect(service.listHistory('u1', {})).resolves.toMatchObject({ nextCursor: null });
+  });
+
+  it.each([
+    ['非 base64/非 JSON 的垃圾串', 'not-a-valid-cursor!!!'],
+    ['合法 base64 但不是对象', Buffer.from('"just-a-string"', 'utf8').toString('base64url')],
+    [
+      'viewedAt 不是可解析时间',
+      Buffer.from(
+        JSON.stringify({ viewedAt: 'nonsense', resourceType: 'GALLERY_POST', resourceId: 'g1' }),
+        'utf8',
+      ).toString('base64url'),
+    ],
+    [
+      'resourceType 不是合法枚举（防止畸形值进 SQL 的枚举 cast）',
+      Buffer.from(
+        JSON.stringify({
+          viewedAt: '2026-07-01T10:00:00.000Z',
+          resourceType: `X'; DROP TABLE "resource_views"; --`,
+          resourceId: 'g1',
+        }),
+        'utf8',
+      ).toString('base64url'),
+    ],
+    [
+      'resourceId 为空',
+      Buffer.from(
+        JSON.stringify({
+          viewedAt: '2026-07-01T10:00:00.000Z',
+          resourceType: 'GALLERY_POST',
+          resourceId: '   ',
+        }),
+        'utf8',
+      ).toString('base64url'),
+    ],
+  ])('畸形 cursor(%s) → BadRequestException，且绝不查询到仓储层', async (_label, cursor) => {
+    const { service, activityRepository } = buildService();
+    await expect(service.listHistory('u1', { cursor: cursor as string })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(activityRepository.listHistory).not.toHaveBeenCalled();
   });
 });

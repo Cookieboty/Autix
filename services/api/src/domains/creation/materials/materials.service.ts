@@ -8,7 +8,10 @@ import {
 import { Prisma, ResourceType } from '../../platform/prisma/generated';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
-import { MarketplaceActivityRepository } from '../../marketplace/marketplace-activity.repository';
+import {
+  MarketplaceActivityRepository,
+  type HistoryCursor,
+} from '../../marketplace/marketplace-activity.repository';
 import { assertInStationMediaUrls } from '../gallery/gallery.helpers';
 import { FavoriteLibraryService } from './favorite-library.service';
 import { MaterialsRepository } from './materials.repository';
@@ -38,6 +41,12 @@ const HISTORY_MAPPABLE_TYPES = new Set<ResourceType>([
   ResourceType.VIDEO_TEMPLATE,
   ResourceType.GALLERY_POST,
 ]);
+
+/**
+ * 全部合法 ResourceType（浏览历史覆盖 5 类资源 + Gallery，比 HISTORY_MAPPABLE_TYPES 宽）——
+ * 只用于校验分页游标里的 resourceType，防止畸形值被拼进 SQL 的枚举 cast。
+ */
+const RESOURCE_TYPES = new Set<ResourceType>(Object.values(ResourceType) as ResourceType[]);
 
 export interface MaterialCreateInput {
   type: MaterialAssetType;
@@ -178,6 +187,64 @@ export class MaterialsService {
     }
 
     return this.favoriteLibrary.saveHistoryMaterial(userId, normalizedType, trimmedId);
+  }
+
+  /**
+   * Plan C Task 11：去重后的浏览历史列表（`GET /materials/history`）——Task 12 前端"从历史
+   * 保存到素材库"的数据源。游标是 base64(JSON) 的不透明串，解码后**严格校验**三元组
+   * （viewedAt 可解析为合法时间、resourceType 属合法枚举、resourceId 非空字符串），
+   * 任何畸形游标一律 400，绝不放行到 SQL 层。
+   */
+  async listHistory(userId: string, opts: { cursor?: string; take?: number }) {
+    // Number('abc') → NaN，且 Math.max(1, NaN) 仍是 NaN——不能让它流到 SQL 的 LIMIT，显式兜底。
+    const rawTake = Number(opts.take);
+    const take = Number.isFinite(rawTake) ? Math.min(100, Math.max(1, Math.trunc(rawTake))) : 30;
+    const cursor = this.decodeHistoryCursor(opts.cursor);
+    const { items, nextCursor } = await this.activityRepository.listHistory(userId, cursor, take);
+    return { items, nextCursor: nextCursor ? this.encodeHistoryCursor(nextCursor) : null };
+  }
+
+  private encodeHistoryCursor(cursor: HistoryCursor): string {
+    return Buffer.from(
+      JSON.stringify({
+        viewedAt: cursor.viewedAt.toISOString(),
+        resourceType: cursor.resourceType,
+        resourceId: cursor.resourceId,
+      }),
+      'utf8',
+    ).toString('base64url');
+  }
+
+  private decodeHistoryCursor(raw?: string): HistoryCursor | undefined {
+    const value = String(raw ?? '').trim();
+    if (!value) return undefined;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+    } catch {
+      throw new BadRequestException('分页游标无效');
+    }
+    if (!parsed || typeof parsed !== 'object') throw new BadRequestException('分页游标无效');
+
+    const { viewedAt, resourceType, resourceId } = parsed as Record<string, unknown>;
+    if (typeof viewedAt !== 'string' || typeof resourceId !== 'string' || !resourceId.trim()) {
+      throw new BadRequestException('分页游标无效');
+    }
+    const viewedAtDate = new Date(viewedAt);
+    if (Number.isNaN(viewedAtDate.getTime())) throw new BadRequestException('分页游标无效');
+    if (
+      typeof resourceType !== 'string' ||
+      !RESOURCE_TYPES.has(resourceType as ResourceType)
+    ) {
+      throw new BadRequestException('分页游标无效');
+    }
+
+    return {
+      viewedAt: viewedAtDate,
+      resourceType: resourceType as ResourceType,
+      resourceId,
+    };
   }
 
   async createUploadUrl(

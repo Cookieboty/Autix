@@ -31,6 +31,24 @@ export class MaterialsController {
     return this.materialsService.getEntitlement(userId);
   }
 
+  /**
+   * Plan C Task 11：去重后的浏览历史（按 (resourceType,resourceId) 取最近一次），游标分页。
+   * 与 POST /materials/save-from-history 配对，构成 Task 12 前端"从历史保存到素材库"的读写两端。
+   * 畸形 cursor 由 MaterialsService.decodeHistoryCursor 拦成 400，不会到达 SQL。
+   */
+  @Get('history')
+  listHistory(
+    @CurrentUser() user: AuthUser,
+    @Query('cursor') cursor?: string,
+    @Query('take') take?: string,
+  ) {
+    const userId = getCurrentUserId(user);
+    return this.materialsService.listHistory(userId, {
+      cursor,
+      take: take ? Number(take) : undefined,
+    });
+  }
+
   @Get()
   list(
     @CurrentUser() user: AuthUser,

@@ -245,6 +245,13 @@ function makeFakePrisma(seed: {
         materialStore.delete(where.id);
         return row;
       },
+      update: async ({ where, data }: any) => {
+        const row = materialStore.get(where.id);
+        if (!row) throw new Error(`material_assets.update: no row ${where.id}`);
+        const next = { ...row, ...data };
+        materialStore.set(where.id, next);
+        return next;
+      },
       updateMany: async ({ where, data }: any) => {
         let count = 0;
         for (const [id, row] of materialStore.entries()) {
@@ -542,6 +549,43 @@ describe('FavoriteLibraryService.saveHistoryMaterial — Plan C Task 11', () => 
     await expect(
       fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, 'does-not-exist'),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('删除→再保存：复活软删行（deletedAt 归 null），不返回幻影的仍处删除态的旧行', async () => {
+    const { prisma, materialStore } = makeFakePrisma({
+      galleries: { [gId]: publishedGallery },
+    });
+    const fav = new FavoriteLibraryService(prisma as never);
+
+    const first = await fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, gId);
+    await fav.deleteMaterial(userId, first.id);
+    // HISTORY 是软删：行还在，deletedAt 已置位；唯一约束没有 deletedAt IS NULL 偏索引，
+    // 所以再次保存必然撞 P2002 —— 这正是"幻影成功"曾经发生的地方。
+    expect(materialStore.get(first.id)!.deletedAt).not.toBeNull();
+
+    const revived = await fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, gId);
+
+    expect(revived.id).toBe(first.id);
+    expect(revived.deletedAt).toBeNull();
+    // 且库里那一行真的活了（list() 按 deletedAt:null 过滤，能重新查到）。
+    expect(materialStore.get(first.id)!.deletedAt).toBeNull();
+    expect(countMaterials(materialStore, userId, 'HISTORY', 'GALLERY_POST', gId)).toBe(1);
+  });
+
+  it('复活时刷新快照字段（标题跟随资源最新状态，不复活出过期僵尸素材）', async () => {
+    const { prisma, galleryStore } = makeFakePrisma({
+      galleries: { [gId]: publishedGallery },
+    });
+    const fav = new FavoriteLibraryService(prisma as never);
+
+    const first = await fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, gId);
+    await fav.deleteMaterial(userId, first.id);
+    galleryStore.set(gId, { ...publishedGallery, title: '作品 A（改名后）' });
+
+    const revived = await fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, gId);
+
+    expect(revived.title).toBe('作品 A（改名后）');
+    expect(revived.deletedAt).toBeNull();
   });
 });
 
