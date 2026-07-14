@@ -123,3 +123,32 @@ export interface ImageCallResult {
   };
   warnings: string[];
 }
+
+/**
+ * 上游调用失败。分类由 preset 的 `errorMapping` 声明 —— 取代「从错误消息里正则
+ * 反推 HTTP 状态码」的老做法（spec §4.6）。
+ *
+ * `message` 只放英文诊断串（进日志）。**不写死中文文案**（spec §8）：面向用户的
+ * 文案由 api-service 的 i18n 决定。`upstreamBody` 是截断后的上游原文，进日志不进 UI。
+ */
+export class ImageUpstreamError extends Error {
+  readonly classification: ErrorClassification;
+  readonly httpStatus?: number;
+  readonly retryable: boolean;
+  readonly upstreamBody?: string;
+
+  constructor(init: {
+    message: string;
+    classification: ErrorClassification;
+    httpStatus?: number;
+    retryable: boolean;
+    upstreamBody?: string;
+  }) {
+    super(init.message);
+    this.name = 'ImageUpstreamError';
+    this.classification = init.classification;
+    this.httpStatus = init.httpStatus;
+    this.retryable = init.retryable;
+    this.upstreamBody = init.upstreamBody;
+  }
+}
