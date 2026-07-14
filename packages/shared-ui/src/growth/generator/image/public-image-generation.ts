@@ -38,6 +38,10 @@ export interface PublicImageHistoryItem {
   createdAt: string;
   images: PublicImageHistoryImage[];
   settings: Record<string, unknown>;
+  /** 该次生成用的模型配置 id。Recreate 要靠它把模型切回去（model 只是展示名）。 */
+  modelConfigId?: string | null;
+  /** 该次生成用到的参考图 URL。Recreate 要把它们一并带回输入框。 */
+  referenceImages?: string[];
   /** 该次生成当前活着的广场帖（status <> REMOVED）；没有投稿过则缺省。 */
   galleryPost?: ImageGenerationGalleryPost;
 }
@@ -82,10 +86,13 @@ export function buildPublicImageHistoryItem({
   data,
   request,
   createdAt,
+  modelConfigId,
 }: {
   data: PublicImageGenerateResult;
   request: PublicImageGenerationPayload;
   createdAt: string;
+  /** 本次生成用的模型配置 id（generate 响应里没有，由调用方补）。 */
+  modelConfigId?: string | null;
 }): PublicImageHistoryItem {
   const fallbackId = `public-image-${Date.now()}`;
   const images = (data.images ?? []).map((image, index) => ({
@@ -102,5 +109,7 @@ export function buildPublicImageHistoryItem({
     createdAt,
     images,
     settings: request.settings,
+    modelConfigId: modelConfigId ?? null,
+    referenceImages: request.referenceImages,
   };
 }
