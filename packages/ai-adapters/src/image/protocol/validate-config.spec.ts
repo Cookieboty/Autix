@@ -108,6 +108,24 @@ describe('validateModelProtocolConfig', () => {
     expect(codes(GOOD_SCHEMA, GOOD_META, preset)).toContain('MISSING_CORE_BINDING');
   });
 
+  it('rejects when edit operation coreBindings lacks inputImages', () => {
+    const preset: ProtocolPreset = {
+      ...gatewayOpenAIV1,
+      coreBindings: {
+        generate: gatewayOpenAIV1.coreBindings.generate!,
+        edit: {
+          model: gatewayOpenAIV1.coreBindings.edit!.model,
+          prompt: gatewayOpenAIV1.coreBindings.edit!.prompt,
+          count: gatewayOpenAIV1.coreBindings.edit!.count,
+          // intentionally omit inputImages
+        },
+      },
+    };
+    expect(codes(GOOD_SCHEMA, GOOD_META, preset)).toContain('MISSING_CORE_BINDING');
+    expect(run(GOOD_SCHEMA, GOOD_META, preset).find((v) => v.code === 'MISSING_CORE_BINDING' && v.message.includes('inputImages')))
+      .toBeDefined();
+  });
+
   it('does NOT require inputImages bindings for a generate-only model', () => {
     const preset: ProtocolPreset = {
       ...gatewayOpenAIV1,
