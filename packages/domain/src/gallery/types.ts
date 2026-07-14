@@ -34,12 +34,6 @@ export type MetricResourceType =
   | 'VIDEO_TEMPLATE'
   | 'GALLERY_POST';
 
-export interface GalleryAuthorSnapshot {
-  displayName: string;
-  avatarUrl?: string;
-  at: string;
-}
-
 export interface GalleryPost {
   id: string;
   kind: GalleryKind;
@@ -64,7 +58,6 @@ export interface GalleryPost {
   isFeatured: boolean;
   isPinned: boolean;
   authorId: string | null;
-  authorSnapshot: GalleryAuthorSnapshot | null;
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;

@@ -238,6 +238,11 @@ export interface ModelConfigItem {
   name: string;
   model: string;
   provider: string;
+  /**
+   * 模型简介，i18n map（`{ "en": "...", "zh-CN": "..." }`）。运营在管理端填，可能为 `{}`。
+   * 服务端不做 select，整行返回——此前类型里漏了这个字段，前端因此看不到它。
+   */
+  description?: Record<string, string> | null;
   type: string;
   priority: number;
   isActive?: boolean;
@@ -2112,6 +2117,13 @@ export const riskAdminApi = {
     chatApi.post(`/api/admin/risk/users/${id}/unblock`, data ?? {}),
 };
 
+/** 作者展示身份（已注销用户由服务端 presentAuthor 脱敏：昵称占位、头像置空）。 */
+export interface GalleryAuthor {
+  userId: string;
+  nickname: string;
+  avatar: string | null;
+}
+
 // ── Gallery Admin (广场审核) ─────────────────────────────────────────────
 export interface GalleryPostAdminItem {
   id: string;
@@ -2121,7 +2133,7 @@ export interface GalleryPostAdminItem {
   mediaUrls: string[];
   category: string;
   status: 'DRAFT' | 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN' | 'REMOVED';
-  authorSnapshot: { displayName: string; avatarUrl?: string; at: string } | null;
+  author: GalleryAuthor;
   createdAt: string;
   publishedAt: string | null;
   sourceType: 'USER_UPLOAD' | 'FROM_GENERATION' | 'FROM_TEMPLATE' | 'ADMIN_CURATED';
@@ -2199,15 +2211,20 @@ export interface GalleryFeedPost {
   aspectRatio: string | null;
   durationSec: number | null;
   prompt: string | null;
+  /** 厂商模型串（`doubao-seedream-4-5`）。留作数据，不直接展示给用户。 */
   model: string | null;
+  /** 展示用的模型别名（`Seedream 4.5`），由服务端查 model_configs 解析；解析不到为 null。 */
+  modelName: string | null;
   width: number | null;
   height: number | null;
-  authorSnapshot: { displayName: string; avatarUrl?: string; at: string } | null;
+  authorId: string;
   publishedAt: string | null;
 }
 
 export interface GalleryFeedItem {
   post: GalleryFeedPost;
+  /** 与 GET /gallery/:id 详情同一形状——feed 不再自造 authorSnapshot。 */
+  author: GalleryAuthor;
   metrics: {
     pvCount: number;
     uvCount: number;
@@ -2235,7 +2252,8 @@ export interface CreateGalleryPostInput {
   kind: 'IMAGE' | 'VIDEO';
   title?: string;
   description?: string;
-  category: string;
+  /** 可选：不传则落 ''，由审核员在管理端补分类（分类只用于管理端筛选）。 */
+  category?: string;
   tags?: string[];
   coverImage?: string;
   mediaUrls?: string[];
@@ -2267,6 +2285,8 @@ export interface GalleryDetailPost {
   durationSec: number | null;
   prompt: string | null;
   model: string | null;
+  /** 展示用的模型别名（服务端查 model_configs 解析）；解析不到为 null。 */
+  modelName: string | null;
   width: number | null;
   height: number | null;
   referenceImage: string | null;

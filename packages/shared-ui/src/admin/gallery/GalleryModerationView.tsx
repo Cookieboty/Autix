@@ -361,7 +361,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-foreground">
-                      {item.authorSnapshot?.displayName ?? '—'}
+                      {item.author?.nickname ?? '—'}
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{item.category}</Badge>

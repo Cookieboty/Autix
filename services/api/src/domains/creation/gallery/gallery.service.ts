@@ -104,7 +104,20 @@ export class GalleryService {
     const where = buildAdminGalleryWhere(q, r2Base);
     const { items, total } = await this.repo.findAdminPage(where, q.page, q.pageSize);
     return {
-      items,
+      // 同 feed：剥离原始 author 关系行，只暴露 presentAuthor 的脱敏结果
+      items: items.map((row) => {
+        const { author: _rawAuthor, ...post } = row;
+        return {
+          ...post,
+          author: presentAuthor({
+            id: row.author.id,
+            status: row.author.status,
+            displayName: row.author.nickname ?? row.author.realName ?? null,
+            username: row.author.username,
+            avatar: row.author.avatar ?? null,
+          }),
+        };
+      }),
       total,
       page: q.page,
       pageSize: q.pageSize,
@@ -227,7 +240,8 @@ export class GalleryService {
       kind: dto.kind,
       title: dto.title,
       description: dto.description,
-      category: dto.category,
+      // 分类可缺省（一键发布不带）：落 ''，审核员在管理端补；与 submitDraft 同一处理
+      category: dto.category ?? '',
       tags: dto.tags ?? [],
       coverImage: media.coverImage,
       mediaUrls: media.mediaUrls,
@@ -548,7 +562,11 @@ export class GalleryService {
       clampedTake,
     );
     const ids = items.map((post) => post.id);
-    const metricsMap = await this.metrics.getMetricsMap(ResourceType.GALLERY_POST, ids);
+    const [metricsMap, modelNames] = await Promise.all([
+      this.metrics.getMetricsMap(ResourceType.GALLERY_POST, ids),
+      // 展示用的模型别名（gallery_posts.model 存的是厂商串，不是给人看的）
+      this.repo.findModelDisplayNames(items.map((post) => post.model ?? '')),
+    ]);
 
     let likedIds: Set<string> | undefined;
     let favoritedIds: Set<string> | undefined;
@@ -560,10 +578,24 @@ export class GalleryService {
     }
 
     return {
-      items: items.map((post) => {
-        const m = metricsMap.get(post.id);
+      items: items.map((row) => {
+        const m = metricsMap.get(row.id);
+        const author: PresentedAuthor = presentAuthor({
+          id: row.author.id,
+          status: row.author.status,
+          displayName: row.author.nickname ?? row.author.realName ?? null,
+          username: row.author.username,
+          avatar: row.author.avatar ?? null,
+        });
+        // 隐私铁律（与 getDetail 同）：剥离 include 进来的原始 author 关系行，只暴露
+        // presenter 脱敏结果——否则匿名响应会把原始 username（含 deleted_<id> 前缀）、
+        // realName、旧头像一并回传，presentAuthor 形同虚设。
+        const { author: _rawAuthor, ...post } = row;
         return {
-          post,
+          // model 原样保留（厂商串，前端不展示但要有）；modelName 是展示用的别名，
+          // 解析不到（模型配置被删了）时为 null，前端回退显示 model。
+          post: { ...post, modelName: post.model ? modelNames.get(post.model) ?? null : null },
+          author,
           metrics: {
             pvCount: m?.pvCount ?? 0,
             uvCount: m?.uvCount ?? 0,
@@ -610,7 +642,14 @@ export class GalleryService {
     // 隐私铁律：剥离 include 进来的原始 author 关系行，只对外暴露 presenter 脱敏结果。
     // 否则匿名响应会连原始 username（含 deleted_<id>）/ realName / avatar 一并回传，
     // 使 presentAuthor 形同虚设（ResponseInterceptor 不做字段裁剪）。
-    const { author: _rawAuthor, ...postSummary } = post;
+    const { author: _rawAuthor, ...rawPost } = post;
+
+    // 展示用的模型别名（与 feed 同一口径：model 保留厂商串，modelName 给人看）
+    const modelNames = await this.repo.findModelDisplayNames([rawPost.model ?? '']);
+    const postSummary = {
+      ...rawPost,
+      modelName: rawPost.model ? modelNames.get(rawPost.model) ?? null : null,
+    };
 
     const m = await this.metrics.getMetrics(ResourceType.GALLERY_POST, id);
     const metrics = {
