@@ -26,6 +26,10 @@ const TRANSITIONS: Record<string, GalleryActor[]> = {
   // 防止作者绕开管理员处罚自行"重新发布"。'HIDDEN->PUBLISHED' 已在上方以 admin-only 定义（unhide）。
   'PUBLISHED->UNPUBLISHED': ['author'],
   'UNPUBLISHED->PENDING': ['author'],
+  // 作者自愿下架的作品，作者有权彻底删除。缺这条会导致 UNPUBLISHED 成为无法离开的终态，
+  // 连带使其来源生成记录永远删不掉（见删除守卫）。不影响 HIDDEN 的防处罚绕过设计：
+  // republish 依然只接受 UNPUBLISHED，HIDDEN 无法回到 PUBLISHED。
+  'UNPUBLISHED->REMOVED': ['author'],
 };
 
 /** 校验状态机转移；非法转移 / 角色无权 → 400。 */

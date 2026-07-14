@@ -6,7 +6,6 @@ import {
   Check,
   Copy,
   Download,
-  Heart,
   ImageIcon,
   Info,
   RefreshCw,
@@ -18,12 +17,16 @@ import {
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { galleryActions, galleryErrorMessage, publicGeneratorActions } from '@autix/shared-store';
 import type {
   PublicImageHistoryImage,
   PublicImageHistoryItem,
 } from './public-image-generation';
 import type { TemplateDensity } from '../generator-studio-helpers';
 import { PublishToGalleryDialog } from './PublishToGalleryDialog';
+import { dedupeGenerationIds, galleryPostActions, summarizeSettled } from './gallery-interaction-model';
+import { DeleteGenerationsDialog } from './DeleteGenerationsDialog';
+import { Button } from '../../../ui/button';
 
 export type PendingImageGenerationCard = {
   id: string;
@@ -142,6 +145,7 @@ export function PublicImageHistoryPanel({
   pending,
   onRecreate,
   onSelectionActiveChange,
+  onHistoryChanged,
 }: {
   items: PublicImageHistoryItem[];
   loading: boolean;
@@ -151,14 +155,16 @@ export function PublicImageHistoryPanel({
   onRecreate?: (item: PublicImageHistoryItem) => void;
   /** 是否处于多选态：父级据此切换「输入框 ↔ 操作栏」 */
   onSelectionActiveChange?: (active: boolean) => void;
+  /** 发布/删除成功后请求父级重拉 history（徽章状态来自服务端，不靠本地内存猜）。 */
+  onHistoryChanged?: () => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const locale = useLocale();
   const [selectedItem, setSelectedItem] = useState<PublicImageHistoryItem | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
-  const [likedKeys, setLikedKeys] = useState<Set<string>>(new Set());
-  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { ref: containerRef, width: containerWidth } = useElementWidth<HTMLDivElement>();
 
   const selectionActive = selectedKeys.size > 0;
@@ -224,15 +230,13 @@ export function PublicImageHistoryPanel({
         }))
       : []),
     ...items.flatMap((item) =>
-      item.images
-        .filter((image) => !hiddenKeys.has(imageKey(item.id, image)))
-        .map((image) => ({
-          kind: 'image' as const,
-          ratio: parseAspectRatio(typeof item.settings.size === 'string' ? item.settings.size : undefined),
-          item,
-          image,
-          key: imageKey(item.id, image),
-        })),
+      item.images.map((image) => ({
+        kind: 'image' as const,
+        ratio: parseAspectRatio(typeof item.settings.size === 'string' ? item.settings.size : undefined),
+        item,
+        image,
+        key: imageKey(item.id, image),
+      })),
     ),
   ];
 
@@ -247,15 +251,46 @@ export function PublicImageHistoryPanel({
     selectedImageList.forEach(({ image }, index) =>
       void downloadImageFile(image.url, `image-${index + 1}.png`),
     );
-  const likeSelected = () => setLikedKeys((prev) => new Set([...prev, ...selectedKeys]));
-  const deleteSelected = () => {
-    setHiddenKeys((prev) => new Set([...prev, ...selectedKeys]));
-    setSelectedKeys(new Set());
-  };
   const clearSelection = () => setSelectedKeys(new Set());
   const publishSelected = () => {
     if (selectedImageList.length === 0) return;
     setPublishDialogOpen(true);
+  };
+
+  const selectedGenerationIds = dedupeGenerationIds(selectedImageList);
+  /** 选中的这些生成记录，实际会被删掉的图片总数（含未被勾选的兄弟图）——确认框如实展示。 */
+  const affectedImageCount = items
+    .filter((item) => selectedGenerationIds.includes(item.id))
+    .reduce((sum, item) => sum + item.images.length, 0);
+  /** 只要选中项里有任何一条还挂着活帖，就不能删（服务端会 409）。 */
+  const deletableSelection = items
+    .filter((item) => selectedGenerationIds.includes(item.id))
+    .every((item) => galleryPostActions(item.galleryPost?.status).canDeleteGeneration);
+
+  const requestDelete = () => {
+    if (selectedGenerationIds.length === 0) return;
+    if (!deletableSelection) {
+      toast.error(t('deleteBlockedToast'));
+      return;
+    }
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    const results = await Promise.allSettled(
+      selectedGenerationIds.map((id) => publicGeneratorActions.deleteImageHistory(id)),
+    );
+    const { succeeded, failed } = summarizeSettled(results);
+    setDeleting(false);
+    setDeleteDialogOpen(false);
+
+    if (succeeded > 0 && failed === 0) toast.success(t('deletedToast', { count: succeeded }));
+    else if (succeeded > 0) toast.warning(t('deletePartialFailedToast', { succeeded, failed }));
+    else toast.error(t('deleteBlockedToast'));
+
+    clearSelection();
+    onHistoryChanged?.();
   };
 
   return (
@@ -277,7 +312,6 @@ export function PublicImageHistoryPanel({
               }
               const { item, image, key } = cell;
               const selected = selectedKeys.has(key);
-              const liked = likedKeys.has(key);
               return (
                 <div
                   key={key}
@@ -302,17 +336,6 @@ export function PublicImageHistoryPanel({
                     <>
                       <div className="pointer-events-none absolute inset-0 z-10 opacity-0 shadow-[inset_0_0_130px_44px_rgba(0,0,0,0.8)] transition duration-200 group-hover:opacity-100" />
                       <div className="absolute right-2 top-2 z-30 flex flex-col gap-1 opacity-0 transition duration-200 group-hover:opacity-100">
-                        <button
-                          type="button"
-                          aria-label={t('ariaLike')}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            toggleKey(setLikedKeys, key);
-                          }}
-                          className="grid size-8 place-items-center rounded-full bg-background/55 text-foreground backdrop-blur-md transition hover:bg-background/85"
-                        >
-                          <Heart className={`size-4 ${liked ? 'fill-growth-accent text-growth-accent' : ''}`} />
-                        </button>
                         <button
                           type="button"
                           aria-label={t('ariaDownload')}
@@ -357,6 +380,19 @@ export function PublicImageHistoryPanel({
                   >
                     <Check className="size-3" strokeWidth={3} />
                   </button>
+                  {item.galleryPost ? (
+                    <span className="pointer-events-none absolute bottom-2 left-2 z-30 rounded-full bg-background/70 px-2 py-0.5 text-xs font-bold text-foreground backdrop-blur-md">
+                      {item.galleryPost.status === 'PENDING'
+                        ? t('badgePending')
+                        : item.galleryPost.status === 'PUBLISHED'
+                          ? t('badgePublished')
+                          : item.galleryPost.status === 'REJECTED'
+                            ? t('badgeRejected')
+                            : item.galleryPost.status === 'HIDDEN'
+                              ? t('badgeHidden')
+                              : t('badgeUnpublished')}
+                    </span>
+                  ) : null}
                 </div>
               );
             })}
@@ -404,19 +440,11 @@ export function PublicImageHistoryPanel({
             onClick={publishSelected}
             className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-foreground/85 transition hover:bg-white/5"
           >
-            <Share2 className="size-4" /> Publish all
+            <Share2 className="size-4" /> {t('publishAll')}
           </button>
           <button
             type="button"
-            onClick={likeSelected}
-            aria-label={t('ariaLike')}
-            className="grid size-9 place-items-center rounded-xl text-foreground/85 transition hover:bg-white/5"
-          >
-            <Heart className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={deleteSelected}
+            onClick={requestDelete}
             aria-label={t('ariaDelete')}
             className="grid size-9 place-items-center rounded-xl text-foreground/85 transition hover:bg-white/5"
           >
@@ -436,15 +464,26 @@ export function PublicImageHistoryPanel({
         item={selectedItem}
         locale={locale}
         onClose={() => setSelectedItem(null)}
+        onHistoryChanged={onHistoryChanged}
       />
       <PublishToGalleryDialog
         open={publishDialogOpen}
         selections={selectedImageList}
         onClose={() => setPublishDialogOpen(false)}
-        onPublished={(count) => {
-          toast.success(t('publishSubmittedToast', { count }));
+        onPublished={({ succeeded, failed }) => {
+          if (failed === 0) toast.success(t('publishSubmittedToast', { count: succeeded }));
+          else toast.warning(t('publishPartialFailedToast', { succeeded, failed }));
           clearSelection();
+          onHistoryChanged?.();
         }}
+      />
+      <DeleteGenerationsDialog
+        open={deleteDialogOpen}
+        generationCount={selectedGenerationIds.length}
+        imageCount={affectedImageCount}
+        deleting={deleting}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={() => void confirmDelete()}
       />
     </>
   );
@@ -484,17 +523,46 @@ function PublicImageHistoryDialog({
   item,
   locale,
   onClose,
+  onHistoryChanged,
 }: {
   item: PublicImageHistoryItem | null;
   locale: string;
   onClose: () => void;
+  onHistoryChanged?: () => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const [copied, setCopied] = useState(false);
   const [activeImage, setActiveImage] = useState<PublicImageHistoryImage | null>(null);
+  const [posting, setPosting] = useState(false);
   const images = item?.images ?? [];
   const image = activeImage ?? images[0] ?? null;
   const prompt = image?.prompt ?? item?.prompt ?? '';
+  const post = item?.galleryPost;
+  const actions = galleryPostActions(post?.status);
+
+  /**
+   * 帖级动作。四条出边对应后端状态机（gallery.helpers.ts TRANSITIONS）：
+   * PENDING→REMOVED（撤回）、PUBLISHED→UNPUBLISHED（下架）、
+   * REJECTED|UNPUBLISHED→PENDING（重新提交）、REJECTED|UNPUBLISHED|HIDDEN→REMOVED（删帖）。
+   * HIDDEN 是管理员处罚，republish 会 400 —— galleryPostActions 不会给出 canRepublish，
+   * 所以这里也不会渲染那个按钮。
+   */
+  const runPostAction = async (action: 'withdraw' | 'unpublish' | 'republish' | 'removePost') => {
+    if (!post || posting) return;
+    setPosting(true);
+    try {
+      if (action === 'withdraw' || action === 'removePost') await galleryActions.remove(post.id);
+      else if (action === 'unpublish') await galleryActions.unpublish(post.id);
+      else await galleryActions.republish(post.id);
+      toast.success(t('postActionDoneToast'));
+      onHistoryChanged?.();
+      onClose();
+    } catch (err) {
+      toast.error(galleryErrorMessage(err));
+    } finally {
+      setPosting(false);
+    }
+  };
 
   useEffect(() => {
     if (!item) return;
@@ -623,6 +691,36 @@ function PublicImageHistoryDialog({
               </div>
             </section>
           </div>
+
+          {post ? (
+            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+              {post.status === 'REJECTED' && post.rejectReason ? (
+                <p className="w-full text-sm text-destructive">
+                  {t('rejectReasonLabel')}：{post.rejectReason}
+                </p>
+              ) : null}
+              {actions.canWithdraw ? (
+                <Button type="button" variant="outline" disabled={posting} onClick={() => void runPostAction('withdraw')}>
+                  {t('withdrawSubmission')}
+                </Button>
+              ) : null}
+              {actions.canUnpublish ? (
+                <Button type="button" variant="outline" disabled={posting} onClick={() => void runPostAction('unpublish')}>
+                  {t('unpublishPost')}
+                </Button>
+              ) : null}
+              {actions.canRepublish ? (
+                <Button type="button" variant="outline" disabled={posting} onClick={() => void runPostAction('republish')}>
+                  {t('republishPost')}
+                </Button>
+              ) : null}
+              {actions.canRemovePost ? (
+                <Button type="button" variant="destructive" disabled={posting} onClick={() => void runPostAction('removePost')}>
+                  {t('removePost')}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </aside>
       </div>
     </div>,

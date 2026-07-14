@@ -54,6 +54,11 @@ export const galleryActions = {
     const res = await galleryApi.republish(id);
     return res.data;
   },
+  /** DELETE /gallery/:id：作者本人删除自己的作品（→ REMOVED）。 */
+  remove: async (id: string): Promise<GalleryDetailPost> => {
+    const res = await galleryApi.remove(id);
+    return res.data;
+  },
   recreate: async (id: string): Promise<GalleryRecreateResult> => {
     const res = await galleryApi.recreate(id);
     return res.data;
@@ -80,9 +85,17 @@ export const galleryActions = {
   },
 };
 
+/**
+ * 后端错误体固定为 `{ success, code, msg, data, traceId }`（AllExceptionsFilter），**没有顶层
+ * `message` 字段**；SDK 的错误拦截器又把 msg 挂到 error.msg 上。所以按 `response.data.message`
+ * 去找必然是 undefined —— 那样所有广场操作失败都只会退化成通用兜底文案，把后端给出的真实
+ * 原因（如「非法状态转移」）全吞掉。这里按真实形状读：先 err.msg，再 response.data.msg。
+ */
 function errorMessage(e: unknown): string {
-  const data = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-  if (typeof data === 'string') return data;
+  const err = e as { msg?: string; response?: { data?: { msg?: string } } };
+  if (typeof err?.msg === 'string' && err.msg) return err.msg;
+  const body = err?.response?.data?.msg;
+  if (typeof body === 'string' && body) return body;
   if (e instanceof Error && e.message) return e.message;
   return 'Loading failed. Please try again later.';
 }

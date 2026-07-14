@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { ResourceType } from '../../platform/prisma/generated';
+import { GalleryStatus, ResourceType } from '../../platform/prisma/generated';
+import { GalleryRepository } from './gallery.repository';
 import { GalleryService } from './gallery.service';
 
 /**
@@ -35,6 +36,10 @@ function makeService(overrides: {
   posts?: Record<string, Record<string, unknown>>;
   captureUpdate?: (id: string, data: Record<string, unknown>) => void;
   r2PublicBaseUrl?: string;
+  activePosts?: Record<string, { id: string; status: string } | null>;
+  captureCreate?: (data: Record<string, unknown>) => void;
+  createImpl?: (data: Record<string, unknown>) => Promise<unknown>;
+  findActivePostImpl?: (imageGenerationId: string) => Promise<{ id: string; status: string } | null>;
 }) {
   const repo = {
     findImageGenerationOwner:
@@ -43,7 +48,14 @@ function makeService(overrides: {
     findVideoGenerationOwner: async () => null,
     isReferenceImagePubliclyReusable: async () =>
       overrides.isReferenceImagePubliclyReusable ?? false,
-    create: async (data: Record<string, unknown>) => ({ id: 'post-1', ...data }),
+    findActivePostByImageGenerationId:
+      overrides.findActivePostImpl ??
+      (async (imageGenerationId: string) => overrides.activePosts?.[imageGenerationId] ?? null),
+    create: async (data: Record<string, unknown>) => {
+      if (overrides.createImpl) return overrides.createImpl(data);
+      overrides.captureCreate?.(data);
+      return { id: 'post-new', ...data };
+    },
     findById: async (id: string) => overrides.posts?.[id] ?? null,
     update: async (id: string, data: Record<string, unknown>) => {
       overrides.captureUpdate?.(id, data);
@@ -115,13 +127,13 @@ describe('GalleryService.createSubmission — fail-closed 归属校验', () => {
 
   it('generation 属于作者本人 → 放行并成功创建投稿', async () => {
     const service = makeService({ imageGenerations: { [myGenId]: myGen } });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
       imageGenerationId: myGenId,
     } as never);
-    expect(post.id).toBe('post-1');
+    expect(post.id).toBe('post-new');
     expect(post.mediaUrls).toEqual(myGen.generatedImages);
     expect(post.coverImage).toBe(myGen.generatedImages![0]);
   });
@@ -146,7 +158,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
       imageGenerations: { [myGenId]: myGen },
       isReferenceImagePubliclyReusable: false,
     });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -165,7 +177,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
       imageGenerations: { [myGenId]: myGen },
       isReferenceImagePubliclyReusable: false,
     });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -180,7 +192,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
       imageGenerations: { [myGenId]: myGen },
       isReferenceImagePubliclyReusable: true,
     });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -194,7 +206,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
       imageGenerations: { [myGenId]: myGen },
       isReferenceImagePubliclyReusable: false,
     });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -205,7 +217,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
 
   it('USER_UPLOAD 来源不触发归属校验、不快照元数据', async () => {
     const service = makeService({});
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'USER_UPLOAD',
@@ -232,7 +244,7 @@ describe('GalleryService.createSubmission — Task 4.5：站内来源写入守�
 
   it('FROM_GENERATION 忽略 DTO mediaUrls，用 generation.generatedImages', async () => {
     const service = makeService({ imageGenerations: { [myGenId]: myGen } });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -284,7 +296,7 @@ describe('GalleryService.createSubmission — Task 4.5：站内来源写入守�
 
   it('USER_UPLOAD 站内 mediaUrls/coverImage 全部放行', async () => {
     const service = makeService({});
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'USER_UPLOAD',
@@ -856,4 +868,181 @@ describe('GalleryService.recreate — 仅 PUBLISHED，读快照 + referenceCount
       expect(recordReference).not.toHaveBeenCalled();
     },
   );
+});
+
+// ── createSubmission 投稿幂等（Task 2）────────────────────────────────────
+
+describe('createSubmission —— 一次生成至多一条活着的广场帖', () => {
+  const dto = {
+    kind: 'IMAGE',
+    category: 'portrait',
+    sourceType: 'FROM_GENERATION',
+    imageGenerationId: 'gen-1',
+  } as never;
+
+  const generation = {
+    userId: 'user-1',
+    resolvedPrompt: 'a cat',
+    modelUsed: 'gpt-image',
+    width: 1024,
+    height: 1024,
+    referenceImage: null,
+    generatedImages: [`${R2_PUBLIC_BASE}/a.png`, `${R2_PUBLIC_BASE}/b.png`],
+  };
+
+  it('已存在活帖时幂等返回该帖，不新建', async () => {
+    const created: unknown[] = [];
+    const service = makeService({
+      imageGenerations: { 'gen-1': generation },
+      activePosts: { 'gen-1': { id: 'post-existing', status: 'PENDING' } },
+      captureCreate: (data) => created.push(data),
+    });
+
+    const result = await service.createSubmission('user-1', dto);
+
+    expect((result as { id: string }).id).toBe('post-existing');
+    expect(created).toHaveLength(0);
+  });
+
+  it('没有活帖时正常新建 PENDING 帖', async () => {
+    const created: unknown[] = [];
+    const service = makeService({
+      imageGenerations: { 'gen-1': generation },
+      activePosts: {},
+      captureCreate: (data) => created.push(data),
+    });
+
+    await service.createSubmission('user-1', dto);
+
+    expect(created).toHaveLength(1);
+    expect((created[0] as { status: string }).status).toBe('PENDING');
+  });
+
+  it('并发抢跑撞 DB 唯一索引（P2002）时回查并返回已有帖，不冒泡成 500', async () => {
+    let activePost: { id: string; status: string } | null = null;
+    const service = makeService({
+      imageGenerations: { 'gen-1': generation },
+      // 首次查为空（放行到 create），create 抛 P2002，回查时另一方已写入
+      findActivePostImpl: async () => activePost,
+      createImpl: async () => {
+        activePost = { id: 'post-raced', status: 'PENDING' };
+        throw Object.assign(new Error('unique'), { code: 'P2002' });
+      },
+    });
+
+    const result = await service.createSubmission('user-1', dto);
+
+    expect((result as { id: string }).id).toBe('post-raced');
+  });
+});
+
+// ── createSubmission：DRAFT 不占「一次生成至多一条活帖」的坑（Task 2 审阅发现的回归）───
+
+/**
+ * `createDraft` 不做归属校验，`imageGenerationId` 是 DTO 里未经校验的任意字符串——任何人
+ * 都能把它填成别人（或自己）某次生成的 id 建一条 DRAFT。若 DRAFT 被
+ * `findActivePostByImageGenerationId` 当成「活帖」，就会占住「一次生成至多一条活帖」的坑，
+ * 导致真正的作者之后调用 createSubmission 时被这条 DRAFT 幂等短路（或撞库唯一索引后回查
+ * 又查到它），永远发不出自己的投稿。
+ *
+ * 这里不用 makeService 的手写 lookup mock ——那个 mock 本身就是「repo 已经过滤好之后的结果」，
+ * 测不出过滤条件本身对不对。要真正锁住 gallery.repository.ts 里的 status 过滤条件，必须接入
+ * 真实 GalleryRepository，配一张只解释标准 Prisma where 子句（相等 / notIn / not）的假
+ * gallery_posts 表——这样"DRAFT 是否被当成活帖"完全由生产代码的 where 子句决定，而不是由
+ * 测试自己重新写一遍判断逻辑。
+ */
+function matchesWhere(row: Record<string, unknown>, where: Record<string, unknown>): boolean {
+  return Object.entries(where).every(([key, condition]) => {
+    const value = row[key];
+    if (condition && typeof condition === 'object') {
+      const c = condition as { notIn?: unknown[]; not?: unknown };
+      if (c.notIn) return !c.notIn.includes(value);
+      if ('not' in c) return value !== c.not;
+      return true;
+    }
+    return value === condition;
+  });
+}
+
+function makeFakeGalleryPostsTable(rows: Array<Record<string, unknown>>) {
+  let seq = 0;
+  return {
+    findFirst: async ({ where }: { where: Record<string, unknown> }) => {
+      const match = rows.find((row) => matchesWhere(row, where));
+      return match ? { id: match.id, status: match.status } : null;
+    },
+    create: async ({ data }: { data: Record<string, unknown> }) => {
+      seq += 1;
+      const row = { id: `post-${seq}`, ...data };
+      rows.push(row);
+      return row;
+    },
+  };
+}
+
+describe('GalleryRepository + GalleryService.createSubmission —— DRAFT 不占坑（回归）', () => {
+  const authorId = 'user-1';
+  const genId = 'gen-1';
+
+  const generationRow = {
+    userId: authorId,
+    resolvedPrompt: 'a cat',
+    modelUsed: 'gpt-image',
+    width: 1024,
+    height: 1024,
+    referenceImage: null,
+    generatedImages: [`${R2_PUBLIC_BASE}/a.png`],
+  };
+
+  function wireRealService(existingPost: Record<string, unknown> | null) {
+    const rows: Array<Record<string, unknown>> = existingPost ? [existingPost] : [];
+    const prisma = {
+      gallery_posts: makeFakeGalleryPostsTable(rows),
+      image_generations: { findUnique: async () => generationRow },
+    };
+    const repo = new GalleryRepository(prisma as never);
+    const r2 = { getPublicBaseUrl: async () => R2_PUBLIC_BASE };
+    const service = new GalleryService(repo, {} as never, r2 as never);
+    return { service, rows };
+  }
+
+  it('已存在一条 DRAFT（同一次生成）时，createSubmission 正常新建 PENDING 帖，而不是把 DRAFT 幂等返回', async () => {
+    const { service, rows } = wireRealService({
+      id: 'draft-existing',
+      imageGenerationId: genId,
+      authorId,
+      status: GalleryStatus.DRAFT,
+    });
+
+    const result = await service.createSubmission(authorId, {
+      kind: 'IMAGE',
+      category: 'portrait',
+      sourceType: 'FROM_GENERATION',
+      imageGenerationId: genId,
+    } as never);
+
+    expect((result as { id: string; status: string }).id).not.toBe('draft-existing');
+    expect((result as { id: string; status: string }).status).toBe(GalleryStatus.PENDING);
+    // 原 DRAFT 仍留在表里，新帖是另建的一条——而不是把 DRAFT 原地幂等返回。
+    expect(rows).toHaveLength(2);
+  });
+
+  it('对照组：存在一条 PENDING（真活帖）时，仍然幂等返回该帖，不新建', async () => {
+    const { service, rows } = wireRealService({
+      id: 'pending-existing',
+      imageGenerationId: genId,
+      authorId,
+      status: GalleryStatus.PENDING,
+    });
+
+    const result = await service.createSubmission(authorId, {
+      kind: 'IMAGE',
+      category: 'portrait',
+      sourceType: 'FROM_GENERATION',
+      imageGenerationId: genId,
+    } as never);
+
+    expect((result as { id: string }).id).toBe('pending-existing');
+    expect(rows).toHaveLength(1);
+  });
 });

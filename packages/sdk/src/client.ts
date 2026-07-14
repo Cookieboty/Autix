@@ -1062,6 +1062,23 @@ export interface ImageWorkbenchGenerateResult {
   };
 }
 
+/** 广场作品状态（与后端 GalleryStatus 一致）。 */
+export type GalleryPostStatus =
+  | 'DRAFT'
+  | 'PENDING'
+  | 'PUBLISHED'
+  | 'REJECTED'
+  | 'HIDDEN'
+  | 'REMOVED'
+  | 'UNPUBLISHED';
+
+/** 该次生成当前「活着的」广场帖（status <> REMOVED, DRAFT）；没有则字段缺省。 */
+export interface ImageGenerationGalleryPost {
+  id: string;
+  status: GalleryPostStatus;
+  rejectReason?: string | null;
+}
+
 export interface ImageWorkbenchHistoryItem {
   id: string;
   resolvedPrompt: string;
@@ -1085,6 +1102,7 @@ export interface ImageWorkbenchHistoryItem {
   settings?: Record<string, unknown>;
   sourceImages?: ConversationSourceImage[];
   referenceImages?: ConversationSourceImage[];
+  galleryPost?: ImageGenerationGalleryPost;
 }
 
 export interface ImageWorkbenchHistoryResult {
@@ -2319,6 +2337,9 @@ export const galleryApi = {
   /** POST /api/gallery/:id/republish —— 作者本人把已下架作品重新提交审核，UNPUBLISHED → PENDING。 */
   republish: (id: string) =>
     chatApi.post<GalleryDetailPost>(`/api/gallery/${id}/republish`, {}),
+  /** DELETE /api/gallery/:id —— 作者本人删除自己的作品（→ REMOVED）。
+   *  PENDING=撤回投稿；REJECTED/UNPUBLISHED/HIDDEN=彻底删除。PUBLISHED 需先 unpublish。 */
+  remove: (id: string) => chatApi.delete<GalleryDetailPost>(`/api/gallery/${id}`),
   /** POST /api/gallery/:id/recreate —— 仅已发布作品；返回该作品创作快照并记一次引用。 */
   recreate: (id: string) => chatApi.post<GalleryRecreateResult>(`/api/gallery/${id}/recreate`, {}),
   /** POST /api/gallery/:id/download —— 仅已发布作品；同步记一次下载事件 + INCR downloadCount。 */

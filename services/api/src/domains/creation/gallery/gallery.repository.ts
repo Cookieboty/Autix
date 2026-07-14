@@ -38,6 +38,47 @@ export class GalleryRepository {
     return this.prisma.gallery_posts.create({ data });
   }
 
+  /**
+   * 按来源生成记录查「活着的」广场帖 —— 活帖定义全局唯一：status NOT IN (REMOVED, DRAFT)。
+   * DRAFT 是私人草稿，本就不是"广场里活着的作品"，不占这个坑——否则 createDraft（不做归属
+   * 校验，imageGenerationId 是 DTO 里任意字符串）建的一条草稿就能把这次生成的投稿坑焊死，
+   * 导致真正的作者之后 createSubmission 被自己的（或被冒名顶替的）草稿短路甚至撞库 500。
+   * 与 DB 的 partial unique index（gallery_posts_image_generation_active_uniq）同一条规则，
+   * 两处必须逐字一致，否则服务层放行的写入会被索引拒绝（或反之）。
+   */
+  findActivePostByImageGenerationId(imageGenerationId: string, authorId: string) {
+    return this.prisma.gallery_posts.findFirst({
+      where: {
+        imageGenerationId,
+        authorId,
+        status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
+      },
+      select: { id: true, status: true },
+    });
+  }
+
+  /**
+   * 按一组来源生成记录批量查活帖——与 findActivePostByImageGenerationId 同一条规则
+   * （status NOT IN (REMOVED, DRAFT)），一次 findMany，供 workbench history 整页回传
+   * 提交态使用，杜绝逐条查的 N+1。
+   */
+  findActivePostsByImageGenerationIds(
+    imageGenerationIds: string[],
+    authorId: string,
+  ): Promise<
+    Array<{ id: string; status: GalleryStatus; rejectReason: string | null; imageGenerationId: string | null }>
+  > {
+    if (imageGenerationIds.length === 0) return Promise.resolve([]);
+    return this.prisma.gallery_posts.findMany({
+      where: {
+        imageGenerationId: { in: imageGenerationIds },
+        authorId,
+        status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
+      },
+      select: { id: true, status: true, rejectReason: true, imageGenerationId: true },
+    });
+  }
+
   update(id: string, data: Prisma.gallery_postsUncheckedUpdateInput) {
     return this.prisma.gallery_posts.update({ where: { id }, data });
   }
