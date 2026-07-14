@@ -27,7 +27,7 @@ export interface SchemaViolation {
   termId?: string;
 }
 
-const CHOICE_CONTROLS: XUiControl[] = ['chips', 'select'];
+const CHOICE_CONTROLS: XUiControl[] = ['chips', 'select', 'size-grid'];
 const RANGE_CONTROLS: XUiControl[] = ['slider', 'stepper'];
 
 /** ajv 对 x-ui 内部零校验（validate-params.ts:26 的 addKeyword valid:true），

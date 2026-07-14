@@ -32,3 +32,14 @@ export interface TextControlProps {
   onChange: (value: string) => void;
   disabled?: boolean;
 }
+
+export interface SizeGridControlProps {
+  label: string;
+  value: string;
+  /** 来自 property.enum + x-ui.optionLabels（字面量 label，如 '1:1' / '2K'）。 */
+  options: Array<{ value: string; label: string }>;
+  /** x-ui.groupBy，如 'tier'。仅 'tier' 触发分辨率档位分组，其它值退化成单组平铺。 */
+  groupBy?: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}

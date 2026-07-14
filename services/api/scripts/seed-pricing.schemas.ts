@@ -39,31 +39,25 @@ export function buildImageParamsSchema(model: ModelSchemaHint): ParamsSchema {
   const properties: ParamsSchema['properties'] = {};
   const required: string[] = [];
 
-  // size：上游真正要的参数。此前根本不在 schema 里（spec §3）—— paramsSchema 一直只
-  // 描述「计价用到的那些参数」，而 size 不计价，于是它就漏了。
-  //
-  // ⚠ 第 1 期它是 wire + hidden + **无 default + 不进 required**，也就是「存在但惰性」：
-  //   - hidden → SchemaForm 跳过它 → 表单外观不变
-  //   - 无 default → applyParamDefaults 不会填它
-  //   - 不进 required → 今天只发 resolution、不发 size 的调用方不会 400
-  //
-  // 第 2 期才由 size-grid 控件让用户直接选 size，届时 resolution 翻转成 derived+hidden
-  // （spec §11 第 2 期第 8 条）。**方向不能在第 1 期翻**：今天 resolution 才是用户在点的
-  // 那个控件（SchemaForm 渲染它），size 是从它反推出来的。
+  // size：**用户直接选的控件**（第 2 期由 size-grid 呈现：分辨率分组 + 长宽比）。
+  // role: 'wire' —— 它发给上游（preset 里剥掉 @tier 后缀），但不参与计价：
+  // 计价看的是从它派生出来的 resolution。
   if (cap.sizes.length > 0) {
     properties.size = {
       type: 'string',
       enum: cap.sizes.map((size) => size.value),
+      default: cap.defaults.size,
       'x-ui': {
         role: 'wire',
-        control: 'hidden',
+        control: 'size-grid',
         labelKey: 'pricing.params.size',
-        // 选项 label 是语言无关标记（'1:1' / '16:9'），走字面量而非 i18n key。
+        // 选项 label 是语言无关标记（'1:1' / '2K'），走字面量不走 i18n（spec 墙 5）
         optionLabels: Object.fromEntries(cap.sizes.map((size) => [size.value, size.label])),
         groupBy: 'tier',
         order: 10,
       },
     };
+    required.push('size');
   }
 
   // quality：仅当模型确有质量档位时给（gemini flash/pro 无质量轴 → 不给该属性，
@@ -88,12 +82,9 @@ export function buildImageParamsSchema(model: ModelSchemaHint): ParamsSchema {
     required.push('quality');
   }
 
-  // resolution：模型真实可达的档位（对每个 size 求 resolveImagePricingResolution 去重）。
-  // compatible 的所有尺寸都落在 1K，所以只有 1K 一档。
-  //
-  // role: pricing —— 它只计价，**不发给上游**（上游要的是 size）。
-  // 它是用户在工作台上点的那个「分辨率」控件（SchemaForm 按 control:'chips' 渲染），
-  // 所以第 1 期保持可见、保持 required。
+  // resolution：**派生参数**（spec §6.2）。服务端按 size 算，前端传什么都被覆盖 ——
+  // 这堵住了「传 size: 4K + resolution: 1K 就按 1K 收费」的洞（spec §6.3）。
+  // 仍留在 required：derive 在 validate 之前跑，此时它已存在。
   const tiers = IMAGE_RESOLUTION_ORDER.filter((tier) =>
     cap.sizes.some((size) => resolveImagePricingResolution(size.value) === tier),
   );
@@ -105,10 +96,11 @@ export function buildImageParamsSchema(model: ModelSchemaHint): ParamsSchema {
       enum: [...tiers],
       default: resolutionDefault,
       'x-ui': {
-        role: 'pricing',
-        control: 'chips',
+        role: 'derived',
+        control: 'hidden',
+        derivedFrom: { param: 'size', via: 'imagePricingResolution' },
         labelKey: 'pricing.params.resolution',
-        order: 20,
+        order: 21,
       },
     };
     required.push('resolution');

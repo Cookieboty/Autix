@@ -1,5 +1,107 @@
 import { applyParamDefaults, resolveConstraints } from '@autix/domain/pricing';
-import type { ParamsSchema } from '@autix/domain/pricing';
+import type { JsonSchemaProperty, ParamsSchema, XUi } from '@autix/domain/pricing';
+import {
+  buildImageSizeResolutionGroups,
+  getUniqueImageAspectOptions,
+  resolveImageSizeSelection,
+  selectImageSizeAspect,
+  selectImageSizeResolution,
+  type ImageSizeAspectOption,
+  type ImageSizeResolutionGroup,
+} from '@autix/domain/image';
+import { layoutProperties } from './schema-layout';
+
+/**
+ * 优先级：optionLabelKeys[v] > optionLabels[v] > 原始值（types.ts:38）。
+ * `optionLabels` 里的值是语言无关标记（'1:1' / '2K'），绝不能走 translateOption——
+ * 那会把字面量当 i18n key 送进翻译器（spec 墙 5）。
+ */
+export function resolveOptionLabel(
+  ui: XUi | undefined,
+  value: string,
+  translateOption: (key: string | undefined, fallback: string) => string,
+): string {
+  const i18nKey = ui?.optionLabelKeys?.[value];
+  if (i18nKey) return translateOption(i18nKey, value);
+  const literal = ui?.optionLabels?.[value];
+  if (literal) return literal;
+  return value;
+}
+
+/**
+ * SchemaForm 该渲染哪些属性：跳过 `control: 'hidden'`，以及**任何** `role: 'derived'`
+ * 的属性——即便它的 control 被错误地写成了可见控件（spec §6.1 role 表）。派生参数
+ * 由服务端从其它参数算出，前端传什么都会被覆盖；渲染它就是让用户去改一个改不动的东西。
+ */
+export function visibleEntries(
+  schema: ParamsSchema,
+): Array<{ name: string; property: JsonSchemaProperty }> {
+  return layoutProperties(schema)
+    .flatMap((g) => g.entries)
+    .filter(({ property }) => {
+      const ui = property['x-ui'];
+      if (!ui || ui.control === 'hidden') return false;
+      return (ui.role ?? 'both') !== 'derived';
+    });
+}
+
+export interface SizeGridView {
+  groups: ImageSizeResolutionGroup[];
+  aspectOptions: ImageSizeAspectOption[];
+  selectedTier: string | undefined;
+  selectedAspect: string | undefined;
+  displayLabel: string;
+  pickTier: (nextTierValue: string) => string;
+  pickAspect: (nextAspectValue: string) => string;
+}
+
+/**
+ * size-grid 控件的读模型（纯函数）：把 schema 的 enum + optionLabels 拼成
+ * `Pick<ImageModelCapability,'sizes'>` 同形对象，喂给 domain 的
+ * `buildImageSizeResolutionGroups`——它的入参本来就是这个形状，一行都不用改
+ * （spec 墙 5）。分组规则只认 `groupBy === 'tier'`；其它取值（包括 undefined）
+ * 一律退化成单组平铺，绝不抛（口径 1：分组规则来自 x-ui.groupBy，不来自 modelFamily）。
+ */
+export function buildSizeGridView(
+  options: Array<{ value: string; label: string }>,
+  groupBy: string | undefined,
+  currentValue: string,
+): SizeGridView {
+  if (groupBy !== 'tier') {
+    const flat = options.find((o) => o.value === currentValue);
+    const flatAspectOptions: ImageSizeAspectOption[] = options.map((o) => ({
+      label: o.label,
+      value: o.value,
+      aspectValue: o.value,
+      sourceLabel: o.label,
+    }));
+    return {
+      groups: [{ label: '', value: '', options: flatAspectOptions }],
+      aspectOptions: flatAspectOptions,
+      selectedTier: undefined,
+      selectedAspect: flat?.label,
+      displayLabel: flat?.label ?? currentValue,
+      pickTier: () => currentValue,
+      pickAspect: (nextAspectValue) => {
+        const match = options.find((o) => o.value === nextAspectValue || o.label === nextAspectValue);
+        return match?.value ?? currentValue;
+      },
+    };
+  }
+
+  const groups = buildImageSizeResolutionGroups({ sizes: options.map((o) => ({ label: o.label, value: o.value })) });
+  const selection = resolveImageSizeSelection(currentValue, groups);
+
+  return {
+    groups,
+    aspectOptions: getUniqueImageAspectOptions(groups),
+    selectedTier: selection.group?.value,
+    selectedAspect: selection.option?.aspectValue,
+    displayLabel: selection.option?.sourceLabel ?? currentValue,
+    pickTier: (nextTierValue) => selectImageSizeResolution(currentValue, nextTierValue, groups),
+    pickAspect: (nextAspectValue) => selectImageSizeAspect(currentValue, nextAspectValue, groups),
+  };
+}
 
 /**
  * 委托给 domain 的 `applyParamDefaults`（zero-dep，前端可用）而不是自己重新实现

@@ -1,9 +1,6 @@
-// 'size-grid' 是第 2 期才引入的控件（spec §11 第 2 期第 8 条）。**本期故意不加**：
-// SchemaForm 的 CONTROL_REGISTRY 是 Record<Exclude<XUiControl,'hidden'>, Component>，
-// 往这个 union 里加一个值就会让 tsc 逼着你立刻实现对应组件 —— 那是有意的守卫，
-// 而第 1 期没有任何 schema 用 size-grid，提前加它既是 YAGNI，也破坏了行为中性。
 export type XUiControl =
-  | 'chips' | 'select' | 'slider' | 'stepper' | 'switch' | 'text' | 'textarea' | 'hidden';
+  | 'chips' | 'select' | 'slider' | 'stepper' | 'switch' | 'text' | 'textarea' | 'hidden'
+  | 'size-grid';
 
 /**
  * 参数在三条链路上的去向。缺省（未写）= 'both'，向后兼容存量 schema。

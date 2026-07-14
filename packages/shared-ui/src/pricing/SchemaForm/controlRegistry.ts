@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import type { XUiControl } from '@autix/domain/pricing';
 import { ChipsControl } from './controls/ChipsControl';
 import { SelectControl } from './controls/SelectControl';
+import { SizeGridControl } from './controls/SizeGridControl';
 import { SliderControl } from './controls/SliderControl';
 import { StepperControl } from './controls/StepperControl';
 import { SwitchControl } from './controls/SwitchControl';
@@ -25,6 +26,7 @@ export type RegisteredControl = Exclude<XUiControl, 'hidden'>;
 export const CONTROL_REGISTRY: Record<RegisteredControl, ComponentType<any>> = {
   chips: ChipsControl,
   select: SelectControl,
+  'size-grid': SizeGridControl,
   slider: SliderControl,
   stepper: StepperControl,
   switch: SwitchControl,

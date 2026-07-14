@@ -1,4 +1,4 @@
-import { SelectLike } from '../../../image/studio/shared/SelectLike';
+import { SelectLike } from '../primitives/SelectLike';
 import { cn } from '../../../ui/utils';
 import type { ChoiceControlProps } from '../types';
 
@@ -6,7 +6,7 @@ export function SelectControl({ label, value, options, onChange, disabled }: Cho
   return (
     <div className="grid gap-1.5 text-xs">
       <span className="text-muted-foreground">{label}</span>
-      {/* SelectLike has no `disabled` prop (packages/shared-ui/src/image/studio/shared/SelectLike.tsx);
+      {/* SelectLike has no `disabled` prop (packages/shared-ui/src/pricing/SchemaForm/primitives/SelectLike.tsx);
           adapt here rather than widening that shared primitive's contract. */}
       <div className={cn(disabled && 'pointer-events-none opacity-60')} aria-disabled={disabled}>
         <SelectLike

@@ -10,7 +10,7 @@ const GOOD_SCHEMA: ParamsSchema = {
   properties: {
     size: {
       type: 'string', enum: ['1024x1024@1K', '2048x2048@2K'], default: '1024x1024@1K',
-      'x-ui': { role: 'wire', control: 'select', groupBy: 'tier',
+      'x-ui': { role: 'wire', control: 'size-grid', groupBy: 'tier',
                 optionLabels: { '1024x1024@1K': '1:1', '2048x2048@2K': '1:1 2K' }, order: 10 },
     },
     quality: {

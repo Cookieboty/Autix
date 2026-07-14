@@ -15,8 +15,8 @@ import {
 import { cn } from '../../../ui/utils';
 import { STYLE_PRESET_VALUES, type ImageStudioModelSettings } from '../constants';
 import { imageSettingsToSchemaParams } from '../schema-params-mapping';
-import { PanelLabel, SliderRow } from '../shared/PrimitiveControls';
-import { SelectLike } from '../shared/SelectLike';
+import { PanelLabel, SliderRow } from '../../../pricing/SchemaForm/primitives/PrimitiveControls';
+import { SelectLike } from '../../../pricing/SchemaForm/primitives/SelectLike';
 
 export function ImageStudioSettingsPanel({
   open,

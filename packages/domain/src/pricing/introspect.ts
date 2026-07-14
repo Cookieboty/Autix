@@ -46,6 +46,9 @@ export function priceOptions(
     const property = paramsSchema.properties[name];
     if (!property?.enum) continue;
 
+    // role: 'wire' 的属性不参与计价 —— 给它算价签既无意义又会放大 quote 次数（spec 墙 8）
+    if ((property['x-ui']?.role ?? 'both') === 'wire') continue;
+
     const prices: Record<string, number> = {};
     for (const candidate of property.enum) {
       prices[String(candidate)] = quoteTask({

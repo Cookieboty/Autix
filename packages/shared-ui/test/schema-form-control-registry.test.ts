@@ -19,6 +19,7 @@ import { CONTROL_REGISTRY } from '../src/pricing/SchemaForm/controlRegistry';
 const EXPECTED_CONTROLS: Record<Exclude<XUiControl, 'hidden'>, true> = {
   chips: true,
   select: true,
+  'size-grid': true,
   slider: true,
   stepper: true,
   switch: true,

@@ -17,8 +17,8 @@ import type {
 import type { ImageResultItem } from '../../../chat/MessageBubble';
 import type { InspirationTab } from '../constants';
 import { TEMPLATE_SORT_VALUES } from '../constants';
-import { TabButton } from '../shared/PrimitiveControls';
-import { SelectLike } from '../shared/SelectLike';
+import { TabButton } from '../../../pricing/SchemaForm/primitives/PrimitiveControls';
+import { SelectLike } from '../../../pricing/SchemaForm/primitives/SelectLike';
 import { ImageTemplateCard } from '../cards/ImageTemplateCard';
 import {
   ImageHistoryTaskCard,

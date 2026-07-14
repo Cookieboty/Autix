@@ -3,10 +3,11 @@
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import { priceOptions } from '@autix/domain/pricing';
 import { layoutProperties } from './schema-layout';
+import { resolveOptionLabel, visibleEntries } from './schema-form-logic';
 import { useSchemaForm, type UseSchemaFormResult } from './useSchemaForm';
 import { CONTROL_REGISTRY, type RegisteredControl } from './controlRegistry';
 import { PriceTag } from './PriceTag';
-import type { ChoiceControlProps } from './types';
+import type { ChoiceControlProps, SizeGridControlProps } from './types';
 
 export interface SchemaFormProps {
   paramsSchema: ParamsSchema;
@@ -30,8 +31,9 @@ export interface SchemaFormProps {
 
 /**
  * 顶层 schema 驱动渲染器（spec §6.6）：按 layoutProperties 的分组渲染，
- * 跳过 x-ui.control === 'hidden' 的属性，按 x-ui.control 分发到
- * CONTROL_REGISTRY 里对应的控件。
+ * 渲染谁由 visibleEntries() 这一个纯函数决定——跳过 x-ui.control === 'hidden'，
+ * 以及**任何** role: 'derived' 的属性（哪怕它的 control 被配错成可见控件，
+ * spec §6.1 role 表），再按 x-ui.control 分发到 CONTROL_REGISTRY 里对应的控件。
  *
  * 哪些 enum 选项该挂 PriceTag，不在这里判断——priceOptions() 本身只对
  * affectedParams(pricingSchema) 里的属性返回价格表（见
@@ -57,6 +59,7 @@ export function SchemaForm({
 
   const priced = priceOptions(paramsSchema, pricingSchema, form.params, pricingContext);
   const groups = layoutProperties(paramsSchema);
+  const visibleNames = new Set(visibleEntries(paramsSchema).map((e) => e.name));
 
   return (
     <div className="space-y-5">
@@ -64,8 +67,9 @@ export function SchemaForm({
         <section key={group.group ?? '__ungrouped'} className="space-y-3">
           {group.entries.map(({ name, property }) => {
             if (hiddenFields?.includes(name)) return null;
+            if (!visibleNames.has(name)) return null;
             const control = property['x-ui']?.control;
-            if (!control || control === 'hidden') return null;
+            if (!control) return null;
             const Control = CONTROL_REGISTRY[control as RegisteredControl];
             if (!Control) return null;
 
@@ -76,7 +80,7 @@ export function SchemaForm({
               const prices = priced[name];
               const options = (property.enum ?? []).map((candidate) => ({
                 value: candidate,
-                label: translateOption(property['x-ui']?.optionLabelKeys?.[String(candidate)], String(candidate)),
+                label: resolveOptionLabel(property['x-ui'], String(candidate), translateOption),
                 priceTag: prices ? (
                   <PriceTag price={prices[String(candidate)]} active={candidate === value} />
                 ) : undefined,
@@ -91,6 +95,29 @@ export function SchemaForm({
                     onChange: (next: string | number) => form.setParam(name, next),
                     disabled,
                   } satisfies ChoiceControlProps)}
+                />
+              );
+            }
+
+            if (control === 'size-grid') {
+              // size 是 role: 'wire'（不计价），priceOptions() 天然不会为它挂价签
+              // （packages/domain/src/pricing/introspect.ts 跳过 wire 属性）——
+              // 这里不重复该判断，直接不传 priceTag。
+              const options = (property.enum ?? []).map((candidate) => ({
+                value: String(candidate),
+                label: resolveOptionLabel(property['x-ui'], String(candidate), translateOption),
+              }));
+              return (
+                <Control
+                  key={name}
+                  {...({
+                    label,
+                    value: String(value ?? ''),
+                    options,
+                    groupBy: property['x-ui']?.groupBy,
+                    onChange: (next: string) => form.setParam(name, next),
+                    disabled,
+                  } satisfies SizeGridControlProps)}
                 />
               );
             }

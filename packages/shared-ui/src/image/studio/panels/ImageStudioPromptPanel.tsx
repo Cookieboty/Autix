@@ -22,7 +22,7 @@ import {
   type ImageStudioModelSettings,
   type ImageStudioPromptRefinement,
 } from '../constants';
-import { SelectLike } from '../shared/SelectLike';
+import { SelectLike } from '../../../pricing/SchemaForm/primitives/SelectLike';
 
 export function ImageStudioPromptPanel({
   prompt,

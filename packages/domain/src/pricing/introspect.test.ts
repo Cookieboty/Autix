@@ -134,4 +134,28 @@ describe('priceOptions', () => {
     expect(result.quality.medium).toBe(withoutFixed.total);
     expect(result.quality.medium).not.toBe(withFixed.total);
   });
+
+  it('does not price options for a wire-role param', () => {
+    const schema: ParamsSchema = {
+      type: 'object',
+      properties: {
+        size: { type: 'string', enum: ['1024x1024@1K', '2048x2048@2K'],
+                'x-ui': { role: 'wire', control: 'size-grid' } },
+        resolution: { type: 'string', enum: ['1K', '2K'],
+                      'x-ui': { role: 'derived', control: 'hidden',
+                                derivedFrom: { param: 'size', via: 'imagePricingResolution' } } },
+      },
+    };
+    // 'size' 必须真的出现在 affectedParams 里（比如误挂了一条按 size 查表的 term），
+    // 否则这个用例测不到 wire 跳过逻辑 —— priceOptions 本来就不会碰一个 pricingSchema
+    // 没引用的参数。
+    const wireAffectingPricing: PricingSchema = {
+      terms: [
+        { id: 'base', op: 'add', const: 1 },
+        { id: 'size', op: 'mul', table: { param: 'size', values: { '1024x1024@1K': 1, '2048x2048@2K': 4 } } },
+      ],
+    };
+    const priced = priceOptions(schema, wireAffectingPricing, { size: '1024x1024@1K' }, ctx);
+    expect(priced.size).toBeUndefined();
+  });
 });

@@ -15,7 +15,7 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { cn } from '../../../ui/utils';
-import { IconAction } from '../shared/PrimitiveControls';
+import { IconAction } from '../../../pricing/SchemaForm/primitives/PrimitiveControls';
 import type { ImageResultItem } from '../../../chat/MessageBubble';
 import type {
   ImageWorkbenchHistoryItem,
