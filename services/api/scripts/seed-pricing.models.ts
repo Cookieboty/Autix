@@ -6,7 +6,6 @@
  * seed 流程。SEED_MODELS 因此永远测不到，除非把它和纯函数一起搬出来（同
  * seed-pricing.schemas.ts 的拆分理由，AGENTS.md 拆分优先级第 1 条）。
  */
-import { buildImageMetadata } from './seed-image-params';
 
 /**
  * type + capabilities 决定 presetKeyFor 的归类（→ text / image / video preset）；
@@ -32,10 +31,6 @@ export interface SeedModelRow {
  * 所有图片模型走同一套网关协议（spec §7.3 的决议），故 protocolKey 恒为
  * gatewayOpenAIV1.key，不按 kind 分支。
  */
-export function imageMetadataFor(model: string): Record<string, unknown> {
-  return buildImageMetadata({ model });
-}
-
 /** 任务-模型绑定的默认加价倍率（2 = 原始成本上加 100% 毛利）。运营可逐条调整。 */
 export const DEFAULT_MULTIPLIER = 2;
 
@@ -77,16 +72,18 @@ export const SEED_MODELS: SeedModelRow[] = [
   { name: 'Grok 4.3', provider: 'amux', model: 'grok-4.3', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'xAI Grok model', 'zh-CN': 'xAI Grok 模型' } },
 
   // —— 图像 ——
-  // 每个模型的参数、协议路由、上传上限，全部来自 IMAGE_MODEL_PARAMS（seed-image-params.ts）——
-  // 那是唯一真相。这里只登记「有哪些模型」和展示名。
-  { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2-official', type: 'general', capabilities: ['image'], isDefault: true, metadata: imageMetadataFor('gpt-image-2-official'), description: { en: 'OpenAI image model', 'zh-CN': 'OpenAI 图像模型' } },
-  { name: 'Nano Banana Pro', provider: 'amux', model: 'gemini-3-pro-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: imageMetadataFor('gemini-3-pro-image-preview'), description: { en: 'Nano Banana Pro', 'zh-CN': 'Nano Banana Pro' } },
-  { name: 'Nano Banana Fast', provider: 'amux', model: 'gemini-3.1-flash-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: imageMetadataFor('gemini-3.1-flash-image-preview'), description: { en: 'Nano Banana Fast', 'zh-CN': 'Nano Banana Fast' } },
-  { name: 'Nano Banana 2 Lite', provider: 'amux', model: 'gemini-3.1-flash-lite-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: imageMetadataFor('gemini-3.1-flash-lite-image'), description: { en: 'Nano Banana 2 Lite', 'zh-CN': 'Nano Banana 2 Lite' } },
-  { name: 'Gemini 2.5 Flash Image', provider: 'amux', model: 'gemini-2.5-flash-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: imageMetadataFor('gemini-2.5-flash-image'), description: { en: 'Google Gemini image model', 'zh-CN': 'Google Gemini 图像模型' } },
-  { name: 'Seedream 4.5', provider: 'amux', model: 'doubao-seedream-4-5', type: 'general', capabilities: ['image'], isDefault: false, metadata: imageMetadataFor('doubao-seedream-4-5'), description: { en: 'ByteDance Seedream image model', 'zh-CN': '字节 Seedream 图像模型' } },
-  { name: 'Seedream 5.0 Lite', provider: 'amux', model: 'doubao-seedream-5-0-lite', type: 'general', capabilities: ['image'], isDefault: false, metadata: imageMetadataFor('doubao-seedream-5-0-lite'), description: { en: 'ByteDance Seedream lite model', 'zh-CN': '字节 Seedream 轻量模型' } },
-  { name: 'MiniMax Image 01', provider: 'amux', model: 'MiniMax-Image-01', type: 'general', capabilities: ['image'], isDefault: false, metadata: imageMetadataFor('MiniMax-Image-01'), description: { en: 'MiniMax image model', 'zh-CN': 'MiniMax 图像模型' } },
+  // **metadata 留空**：协议路由（protocolKey）、能力（operations / limits）、参数
+  // （paramsSchema）全部由运营在 admin 模型配置页填，存 DB。seed 不猜、不写死——
+  // 每个模型支持哪些参数、走哪个协议、上传几张图，逐模型都不同。
+  // seed 只负责「库里没有这个模型就建一行」。
+  { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2-official', type: 'general', capabilities: ['image'], isDefault: true, metadata: {}, description: { en: 'OpenAI image model', 'zh-CN': 'OpenAI 图像模型' } },
+  { name: 'Nano Banana Pro', provider: 'amux', model: 'gemini-3-pro-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'Nano Banana Pro', 'zh-CN': 'Nano Banana Pro' } },
+  { name: 'Nano Banana Fast', provider: 'amux', model: 'gemini-3.1-flash-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'Nano Banana Fast', 'zh-CN': 'Nano Banana Fast' } },
+  { name: 'Nano Banana 2 Lite', provider: 'amux', model: 'gemini-3.1-flash-lite-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'Nano Banana 2 Lite', 'zh-CN': 'Nano Banana 2 Lite' } },
+  { name: 'Gemini 2.5 Flash Image', provider: 'amux', model: 'gemini-2.5-flash-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'Google Gemini image model', 'zh-CN': 'Google Gemini 图像模型' } },
+  { name: 'Seedream 4.5', provider: 'amux', model: 'doubao-seedream-4-5', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'ByteDance Seedream image model', 'zh-CN': '字节 Seedream 图像模型' } },
+  { name: 'Seedream 5.0 Lite', provider: 'amux', model: 'doubao-seedream-5-0-lite', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'ByteDance Seedream lite model', 'zh-CN': '字节 Seedream 轻量模型' } },
+  { name: 'MiniMax Image 01', provider: 'amux', model: 'MiniMax-Image-01', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'MiniMax image model', 'zh-CN': 'MiniMax 图像模型' } },
 
   // —— 视频（video preset）—— 只保留 Seedance 2.0 系列（线上真实 id）；metadata.videoModelKind 定档
   { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0' }, description: { en: 'Seedance video model', 'zh-CN': 'Seedance 视频模型' } },

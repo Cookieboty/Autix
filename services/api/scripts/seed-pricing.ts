@@ -9,8 +9,7 @@ import {
   type PricingSchema,
 } from '@autix/domain/pricing';
 import { buildVideoParamsSchema } from './seed-pricing.schemas';
-import { buildImageParamsSchema, IMAGE_MODEL_PARAMS } from './seed-image-params';
-import { SEED_MODELS, DEFAULT_MULTIPLIER, imageMetadataFor } from './seed-pricing.models';
+import { SEED_MODELS, DEFAULT_MULTIPLIER } from './seed-pricing.models';
 import { createPrismaClient } from './db';
 
 
@@ -99,48 +98,6 @@ async function seedModels() {
   console.log(`models: created ${created} new, skipped ${skipped.length} existing (untouched): ${skipped.join(', ')}`);
 }
 
-/**
- * 存量模型补写协议 metadata。seedModels() 对已存在的行是整行跳过的，所以光改
- * SEED_MODELS 对线上模型无效——线上模型的 metadata 里永远不会出现新的
- * protocolKey/operations/limits。这里做**合并写**：只补协议三件套（用
- * imageMetadataFor 生成，取值与 IMAGE_MODEL_CAPABILITIES 保持一致），不动运营
- * 手改过的其它 metadata 字段（比如运营自己加的备注类 key）。幂等：重复跑只会
- * 覆盖同样的三个字段为同样的值。
- */
-async function seedModelProtocolMetadata(): Promise<void> {
-  const models = await prisma.model_configs.findMany({
-    where: { capabilities: { has: 'image' } },
-    select: { id: true, provider: true, model: true, metadata: true, isActive: true },
-  });
-  for (const model of models) {
-    // 未登记在 IMAGE_MODEL_PARAMS 里的图片模型（已下线的、或运营手加的）——**退役，不猜**。
-    //
-    // 为什么不能只是"跳过"：这一行仍然 isActive，用户在模型下拉里选得到它。而它没有
-    // protocolKey、schema 也是旧的 → 选中就是一次 400。老代码正是靠"猜一个 kind"把未知
-    // 模型悄悄按别的模型的参数表处理，用户因此能选到该模型根本不支持的档位。
-    //
-    // 为什么是停用而不是 DELETE：image_generations 等表按 modelConfigId 外键引用它，
-    // 硬删会带走历史记录。停用后它从所有面向用户的列表里消失，历史仍可追溯。
-    if (!IMAGE_MODEL_PARAMS[model.model]) {
-      if (model.isActive) {
-        await prisma.model_configs.update({
-          where: { id: model.id },
-          data: { isActive: false },
-        });
-        console.warn(`[seed] retired ${model.model} —— 未登记在 IMAGE_MODEL_PARAMS，已停用（历史记录保留）`);
-      }
-      continue;
-    }
-    const existing = (model.metadata ?? {}) as Record<string, unknown>;
-    const merged = { ...existing, ...imageMetadataFor(model.model) };
-    await prisma.model_configs.update({
-      where: { id: model.id },
-      data: { metadata: toInputJson(merged) },
-    });
-    console.info(`[seed] protocol metadata → ${model.model}`);
-  }
-}
-
 async function seedTasks() {
   for (const [index, task] of TASK_PRESETS.entries()) {
     const fixedCostSchema = task.fixedCostSchema ? toInputJson(task.fixedCostSchema) : Prisma.JsonNull;
@@ -170,54 +127,9 @@ async function seedTasks() {
  * 未列出的模型沿用 MODEL_PRESETS 的通用 pricingSchema。
  */
 const MODEL_PRICING: Record<string, PricingSchema> = {
-  // —— 图像：单张积分（档位/质量查表）。张数由业务层乘算，schema 只算一张 ——
-  // 档位 key 必须覆盖该模型 schema 里 resolution 的**每一个** enum 值，否则查表落空
-  // 走 fallback，用户选了 4K 却按默认档收费。
-  'gpt-image-2-official': {
-    terms: [
-      { id: 'base', op: 'add', const: 0 },
-      { id: 'quality', op: 'add', table: { param: 'quality', values: { low: 3, medium: 27, high: 106 } } },
-    ],
-  },
-  'gemini-3-pro-image-preview': {
-    terms: [
-      { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '1K': 34, '2K': 51, '4K': 75 } } },
-    ],
-  },
-  'gemini-3.1-flash-image-preview': {
-    terms: [
-      { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '1K': 34, '2K': 51, '4K': 75 } } },
-    ],
-  },
-  'gemini-3.1-flash-lite-image': {
-    terms: [
-      { id: 'perImage', op: 'add', const: 17 },
-    ],
-  },
-  'gemini-2.5-flash-image': {
-    terms: [
-      { id: 'perImage', op: 'add', const: 17 },
-    ],
-  },
-  'doubao-seedream-4-5': {
-    terms: [
-      { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '4K': 45 } } },
-    ],
-  },
-  'doubao-seedream-5-0-lite': {
-    terms: [
-      { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '3K': 34 } } },
-    ],
-  },
-  'MiniMax-Image-01': {
-    terms: [
-      { id: 'perImage', op: 'add', const: 15 },
-    ],
-  },
+  // 图片模型的 pricingSchema **不在这里**——它和 paramsSchema / metadata 一样，
+  // 由运营在 admin 模型配置页填、存 DB。每个模型的计价参数都不同（有的按分辨率档位
+  // 查表、有的按质量、有的按张固定价），seed 写死一份只会覆盖运营配好的价。
   // —— 视频：每秒积分 × seconds ——
   'doubao-seedance-2.0': {
     terms: [
@@ -241,7 +153,6 @@ function paramsSchemaFor(
   key: ModelPresetKey,
   model: { provider?: string | null; model: string; metadata: unknown },
 ): ParamsSchema {
-  if (key === 'image') return buildImageParamsSchema(model);
   if (key === 'video') return buildVideoParamsSchema(model);
   return MODEL_PRESETS[key].paramsSchema;
 }
@@ -279,10 +190,11 @@ async function seedModelSchemas() {
     // 但**只作用于 image/video**：受历史通用 schema bug 影响的就是这两类(quality 档位/
     // 分辨率不匹配)；text 模型走统一 text preset、无 per-model 差异，且更可能被运营调过
     // token 计价，故即使 force 也不动它们，避免误伤。
-    // 已退役的图片模型（不在 IMAGE_MODEL_PARAMS 里）：不给它生成 schema。
-    // buildImageParamsSchema 对未登记的 model id 是**直接抛**的（不做静默兜底），
-    // 不在这里跳过的话整个 seed 会在这一行崩掉。
-    if (key === 'image' && !IMAGE_MODEL_PARAMS[model.model]) {
+    // 图片模型的 paramsSchema / metadata **不由 seed 写**——它们是运营在 admin
+    // 模型配置页填的、存在 DB 里的配置（每个模型支持哪些参数、走哪个协议、上传上限
+    // 多少，全部逐模型不同）。seed 只负责「库里没有这个模型就建一行」。
+    // 保存期的跨配置校验器会拦住存不进去的坏配置（schema 与 preset 不闭合）。
+    if (key === 'image') {
       skipped.add(model.id);
       continue;
     }
@@ -451,7 +363,6 @@ async function main() {
   // 排在 seedModelSchemas() 之前：存量模型（seedModels() 因已存在而跳过创建的那些）
   // 也要拿到 protocolKey/operations/limits，否则 preset 路由（Task 9）在它们身上永远
   // 读不到 protocolKey，只能走「未注册」报错。
-  await seedModelProtocolMetadata();
   await seedTasks();
   const { skipped } = await seedModelSchemas();
   // seedBindings 自行按 active/public + 确定性排序查候选，不再依赖 seedModelSchemas

@@ -29,8 +29,6 @@ export interface ModelSchemaHint {
   metadata: unknown;
 }
 
-export { buildImageParamsSchema } from './seed-image-params';
-
 export function buildVideoParamsSchema(model: ModelSchemaHint): ParamsSchema {
   const kind = detectVideoModelKind({
     provider: model.provider,
