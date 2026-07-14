@@ -1,3 +1,4 @@
+import { GalleryStatus } from '../../platform/prisma/generated';
 import {
   assertInStationMediaUrls,
   assertSource,
@@ -182,5 +183,19 @@ describe('isInStationMediaUrl / assertInStationMediaUrls（Task 4.5：站内来�
     expect(() =>
       assertInStationMediaUrls(['https://cdn.mine.com/a.png', 'https://evil.com/x.png'], [base]),
     ).toThrow('仅允许使用站内存储的媒体链接');
+  });
+});
+
+describe('assertTransition —— UNPUBLISHED 出边', () => {
+  it('作者可以删除自己已下架的作品（UNPUBLISHED → REMOVED）', () => {
+    expect(() =>
+      assertTransition(GalleryStatus.UNPUBLISHED, GalleryStatus.REMOVED, 'author'),
+    ).not.toThrow();
+  });
+
+  it('HIDDEN 仍不可由作者直接改回 PUBLISHED（防绕过管理员处罚）', () => {
+    expect(() =>
+      assertTransition(GalleryStatus.HIDDEN, GalleryStatus.PUBLISHED, 'author'),
+    ).toThrow();
   });
 });
