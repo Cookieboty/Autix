@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../ui/select';
+import { dedupeGenerationIds, summarizeSettled } from './gallery-interaction-model';
 import type { PublicImageHistoryImage, PublicImageHistoryItem } from './public-image-generation';
 
 /** 与后端 CreateGalleryPostDto category 语义对齐的固定分类集——复用 categoryOptions 命名空间的既有译文。 */
@@ -54,7 +55,7 @@ export function PublishToGalleryDialog({
   open: boolean;
   selections: PublishSelection[];
   onClose: () => void;
-  onPublished?: (count: number) => void;
+  onPublished?: (result: { succeeded: number; failed: number }) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const tCategory = useTranslations('categoryOptions');
@@ -78,26 +79,40 @@ export function PublishToGalleryDialog({
     if (count === 0 || submitting) return;
     setSubmitting(true);
     setError(null);
-    try {
-      let succeeded = 0;
-      for (const { item, image } of selections) {
-        await galleryActions.publish({
+
+    // 服务端 FROM_GENERATION 是按「一次生成」建帖（该次生成的全部图派生进同一条帖），
+    // 所以同一次生成勾多张只发一次；不去重就会建出内容相同的重复帖。
+    const generationIds = dedupeGenerationIds(selections);
+    const titleOf = (generationId: string) => {
+      const hit = selections.find(({ image }) => image.generationId === generationId);
+      const text = hit?.image.prompt ?? hit?.item.prompt;
+      return text?.slice(0, 60) || undefined;
+    };
+
+    // 逐条独立：一条失败不再中断其余（原先的串行 for-await 会整批中止，且只报第一个错）。
+    const results = await Promise.allSettled(
+      generationIds.map((generationId) =>
+        galleryActions.publish({
           kind: 'IMAGE',
           category,
-          title: (image.prompt ?? item.prompt)?.slice(0, 60) || undefined,
+          title: titleOf(generationId),
           sourceType: 'FROM_GENERATION',
-          imageGenerationId: image.generationId,
+          imageGenerationId: generationId,
           allowPublicReference,
-        });
-        succeeded += 1;
-      }
-      onPublished?.(succeeded);
-      onClose();
-    } catch (err) {
-      setError(galleryErrorMessage(err));
-    } finally {
-      setSubmitting(false);
+        }),
+      ),
+    );
+
+    const { succeeded, failed, firstError } = summarizeSettled(results);
+    setSubmitting(false);
+
+    if (succeeded === 0) {
+      setError(galleryErrorMessage(firstError));
+      return;
     }
+
+    onPublished?.({ succeeded, failed });
+    onClose();
   };
 
   return (

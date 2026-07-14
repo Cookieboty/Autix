@@ -2,6 +2,7 @@ import type {
   TaskEstimateInput,
   ModelConfigItem,
   PublicImageGenerateResult,
+  ImageGenerationGalleryPost,
 } from '@autix/shared-store';
 
 /**
@@ -37,6 +38,8 @@ export interface PublicImageHistoryItem {
   createdAt: string;
   images: PublicImageHistoryImage[];
   settings: Record<string, unknown>;
+  /** 该次生成当前活着的广场帖（status <> REMOVED）；没有投稿过则缺省。 */
+  galleryPost?: ImageGenerationGalleryPost;
 }
 
 /**

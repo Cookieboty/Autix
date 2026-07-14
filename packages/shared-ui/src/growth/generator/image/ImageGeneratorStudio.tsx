@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ImageModelCapability } from '@autix/domain/image';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import {
+  galleryActions,
   publicGalleryActions,
   publicGeneratorActions,
   useAuthStore,
@@ -18,7 +19,8 @@ import type { PublicGrowthMediaItem } from '../../types';
 import { ModeTabs, StudioDensitySlider } from '../parts';
 import type { ImageStudioMode, TemplateDensity } from '../generator-studio-helpers';
 import { ImageComposer } from './ImageComposer';
-import { PublicImageTemplateWall } from './ImageTemplateWall';
+import { resolveFavoriteAction, resolveLikeAction } from './gallery-interaction-model';
+import { PublicImageTemplateWall, type GalleryCardInteraction } from './ImageTemplateWall';
 import { PublicImageHistoryPanel, type PendingImageGenerationCard } from './PublicImageHistoryPanel';
 import { PublicImageTemplateDialog } from './ImageTemplateDialog';
 import {
@@ -30,11 +32,14 @@ import {
 /**
  * 广场作品 → 模板卡片形状映射：只填模板墙/详情弹窗实际读取的字段，
  * description 充当 prompt（"使用"即把描述填入生成器）。其余模板专有字段留空。
+ *
+ * 不再 `as unknown as ImageTemplate` —— 那个强转正是 liked/favorited 被悄悄丢掉却没被
+ * 类型检查抓住的原因。这里显式声明返回一个「补齐了必填字段」的卡片对象。
  */
 function galleryItemToTemplateCard(item: GalleryFeedItem): ImageTemplate {
   const { post, metrics } = item;
   const cover = post.coverImage ?? post.mediaUrls[0] ?? '';
-  return {
+  const card: Partial<ImageTemplate> = {
     id: post.id,
     // 广场无标题
     title: '',
@@ -48,7 +53,17 @@ function galleryItemToTemplateCard(item: GalleryFeedItem): ImageTemplate {
     viewCount: metrics.viewCount,
     useCount: 0,
     modelHint: post.model ?? '',
-  } as unknown as ImageTemplate;
+  };
+  return card as ImageTemplate;
+}
+
+/** feed → 互动态：登录态才有 liked/favorited（匿名是 undefined，不是 false）。 */
+function galleryItemToInteraction(item: GalleryFeedItem): GalleryCardInteraction {
+  return {
+    liked: item.liked ?? false,
+    favorited: item.favorited ?? false,
+    likeCount: item.metrics.likeCount,
+  };
 }
 
 export function ImageGeneratorStudio({
@@ -88,6 +103,7 @@ export function ImageGeneratorStudio({
   const [templateDensity, setTemplateDensity] = useState<TemplateDensity>('normal');
   const [templates, setTemplates] = useState<ImageTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [interactions, setInteractions] = useState<Record<string, GalleryCardInteraction>>({});
   const [historyItems, setHistoryItems] = useState<PublicImageHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -110,10 +126,17 @@ export function ImageGeneratorStudio({
     publicGalleryActions
       .listFeed({ kind: 'IMAGE', limit: 60 })
       .then((feed) => {
-        if (!cancelled) setTemplates(feed.map(galleryItemToTemplateCard));
+        if (cancelled) return;
+        setTemplates(feed.map(galleryItemToTemplateCard));
+        setInteractions(
+          Object.fromEntries(feed.map((item) => [item.post.id, galleryItemToInteraction(item)])),
+        );
       })
       .catch(() => {
-        if (!cancelled) setTemplates([]);
+        if (!cancelled) {
+          setTemplates([]);
+          setInteractions({});
+        }
       })
       .finally(() => {
         if (!cancelled) setTemplatesLoading(false);
@@ -123,61 +146,55 @@ export function ImageGeneratorStudio({
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadHistory = useCallback(async () => {
     if (!isAuthenticated) {
       setHistoryItems([]);
       setHistoryLoading(false);
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
     setHistoryLoading(true);
-    publicGeneratorActions
-      .listImageHistory({ pageSize: 30 })
-      .then((items) => {
-        if (!cancelled) {
-          setHistoryItems(
-            items.map((item) => ({
-              id: item.id,
-              prompt: item.resolvedPrompt,
-              model: item.modelUsed,
-              createdAt: item.createdAt,
-              // settings 现在是透传 bag（spec §11 第 2 期）：历史回填只需要展示用的
-              // size/quality，不再伪造 guidanceScale/steps/stylePreset 等已下线的
-              // 固定字段——PublicImageHistoryItem.settings 的类型不再要求它们。
-              settings: {
-                size: String(item.settings?.size ?? ''),
-                quality: item.settings?.quality ? String(item.settings.quality) : undefined,
-              },
-              images: (item.images?.length
-                ? item.images
-                : item.generatedImages.map((url, index) => ({
-                    url,
-                    index,
-                    prompt: item.resolvedPrompt,
-                    generationId: item.id,
-                  }))
-              ).map((image, index) => ({
-                url: image.url,
-                prompt: image.prompt ?? item.resolvedPrompt,
-                generationId: image.generationId ?? item.id,
-                index: image.index ?? index,
-              })),
-            })),
-          );
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setHistoryItems([]);
-      })
-      .finally(() => {
-        if (!cancelled) setHistoryLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const items = await publicGeneratorActions.listImageHistory({ pageSize: 30 });
+      setHistoryItems(
+        items.map((item) => ({
+          id: item.id,
+          prompt: item.resolvedPrompt,
+          model: item.modelUsed,
+          createdAt: item.createdAt,
+          galleryPost: item.galleryPost,
+          // settings 现在是透传 bag（spec §11 第 2 期）：历史回填只需要展示用的
+          // size/quality，不再伪造 guidanceScale/steps/stylePreset 等已下线的
+          // 固定字段——PublicImageHistoryItem.settings 的类型不再要求它们。
+          settings: {
+            size: String(item.settings?.size ?? ''),
+            quality: item.settings?.quality ? String(item.settings.quality) : undefined,
+          },
+          images: (item.images?.length
+            ? item.images
+            : item.generatedImages.map((url, index) => ({
+                url,
+                index,
+                prompt: item.resolvedPrompt,
+                generationId: item.id,
+              }))
+          ).map((image, index) => ({
+            url: image.url,
+            prompt: image.prompt ?? item.resolvedPrompt,
+            generationId: image.generationId ?? item.id,
+            index: image.index ?? index,
+          })),
+        })),
+      );
+    } catch {
+      setHistoryItems([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
 
   // 广场「recreate」跳转预填：挂载时若带 initialPrompt 则应用一次（不随后续 props 变化重复触发）。
   useEffect(() => {
@@ -247,6 +264,106 @@ export function ImageGeneratorStudio({
     }
   };
 
+  /**
+   * 点赞/收藏请求的「过期请求」防护：每次发起请求前给该 postId 的对应动作种类打一个
+   * 递增版本号，请求 settle（无论成功/失败）时只有版本号仍是发起时那一个才应用结果，
+   * 否则说明用户在这期间又点了一次（甚至好几次），这次 settle 已经过期，直接丢弃 ——
+   * 不然纯靠「最后 settle 的赢」，一个姗姗来迟的失败回调可能把后来请求已经校准好的
+   * 状态（服务端真实 likeCount 等）静默覆盖回旧值。
+   * 用 useRef 存放，避免被重渲染重置；用 like/favorite 两个独立 keyspace，
+   * 避免点赞请求在途时收藏动作把它的版本号也顶掉（反之亦然）。
+   */
+  const interactionVersionsRef = useRef<{ like: Record<string, number>; favorite: Record<string, number> }>({
+    like: {},
+    favorite: {},
+  });
+  const bumpInteractionVersion = (kind: 'like' | 'favorite', postId: string) => {
+    const next = (interactionVersionsRef.current[kind][postId] ?? 0) + 1;
+    interactionVersionsRef.current[kind][postId] = next;
+    return next;
+  };
+  const isStaleInteractionVersion = (kind: 'like' | 'favorite', postId: string, version: number) =>
+    interactionVersionsRef.current[kind][postId] !== version;
+
+  /**
+   * 点赞：乐观翻转 + ±1，失败回滚。成功后用服务端返回的 ResourceMetrics.likeCount 覆盖
+   * 本地推算值 —— 多标签页并发点同一张也不会飘。
+   * 未登录（feed 匿名时不返回 liked）→ 走站内既有的登录弹层，不另造一套。
+   */
+  const handleToggleLike = (postId: string) => {
+    if (!isAuthenticated) {
+      openAuthModal({ mode: 'entry', returnTo: '/ai/image' });
+      return;
+    }
+    const current = interactions[postId];
+    if (!current) return;
+    const action = resolveLikeAction(current.liked);
+    const optimistic: GalleryCardInteraction = {
+      ...current,
+      liked: action === 'like',
+      likeCount: Math.max(0, current.likeCount + (action === 'like' ? 1 : -1)),
+    };
+    setInteractions((prev) => ({ ...prev, [postId]: optimistic }));
+
+    const version = bumpInteractionVersion('like', postId);
+    const request = action === 'like' ? galleryActions.like(postId) : galleryActions.unlike(postId);
+    void request
+      .then((metrics) => {
+        if (isStaleInteractionVersion('like', postId, version)) return;
+        setInteractions((prev) => ({
+          ...prev,
+          [postId]: { ...prev[postId]!, likeCount: metrics.likeCount },
+        }));
+      })
+      .catch(() => {
+        if (isStaleInteractionVersion('like', postId, version)) return;
+        setInteractions((prev) => {
+          const entry = prev[postId];
+          if (!entry) return prev;
+          return { ...prev, [postId]: { ...entry, liked: current.liked, likeCount: current.likeCount } };
+        });
+      });
+  };
+
+  /**
+   * 收藏：POST/DELETE 是幂等的，不是 toggle —— 必须按当前 favorited 定方向（resolveFavoriteAction）。
+   * 只维护状态、不显示计数：接口只返回 { favorited }，没有 favoriteCount 可用来校准乐观更新，
+   * 显示一个校不准的数字不如不显示。
+   */
+  const handleToggleFavorite = (postId: string) => {
+    if (!isAuthenticated) {
+      openAuthModal({ mode: 'entry', returnTo: '/ai/image' });
+      return;
+    }
+    const current = interactions[postId];
+    if (!current) return;
+    const action = resolveFavoriteAction(current.favorited);
+    setInteractions((prev) => ({
+      ...prev,
+      [postId]: { ...prev[postId]!, favorited: action === 'favorite' },
+    }));
+
+    const version = bumpInteractionVersion('favorite', postId);
+    const request =
+      action === 'favorite' ? galleryActions.favorite(postId) : galleryActions.unfavorite(postId);
+    void request
+      .then((result) => {
+        if (isStaleInteractionVersion('favorite', postId, version)) return;
+        setInteractions((prev) => ({
+          ...prev,
+          [postId]: { ...prev[postId]!, favorited: result.favorited },
+        }));
+      })
+      .catch(() => {
+        if (isStaleInteractionVersion('favorite', postId, version)) return;
+        setInteractions((prev) => {
+          const entry = prev[postId];
+          if (!entry) return prev;
+          return { ...prev, [postId]: { ...entry, favorited: current.favorited } };
+        });
+      });
+  };
+
   return (
     <div className="relative h-full">
       {/* 背景由 PublicGeneratorStudioView 的全屏固定底层统一提供，此处不再自带背景，避免滑动时错位漏底 */}
@@ -258,6 +375,9 @@ export function ImageGeneratorStudio({
           density={templateDensity}
           onSelectTemplate={setSelectedTemplate}
           onUseTemplate={useTemplatePrompt}
+          interactions={interactions}
+          onToggleLike={handleToggleLike}
+          onToggleFavorite={handleToggleFavorite}
         />
       ) : null}
       {templateMode ? <div className="growth-template-scroll-overlay pointer-events-none absolute inset-0" /> : null}
@@ -273,6 +393,7 @@ export function ImageGeneratorStudio({
               pending={pendingGeneration}
               onRecreate={handleRecreate}
               onSelectionActiveChange={setHistorySelectionActive}
+              onHistoryChanged={() => void loadHistory()}
             />
           </div>
         ) : (
@@ -316,6 +437,9 @@ export function ImageGeneratorStudio({
         template={selectedTemplate}
         onClose={() => setSelectedTemplate(null)}
         onUsePrompt={useTemplatePrompt}
+        interactions={interactions}
+        onToggleLike={handleToggleLike}
+        onToggleFavorite={handleToggleFavorite}
       />
       </main>
 

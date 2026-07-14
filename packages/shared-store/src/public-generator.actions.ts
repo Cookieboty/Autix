@@ -9,6 +9,7 @@ import {
   type PublicImageGenerateInput,
   type PublicImageGenerateResult,
   type PublicImageHistoryItem,
+  type ImageGenerationGalleryPost,
 } from '@autix/sdk';
 
 export type {
@@ -21,6 +22,7 @@ export type {
   PublicImageGenerateInput,
   PublicImageGenerateResult,
   PublicImageHistoryItem,
+  ImageGenerationGalleryPost,
 };
 
 export const publicGeneratorActions = {
@@ -44,6 +46,11 @@ export const publicGeneratorActions = {
   }): Promise<PublicImageHistoryItem[]> => {
     const res = await publicImageGeneratorApi.history(params);
     return res.data.items ?? [];
+  },
+  /** DELETE /image-gen/workbench/history/:id：删除一整条生成记录（该次生成的全部图）。
+   *  该生成若还有活着的广场帖，服务端返回 409。 */
+  deleteImageHistory: async (id: string): Promise<void> => {
+    await publicImageGeneratorApi.deleteHistory(id);
   },
   generateImage: async (
     input: PublicImageGenerateInput,

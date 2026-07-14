@@ -57,6 +57,28 @@ export class GalleryRepository {
     });
   }
 
+  /**
+   * 按一组来源生成记录批量查活帖——与 findActivePostByImageGenerationId 同一条规则
+   * （status NOT IN (REMOVED, DRAFT)），一次 findMany，供 workbench history 整页回传
+   * 提交态使用，杜绝逐条查的 N+1。
+   */
+  findActivePostsByImageGenerationIds(
+    imageGenerationIds: string[],
+    authorId: string,
+  ): Promise<
+    Array<{ id: string; status: GalleryStatus; rejectReason: string | null; imageGenerationId: string | null }>
+  > {
+    if (imageGenerationIds.length === 0) return Promise.resolve([]);
+    return this.prisma.gallery_posts.findMany({
+      where: {
+        imageGenerationId: { in: imageGenerationIds },
+        authorId,
+        status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
+      },
+      select: { id: true, status: true, rejectReason: true, imageGenerationId: true },
+    });
+  }
+
   update(id: string, data: Prisma.gallery_postsUncheckedUpdateInput) {
     return this.prisma.gallery_posts.update({ where: { id }, data });
   }

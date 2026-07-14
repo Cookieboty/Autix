@@ -419,6 +419,8 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
         (error as AxiosError & { msg?: string; code?: string }).msg = payload.msg;
         (error as AxiosError & { msg?: string; code?: string }).code = payload.code;
         (error as AxiosError & { hint?: ApiResponseHint }).hint = payload.hint;
+        // 与 2xx-but-failed 分支保持一致：把服务端结构化错误上下文透传到 error 对象上。
+        (error as AxiosError & { data?: unknown }).data = payload.data;
       }
 
       const finalMsg =

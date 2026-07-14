@@ -1,20 +1,37 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronDown, Copy, Image as ImageIcon, Info, Sparkles, WandSparkles, X } from 'lucide-react';
+import {
+  Bookmark,
+  ChevronDown,
+  Copy,
+  Heart,
+  Image as ImageIcon,
+  Info,
+  Sparkles,
+  WandSparkles,
+  X,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ImageTemplate } from '@autix/shared-store';
 import { resolveTemplatePrompt } from '../media-inputs';
 import { imageTemplateCover } from '../generator-studio-helpers';
+import type { GalleryCardInteraction } from './ImageTemplateWall';
 
 export function PublicImageTemplateDialog({
   template,
   onClose,
   onUsePrompt,
+  interactions,
+  onToggleLike,
+  onToggleFavorite,
 }: {
   template: ImageTemplate | null;
   onClose: () => void;
   onUsePrompt: (template: ImageTemplate) => void;
+  interactions?: Record<string, GalleryCardInteraction>;
+  onToggleLike?: (postId: string) => void;
+  onToggleFavorite?: (postId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const [copied, setCopied] = useState(false);
@@ -154,14 +171,49 @@ export function PublicImageTemplateDialog({
             </section>
           </div>
 
-          <button
-            type="button"
-            className="growth-accent-glow-sm mt-5 inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-growth-accent px-4 text-base font-black text-background transition hover:bg-growth-accent-hover"
-            onClick={() => onUsePrompt(template)}
-          >
-            <WandSparkles className="size-5" />
-            {t('usePrompt')}
-          </button>
+          <div className="mt-5 flex items-center gap-2">
+            {onToggleLike ? (
+              <button
+                type="button"
+                aria-label={t('ariaLike')}
+                aria-pressed={interactions?.[template.id]?.liked ?? false}
+                onClick={() => onToggleLike(template.id)}
+                className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-border px-4 text-sm font-bold text-foreground transition hover:bg-secondary"
+              >
+                <Heart
+                  className={`size-4 ${
+                    interactions?.[template.id]?.liked ? 'fill-growth-accent text-growth-accent' : ''
+                  }`}
+                />
+                {interactions?.[template.id]?.likeCount ?? template.likeCount ?? 0}
+              </button>
+            ) : null}
+            {onToggleFavorite ? (
+              <button
+                type="button"
+                aria-label={t('ariaFavorite')}
+                aria-pressed={interactions?.[template.id]?.favorited ?? false}
+                onClick={() => onToggleFavorite(template.id)}
+                className="grid size-10 cursor-pointer place-items-center rounded-xl border border-border text-foreground transition hover:bg-secondary"
+              >
+                <Bookmark
+                  className={`size-4 ${
+                    interactions?.[template.id]?.favorited
+                      ? 'fill-growth-accent text-growth-accent'
+                      : ''
+                  }`}
+                />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="growth-accent-glow-sm inline-flex min-h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-growth-accent px-4 text-base font-black text-background transition hover:bg-growth-accent-hover"
+              onClick={() => onUsePrompt(template)}
+            >
+              <WandSparkles className="size-5" />
+              {t('usePrompt')}
+            </button>
+          </div>
         </aside>
       </div>
     </div>

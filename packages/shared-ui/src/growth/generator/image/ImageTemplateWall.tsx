@@ -1,7 +1,7 @@
 'use client';
 
 import type { MouseEvent } from 'react';
-import { Eye, Image as ImageIcon, UserRound } from 'lucide-react';
+import { Bookmark, Eye, Heart, Image as ImageIcon, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ImageTemplate } from '@autix/shared-store';
 import { MediaThumb } from '../../MediaBlocks';
@@ -37,6 +37,13 @@ const TEMPLATE_DENSITY_SKELETON_CLASS_TIGHT: Record<TemplateDensity, string> = {
   dense: 'grid-cols-2 gap-px md:grid-cols-5 xl:grid-cols-6',
   xdense: 'grid-cols-3 gap-px md:grid-cols-6 xl:grid-cols-8',
 };
+
+/** 广场卡片的互动态。收藏只有布尔态、没有计数——接口只回 { favorited }，没有可校准的 favoriteCount。 */
+export interface GalleryCardInteraction {
+  liked: boolean;
+  favorited: boolean;
+  likeCount: number;
+}
 
 function repeatedItems(items: PublicGrowthMediaItem[], count: number) {
   if (!items.length) return [];
@@ -89,6 +96,9 @@ export function ImageTemplateGrid({
   limit = 24,
   compact = false,
   tight = false,
+  interactions,
+  onToggleLike,
+  onToggleFavorite,
 }: {
   templates: ImageTemplate[];
   density: TemplateDensity;
@@ -99,6 +109,10 @@ export function ImageTemplateGrid({
   compact?: boolean;
   /** 紧凑铺排：1px 间距 + 无圆角（用于 /ai/image 模板墙） */
   tight?: boolean;
+  /** 卡片互动态（点赞/收藏），按 template.id 索引。不传则右上角只显示浏览量，行为与此前完全一致。 */
+  interactions?: Record<string, GalleryCardInteraction>;
+  onToggleLike?: (postId: string) => void;
+  onToggleFavorite?: (postId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const previewTemplates = templates.slice(0, limit);
@@ -151,10 +165,55 @@ export function ImageTemplateGrid({
                 )}
                 <span className="truncate">{template.authorName || t('unknownAuthor')}</span>
               </span>
-              {/* 右上：访问量 */}
-              <span className="growth-inset-ring-bright inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-sm font-black text-foreground backdrop-blur-md">
-                <Eye className="size-4" />
-                {formatTemplateMetric(template.viewCount)}
+              {/* 右上：访问量 + 点赞 + 收藏 */}
+              <span className="flex shrink-0 items-center gap-1">
+                <span className="growth-inset-ring-bright inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-sm font-black text-foreground backdrop-blur-md">
+                  <Eye className="size-4" />
+                  {formatTemplateMetric(template.viewCount)}
+                </span>
+                {onToggleLike ? (
+                  <button
+                    type="button"
+                    aria-label={t('ariaLike')}
+                    aria-pressed={interactions?.[template.id]?.liked ?? false}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleLike(template.id);
+                    }}
+                    className="growth-inset-ring-bright pointer-events-auto inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-sm font-black text-foreground backdrop-blur-md transition hover:brightness-125"
+                  >
+                    <Heart
+                      className={`size-4 ${
+                        interactions?.[template.id]?.liked
+                          ? 'fill-growth-accent text-growth-accent'
+                          : ''
+                      }`}
+                    />
+                    {formatTemplateMetric(
+                      interactions?.[template.id]?.likeCount ?? template.likeCount,
+                    )}
+                  </button>
+                ) : null}
+                {onToggleFavorite ? (
+                  <button
+                    type="button"
+                    aria-label={t('ariaFavorite')}
+                    aria-pressed={interactions?.[template.id]?.favorited ?? false}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleFavorite(template.id);
+                    }}
+                    className="growth-inset-ring-bright pointer-events-auto grid size-9 shrink-0 cursor-pointer place-items-center rounded-full bg-secondary text-foreground backdrop-blur-md transition hover:brightness-125"
+                  >
+                    <Bookmark
+                      className={`size-4 ${
+                        interactions?.[template.id]?.favorited
+                          ? 'fill-growth-accent text-growth-accent'
+                          : ''
+                      }`}
+                    />
+                  </button>
+                ) : null}
               </span>
             </div>
             {/* 底部居中：Recreate 按钮（主题色，圆角与参数按钮一致） */}
@@ -180,12 +239,18 @@ export function PublicImageTemplateWall({
   density,
   onSelectTemplate,
   onUseTemplate,
+  interactions,
+  onToggleLike,
+  onToggleFavorite,
 }: {
   templates: ImageTemplate[];
   loading: boolean;
   density: TemplateDensity;
   onSelectTemplate: (template: ImageTemplate) => void;
   onUseTemplate: (template: ImageTemplate) => void;
+  interactions?: Record<string, GalleryCardInteraction>;
+  onToggleLike?: (postId: string) => void;
+  onToggleFavorite?: (postId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const previewTemplates = templates.slice(0, 24);
@@ -227,6 +292,9 @@ export function PublicImageTemplateWall({
         density={density}
         onSelectTemplate={onSelectTemplate}
         onUseTemplate={onUseTemplate}
+        interactions={interactions}
+        onToggleLike={onToggleLike}
+        onToggleFavorite={onToggleFavorite}
         tight
       />
     </div>

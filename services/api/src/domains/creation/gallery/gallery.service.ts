@@ -511,6 +511,19 @@ export class GalleryService {
     return this.repo.update(id, { status: GalleryStatus.PENDING });
   }
 
+  /** 生成记录 id → 该生成当前活着的广场帖（status <> REMOVED, DRAFT）。无活帖的 id 不在 Map 里。 */
+  async findActivePostsByGenerationIds(authorId: string, imageGenerationIds: string[]) {
+    const posts = await this.repo.findActivePostsByImageGenerationIds(imageGenerationIds, authorId);
+    return new Map(
+      posts
+        .filter((post) => !!post.imageGenerationId)
+        .map((post) => [
+          post.imageGenerationId as string,
+          { id: post.id, status: post.status, rejectReason: post.rejectReason },
+        ]),
+    );
+  }
+
   /**
    * GET /gallery/feed：公开热度 Feed（首页图片/视频画廊消费）。
    * 只返回 PUBLISHED 作品，按 kind 分流（IMAGE/VIDEO），并附带互动指标（无指标行则补零）。
