@@ -23,6 +23,60 @@ const PRICING_SCHEMA = {
   ],
 };
 
+/**
+ * 第 2 期翻转后的图片 schema 形状（见 services/api/scripts/seed-pricing.schemas.ts）：
+ * size 是用户选的 wire 参数，resolution 由 size 派生、只计价。
+ */
+const SIZE_PARAMS_SCHEMA = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object' as const,
+  required: ['size', 'quality', 'resolution'],
+  properties: {
+    size: {
+      type: 'string' as const,
+      enum: ['1024x1024@1K', '2048x2048@2K'],
+      default: '1024x1024@1K',
+      'x-ui': { role: 'wire' as const, control: 'size-grid' as const },
+    },
+    quality: {
+      type: 'string' as const,
+      enum: ['low', 'medium', 'high'],
+      default: 'medium',
+      'x-ui': { role: 'both' as const, control: 'chips' as const },
+    },
+    resolution: {
+      type: 'string' as const,
+      enum: ['1K', '2K'],
+      default: '1K',
+      'x-ui': {
+        role: 'derived' as const,
+        control: 'hidden' as const,
+        derivedFrom: { param: 'size', via: 'imagePricingResolution' as const },
+      },
+    },
+    referenceImages: {
+      type: 'integer' as const,
+      minimum: 0,
+      maximum: 4,
+      default: 0,
+      'x-ui': { role: 'pricing' as const, control: 'hidden' as const },
+    },
+  },
+};
+
+const SIZE_PRICING_SCHEMA = {
+  terms: [
+    { id: 'base', op: 'add' as const, const: 1 },
+    { id: 'quality', op: 'mul' as const, table: { param: 'quality', values: { low: 15, medium: 90, high: 350 } } },
+    { id: 'resolution', op: 'mul' as const, table: { param: 'resolution', values: { '1K': 1, '2K': 2 } } },
+    { id: 'referenceImages', op: 'add' as const, perUnit: { param: 'referenceImages', unitCost: 5 } },
+  ],
+};
+
+/** quality medium(90) × resolution 2K(2) = 180；1K 则是 90。 */
+const PRICE_AT_2K = 180;
+const PRICE_AT_1K = 90;
+
 function buildRepo(overrides: Partial<jest.Mocked<TaskPricingRepository>> = {}) {
   return {
     findTaskDefinition: jest.fn().mockResolvedValue({
@@ -506,13 +560,13 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
         params: { quantity: 1 },
       });
 
-      // base(1) * quality medium(90) * resolution 1K(1) * quantity(1) = 90;
-      // + referenceImages(0 * 5) = 90.
+      // base(1) * quality medium(90) * resolution 1K(1) = 90; + referenceImages(0 * 5) = 90.
       expect(result.estimatedCost).toBe(90);
+      // quantity 是调用方传来的、schema 从未声明的键（张数已从图像 schema 移除）。
+      // 快照是白名单 → 它不进快照。此前的黑名单实现会把它原样冻进去。
       expect(result.pricingSnapshot.params).toEqual({
         quality: 'medium',
         resolution: '1K',
-        quantity: 1,
         referenceImages: 0,
       });
 
@@ -662,12 +716,97 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
         params: { quality: 'high', resolution: '4K', quantity: 3, referenceImages: 1 },
       });
 
+      // quantity 未被 schema 声明 → 白名单投影丢弃；其余三个是调用方显式传的值，
+      // 不得被 default 覆盖。
       expect(result.pricingSnapshot.params).toEqual({
         quality: 'high',
         resolution: '4K',
-        quantity: 3,
         referenceImages: 1,
       });
+    });
+  });
+
+  describe('deriveParams — 权威扣费路径的派生（spec §6.2/§6.3）', () => {
+    function buildSizeRepo() {
+      return buildRepo({
+        findModelPricingConfig: jest.fn().mockResolvedValue({
+          id: 'model-1',
+          name: 'Flipped Image Model',
+          paramsSchema: SIZE_PARAMS_SCHEMA,
+          pricingSchema: SIZE_PRICING_SCHEMA,
+          schemaVersion: 1,
+        }),
+      });
+    }
+
+    it('derives resolution from size and overwrites a client-sent value', async () => {
+      const service = new TaskPricingEstimatorService(buildSizeRepo());
+
+      // 前端传 size=2K + resolution=1K（想按 1K 收费）→ 必须按 2K 结算（spec §6.3）
+      const result = await service.estimateCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        params: { size: '2048x2048@2K', resolution: '1K', quality: 'medium' },
+      });
+
+      expect(result.pricingSnapshot.params.resolution).toBe('2K');
+      expect(result.estimatedCost).toBe(PRICE_AT_2K);
+      expect(result.estimatedCost).not.toBe(PRICE_AT_1K);
+    });
+
+    it('freezes the derived resolution but not the wire-only size into the snapshot', async () => {
+      const service = new TaskPricingEstimatorService(buildSizeRepo());
+
+      const result = await service.estimateCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        params: { size: '2048x2048@2K', quality: 'medium' },
+      });
+
+      expect(result.pricingSnapshot.params).toHaveProperty('resolution', '2K');
+      expect(result.pricingSnapshot.params).not.toHaveProperty('size'); // role: wire → 墙 7
+      expect(quoteTaskFromSnapshot(result.pricingSnapshot, {}).total).toBe(result.estimatedCost);
+    });
+
+    it('derives from the size default when the caller sends no size at all', async () => {
+      const service = new TaskPricingEstimatorService(buildSizeRepo());
+
+      // applyParamDefaults 先填 size=1024x1024@1K，deriveParams 才能从它算出 1K；
+      // 顺序反了这里就会 400（缺少 required resolution）或按错误档位收费。
+      const result = await service.estimateCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        params: {},
+      });
+
+      expect(result.pricingSnapshot.params.resolution).toBe('1K');
+      expect(result.estimatedCost).toBe(PRICE_AT_1K);
+    });
+
+    it('drops the dirty keys of a legacy settings bag instead of freezing them into the snapshot', async () => {
+      const service = new TaskPricingEstimatorService(buildSizeRepo());
+
+      const result = await service.estimateCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        params: {
+          size: '2048x2048@2K',
+          quality: 'medium',
+          referenceImages: 1,
+          // 老前端发的、schema 从未声明的键：ajv 不带 additionalProperties:false，不会 400；
+          // 但它们绝不能进快照 —— 结算期 mergeParamsAndUsage 的 key 冲突断言会 500。
+          promptTuning: '自动优化',
+          skipPromptTuning: true,
+          stylePreset: 'cinematic',
+        },
+      });
+
+      expect(result.pricingSnapshot.params).toEqual({
+        quality: 'medium',
+        resolution: '2K',
+        referenceImages: 1,
+      });
+      expect(quoteTaskFromSnapshot(result.pricingSnapshot, {})).toBeDefined();
     });
   });
 });
@@ -727,6 +866,22 @@ describe('stripNonPricingParams', () => {
     // 删掉这条过滤会复活「frozen inputTokens:0 → 每次结算按 0 token 计价」
     // 那个真实的线上 bug（spec §3.1.1.65）。
     expect('inputTokens' in stripNonPricingParams(SCHEMA, PARAMS)).toBe(false);
+  });
+
+  it('drops a key the schema never declared — snapshot is a whitelist, not a blacklist', () => {
+    // 老实现是 `{...params}` 再 delete：schema 未声明的键（老前端的 promptTuning /
+    // skipPromptTuning / stylePreset）会原样冻进快照，给结算期
+    // mergeParamsAndUsage 的「params/usage key 冲突即 throw」断言埋 500 的雷。
+    const out = stripNonPricingParams(SCHEMA, {
+      quality: 'high',
+      skipPromptTuning: true,
+      promptTuning: '自动优化',
+    });
+    expect(out).toEqual({ quality: 'high' });
+  });
+
+  it('does not invent a key the caller never sent, even though the schema declares it', () => {
+    expect(stripNonPricingParams(SCHEMA, { quality: 'low' })).toEqual({ quality: 'low' });
   });
 
   it('drops a usage param even when it also declares a pricing role', () => {

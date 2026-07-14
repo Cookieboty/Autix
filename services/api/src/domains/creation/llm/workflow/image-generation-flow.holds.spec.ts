@@ -55,7 +55,7 @@ describe('buildPromptOptimizeEstimateInput', () => {
 });
 
 describe('buildImageGenerationEstimateInput', () => {
-  it('packs quality/resolution/quantity/referenceImages into params, modelConfigId at top level', () => {
+  it('passes the user settings through and injects referenceImages, modelConfigId at top level', () => {
     const request = {
       modelConfig: { id: 'model-1', provider: 'openai', model: 'gpt-image' },
       settings: { quality: 'high', size: '1024x1024' },
@@ -69,9 +69,43 @@ describe('buildImageGenerationEstimateInput', () => {
     expect(input.modelConfigId).toBe('model-1');
     // 张数不进计价 params：pricingSchema 只描述「一张」的价格，多图的
     // 「单张价 × 张数」由 flow.service 在 createHold 时算。
-    expect(input.params).toMatchObject({ quality: 'high', referenceImages: 1 });
+    expect(input.params).toMatchObject({ quality: 'high', size: '1024x1024', referenceImages: 1 });
     expect('quantity' in input.params).toBe(false);
     expect(input.membershipLevel).toBe(3);
+  });
+
+  it('does NOT derive resolution here — the server-side estimator does (spec §6.2)', () => {
+    // 手写派生已删：resolution 必须由 estimator 的 deriveParams 从 size 算。
+    // 在这里再算一遍 = 两处实现、两套口径，迟早分裂（第 1 期的老 bug）。
+    const request = {
+      modelConfig: { id: 'model-1', provider: 'openai', model: 'gemini-3-pro-image' },
+      settings: { quality: 'high', size: '2048x2048@2K' },
+    } as never;
+
+    const input = buildImageGenerationEstimateInput(request);
+
+    expect('resolution' in input.params).toBe(false);
+    expect(input.params.size).toBe('2048x2048@2K');
+  });
+
+  it('overrides a client-sent referenceImages count with the真实上传张数', () => {
+    // referenceImages 是计价参数，用户不可自报：按真实上传张数收费。
+    const request = {
+      modelConfig: { id: 'model-1', provider: 'openai', model: 'gpt-image' },
+      settings: { quality: 'high', referenceImages: 0 },
+      sourceImages: [{ url: 'a' }, { url: 'b' }],
+      referenceImages: [{ url: 'c' }],
+    } as never;
+
+    expect(buildImageGenerationEstimateInput(request).params.referenceImages).toBe(3);
+  });
+
+  it('tolerates an absent settings bag', () => {
+    const request = {
+      modelConfig: { id: 'model-1', provider: 'openai', model: 'gpt-image' },
+    } as never;
+
+    expect(buildImageGenerationEstimateInput(request).params).toEqual({ referenceImages: 0 });
   });
 
   it('omits membershipLevel entirely when not provided', () => {

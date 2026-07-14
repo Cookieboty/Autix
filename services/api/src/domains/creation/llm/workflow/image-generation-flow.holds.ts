@@ -3,7 +3,6 @@ import type {
   ResolvedImageRequest,
   SourceImageRef,
 } from './image-generation-call-params';
-import { resolveImagePricingResolution } from '@autix/domain/image';
 
 /**
  * FIX-18: prompt 优化的输入 token 绝对上限，防止提交超大上下文消耗上游 token（DoS/超额成本）。
@@ -19,7 +18,6 @@ export function assertPromptOptimizeInputWithinLimit(inputTokens: number): void 
 }
 import {
   formatBillingModel,
-  normalizeImageQuality,
   toImageFlowJsonValue,
   type ImageFlowModelConfigLike,
 } from './image-generation-flow.core';
@@ -110,27 +108,30 @@ export function buildPromptOptimizeHoldCreateInput(input: {
 }
 
 /**
- * 计价入参。**不含张数**：pricingSchema 只描述「一张」的参数与价格，多图的
- * 「单张价 × 张数」由 image-generation-flow.service 在 createHold 时算
- * （见该处注释）。此前这里往 params 里塞了一个 quantity —— schema 不声明它、
- * 没有任何计价 term 引用它，是纯死参数，只因 schema 没写 additionalProperties:false
- * 才没报错。
+ * 计价入参。
+ *
+ * **不再手写 resolution** —— 它由 estimator 的 `deriveParams` 从 size 派生
+ * （spec §6.2/§6.3）。在这里再算一遍就是两处实现、两套口径，迟早分裂。
+ *
+ * **不含张数**：pricingSchema 只描述「一张」的参数与价格，多图的「单张价 × 张数」
+ * 由 image-generation-flow.service 在 createHold 时算（见该处注释）。
+ *
+ * 这里只做两件事：把用户参数原样交出去（脏键由 estimator 的白名单投影剔除），
+ * 外加注入一个用户不可自报的计价参数 —— referenceImages（按真实上传张数收费）。
  */
 export function buildImageGenerationEstimateInput(
   request: ResolvedImageRequest,
   membershipLevel?: number,
 ) {
-  const pricingResolution = resolveImagePricingResolution(request.settings?.size);
+  const referenceImages =
+    (request.sourceImages?.length ?? 0) + (request.referenceImages?.length ?? 0);
   return {
-    taskType: IMAGE_GENERATION_TASK_TYPE,
+    taskType: resolveImagePricingTaskType(request),
     modelConfigId: request.modelConfig.id,
     params: {
-      quality: normalizeImageQuality(request.settings?.quality),
-      ...(pricingResolution ? { resolution: pricingResolution } : {}),
-      referenceImages:
-        (request.sourceImages?.length ?? 0) +
-        (request.referenceImages?.length ?? 0),
-    },
+      ...(request.settings ?? {}),
+      referenceImages,
+    } as Record<string, unknown>,
     ...(membershipLevel !== undefined ? { membershipLevel } : {}),
   };
 }

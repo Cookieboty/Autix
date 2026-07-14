@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   applyParamDefaults,
+  deriveParams,
   quoteTask,
   validateParams,
   validatePricingSchema,
@@ -61,20 +62,28 @@ const PRICING_ROLES = new Set(['pricing', 'both', 'derived']);
  *
  * ⚠ 两者是**叠加**不是**取代**：一个 role: 'both' 且 valueSource: 'usage' 的属性
  * 必须被剥掉。
+ *
+ * **这是白名单，不是黑名单**：遍历 schema 的属性，不遍历 params 的键。老实现是
+ * `{...params}` 再 delete —— schema 未声明的键（老前端发的 promptTuning /
+ * stylePreset / skipPromptTuning，ajv 不带 additionalProperties:false 所以不会 400）
+ * 会原样冻进快照，而结算期 `mergeParamsAndUsage` 有「params/usage key 冲突即 throw」
+ * 的断言 —— 那是一颗 500 的雷。
+ *
+ * 与上游投影 `pickWireParams`（保留 wire/both）互为对偶。
  */
 export function stripNonPricingParams(
   paramsSchema: ParamsSchema,
   params: Record<string, unknown>,
 ): Record<string, unknown> {
-  const stripped: Record<string, unknown> = { ...params };
+  const kept: Record<string, unknown> = {};
   for (const [name, property] of Object.entries(paramsSchema.properties ?? {})) {
+    if (!(name in params)) continue;
     const ui = property['x-ui'];
     const role = ui?.role ?? 'both';
-    if (!PRICING_ROLES.has(role) || ui?.valueSource === 'usage') {
-      delete stripped[name];
-    }
+    if (!PRICING_ROLES.has(role) || ui?.valueSource === 'usage') continue;
+    kept[name] = params[name];
   }
-  return stripped;
+  return kept;
 }
 
 @Injectable()
@@ -127,7 +136,15 @@ export class TaskPricingEstimatorService {
     // the filled object for everything downstream (quoteTask + the snapshot),
     // not just validation, so settlement re-prices from the same params the
     // estimate was actually priced with.
-    const params = applyParamDefaults(paramsSchema, input.params);
+    //
+    // spec §6.2 的执行顺序（**顺序即正确性**）：
+    //   applyParamDefaults → deriveParams → validateParams → 投影
+    // derive 必须在 validate 之前：required: ['resolution'] 的属性是从 size 派生出来的，
+    // 派生晚于校验就会在派生前 400。它也必须在 quoteTask 之前：派生值会覆盖调用方传来的
+    // 值（传 size=2K + resolution=1K 就按 1K 收费的洞，spec §6.3）。
+    // 前端 quote 预览与这里的顺序必须一致，否则前后端价格分裂。
+    const withDefaults = applyParamDefaults(paramsSchema, input.params);
+    const params = deriveParams(paramsSchema, withDefaults);
 
     const violations = validateParams(paramsSchema, params);
     if (violations.length > 0) {
