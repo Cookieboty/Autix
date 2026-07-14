@@ -97,10 +97,13 @@ describe('buildImageParamsSchema', () => {
     expect(schema.properties.referenceImages['x-ui']!.role).toBe('pricing');
   });
 
-  // 变异测试：公开生成器的 getImageReferenceUploadLimit 唯一读这个 maximum
-  // （packages/shared-ui/src/growth/generator-image-presenters.ts）——不设它会让上传
-  // 上限恒为 0，上传功能直接废掉（spec §12 / task-11 brief 第 6 步）。
-  it('caps referenceImages.maximum by the capability\'s reference-image support', () => {
+  // referenceImages 的值是「实际上传张数」，且被 ajv 校验（validateParams,
+  // strict: true）；这份 paramsSchema 是 chat / canvas / 公开生成器共享的同一份
+  // image_generation 任务 schema。canvas 的参考图选择没有上游数量上限，若这里设了
+  // JSON-Schema 的 maximum，canvas 里合法的 9+ 张组合参考图会在 hold 时被 ajv 400。
+  // 上传上限因此只能活在 x-ui.uploadMax（ajv 对 x-ui 整体 valid: true，零校验），
+  // 供公开生成器的 getImageReferenceUploadLimit 读。
+  it('does NOT set referenceImages.maximum, but does cap x-ui.uploadMax by reference-image support', () => {
     for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
       const modelSchema = buildImageParamsSchema(model);
       const kind = detectImageModelKind({
@@ -109,9 +112,23 @@ describe('buildImageParamsSchema', () => {
         metadata: model.metadata as ImageModelHint['metadata'],
       });
       const cap = IMAGE_MODEL_CAPABILITIES[kind];
-      expect(modelSchema.properties.referenceImages.maximum).toBe(
+      expect(modelSchema.properties.referenceImages.maximum).toBeUndefined();
+      expect(modelSchema.properties.referenceImages['x-ui']?.uploadMax).toBe(
         cap.supportsReferenceImage ? 8 : 0,
       );
+    }
+  });
+
+  // 回归守卫（本次修复的核心）：canvas 的参考图选择没有上游数量上限，一次 hold 可能
+  // 携带 12 张组合参考图（source + reference）。如果 referenceImages 设了 ajv 的
+  // maximum，这个对象会被 validateParams 判 400——这正是 Task 11 的 Critical bug。
+  // 这里直接对种子 schema 跑 validateParams，确保它必须放行。
+  it('validateParams passes a referenceImages count far above the old upload cap (canvas has no upstream limit)', () => {
+    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
+      const modelSchema = buildImageParamsSchema(model);
+      const withDefaults = applyParamDefaults(modelSchema, { referenceImages: 12 });
+      const derived = deriveParams(modelSchema, withDefaults);
+      expect(validateParams(modelSchema, derived)).toEqual([]);
     }
   });
 

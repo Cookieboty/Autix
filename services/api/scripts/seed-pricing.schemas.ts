@@ -117,18 +117,20 @@ export function buildImageParamsSchema(model: ModelSchemaHint): ParamsSchema {
   // 生成张数(quantity)不进图像 schema：按业务要求，张数由业务逻辑在下单时吃掉，
   // schema 只描述「一张」的参数与价格。故这里不再生成 quantity 属性/控件。
 
-  // 隐藏计价参数：按真实上传张数收费。原先刻意不设 maximum（张数来自服务端计数而非
-  // 用户任填，怕设上限会在参考图偏多时 ajv 400）——但第 2 期公开生成器的上传上限
-  // （getImageReferenceUploadLimit）改成唯一读这个 maximum，不设的话上传功能会恒
-  // 拿到 0（详见 packages/shared-ui/src/growth/generator-image-presenters.ts）。
-  // 这里补上 maximum，与既有的「共享图片工作台上传上限」口径（cap.supportsReferenceImage
-  // ? 8 : 0）保持一致——hold 仍按真实数量扣费，maximum 只是前端上传口的硬上限。
+  // 隐藏计价参数：按真实上传张数收费。刻意不设 maximum —— 张数来自服务端计数而非
+  // 用户任填，设上限只会在参考图偏多时 ajv 400；hold 本就按真实数量扣费。
+  //
+  // 上传上限（公开生成器 UI 用，getImageReferenceUploadLimit 读）走 x-ui.uploadMax
+  // 而不是 JSON-Schema 的 maximum：这份 paramsSchema 是 chat / canvas / 公开生成器
+  // 共享的同一份 image_generation 任务 schema，canvas 的参考图选择没有上游数量上限，
+  // ajv 的 maximum 会把 canvas 里合法的 9+ 张组合参考图在 hold 时 400 掉。x-ui 整个
+  // 关键字对 ajv 是 valid: true（validate-params.ts），uploadMax 因此只影响 UI，不
+  // 影响校验。
   properties.referenceImages = {
     type: 'integer',
     minimum: 0,
-    maximum: cap.supportsReferenceImage ? 8 : 0,
     default: 0,
-    'x-ui': { role: 'pricing', control: 'hidden' },
+    'x-ui': { role: 'pricing', control: 'hidden', uploadMax: cap.supportsReferenceImage ? 8 : 0 },
   };
 
   // seed：网关协议（gatewayOpenAIV1.paramBindings.seed）对所有图片模型统一暴露的透传参数

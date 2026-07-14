@@ -21,14 +21,20 @@ export function resolveImageCapabilityFromModelParam(
 
 /**
  * 公开生成器的参考图上传上限 —— 唯一来自模型 paramsSchema.properties.referenceImages
- * .maximum（spec §12）。paramsSchema 缺失（尚未拉到 / 模型不识别）时返回 0：不再
- * fallback 到静态能力表的 supportsReferenceImage，那条路径正是 DEFAULT_IMAGE_KIND
- * 洞的来源之一——未识别模型会被静默当成 gemini-3-pro-image 的能力表。
+ * ['x-ui'].uploadMax（不是 JSON-Schema 的 maximum：那会被 ajv 校验，而这份 schema
+ * 是 chat / canvas / 公开生成器共享的同一份 image_generation 任务 schema，canvas 的
+ * 参考图选择没有上游数量上限，maximum 会把 canvas 里合法的多图请求在 hold 时 400
+ * 掉）。paramsSchema 缺失（尚未拉到 / 模型不识别）或 uploadMax 缺失（模型不支持
+ * 参考图，或该行是本次改动之前 seed 的旧数据）时返回 0：不再 fallback 到静态能力表
+ * 的 supportsReferenceImage，那条路径正是 DEFAULT_IMAGE_KIND 洞的来源之一——未识别
+ * 模型会被静默当成 gemini-3-pro-image 的能力表。
  */
 export function getImageReferenceUploadLimit(
-  paramsSchema: { properties?: Record<string, { maximum?: number }> } | undefined,
+  paramsSchema:
+    | { properties?: Record<string, { 'x-ui'?: { uploadMax?: number } }> }
+    | undefined,
 ): number {
-  return paramsSchema?.properties?.referenceImages?.maximum ?? 0;
+  return paramsSchema?.properties?.referenceImages?.['x-ui']?.uploadMax ?? 0;
 }
 
 function normalizeModelHint(value: string | null | undefined) {

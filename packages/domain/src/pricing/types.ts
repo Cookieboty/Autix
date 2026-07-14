@@ -54,6 +54,12 @@ export interface XUi {
    *   `usage` passed to `quoteTaskFromSnapshot`. e.g. `inputTokens`, `outputTokens`.
    */
   valueSource?: 'params' | 'usage';
+  /**
+   * UI-facing cap on how many files the user may attach (e.g. reference images).
+   * Deliberately NOT a JSON-Schema `maximum` — ajv would then reject legitimate
+   * multi-image requests from other callers (chat/canvas) sharing this same task schema.
+   */
+  uploadMax?: number;
 }
 
 export interface JsonSchemaProperty {
