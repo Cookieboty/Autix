@@ -52,6 +52,8 @@ export function ImageComposer({
   pricingSchema,
   pricingContext,
   appliedTemplate,
+  appliedReference,
+  appliedRecreate,
   generating,
   onGenerate,
   onModelChange,
@@ -72,6 +74,21 @@ export function ImageComposer({
   pricingSchema: PricingSchema | undefined;
   pricingContext: { multiplier: number; discountFactor: number };
   appliedTemplate?: { id: string; title: string; prompt: string } | null;
+  /**
+   * 历史详情弹窗点 Reference 塞回来的参考图。与 appliedTemplate 同一套路：父级每次
+   * 换一个新的 id，这里据此追加到已上传参考图列表（超出模型上限时由
+   * limitPublicUploadedReferences 裁掉最早的）。
+   */
+  appliedReference?: PublicUploadedReference | null;
+  /**
+   * Recreate 指令：把某次历史生成的 prompt + 参考图带回输入框（模型由父级切换）。
+   * **不回填参数、不自动提交** —— 参数用户自己选，生成用户自己点。
+   */
+  appliedRecreate?: {
+    id: string;
+    prompt: string;
+    referenceImages: string[];
+  } | null;
   generating: boolean;
   onGenerate: (payload: PublicImageGenerationPayload) => Promise<void>;
   onModelChange: (modelId: string) => void;
@@ -119,6 +136,35 @@ export function ImageComposer({
     if (!appliedTemplate?.prompt) return;
     setPrompt(appliedTemplate.prompt);
   }, [appliedTemplate?.id, appliedTemplate?.prompt]);
+
+  useEffect(() => {
+    if (!appliedReference) return;
+    setUploadedRefs((current) =>
+      current.some((ref) => ref.url === appliedReference.url)
+        ? current
+        : limitPublicUploadedReferences([...current, appliedReference], uploadLimit),
+    );
+    // uploadLimit 不进依赖：它变化时下面那个 effect 已经会重新裁剪，这里只关心「又塞了一张」
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedReference?.id]);
+
+  // Recreate：prompt 与参考图整体replace（不是追加——这是「重来一次」，不是「再加一张」）
+  useEffect(() => {
+    if (!appliedRecreate) return;
+    setPrompt(appliedRecreate.prompt);
+    setUploadedRefs(
+      limitPublicUploadedReferences(
+        appliedRecreate.referenceImages.map((url, index) => ({
+          id: `${appliedRecreate.id}-ref-${index}`,
+          url,
+          name: `reference-${index + 1}.png`,
+        })),
+        uploadLimit,
+      ),
+    );
+    // uploadLimit 不进依赖：模型切换后由下面的裁剪 effect 兜底
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedRecreate?.id]);
 
   useEffect(() => {
     syncPromptTextareaHeight();
@@ -275,11 +321,11 @@ export function ImageComposer({
             />
             <div className={`rounded-md text-sm text-foreground/48 ${hasUploadedRefs ? 'space-y-4' : 'flex min-h-12 items-start gap-3'}`}>
               {hasUploadedRefs ? (
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                   {uploadedRefs.map((ref) => (
                     <div
                       key={ref.id}
-                      className="group relative size-20 overflow-hidden rounded-md border border-border bg-background/40"
+                      className="group relative size-14 overflow-hidden rounded-xl border border-border bg-background/40"
                     >
                       <img
                         src={ref.url}
@@ -289,10 +335,10 @@ export function ImageComposer({
                       <button
                         type="button"
                         aria-label={t('close')}
-                        className="absolute right-1 top-1 grid size-6 cursor-pointer place-items-center rounded-md bg-background/65 text-foreground/70 opacity-0 transition hover:bg-background hover:text-foreground group-hover:opacity-100"
+                        className="absolute right-0.5 top-0.5 grid size-5 cursor-pointer place-items-center rounded-full bg-background/65 text-foreground/70 opacity-0 transition hover:bg-background hover:text-foreground group-hover:opacity-100"
                         onClick={() => removeUploadedRef(ref.id)}
                       >
-                        <X className="size-3.5" />
+                        <X className="size-3" />
                       </button>
                     </div>
                   ))}
@@ -301,11 +347,11 @@ export function ImageComposer({
                       type="button"
                       title={t('uploadImage')}
                       aria-label={t('uploadImage')}
-                      className="grid size-20 cursor-pointer place-items-center rounded-md border border-border bg-secondary text-foreground transition hover:border-growth-accent/45 hover:bg-secondary hover:text-growth-accent disabled:cursor-not-allowed disabled:opacity-45"
+                      className="grid size-14 cursor-pointer place-items-center rounded-xl border border-border bg-background/22 text-foreground/78 transition hover:border-growth-accent/45 hover:bg-secondary hover:text-growth-accent disabled:cursor-not-allowed disabled:opacity-45"
                       disabled={uploading}
                       onClick={openUploadDialog}
                     >
-                      {uploading ? <Loader2 className="size-6 animate-spin" /> : <ImagePlus className="size-6" />}
+                      {uploading ? <Loader2 className="size-5 animate-spin" /> : <ImagePlus className="size-5" />}
                     </button>
                   ) : null}
                 </div>
@@ -339,35 +385,6 @@ export function ImageComposer({
                   selectedModelId={selectedModelId}
                   onChange={onModelChange}
                 />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      aria-pressed={visibility === 'public'}
-                      onClick={() =>
-                        setVisibility((current) => (current === 'private' ? 'public' : 'private'))
-                      }
-                      className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
-                    >
-                      {visibility === 'private' ? (
-                        <Lock className="size-4" />
-                      ) : (
-                        <Globe2 className="size-4 text-growth-accent" />
-                      )}
-                      {visibility === 'private' ? t('private') : t('public')}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[260px] text-left">
-                    <p className="flex items-start gap-1.5">
-                      <Lock className="mt-0.5 size-3.5 shrink-0" />
-                      <span>{t('privateHint')}</span>
-                    </p>
-                    <p className="mt-1.5 flex items-start gap-1.5">
-                      <Globe2 className="mt-0.5 size-3.5 shrink-0" />
-                      <span>{t('publicHint')}</span>
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
                 {/* 「绘制」只是跳转 /draw 的导航链接，无生成相关后端逻辑，暂隐藏（需要时取消注释即可）
                 <Link
                   href="/draw"
@@ -391,6 +408,36 @@ export function ImageComposer({
                     resolutionTitle={t('selectResolution')}
                   />
                 ) : null}
+                {/* 可见性：排在所有参数之后，只给图标（语义由 aria-label + tooltip 承担） */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-pressed={visibility === 'public'}
+                      aria-label={visibility === 'private' ? t('private') : t('public')}
+                      onClick={() =>
+                        setVisibility((current) => (current === 'private' ? 'public' : 'private'))
+                      }
+                      className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl border border-border bg-background/22 text-foreground/78 transition hover:bg-secondary hover:text-foreground"
+                    >
+                      {visibility === 'private' ? (
+                        <Lock className="size-4" />
+                      ) : (
+                        <Globe2 className="size-4 text-growth-accent" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[260px] text-left">
+                    <p className="flex items-start gap-1.5">
+                      <Lock className="mt-0.5 size-3.5 shrink-0" />
+                      <span>{t('privateHint')}</span>
+                    </p>
+                    <p className="mt-1.5 flex items-start gap-1.5">
+                      <Globe2 className="mt-0.5 size-3.5 shrink-0" />
+                      <span>{t('publicHint')}</span>
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </div>
