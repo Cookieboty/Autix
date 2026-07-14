@@ -69,7 +69,6 @@ COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.ya
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
 COPY --from=builder /app/packages/database/prisma.config.ts ./packages/database/prisma.config.ts
 COPY --from=builder /app/packages/database/dist ./packages/database/dist
-COPY --from=builder /app/packages/database/src/generated ./packages/database/src/generated
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /app/packages/database/scripts ./packages/database/scripts
 COPY --from=prod-deps /app/packages/database/node_modules ./packages/database/node_modules
@@ -98,7 +97,14 @@ RUN mkdir -p node_modules/@autix && \
 # dotenv — all devDependencies, which `--prod` above excludes. bun got these for
 # free (it runs TypeScript natively); Node does not, so install them explicitly
 # or the migration chain dies at container start.
-RUN pnpm add -g prisma@7.7.0 tsx@4.21.0 dotenv-cli@8.0.0
+#
+# The prisma CLI version is derived from the @prisma/client actually installed:
+# Prisma refuses to run when the two drift, and hardcoding a version here would
+# silently rot the moment the lockfile resolves a new patch.
+RUN PRISMA_VERSION="$(node -p "require('/app/packages/database/node_modules/@prisma/client/package.json').version")" && \
+    TSX_VERSION="$(node -p "require('/app/package.json').devDependencies.tsx")" && \
+    DOTENV_VERSION="$(node -p "require('/app/package.json').devDependencies['dotenv-cli']")" && \
+    pnpm add -g "prisma@${PRISMA_VERSION}" "tsx@${TSX_VERSION}" "dotenv-cli@${DOTENV_VERSION}"
 
 ENV NODE_ENV=production
 ENV NODE_PATH=/app/node_modules
