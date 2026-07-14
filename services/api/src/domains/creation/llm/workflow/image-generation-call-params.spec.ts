@@ -113,18 +113,37 @@ describe('buildImageCallRequest', () => {
     expect(call.apiKey).toBe('key');
   });
 
-  it('throws when the model declares no protocolKey — no silent fallback adapter', () => {
-    expect(() =>
+  it('throws a 400 with ERR_IMAGE_MODEL_NOT_CONFIGURED (not a 500) when the model declares no protocolKey — no silent fallback adapter', () => {
+    // Finding 2 (Task 9 review): resolveImagePreset throws a bare Error; before
+    // this fix it escaped uncaught and became an unhandled 500 for every legacy
+    // model_configs row not yet back-filled with metadata.protocolKey.
+    let captured: unknown;
+    try {
       buildImageCallRequest(
         { ...baseRequest, modelConfig: { ...baseRequest.modelConfig, metadata: {} } },
         1,
         PARAMS_SCHEMA,
-      ),
-    ).toThrow(/protocolKey/);
+      );
+    } catch (err) {
+      captured = err;
+    }
+
+    expect(captured).toBeInstanceOf(BadRequestException);
+    expect((captured as BadRequestException).getStatus()).toBe(400);
+    const response = (captured as BadRequestException).getResponse() as {
+      errorCode?: string;
+      message?: string;
+      details?: Record<string, unknown>;
+    };
+    expect(response.errorCode).toBe('ERR_IMAGE_MODEL_NOT_CONFIGURED');
+    expect(response.message).toContain('protocolKey');
+    expect(response.message).toContain('image-model-1');
+    expect(response.details).toMatchObject({ modelConfigId: 'image-model-1' });
   });
 
-  it('throws when protocolKey resolves to no registered preset', () => {
-    expect(() =>
+  it('throws a 400 with ERR_IMAGE_MODEL_NOT_CONFIGURED when protocolKey resolves to no registered preset', () => {
+    let captured: unknown;
+    try {
       buildImageCallRequest(
         {
           ...baseRequest,
@@ -132,8 +151,20 @@ describe('buildImageCallRequest', () => {
         },
         1,
         PARAMS_SCHEMA,
-      ),
-    ).toThrow(/nope@v9/);
+      );
+    } catch (err) {
+      captured = err;
+    }
+
+    expect(captured).toBeInstanceOf(BadRequestException);
+    expect((captured as BadRequestException).getStatus()).toBe(400);
+    const response = (captured as BadRequestException).getResponse() as {
+      errorCode?: string;
+      message?: string;
+    };
+    expect(response.errorCode).toBe('ERR_IMAGE_MODEL_NOT_CONFIGURED');
+    // 消息里必须能看到具体是哪个 protocolKey 没注册到——不是一句笼统的"配置错误"。
+    expect(response.message).toContain('nope@v9');
   });
 
   it('sends only the wire slice upstream: no derived, no pricing-only, no undeclared key', () => {

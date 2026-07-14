@@ -4,6 +4,7 @@ import {
   type ImageArtifact,
   type ImageCallRequest,
   type ImageUpstreamError,
+  type ProtocolPreset,
 } from '@autix/ai-adapters/image';
 import { readImageModelMetadata } from '@autix/domain/model';
 import { pickWireParams, type ParamsSchema } from '@autix/domain/pricing';
@@ -109,6 +110,40 @@ export function narrowImageParamsSchema(
 }
 
 /**
+ * `resolveImagePreset` 抛的是裸 `Error`（ai-adapters 是纯协议层，不认识
+ * Nest 的 HttpException）。这是一条真实存在的存量数据路径 —— 任何还没被
+ * `seed-pricing.ts` 回填 `metadata.protocolKey` 的 `model_configs` 行，每次
+ * 生图都会走到这里。裸 `Error` 逃出 `callImageApi` 的 try/catch（它只转换
+ * `ImageUpstreamError`）就是 500：一个可由运营在后台修好的配置问题，被
+ * 报成了服务器故障。冻结额仍会被 `generateAndPersistImage` 的通用 catch
+ * 退回，不丢分；但错误码不对，操作者拿不到可执行的信息。
+ *
+ * 在这里、而不是在 ai-adapters 里转换：不想给协议层引入 Nest 依赖，
+ * 也不想在 `callImageApi` 里为一个「根本没进到 try」的调用单独加分支。
+ * 同样绝不做静默 fallback —— 那正是老 `resolveImageAdapter` 的病根
+ * （spec §2）。
+ */
+export function buildImageModelNotConfiguredException(
+  request: ResolvedImageRequest,
+  cause: unknown,
+): BadRequestException {
+  const modelConfigId = request.modelConfig.id;
+  const model = request.modelConfig.model;
+  const reason = cause instanceof Error ? cause.message : String(cause);
+  // reason 覆盖 resolveImagePreset 的两种失败（protocolKey 缺失 / protocolKey 未注册），
+  // 直接把它拼进 message —— 运营看到的第一行就得知道该去改哪个模型的哪个字段。
+  return new BadRequestException({
+    errorCode: 'ERR_IMAGE_MODEL_NOT_CONFIGURED',
+    message: `模型配置 ${modelConfigId}（${model}）无法路由到图片生成协议：${reason}。请在后台为该模型正确配置 metadata.protocolKey。`,
+    details: {
+      modelConfigId,
+      model,
+      reason,
+    },
+  });
+}
+
+/**
  * 不再嗅探 kind、不再猜协议：`metadata.protocolKey` 显式声明，preset 决定一切
  * （spec §5）。未注册的 protocolKey 直接抛 —— 没有静默 fallback adapter。
  *
@@ -122,7 +157,12 @@ export function buildImageCallRequest(
 ): ImageCallRequest {
   const { apiKey, baseUrl } = resolveImageCallCredentials(request);
   const metadata = readImageModelMetadata(request.modelConfig.metadata);
-  const preset = resolveImagePreset(metadata.protocolKey);
+  let preset: ProtocolPreset;
+  try {
+    preset = resolveImagePreset(metadata.protocolKey);
+  } catch (error) {
+    throw buildImageModelNotConfiguredException(request, error);
+  }
 
   return {
     preset,

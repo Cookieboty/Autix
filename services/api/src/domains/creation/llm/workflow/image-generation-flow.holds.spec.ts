@@ -88,6 +88,18 @@ describe('buildImageGenerationEstimateInput', () => {
     expect(input.params.size).toBe('2048x2048@2K');
   });
 
+  it('normalizes non-canonical quality casing/whitespace before pricing (Finding 3)', () => {
+    // 归一前 ' HIGH ' 会在 estimator 的 ajv enum 校验（只认 'low'/'medium'/'high'）
+    // 上 400。第 1 期一直靠 normalizeImageQuality 兜底；本次重构把这一步漏掉了，
+    // 这条用例把它钉回来。
+    const request = {
+      modelConfig: { id: 'model-1', provider: 'openai', model: 'gpt-image' },
+      settings: { quality: ' HIGH ', size: '1024x1024' },
+    } as never;
+
+    expect(buildImageGenerationEstimateInput(request).params.quality).toBe('high');
+  });
+
   it('overrides a client-sent referenceImages count with the真实上传张数', () => {
     // referenceImages 是计价参数，用户不可自报：按真实上传张数收费。
     const request = {

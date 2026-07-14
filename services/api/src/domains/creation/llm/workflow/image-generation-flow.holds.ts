@@ -18,6 +18,7 @@ export function assertPromptOptimizeInputWithinLimit(inputTokens: number): void 
 }
 import {
   formatBillingModel,
+  normalizeImageQuality,
   toImageFlowJsonValue,
   type ImageFlowModelConfigLike,
 } from './image-generation-flow.core';
@@ -118,6 +119,11 @@ export function buildPromptOptimizeHoldCreateInput(input: {
  *
  * 这里只做两件事：把用户参数原样交出去（脏键由 estimator 的白名单投影剔除），
  * 外加注入一个用户不可自报的计价参数 —— referenceImages（按真实上传张数收费）。
+ *
+ * `quality` 是例外：先过 `normalizeImageQuality`（小写 + trim）再交出去。客户端
+ * 发 `'HIGH'` / `' high '` 这种非规范大小写，如果原样透传，会在 ajv 的 `enum`
+ * 上 400（本轮 review 发现的回归——之前这里确实调用过 normalizeImageQuality，
+ * 重构时被漏掉了）。这不是新增容错，是把第 1 期就有的容错行为找回来。
  */
 export function buildImageGenerationEstimateInput(
   request: ResolvedImageRequest,
@@ -125,11 +131,16 @@ export function buildImageGenerationEstimateInput(
 ) {
   const referenceImages =
     (request.sourceImages?.length ?? 0) + (request.referenceImages?.length ?? 0);
+  const settings = request.settings ?? {};
+  const normalizedQuality = normalizeImageQuality(settings.quality);
   return {
     taskType: resolveImagePricingTaskType(request),
     modelConfigId: request.modelConfig.id,
     params: {
-      ...(request.settings ?? {}),
+      ...settings,
+      // 只有 caller 实际发了 quality、且能归一出非空值时才覆盖；不发 quality
+      // 的调用（canvas 无质量选择器）保持原样交给 applyParamDefaults 去填。
+      ...(normalizedQuality !== undefined ? { quality: normalizedQuality } : {}),
       referenceImages,
     } as Record<string, unknown>,
     ...(membershipLevel !== undefined ? { membershipLevel } : {}),

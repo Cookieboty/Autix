@@ -73,6 +73,54 @@ const SIZE_PRICING_SCHEMA = {
   ],
 };
 
+/**
+ * Finding 1（Task 9 review）：`SIZE_PARAMS_SCHEMA` 上面那份给 `resolution` 声明了
+ * `default: '1K'` —— 今天所有 seeded schema 都这样，所以 `applyParamDefaults` 自己
+ * 就能满足 `required: ['resolution']`，测试套件测不出 derive 是在 validate 之前还是
+ * 之后跑：两种顺序下 resolution 都已经"存在"了，只是值可能不对。
+ *
+ * 这份 fixture 故意不给 resolution 声明 default —— 只有 deriveParams 先于
+ * validateParams 跑，required 才能被满足；顺序反了就是 400（缺 resolution），
+ * 不是"按错误档位收费"这种更隐蔽的失败。
+ */
+const SIZE_PARAMS_SCHEMA_NO_RESOLUTION_DEFAULT = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object' as const,
+  required: ['size', 'quality', 'resolution'],
+  properties: {
+    size: {
+      type: 'string' as const,
+      enum: ['1024x1024@1K', '2048x2048@2K'],
+      default: '1024x1024@1K',
+      'x-ui': { role: 'wire' as const, control: 'size-grid' as const },
+    },
+    quality: {
+      type: 'string' as const,
+      enum: ['low', 'medium', 'high'],
+      default: 'medium',
+      'x-ui': { role: 'both' as const, control: 'chips' as const },
+    },
+    resolution: {
+      // 无 default（此 fixture 存在的唯一理由）。
+      type: 'string' as const,
+      enum: ['1K', '2K'],
+      'x-ui': {
+        role: 'derived' as const,
+        control: 'hidden' as const,
+        derivedFrom: { param: 'size', via: 'imagePricingResolution' as const },
+      },
+    },
+  },
+};
+
+const SIZE_PRICING_SCHEMA_NO_REFERENCE_IMAGES = {
+  terms: [
+    { id: 'base', op: 'add' as const, const: 1 },
+    { id: 'quality', op: 'mul' as const, table: { param: 'quality', values: { low: 15, medium: 90, high: 350 } } },
+    { id: 'resolution', op: 'mul' as const, table: { param: 'resolution', values: { '1K': 1, '2K': 2 } } },
+  ],
+};
+
 /** quality medium(90) × resolution 2K(2) = 180；1K 则是 90。 */
 const PRICE_AT_2K = 180;
 const PRICE_AT_1K = 90;
@@ -807,6 +855,39 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
         referenceImages: 1,
       });
       expect(quoteTaskFromSnapshot(result.pricingSnapshot, {})).toBeDefined();
+    });
+
+    it('[discriminates derive-BEFORE-validate ordering] derives a required param that has NO schema default when the caller sends only size', async () => {
+      // Finding 1（Task 9 review）：every other fixture in this file gives the
+      // derived param a `default`, so applyParamDefaults alone already satisfies
+      // `required`, and this suite never actually distinguished
+      // "derive runs before validate" from "derive runs after validate" — the
+      // ordering was pinned only by a source comment. This fixture has no
+      // default on `resolution`, so ONLY a correctly-ordered pipeline
+      // (applyParamDefaults → deriveParams → validateParams) can satisfy
+      // `required: [..., 'resolution']` here.
+      const repo = buildRepo({
+        findModelPricingConfig: jest.fn().mockResolvedValue({
+          id: 'model-1',
+          name: 'No-default-resolution image model',
+          paramsSchema: SIZE_PARAMS_SCHEMA_NO_RESOLUTION_DEFAULT,
+          pricingSchema: SIZE_PRICING_SCHEMA_NO_REFERENCE_IMAGES,
+          schemaVersion: 1,
+        }),
+      });
+      const service = new TaskPricingEstimatorService(repo);
+
+      // 调用方只传 size（quality 靠自己的 default 填），完全不传 resolution：
+      // resolution 没有 default，required 里却有它——若 deriveParams 晚于
+      // validateParams 跑，这里必 400（缺 required resolution）。
+      const result = await service.estimateCost({
+        taskType: 'image_generation',
+        modelConfigId: 'model-1',
+        params: { size: '2048x2048@2K' },
+      });
+
+      expect(result.pricingSnapshot.params.resolution).toBe('2K');
+      expect(result.estimatedCost).toBe(PRICE_AT_2K);
     });
   });
 });

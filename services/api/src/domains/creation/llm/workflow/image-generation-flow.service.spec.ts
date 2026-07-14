@@ -849,20 +849,74 @@ describe('ImageGenerationFlowService', () => {
     global.fetch = originalFetch;
   });
 
-  it('rejects an image model whose protocolKey is missing — no silent fallback adapter', async () => {
+  it('rejects an image model whose protocolKey is missing with a 400 config error, not a 500 (no silent fallback adapter)', async () => {
+    // resolveImagePreset throws a bare Error; before this fix that Error escaped
+    // callImageApi uncaught (buildImageCallRequest runs before the try/catch) and
+    // surfaced as an unhandled 500. Any model_configs row not yet back-filled with
+    // metadata.protocolKey hit this on every generation. Now it must be a 400 with
+    // an actionable, operator-facing error code — never a silent fallback preset.
     const { service } = createService();
     const originalFetch = global.fetch;
     global.fetch = jest.fn() as never;
 
-    await expect(
-      service.callImageApi(
+    let captured: { status?: number; response?: unknown } | undefined;
+    try {
+      await service.callImageApi(
         imageRequest({
           modelConfig: { ...IMAGE_MODEL_CONFIG, metadata: {} },
           settings: { size: '1024x1024@1K' },
         }),
         1,
+      );
+    } catch (err) {
+      captured = {
+        status: (err as { status?: number }).status,
+        response: (err as { response?: unknown }).response,
+      };
+    }
+
+    expect(captured).toBeDefined();
+    expect(captured?.status).toBe(400);
+    const response = captured?.response as
+      | { errorCode?: string; message?: string; details?: Record<string, unknown> }
+      | undefined;
+    expect(response?.errorCode).toBe('ERR_IMAGE_MODEL_NOT_CONFIGURED');
+    // 消息必须点名是哪个模型配置缺 protocolKey，运营才能去后台修。
+    expect(response?.message).toContain('image-model-1');
+    expect(response?.message).toContain('protocolKey');
+    expect(response?.details).toMatchObject({ modelConfigId: 'image-model-1' });
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('refunds the image hold when the model config is missing protocolKey (config error, no lost points)', async () => {
+    // Same missing-protocolKey config error as above, but exercised through the
+    // full generateAndPersistImage path: the hold is created before callImageApi
+    // runs, so the generic catch/refund must still fire for this 400, exactly as
+    // it would for any other provider-call failure — refunding is not conditional
+    // on the error being a 5xx.
+    const { service, pointsService } = createService();
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn() as never;
+
+    await expect(
+      service.generateAndPersistImage(
+        { userId: 'user-1', templateId: 'tpl-1', modelConfigId: 'image-model-1' },
+        imageRequest({
+          modelConfig: { ...IMAGE_MODEL_CONFIG, metadata: {} },
+          settings: { size: '1024x1024@1K', quality: 'medium' },
+        }),
+        1,
       ),
-    ).rejects.toThrow(/protocolKey/);
+    ).rejects.toMatchObject({
+      status: 400,
+      response: { errorCode: 'ERR_IMAGE_MODEL_NOT_CONFIGURED' },
+    });
+
+    expect(pointsService.createHold).toHaveBeenCalled();
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
+    expect(pointsService.confirmHold).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
 
     global.fetch = originalFetch;
