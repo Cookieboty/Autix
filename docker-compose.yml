@@ -31,7 +31,7 @@ services:
     pull_policy: always
     container_name: autix-api
     ports:
-      - "4000:4000"
+      - "4100:4100"
     env_file:
       - .env
     environment:
@@ -46,13 +46,13 @@ services:
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
       SUPER_ADMIN_RESET_PASSWORD: ${SUPER_ADMIN_RESET_PASSWORD:-false}
       CORS_ORIGIN: ${CORS_ORIGIN}
-      PORT: 4000
+      PORT: 4100
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/api/auth/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4100/api/auth/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -73,7 +73,7 @@ services:
       TZ: Asia/Shanghai
       NODE_ENV: production
       PORT: 3000
-      API_URL: http://api:4000
+      API_URL: http://api:4100
       NEXT_PUBLIC_SITE_URL: https://REPLACE_ME.example.com # TODO: 替换为实际生产域名
     depends_on:
       api:

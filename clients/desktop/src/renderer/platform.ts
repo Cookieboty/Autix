@@ -96,7 +96,7 @@ const oauthLink: OAuthLinkAdapter = {
 };
 
 /** 桌面端运行时配置：通过 import.meta.env 读 Vite 环境变量 */
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:4100';
 
 const env: EnvConfig = {
   apiUrl,

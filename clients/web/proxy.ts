@@ -15,7 +15,7 @@ import { isNoindexPathname } from './lib/i18n/route-policy';
 const handleIntl = createMiddleware(routing);
 
 function getApiOrigin(): string {
-  return (process.env.API_URL || 'http://localhost:4000')
+  return (process.env.API_URL || 'http://localhost:4100')
     .replace(/\/+$/, '')
     .replace(/\/api$/, '');
 }

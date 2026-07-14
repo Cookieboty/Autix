@@ -10,9 +10,9 @@ Bun Workspaces + Turborepo 单仓多包，包含 Web 前端、桌面端、统一
 
 | 模块 | 描述 | 端口 |
 |------|------|------|
-| `clients/web` | Next.js 16 前端（首页 + AI 工作台 + 会员中心 + `/admin` 管理后台） | 3000 |
+| `clients/web` | Next.js 16 前端（首页 + AI 工作台 + 会员中心 + `/admin` 管理后台） | 3100 |
 | `clients/desktop` | Electron 桌面端（复用 shared-ui，HashRouter，自带托盘/全局快捷键/Deep Link/自动更新） | — |
-| `services/api` | NestJS API 服务（认证/RBAC + 多 Agent + RAG + 多模型对战 + 模板生成 + 图片生成 + 会员积分 + SSE） | 4000 |
+| `services/api` | NestJS API 服务（认证/RBAC + 多 Agent + RAG + 多模型对战 + 模板生成 + 图片生成 + 会员积分 + SSE） | 4100 |
 | `packages/domain` | 前后端共享领域契约、业务枚举、纯规则和协议类型 | — |
 | `packages/sdk` | 类型安全前端 API Client | — |
 | `packages/platform` | Web/Desktop 运行时适配（存储、导航、环境注入） | — |
@@ -84,7 +84,7 @@ cp .env.example .env
 | `JWT_SECRET` | JWT 签名密钥（>= 32 字符，所有服务共享） |
 | `CORS_ORIGIN` | 服务端 CORS 白名单（含 `file://`、`app://desktop` 以支持桌面端） |
 | `SUPER_ADMIN_*` | 超管账号（首次启动自动创建，幂等） |
-| `API_URL` | Web BFF 反向代理目标，默认 `http://localhost:4000` |
+| `API_URL` | Web BFF 反向代理目标，默认 `http://localhost:4100` |
 | `NEXT_PUBLIC_AMUX_HOST` / `NEXT_PUBLIC_AMUX_CLIENT_ID` | Amux 凭据代理（amux-proxy）配置 |
 | `R2_*` / `S3_API` / `Access_key_ID` 等 | Cloudflare R2 对象存储（可选） |
 
@@ -111,8 +111,8 @@ Turborepo 按依赖顺序启动：
 
 | 服务 | 地址 |
 |------|------|
-| API | http://localhost:4000 |
-| Web | http://localhost:3000 |
+| API | http://localhost:4100 |
+| Web | http://localhost:3100 |
 
 桌面端单独启动（依赖 API 已就绪）：
 
@@ -206,7 +206,7 @@ bun run dev:desktop      # 仅桌面端
 # 构建 & 检查
 bun run build            # 构建所有包
 bun run typecheck        # TypeScript 类型检查
-bun run clean:ports      # 终止占用 3000/4000/5173 的进程
+bun run clean:ports      # 终止占用 3100/4100/5173 的进程
 
 # 数据库
 bun run --filter @autix/api db:studio    # 统一 DB GUI
