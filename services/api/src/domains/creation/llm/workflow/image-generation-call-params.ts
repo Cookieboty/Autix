@@ -1,45 +1,25 @@
 import { BadRequestException } from '@nestjs/common';
-import { UpstreamParamsInvalidError } from '@autix/ai-adapters/core';
-import type { ImageCallContext } from '@autix/ai-adapters/image';
 import {
-  coerceImageParams,
-  detectImageModelKind,
-  IMAGE_MODEL_CAPABILITIES,
-  type ImageModelKind,
-} from '@autix/domain/image';
+  resolveImagePreset,
+  type ImageArtifact,
+  type ImageCallRequest,
+  type ImageUpstreamError,
+} from '@autix/ai-adapters/image';
+import { readImageModelMetadata } from '@autix/domain/model';
+import { pickWireParams, type ParamsSchema } from '@autix/domain/pricing';
 import type { Prisma } from '../../../platform/prisma/generated';
 import { resolveApiKey, resolveBaseUrl } from '../../model-config/model-gateway-credentials';
 
-interface SafeDefaults {
-  size: string;
-  quality?: string;
-  count: number;
-}
-
-// Per-kind fallback used by the one-shot retry path. Each entry is guaranteed
-// to be inside the corresponding capability whitelist, so the second attempt
-// can never trip the same upstream 4xx for params.
-export const SAFE_IMAGE_DEFAULTS_BY_KIND: Record<ImageModelKind, SafeDefaults> = {
-  'gpt-image': { size: 'auto', quality: 'medium', count: 1 },
-  'gemini-flash-image': { size: '1024x1024', count: 1 },
-  'gemini-3-pro-image': { size: '1024x1024@1K', count: 1 },
-  'gemini-3-flash-image': { size: '1024x1024@1K', count: 1 },
-  compatible: { size: '1024x1024', quality: 'standard', count: 1 },
-};
-
-// Heuristic: any upstream HTTP status in [400, 500) is treated as a retryable
-// "parameter" failure. Adapters use `assertResponseOk` which embeds the status
-// code as ` <status>: ` inside the Error message; we match that. Typed
-// `UpstreamParamsInvalidError` is handled separately by direct instanceof check.
-const UPSTREAM_4XX_RE = /\s(4\d{2}):\s/;
-
+/**
+ * 「真正发出去的值」（spec §4.4）。它不再是固定 9 字段的 settings 袋 —— key 由
+ * preset 的绑定决定，由 `ImageCallResult.applied.params` 回填。此前这里记的是
+ * 「我们打算发的值」，与实际请求体可能不一致（DB 记录的参数 ≠ 实际发出的参数）。
+ */
 export interface AppliedImageSettings {
-  size?: string;
-  quality?: string;
   count: number;
   coerced: boolean;
   notes: string[];
-  kind: ImageModelKind;
+  [key: string]: unknown;
 }
 
 export interface CallImageApiResult {
@@ -54,6 +34,13 @@ export interface SourceImageRef {
   index?: number;
 }
 
+/**
+ * 用户提交的参数袋。**不再是固定字段的枚举** —— 具体有哪些参数由模型的
+ * paramsSchema 声明，服务端用 `pickWireParams` / `stripNonPricingParams`
+ * 两个白名单投影分别筛出上游子集与计价子集。这里保留几个字段只是为了让
+ * 现存调用点（entitlement 闸门读 size/quality、prompt 微调读 promptTuning）
+ * 有类型可用，不代表 schema 只允许这些。
+ */
 export interface ImageGenerationSettings {
   size?: string;
   quality?: string;
@@ -77,6 +64,8 @@ export interface ResolvedImageRequest {
     baseUrl?: string | null;
     apiKey?: string | null;
     metadata?: Prisma.JsonValue | null;
+    /** 同一条 model_configs 记录里的 paramsSchema —— 投影与校验都靠它，不再另发一次查询。 */
+    paramsSchema?: Prisma.JsonValue | null;
     createdBy?: string | null;
   };
   template: Record<string, unknown>;
@@ -84,22 +73,6 @@ export interface ResolvedImageRequest {
   sourceImages?: SourceImageRef[];
   referenceImages?: SourceImageRef[];
   settings?: ImageGenerationSettings;
-}
-
-export interface NormalizedImageCallParams {
-  kind: ImageModelKind;
-  metadata?: Record<string, unknown>;
-  primaryContext: ImageCallContext;
-  primaryAppliedSettings: AppliedImageSettings;
-  safeContext: ImageCallContext;
-  safeAppliedSettings: AppliedImageSettings;
-  safeDefaults: SafeDefaults;
-}
-
-export function isUpstreamImageParamsError(err: unknown): boolean {
-  if (err instanceof UpstreamParamsInvalidError) return true;
-  const msg = err instanceof Error ? err.message : String(err ?? '');
-  return UPSTREAM_4XX_RE.test(msg);
 }
 
 export function asImageCallMetadata(value: unknown): Record<string, unknown> | undefined {
@@ -119,96 +92,82 @@ export function resolveImageCallCredentials(
   return { baseUrl, apiKey };
 }
 
-export function normalizeImageCallParams(
+/**
+ * paramsSchema 是投影的白名单。它缺席时**必须拒绝**，不能当成空 schema：
+ * 空 schema 会让 `pickWireParams` 丢掉每一个 wire 参数，静默按上游默认值出图
+ * （用户选的尺寸/质量全部失效），而计价那边早就按用户参数收了钱。
+ * 正常路径上 estimateCost 已经先于此拒绝了 paramsSchema 为 NULL 的模型。
+ */
+export function narrowImageParamsSchema(
+  value: Prisma.JsonValue | null | undefined,
+  modelConfigId: string,
+): ParamsSchema {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new BadRequestException(`模型未配置参数规则(paramsSchema): ${modelConfigId}`);
+  }
+  return value as unknown as ParamsSchema;
+}
+
+/**
+ * 不再嗅探 kind、不再猜协议：`metadata.protocolKey` 显式声明，preset 决定一切
+ * （spec §5）。未注册的 protocolKey 直接抛 —— 没有静默 fallback adapter。
+ *
+ * count 的上限在 dispatch 入口一次性 clamp（`resolveImageCountCeiling` + risk 硬上限），
+ * 这里不再各自 clamp。
+ */
+export function buildImageCallRequest(
   request: ResolvedImageRequest,
   count: number,
-): NormalizedImageCallParams {
-  const metadata = asImageCallMetadata(request.modelConfig.metadata);
-  const { baseUrl, apiKey } = resolveImageCallCredentials(request, metadata);
-  const kind = detectImageModelKind({
-    provider: request.modelConfig.provider ?? undefined,
-    model: request.modelConfig.model,
-  });
+  paramsSchema: ParamsSchema,
+): ImageCallRequest {
+  const { apiKey, baseUrl } = resolveImageCallCredentials(request);
+  const metadata = readImageModelMetadata(request.modelConfig.metadata);
+  const preset = resolveImagePreset(metadata.protocolKey);
 
-  const coerced = coerceImageParams({
-    kind,
-    size: request.settings?.size,
-    quality: request.settings?.quality,
-    count,
-    negativePrompt:
-      typeof request.settings?.negativePrompt === 'string'
-        ? request.settings.negativePrompt
-        : undefined,
-  });
-  const safeDefaults = SAFE_IMAGE_DEFAULTS_BY_KIND[kind];
-  const buildContext = (params: {
-    size?: string;
-    quality?: string;
-    count: number;
-  }): ImageCallContext => ({
+  return {
+    preset,
+    operation: request.mode === 'edit' ? 'edit' : 'generate',
     baseUrl,
     apiKey,
     model: request.modelConfig.model,
     prompt: request.prompt,
-    count: params.count,
-    size: params.size,
-    quality: params.quality,
+    count,
+    params: pickWireParams(paramsSchema, request.settings ?? {}),
     sourceImages: request.sourceImages,
     referenceImages: request.referenceImages,
-    metadata,
-  });
-
-  return {
-    kind,
-    metadata,
-    primaryContext: buildContext({
-      size: coerced.size,
-      quality: coerced.quality,
-      count: coerced.count,
-    }),
-    primaryAppliedSettings: {
-      size: coerced.size,
-      quality: coerced.quality,
-      count: coerced.count,
-      coerced: coerced.notes.length > 0,
-      notes: coerced.notes,
-      kind,
-    },
-    safeContext: buildContext({
-      size: safeDefaults.size,
-      quality: safeDefaults.quality,
-      count: safeDefaults.count,
-    }),
-    safeAppliedSettings: {
-      size: safeDefaults.size,
-      quality: safeDefaults.quality,
-      count: safeDefaults.count,
-      coerced: true,
-      notes: [
-        ...coerced.notes,
-        `upstream 4xx fallback → safe defaults for kind=${kind}`,
-      ],
-      kind,
-    },
-    safeDefaults,
   };
 }
 
+/**
+ * `ai-adapters` 是纯协议层（spec §8）：artifact → data-uri / url 的转换留在 api-service。
+ */
+export function toImageUrlOrDataUri(artifact: ImageArtifact): string {
+  return artifact.source.type === 'base64'
+    ? `data:${artifact.source.mimeType};base64,${artifact.source.data}`
+    : artifact.source.url;
+}
+
+/**
+ * `ERR_IMAGE_PARAMS_NOT_SUPPORTED` 是前端契约的一部分（spec §7.3），保留。
+ *
+ * 变的是触发条件：从「正则匹配到 4xx，重试一次 safe defaults，再失败才抛」变成
+ * 「preset 的 errorMapping 把这次失败分类成 `params` → 直接抛」。4xx → safe-defaults
+ * 重试整条删除：它的 safe defaults 仍是同一个 `1024x1024@1K`，从未修好过任何东西，
+ * 只是把上游多打了一次；preset 的 stripTierSuffix 从根上消除了那个失败模式。
+ */
 export function buildUnsupportedImageParamsException(
   request: ResolvedImageRequest,
-  kind: ImageModelKind,
-  firstError: unknown,
-  retryError: unknown,
+  error: ImageUpstreamError,
 ): BadRequestException {
-  const cap = IMAGE_MODEL_CAPABILITIES[kind];
+  const metadata = readImageModelMetadata(request.modelConfig.metadata);
   return new BadRequestException({
     errorCode: 'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
-    message: `当前模型不支持所选参数，请尝试其他尺寸或质量。（${cap.displayName}）`,
+    message: `当前模型不支持所选参数，请尝试其他尺寸或质量。（${request.modelConfig.model}）`,
     details: {
-      kind,
       model: request.modelConfig.model,
-      firstError: firstError instanceof Error ? firstError.message : String(firstError),
-      retryError: retryError instanceof Error ? retryError.message : String(retryError),
+      protocolKey: metadata.protocolKey,
+      httpStatus: error.httpStatus,
+      upstreamError: error.message,
     },
   });
 }

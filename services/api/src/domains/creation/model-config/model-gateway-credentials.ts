@@ -20,14 +20,14 @@
  * whitelist DTO (`toClientModelConfig`) is what keeps it off the wire.
  *
  * An empty string (`''`) is treated the same as `null`/`undefined` — "not
- * set" — never as a real configured value. Any hardcoded per-provider
- * default (e.g. an adapter's `https://api.openai.com` literal) is the
- * caller's responsibility and belongs *after* this resolution, not inside it.
+ * set" — never as a real configured value.
  *
- * This is intentionally the ONLY place that reads `AMUX_API_KEY` /
- * `AMUX_BASE_URL` — every call site that builds a provider client should
- * route through `resolveApiKey` / `resolveBaseUrl` (or `resolveModelCredentials`)
- * instead of re-implementing the `??` chain.
+ * This is the ONLY place in the codebase that reads `AMUX_API_KEY` /
+ * `AMUX_BASE_URL`. That sentence used to be aspirational: the three hand-written
+ * image adapters read `process.env.AMUX_BASE_URL` behind this function's back.
+ * They are gone (protocol presets replaced them), so it is now simply true —
+ * 网关是运行环境，不是代码概念：baseUrl 从这里解析出来后一路传下去，协议层只收到
+ * 一个 `baseUrl` 字符串，不知道也不关心它来自哪个网关。
  */
 
 export interface ModelCredentialSource {

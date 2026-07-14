@@ -14,11 +14,12 @@ import { createChatModelFromDbConfig } from '../model.factory';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
 import { estimateTextTokens, extractTokenUsage } from '../billing/token-estimation';
 import { LlmRepository } from '../llm.repository';
-import { resolveImageAdapter } from '@autix/ai-adapters/image';
+import { executeImageCall, ImageUpstreamError } from '@autix/ai-adapters/image';
 import {
+  buildImageCallRequest,
   buildUnsupportedImageParamsException,
-  isUpstreamImageParamsError,
-  normalizeImageCallParams,
+  narrowImageParamsSchema,
+  toImageUrlOrDataUri,
   type AppliedImageSettings,
   type CallImageApiResult,
   type ImageGenerationSettings,
@@ -52,7 +53,7 @@ import {
   supportsImagePromptVision,
 } from './image-generation-flow.helpers';
 // isUserOwnedImageModel 已移除：自有模型不再免费，图片生成始终计费。
-import { assertImageHardLimits } from './image-generation-flow.risk';
+import { assertImageHardLimits, resolveImageCountCeiling } from './image-generation-flow.risk';
 
 export type {
   AppliedImageSettings,
@@ -464,63 +465,56 @@ export class ImageGenerationFlowService {
     request: ResolvedImageRequest,
     count: number,
   ): Promise<CallImageApiResult> {
-    const params = normalizeImageCallParams(request, count);
+    const paramsSchema = narrowImageParamsSchema(
+      request.modelConfig.paramsSchema,
+      request.modelConfig.id,
+    );
+    const callRequest = buildImageCallRequest(request, count, paramsSchema);
 
-    if (!params.primaryContext.baseUrl || !params.primaryContext.apiKey) {
+    if (!callRequest.baseUrl || !callRequest.apiKey) {
       throw new BadRequestException('图片模型缺少 baseUrl 或 apiKey 配置');
     }
 
-    if (params.primaryAppliedSettings.notes.length > 0) {
-      this.logger.warn(
-        `coerceImageParams adjusted ${request.modelConfig.model} (kind=${params.kind}): ${params.primaryAppliedSettings.notes.join('; ')}`,
-      );
-    }
-
-    const adapter = resolveImageAdapter(request.modelConfig.provider, params.metadata);
-    const dispatch = (ctx: typeof params.primaryContext): Promise<string[]> =>
-      request.mode === 'edit' ? adapter.edit(ctx) : adapter.generate(ctx);
     this.logger.log(
-      `image api dispatch: mode=${request.mode} provider=${adapter.provider} model=${request.modelConfig.model} kind=${params.kind} requestedCount=${count} appliedCount=${params.primaryContext.count} size=${params.primaryContext.size ?? '-'} quality=${params.primaryContext.quality ?? '-'} sourceImages=${params.primaryContext.sourceImages?.length ?? 0} referenceImages=${params.primaryContext.referenceImages?.length ?? 0}`,
+      `image api dispatch: mode=${request.mode} protocol=${callRequest.preset.key} model=${callRequest.model} count=${callRequest.count} params=${JSON.stringify(callRequest.params)} sourceImages=${callRequest.sourceImages?.length ?? 0} referenceImages=${callRequest.referenceImages?.length ?? 0}`,
     );
 
     try {
-      const images = await dispatch(params.primaryContext);
-      this.logger.log(
-        `image api result: mode=${request.mode} provider=${adapter.provider} model=${request.modelConfig.model} requestedCount=${count} appliedCount=${params.primaryContext.count} imageCount=${images.length}`,
-      );
-      return {
-        images,
-        appliedSettings: params.primaryAppliedSettings,
-      };
-    } catch (err) {
-      if (!isUpstreamImageParamsError(err)) throw err;
+      const result = await executeImageCall(callRequest);
 
-      this.logger.warn(
-        `upstream 4xx for ${request.modelConfig.model} (kind=${params.kind}); retrying with safe defaults size=${params.safeDefaults.size} quality=${params.safeDefaults.quality ?? '-'} count=${params.safeDefaults.count}. reason=${err instanceof Error ? err.message : String(err)
-        }`,
-      );
-
-      try {
-        this.logger.log(
-          `image api fallback dispatch: mode=${request.mode} provider=${adapter.provider} model=${request.modelConfig.model} kind=${params.kind} requestedCount=${count} fallbackCount=${params.safeContext.count} size=${params.safeContext.size ?? '-'} quality=${params.safeContext.quality ?? '-'}`,
-        );
-        const images = await dispatch(params.safeContext);
-        this.logger.log(
-          `image api fallback result: mode=${request.mode} provider=${adapter.provider} model=${request.modelConfig.model} requestedCount=${count} fallbackCount=${params.safeContext.count} imageCount=${images.length}`,
-        );
-        return {
-          images,
-          appliedSettings: params.safeAppliedSettings,
-        };
-      } catch (retryErr) {
-        if (!isUpstreamImageParamsError(retryErr)) throw retryErr;
-        throw buildUnsupportedImageParamsException(
-          request,
-          params.kind,
-          err,
-          retryErr,
+      if (result.warnings.length > 0) {
+        this.logger.warn(
+          `image api coercions: model=${callRequest.model} protocol=${callRequest.preset.key} ${result.warnings.join('; ')}`,
         );
       }
+      this.logger.log(
+        `image api result: mode=${request.mode} protocol=${result.upstream.protocolKey} model=${callRequest.model} count=${callRequest.count} imageCount=${result.artifacts.length} durationMs=${result.upstream.durationMs}`,
+      );
+
+      // ai-adapters 是纯协议层（spec §8）：artifact → data-uri / url 的转换留在这里。
+      return {
+        images: result.artifacts.map(toImageUrlOrDataUri),
+        appliedSettings: {
+          // 「真正发出去的值」（spec §4.4）—— 不是「我们打算发的值」。
+          ...result.applied.params,
+          count: callRequest.count,
+          coerced: result.applied.coercions.length > 0,
+          notes: result.applied.coercions,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ImageUpstreamError && error.classification === 'params') {
+        // 参数不被上游接受 —— **不再「换一组 safe defaults 重试」**。那套重试用的
+        // safe defaults 仍是同一个 1024x1024@1K，从未修好过任何东西，只是把上游多打
+        // 一次；真正的病根（kind 嗅探把 @tier token 发给不认识它的端点）已由 preset 的
+        // stripTierSuffix 根除。保存期的跨配置校验器保证 schema 与 preset 自洽，
+        // 参数错误此刻是配置错误，不是可重试的抖动。
+        this.logger.warn(
+          `image upstream rejected params: model=${callRequest.model} protocol=${callRequest.preset.key} status=${error.httpStatus ?? '-'} body=${error.upstreamBody ?? '-'}`,
+        );
+        throw buildUnsupportedImageParamsException(request, error);
+      }
+      throw error;
     }
   }
 
@@ -564,7 +558,12 @@ export class ImageGenerationFlowService {
     options?: { persistedRequest?: ResolvedImageRequest },
   ): Promise<GenerateAndPersistImageResult> {
     const startedAt = Date.now();
-    const normalizedCount = normalizeImageGenerationCount(count);
+    // 张数在 dispatch 入口 clamp 一次：模型能力上限（metadata.limits.maxCount）∩ 风控硬上限。
+    // adapter 层与 coerceImageParams 里的重复 clamp 已随 adapter 一起删除。
+    const normalizedCount = normalizeImageGenerationCount(
+      count,
+      resolveImageCountCeiling(request.modelConfig.metadata),
+    );
     const persistedRequest = options?.persistedRequest ?? request;
     const billingTaskId = `image:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     let holdId: string | null = null;

@@ -325,12 +325,14 @@ describe('image generation flow helpers', () => {
     };
 
     // quantity 不再进计价 params —— schema 不声明它，也没有任何计价 term 引用它。
+    // resolution 也不在这里：它由服务端 estimator 的 deriveParams 从 size 派生（spec §6.2），
+    // 这里只把用户参数原样透传 + 注入真实 referenceImages 张数。
     expect(buildImageGenerationEstimateInput(request)).toEqual({
       taskType: 'image_generation',
       modelConfigId: 'image-model-1',
       params: {
         quality: 'hd',
-        resolution: '1K',
+        size: '1024x1024',
         referenceImages: 1,
       },
     });

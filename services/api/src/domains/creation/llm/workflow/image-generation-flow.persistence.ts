@@ -84,11 +84,13 @@ export function buildImageConversationContent(images: string[]): string {
 // 避免与请求值混淆。
 const STRICT_SIZE_RE = /^(\d+)x(\d+)$/;
 
-export function parseAppliedImageSize(size: string | undefined | null): {
+export function parseAppliedImageSize(size: unknown): {
   width: number | null;
   height: number | null;
 } {
-  const match = size ? STRICT_SIZE_RE.exec(size.trim()) : null;
+  // `AppliedImageSettings` 的 key 由 preset 绑定决定（值是 unknown）——不是所有模型都有
+  // size，也不保证它是字符串。非字符串一律当「不可解析」，存 null。
+  const match = typeof size === 'string' ? STRICT_SIZE_RE.exec(size.trim()) : null;
   if (!match) return { width: null, height: null };
   const width = Number(match[1]);
   const height = Number(match[2]);

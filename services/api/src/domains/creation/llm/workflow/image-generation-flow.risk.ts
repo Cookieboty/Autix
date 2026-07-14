@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { readImageMaxCount } from '@autix/domain/model';
 import {
   IMAGE_PIXELS_HARD_CEILING,
   parseImageSizePixels,
@@ -12,6 +13,21 @@ export const IMAGE_RISK_HARD_LIMITS = {
   maxPixels: IMAGE_PIXELS_HARD_CEILING,
   maxCount: 4,
 } as const;
+
+/**
+ * 张数上限 = 模型能力上限 ∩ 风控硬上限（spec §5.2）。
+ *
+ * `IMAGE_RISK_HARD_LIMITS.maxCount` 是**风控**上限（防滥用/DoS），任何模型都不得突破；
+ * `metadata.limits.maxCount` 是**能力**上限（这个模型一次最多出几张）。两者取交：
+ * admin 在 metadata 里写 99 也只会被 clamp 到风控上限。模型没声明能力上限时退回风控上限。
+ *
+ * 这是**唯一**的 clamp 点（dispatch 入口调一次）—— 此前 adapter 层与 coerceImageParams
+ * 各自 clamp 一遍，谁是权威说不清。
+ */
+export function resolveImageCountCeiling(metadata: unknown): number {
+  const modelMax = readImageMaxCount(metadata) ?? IMAGE_RISK_HARD_LIMITS.maxCount;
+  return Math.min(modelMax, IMAGE_RISK_HARD_LIMITS.maxCount);
+}
 
 export function assertImageHardLimits(req: { size?: string | null; count: number }): void {
   const pixels = parseImageSizePixels(req.size);

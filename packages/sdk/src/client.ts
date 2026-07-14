@@ -1046,9 +1046,11 @@ export interface ImageWorkbenchGenerateResult {
   prompt: string;
   model: string;
   /**
-   * Final params actually sent to the upstream after server-side coercion
-   * and/or a safe-default retry. `coerced=true` means the UI should re-sync
-   * the form to these values (and may show a "已自动调整参数" hint).
+   * 真正发给上游的参数（`ImageCallResult.applied.params`）。key 由模型 protocol preset
+   * 的绑定决定 —— 不是固定字段集，所以带索引签名。`coerced=true` 表示上游组装过程中有
+   * 参数被调整/丢弃（`notes` 说明原因），UI 可据此把表单同步成实际生效的值。
+   *
+   * `kind` 已移除：模型分类（kind 嗅探）连同三个手写 adapter 一起删除了，服务端不再产出它。
    */
   appliedSettings?: {
     size?: string;
@@ -1056,7 +1058,7 @@ export interface ImageWorkbenchGenerateResult {
     count: number;
     coerced: boolean;
     notes: string[];
-    kind: 'gpt-image' | 'gemini-flash-image' | 'gemini-3-pro-image' | 'gemini-3-flash-image' | 'compatible';
+    [key: string]: unknown;
   };
 }
 

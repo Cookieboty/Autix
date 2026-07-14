@@ -36,8 +36,13 @@ export function toImageFlowJsonValue(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
 }
 
-export function normalizeImageGenerationCount(count: number): number {
-  return Math.max(1, Math.min(count, 4));
+/**
+ * dispatch 入口的**唯一** clamp 点。上限由调用方给出
+ * （`resolveImageCountCeiling(metadata)` = 模型能力 ∩ 风控硬上限）；缺省是风控硬上限，
+ * 保持既有调用点行为不变。
+ */
+export function normalizeImageGenerationCount(count: number, ceiling = 4): number {
+  return Math.max(1, Math.min(count, Math.max(1, ceiling)));
 }
 
 export function resolvePersistedGenerationId(

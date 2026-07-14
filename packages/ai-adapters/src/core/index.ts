@@ -1,11 +1,2 @@
-export { normalizeProvider } from './types';
-export { AdapterRegistry } from './registry';
-export {
-  buildEndpoint,
-  fetchUrlAsBase64,
-  fetchUrlAsBlob,
-  readOpenAIImageResponse,
-  assertResponseOk,
-} from './http';
+export { buildEndpoint, fetchUrlAsBlob } from './http';
 export { safeFetch, assertSafeFetchUrl, isPrivateIpAddress } from './safe-fetch';
-export { UpstreamParamsInvalidError, UPSTREAM_PARAMS_INVALID } from './errors';

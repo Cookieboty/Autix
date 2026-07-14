@@ -5,15 +5,18 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./src/index.ts",
+      "require": "./dist/index.js"
     },
     "./image": {
       "types": "./dist/image/index.d.ts",
-      "default": "./dist/image/index.js"
+      "import": "./src/image/index.ts",
+      "require": "./dist/image/index.js"
     },
     "./core": {
       "types": "./dist/core/index.d.ts",
-      "default": "./dist/core/index.js"
+      "import": "./src/core/index.ts",
+      "require": "./dist/core/index.js"
     }
   },
   "main": "./dist/index.js",

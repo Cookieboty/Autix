@@ -16,7 +16,12 @@ import {
   type PricingSchema,
   type SchemaViolation,
 } from '@autix/domain/pricing';
-import { validateDescription, type LocalizedText } from '@autix/domain/model';
+import {
+  readImageModelMetadata,
+  validateDescription,
+  type LocalizedText,
+} from '@autix/domain/model';
+import { PROTOCOL_PRESETS, validateModelProtocolConfig } from '@autix/ai-adapters/image';
 
 export interface CreateModelConfigDto {
   name: string;
@@ -229,7 +234,7 @@ export class ModelConfigService {
     // paramsSchema/pricingSchema are required on create (see CreateModelConfigDto),
     // so both are already-typed values here — no Prisma.JsonValue to narrow, just
     // runtime-validate the untrusted HTTP body against the domain rules.
-    this.assertValidPricingConfig(dto.paramsSchema, dto.pricingSchema);
+    this.assertValidPricingConfig(dto.paramsSchema, dto.pricingSchema, dto.metadata);
     if (dto.description !== undefined) {
       this.assertValidDescription(dto.description);
     }
@@ -279,7 +284,15 @@ export class ModelConfigService {
     // are legitimately NULL on models nobody has priced yet; an update that never
     // touches either field (e.g. renaming a model, or fixing its description) must
     // not be rejected just because those columns happen to be empty right now.
-    if (dto.paramsSchema !== undefined || dto.pricingSchema !== undefined) {
+    //
+    // `metadata` joins the trigger list because the 3rd layer (schema ⟷ preset 闭合)
+    // reads `metadata.protocolKey`: switching a model's protocol without touching its
+    // paramsSchema is exactly how the two configs get to diverge.
+    if (
+      dto.paramsSchema !== undefined ||
+      dto.pricingSchema !== undefined ||
+      dto.metadata !== undefined
+    ) {
       this.assertValidPricingConfigUpdate(dto, existing);
     }
     if (dto.description !== undefined) {
@@ -394,7 +407,11 @@ export class ModelConfigService {
    * precisely to check that an untrusted HTTP body actually has that shape at
    * runtime.
    */
-  private assertValidPricingConfig(paramsSchema: ParamsSchema, pricingSchema: PricingSchema) {
+  private assertValidPricingConfig(
+    paramsSchema: ParamsSchema,
+    pricingSchema: PricingSchema,
+    metadata?: unknown,
+  ) {
     const violations: SchemaViolation[] = [
       ...validatePricingSchema(pricingSchema),
       ...validateParamsSchema(paramsSchema, pricingSchema),
@@ -404,6 +421,37 @@ export class ModelConfigService {
     }
 
     this.assertParamsSchemaCompiles(paramsSchema);
+    this.assertProtocolConfigIsClosed(paramsSchema, metadata);
+  }
+
+  /**
+   * 墙 3（§15.2）：**跨配置**校验 —— paramsSchema ⟷ metadata.protocolKey 指向的 preset
+   * 必须双向闭合。
+   *
+   * 前两层各自只看一份配置：结构校验只看 schema 自己，ajv 只看 schema 能不能编译。
+   * 一个 role: 'wire' 的参数在 preset 里没有绑定（上游永远收不到它，用户以为调了参数、
+   * 其实被静默丢弃），或 protocolKey 指向一个不存在的 preset（下单时 resolveImagePreset
+   * 抛未捕获异常 → 500），两层都放行。
+   *
+   * **任一层失败即拒绝保存**，不做「警告但允许保存」—— 两份配置一旦分叉就是线上的静默失败。
+   *
+   * 非图片模型（没声明 protocolKey）不适用：直接放行。
+   */
+  private assertProtocolConfigIsClosed(paramsSchema: ParamsSchema, metadata: unknown): void {
+    const meta = readImageModelMetadata(metadata);
+    if (!meta.protocolKey) return;
+
+    const violations = validateModelProtocolConfig({
+      paramsSchema,
+      metadata,
+      preset: PROTOCOL_PRESETS[meta.protocolKey],
+    });
+    if (violations.length > 0) {
+      throw new BadRequestException({
+        message: '模型协议配置与参数 schema 不闭合',
+        violations,
+      });
+    }
   }
 
   /**
@@ -445,8 +493,16 @@ export class ModelConfigService {
    * unvalidated cast result escape.
    */
   private assertValidPricingConfigUpdate(
-    dto: { paramsSchema?: ParamsSchema; pricingSchema?: PricingSchema },
-    existing: { paramsSchema: Prisma.JsonValue | null; pricingSchema: Prisma.JsonValue | null },
+    dto: {
+      paramsSchema?: ParamsSchema;
+      pricingSchema?: PricingSchema;
+      metadata?: Record<string, unknown>;
+    },
+    existing: {
+      paramsSchema: Prisma.JsonValue | null;
+      pricingSchema: Prisma.JsonValue | null;
+      metadata?: Prisma.JsonValue | null;
+    },
   ) {
     const violations: SchemaViolation[] = [];
 
@@ -484,6 +540,22 @@ export class ModelConfigService {
     // 只编译真的被改动的那份：没改的那份已经在库里，存进去时编译过了。
     if (dto.paramsSchema !== undefined) {
       this.assertParamsSchemaCompiles(dto.paramsSchema);
+    }
+
+    // 墙 3 是**跨**两份配置的，所以必须拿「生效后」的组合去校验：
+    // 改了哪份用哪份的新值，没改的那份从库里读。paramsSchema 还没配的模型跳过
+    // （半配置状态是合法的在建状态，不是错误）。
+    const effectiveParamsSchema: ParamsSchema | null =
+      dto.paramsSchema !== undefined
+        ? dto.paramsSchema
+        : existing.paramsSchema === null
+          ? null
+          : this.narrowParamsSchema(existing.paramsSchema, '已保存的 paramsSchema');
+    if (effectiveParamsSchema !== null) {
+      this.assertProtocolConfigIsClosed(
+        effectiveParamsSchema,
+        dto.metadata !== undefined ? dto.metadata : existing.metadata,
+      );
     }
   }
 

@@ -2,75 +2,6 @@ import { ModelType, PointHoldStatus } from '../../../platform/prisma/generated';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
 
 const mockChatInvoke = jest.fn(async () => ({ content: 'refined prompt from llm' }));
-class MockUpstreamParamsInvalidError extends Error {
-  readonly code = 'UPSTREAM_PARAMS_INVALID';
-
-  constructor(message: string) {
-    super(message);
-    this.name = 'UpstreamParamsInvalidError';
-  }
-}
-
-function buildEndpoint(baseUrl: string, endpoint: string): string {
-  const normalizedBase = baseUrl.replace(/\/$/, '');
-  if (normalizedBase.endsWith('/v1') && endpoint.startsWith('/v1/')) {
-    return `${normalizedBase}${endpoint.slice(3)}`;
-  }
-  return `${normalizedBase}${endpoint}`;
-}
-
-async function assertOk(response: Response) {
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(`Image API ${response.status}: ${text.slice(0, 500)}`);
-  }
-}
-
-function readImages(data: { data?: Array<{ b64_json?: string; url?: string }> }) {
-  return (data.data ?? [])
-    .map((item) =>
-      item.b64_json ? `data:image/png;base64,${item.b64_json}` : item.url,
-    )
-    .filter((url): url is string => Boolean(url));
-}
-
-const mockImageGenerate = jest.fn(async (ctx: any) => {
-  const isGptImage = /^gpt-image/i.test(ctx.model);
-  const body: Record<string, unknown> = {
-    model: ctx.model,
-    prompt: ctx.prompt,
-  };
-  if (!isGptImage) {
-    body.n = ctx.count;
-    body.response_format = 'b64_json';
-  }
-  if (ctx.size && ctx.size !== 'auto') body.size = ctx.size;
-  if (ctx.quality && ctx.quality !== 'auto') body.quality = ctx.quality;
-
-  const response = await fetch(buildEndpoint(ctx.baseUrl, '/v1/images/generations'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${ctx.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
-  await assertOk(response as Response);
-  return readImages(
-    (await (response as Response).json()) as {
-      data?: Array<{ b64_json?: string; url?: string }>;
-    },
-  );
-});
-
-const mockImageEdit = jest.fn(async (ctx: any) => {
-  if (ctx.provider === 'openai-official' && !/^gpt-image/i.test(ctx.model)) {
-    throw new MockUpstreamParamsInvalidError(
-      `OpenAI image edit is only supported by gpt-image models; got model=${ctx.model}`,
-    );
-  }
-  return mockImageGenerate(ctx);
-});
 
 jest.mock('../model.factory', () => ({
   createChatModelFromDbConfig: jest.fn(() => ({
@@ -78,17 +9,97 @@ jest.mock('../model.factory', () => ({
   })),
 }));
 
-jest.mock('@autix/ai-adapters/core', () => ({
-  UPSTREAM_PARAMS_INVALID: 'UPSTREAM_PARAMS_INVALID',
-  UpstreamParamsInvalidError: MockUpstreamParamsInvalidError,
-}));
+// **不再 mock `@autix/ai-adapters/image`**：图片调用现在跑真正的 protocol 引擎
+// （resolveImagePreset + executeImageCall），只把 `global.fetch` 打桩。这样这些用例
+// 断言的是「真正发出去的 HTTP 请求体」，而不是一个手写 mock adapter 对协议的复述 ——
+// 老 mock 自己重新实现了一遍 kind 嗅探与 body 拼装，它绿不代表线上对。
 
-jest.mock('@autix/ai-adapters/image', () => ({
-  resolveImageAdapter: jest.fn((provider?: string | null) => ({
-    generate: (ctx: any) => mockImageGenerate({ ...ctx, provider }),
-    edit: (ctx: any) => mockImageEdit({ ...ctx, provider }),
-  })),
-}));
+/** 第 2 期翻转后的图片 paramsSchema（seed-pricing.schemas.ts 的形状）。 */
+const IMAGE_PARAMS_SCHEMA = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['size', 'quality', 'resolution'],
+  properties: {
+    size: {
+      type: 'string',
+      enum: ['1024x1024@1K', '2048x2048@2K'],
+      default: '1024x1024@1K',
+      'x-ui': { role: 'wire', control: 'size-grid' },
+    },
+    quality: {
+      type: 'string',
+      enum: ['low', 'medium', 'high'],
+      default: 'medium',
+      'x-ui': { role: 'both', control: 'chips' },
+    },
+    resolution: {
+      type: 'string',
+      enum: ['1K', '2K'],
+      default: '1K',
+      'x-ui': {
+        role: 'derived',
+        control: 'hidden',
+        derivedFrom: { param: 'size', via: 'imagePricingResolution' },
+      },
+    },
+    referenceImages: {
+      type: 'integer',
+      minimum: 0,
+      default: 0,
+      'x-ui': { role: 'pricing', control: 'hidden' },
+    },
+    seed: { type: 'string', 'x-ui': { role: 'wire', control: 'hidden' } },
+  },
+};
+
+const IMAGE_MODEL_CONFIG = {
+  id: 'image-model-1',
+  model: 'gemini-3-pro-image',
+  provider: 'openai-compatible',
+  baseUrl: 'https://api.example.com/v1',
+  apiKey: 'key',
+  metadata: {
+    protocolKey: 'openai-images@v1',
+    operations: ['generate', 'edit'],
+    limits: { maxCount: 4 },
+  },
+  paramsSchema: IMAGE_PARAMS_SCHEMA,
+};
+
+function imageRequest(overrides: Record<string, unknown> = {}) {
+  return {
+    mode: 'generate',
+    prompt: 'A scene',
+    modelConfig: IMAGE_MODEL_CONFIG,
+    template: {},
+    variables: {},
+    ...overrides,
+  } as never;
+}
+
+/** 读出打桩 fetch 收到的 JSON 请求体。 */
+function sentBody(fetchMock: jest.Mock, call = 0): Record<string, unknown> {
+  const init = fetchMock.mock.calls[call][1] as { body: string };
+  return JSON.parse(init.body) as Record<string, unknown>;
+}
+
+function okJson(payload: unknown) {
+  return {
+    ok: true,
+    status: 200,
+    headers: { get: () => null },
+    json: async () => payload,
+  };
+}
+
+function upstreamError(status: number, body: string) {
+  return {
+    ok: false,
+    status,
+    headers: { get: () => null },
+    text: async () => body,
+  };
+}
 
 function createService() {
   const prisma = {
@@ -221,8 +232,6 @@ function createService() {
 describe('ImageGenerationFlowService', () => {
   beforeEach(() => {
     mockChatInvoke.mockClear();
-    mockImageGenerate.mockClear();
-    mockImageEdit.mockClear();
   });
 
   it('builds a compact image conversation summary from relevant metadata', () => {
@@ -684,162 +693,110 @@ describe('ImageGenerationFlowService', () => {
     );
   });
 
-  it('includes image generation settings in API request body', async () => {
+  it('sends the wire params in the request body and reports what was actually sent', async () => {
     const { service } = createService();
     const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: [{ url: 'https://img.test/1.png' }] }),
-    }) as never;
-
-    const result = await service.callImageApi(
-      {
-        mode: 'generate',
-        prompt: 'A scene',
-        modelConfig: {
-          id: 'image-model-1',
-          model: 'gpt-image-2',
-          baseUrl: 'https://api.example.com/v1',
-          apiKey: 'key',
-          metadata: {},
-        },
-        template: {},
-        variables: {},
-        settings: {
-          size: '1024x1024',
-          quality: 'high',
-        },
-      },
-      2,
+    const fetchMock = jest.fn().mockResolvedValue(
+      okJson({ data: [{ url: 'https://img.test/1.png' }] }),
     );
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.example.com/v1/images/generations',
-      expect.objectContaining({
-        body: JSON.stringify({
-          model: 'gpt-image-2',
-          prompt: 'A scene',
-          size: '1024x1024',
-          quality: 'high',
-        }),
-      }),
-    );
-    expect(result.images).toEqual(['https://img.test/1.png']);
-    expect(result.appliedSettings.coerced).toBe(true);
-    expect(result.appliedSettings.count).toBe(1);
-    expect(result.appliedSettings.kind).toBe('gpt-image');
-
-    global.fetch = originalFetch;
-  });
-
-  it('coerces oversized count and surfaces appliedSettings.coerced=true', async () => {
-    const { service } = createService();
-    const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: [{ url: 'https://img.test/1.png' }] }),
-    }) as never;
-
-    const result = await service.callImageApi(
-      {
-        mode: 'generate',
-        prompt: 'A scene',
-        modelConfig: {
-          id: 'image-model-1',
-          model: 'gpt-image-2',
-          provider: 'openai-official',
-          baseUrl: 'https://api.example.com/v1',
-          apiKey: 'key',
-          metadata: {},
-        },
-        template: {},
-        variables: {},
-        settings: { size: '1024x1024', quality: 'high' },
-      },
-      99,
-    );
-
-    expect(result.appliedSettings.coerced).toBe(true);
-    expect(result.appliedSettings.count).toBe(1);
-    expect(result.appliedSettings.notes.join(';')).toContain('count');
-
-    global.fetch = originalFetch;
-  });
-
-  it('retries with SAFE_DEFAULTS on upstream 4xx and returns coerced=true', async () => {
-    const { service } = createService();
-    const originalFetch = global.fetch;
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        text: async () => '{"error":{"message":"invalid size"}}',
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ data: [{ b64_json: 'AAA' }] }),
-      });
     global.fetch = fetchMock as never;
 
     const result = await service.callImageApi(
-      {
-        mode: 'generate',
-        prompt: 'A scene',
-        modelConfig: {
-          id: 'image-model-1',
-          model: 'gpt-image-1',
-          provider: 'openai-official',
-          baseUrl: 'https://api.example.com/v1',
-          apiKey: 'key',
-          metadata: {},
-        },
-        template: {},
-        variables: {},
-        settings: { size: '1024x1024', quality: 'high' },
-      },
+      imageRequest({ settings: { size: '1024x1024@1K', quality: 'high' } }),
       2,
     );
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(result.images).toEqual(['data:image/png;base64,AAA']);
-    expect(result.appliedSettings.coerced).toBe(true);
-    expect(result.appliedSettings.count).toBe(1);
-    expect(result.appliedSettings.size).toBe('auto');
-    expect(result.appliedSettings.notes.join(';')).toContain('fallback');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/v1/images/generations');
+    expect(sentBody(fetchMock)).toEqual({
+      response_format: 'b64_json',
+      model: 'gemini-3-pro-image',
+      prompt: 'A scene',
+      n: 2,
+      size: '1024x1024',
+      quality: 'high',
+    });
+    expect(result.images).toEqual(['https://img.test/1.png']);
+    // appliedSettings = 真正发出去的值（§4.4）：size 已被 preset 剥掉 @tier 后缀。
+    expect(result.appliedSettings).toEqual({
+      size: '1024x1024',
+      quality: 'high',
+      count: 2,
+      coerced: false,
+      notes: [],
+    });
 
     global.fetch = originalFetch;
   });
 
-  it('throws ERR_IMAGE_PARAMS_NOT_SUPPORTED on consecutive upstream 4xx', async () => {
+  it('strips the @tier suffix before it reaches the upstream (the Nano Banana fix)', async () => {
     const { service } = createService();
     const originalFetch = global.fetch;
-    global.fetch = jest
+    const fetchMock = jest.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'AAA' }] }));
+    global.fetch = fetchMock as never;
+
+    const result = await service.callImageApi(
+      imageRequest({ settings: { size: '2048x2048@2K', quality: 'high' } }),
+      1,
+    );
+
+    // 老 kind 嗅探把 `2048x2048@2K` 原样发给不认识 @tier 的端点 → 400 → 「重试 safe
+    // defaults」（同一个 1024x1024@1K，从没修好过任何东西）。preset 的 stripTierSuffix
+    // 从根上消除了这个失败模式。
+    expect(sentBody(fetchMock).size).toBe('2048x2048');
+    expect(result.appliedSettings.size).toBe('2048x2048');
+    expect(result.images).toEqual(['data:image/png;base64,AAA']);
+
+    global.fetch = originalFetch;
+  });
+
+  it('never sends derived / pricing-only / undeclared params upstream', async () => {
+    const { service } = createService();
+    const originalFetch = global.fetch;
+    const fetchMock = jest.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'AAA' }] }));
+    global.fetch = fetchMock as never;
+
+    const result = await service.callImageApi(
+      imageRequest({
+        settings: {
+          size: '1024x1024@1K',
+          quality: 'high',
+          resolution: '4K',        // role: derived —— 客户端伪造的计价值绝不上线
+          referenceImages: 3,      // role: pricing —— 上游要的是图本身，不是「几张」这个数
+          promptTuning: '自动优化', // schema 未声明 —— 白名单丢弃
+          skipPromptTuning: true,
+          stylePreset: 'cinematic',
+        },
+      }),
+      1,
+    );
+
+    const body = sentBody(fetchMock);
+    expect(body).not.toHaveProperty('resolution');
+    expect(body).not.toHaveProperty('referenceImages');
+    expect(body).not.toHaveProperty('promptTuning');
+    expect(body).not.toHaveProperty('skipPromptTuning');
+    expect(body).not.toHaveProperty('stylePreset');
+    expect(result.appliedSettings).not.toHaveProperty('resolution');
+    expect(result.appliedSettings).not.toHaveProperty('promptTuning');
+
+    global.fetch = originalFetch;
+  });
+
+  it('does NOT retry a params 4xx: throws ERR_IMAGE_PARAMS_NOT_SUPPORTED after exactly one upstream call', async () => {
+    const { service } = createService();
+    const originalFetch = global.fetch;
+    // 行为变更：4xx → safe-defaults 重试整条删除。重试用的 safe defaults 仍是同一组参数，
+    // 它从来没修好过任何东西，只是把上游多打了一次。
+    const fetchMock = jest
       .fn()
-      .mockResolvedValue({
-        ok: false,
-        status: 400,
-        text: async () => '{"error":{"message":"persistently invalid"}}',
-      }) as never;
+      .mockResolvedValue(upstreamError(400, '{"error":{"message":"invalid size"}}'));
+    global.fetch = fetchMock as never;
 
     let captured: { status?: number; response?: unknown } | undefined;
     try {
       await service.callImageApi(
-        {
-          mode: 'generate',
-          prompt: 'A scene',
-          modelConfig: {
-            id: 'image-model-1',
-            model: 'gpt-image-1',
-            provider: 'openai-official',
-            baseUrl: 'https://api.example.com/v1',
-            apiKey: 'key',
-            metadata: {},
-          },
-          template: {},
-          variables: {},
-          settings: { size: '1024x1024', quality: 'high' },
-        },
+        imageRequest({ settings: { size: '1024x1024@1K', quality: 'high' } }),
         1,
       );
     } catch (err) {
@@ -851,54 +808,61 @@ describe('ImageGenerationFlowService', () => {
 
     expect(captured).toBeDefined();
     expect(captured?.status).toBe(400);
-    const response = captured?.response as { errorCode?: string; message?: string } | undefined;
+    const response = captured?.response as
+      | { errorCode?: string; message?: string; details?: Record<string, unknown> }
+      | undefined;
     expect(response?.errorCode).toBe('ERR_IMAGE_PARAMS_NOT_SUPPORTED');
     expect(response?.message).toContain('当前模型不支持所选参数');
+    expect(response?.details).toMatchObject({ httpStatus: 400, protocolKey: 'openai-images@v1' });
+    // 上游只被打了一次 —— 这条断言是那条被删掉的重试路径的墓碑。
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
     global.fetch = originalFetch;
   });
 
-  it('maps UpstreamParamsInvalidError to ERR_IMAGE_PARAMS_NOT_SUPPORTED after retry exhaustion', async () => {
+  it('propagates a 5xx as-is instead of blaming the user params', async () => {
     const { service } = createService();
     const originalFetch = global.fetch;
-    // Edit mode on a non-gpt-image model → OpenAI adapter throws
-    // UpstreamParamsInvalidError synchronously; the retry uses safe defaults
-    // (still non-gpt-image), which also throws, so we expect the typed error
-    // to be mapped to the stable Chinese error code.
-    global.fetch = jest.fn() as never; // should never be invoked
+    const fetchMock = jest.fn().mockResolvedValue(upstreamError(500, 'gateway exploded'));
+    global.fetch = fetchMock as never;
 
-    let captured: { status?: number; response?: unknown } | undefined;
+    // 变异测试：若 callImageApi 把任何上游错误都映射成 ERR_IMAGE_PARAMS_NOT_SUPPORTED
+    // （老 UPSTREAM_4XX_RE 的近亲），这条会红 —— 上游宕机会被误报成「参数不支持」，
+    // 用户会去反复改尺寸。preset 的 errorMapping 把 500 分类成 'upstream'。
+    let captured: unknown;
     try {
       await service.callImageApi(
-        {
-          mode: 'edit',
-          prompt: 'edit it',
-          modelConfig: {
-            id: 'image-model-1',
-            model: 'sdxl-base-1.0',
-            provider: 'openai-official',
-            baseUrl: 'https://api.example.com/v1',
-            apiKey: 'key',
-            metadata: {},
-          },
-          template: {},
-          variables: {},
-          sourceImages: [{ url: 'https://img.test/source.png' }],
-          settings: { size: '1024x1024' },
-        },
+        imageRequest({ settings: { size: '1024x1024@1K', quality: 'high' } }),
         1,
       );
     } catch (err) {
-      captured = {
-        status: (err as { status?: number }).status,
-        response: (err as { response?: unknown }).response,
-      };
+      captured = err;
     }
 
-    expect(captured).toBeDefined();
-    expect(captured?.status).toBe(400);
-    const response = captured?.response as { errorCode?: string } | undefined;
-    expect(response?.errorCode).toBe('ERR_IMAGE_PARAMS_NOT_SUPPORTED');
+    expect(captured).toBeInstanceOf(Error);
+    expect((captured as { status?: number }).status).not.toBe(400);
+    expect(JSON.stringify((captured as { response?: unknown }).response ?? '')).not.toContain(
+      'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    global.fetch = originalFetch;
+  });
+
+  it('rejects an image model whose protocolKey is missing — no silent fallback adapter', async () => {
+    const { service } = createService();
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn() as never;
+
+    await expect(
+      service.callImageApi(
+        imageRequest({
+          modelConfig: { ...IMAGE_MODEL_CONFIG, metadata: {} },
+          settings: { size: '1024x1024@1K' },
+        }),
+        1,
+      ),
+    ).rejects.toThrow(/protocolKey/);
     expect(global.fetch).not.toHaveBeenCalled();
 
     global.fetch = originalFetch;
@@ -942,7 +906,6 @@ describe('ImageGenerationFlowService', () => {
           count: 2,
           coerced: false,
           notes: [],
-          kind: 'gpt-image',
         },
       };
     });
@@ -981,17 +944,15 @@ describe('ImageGenerationFlowService', () => {
       2,
     );
 
-    // Hold-time estimate uses the new task/params/usage shape and the requested count (2).
+    // Hold-time estimate uses the new task/params/usage shape.
+    // 用户参数原样透传 + 注入真实 referenceImages 张数；**不含 resolution**（由服务端
+    // estimator 的 deriveParams 从 size 派生，不在这里手写）、**不含 quantity**
+    // （张数由业务逻辑吃掉，不是计价参数）。
     expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
     expect(pointsService.estimateCost).toHaveBeenCalledWith({
       taskType: 'image_generation',
       modelConfigId: 'image-model-1',
-      params: expect.objectContaining({
-        quantity: 2,
-        referenceImages: 1,
-        quality: 'high',
-        resolution: '1K',
-      }),
+      params: { quality: 'high', size: '1024x1024', referenceImages: 1 },
       membershipLevel: 2,
     });
     // 张数由业务逻辑计费：pricingSchema 只算单张，冻结额 = 单张估价(90) × 请求张数(2) = 180。
@@ -1031,7 +992,7 @@ describe('ImageGenerationFlowService', () => {
     prisma.image_generations.create.mockImplementation(async (args: any) => ({ id: 'gen-1', ...args.data }));
     jest.spyOn(service, 'callImageApi').mockResolvedValue({
       images: ['data:image/png;base64,A', 'data:image/png;base64,B', 'data:image/png;base64,C'],
-      appliedSettings: { size: '1024x1024', quality: 'standard', count: 3, coerced: false, notes: [], kind: 'compatible' },
+      appliedSettings: { size: '1024x1024', quality: 'standard', count: 3, coerced: false, notes: [] },
     });
     jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue([
       'https://cdn.test/a.png',
@@ -1070,6 +1031,63 @@ describe('ImageGenerationFlowService', () => {
     );
     // 实扣 = 单张价(40) × 实际产图数(3) = 120（全部产出，无退款）。
     expect(pointsService.confirmHoldWithinTx).toHaveBeenCalledWith(expect.any(Object), 'hold-1', 120);
+  });
+
+  describe('count ceiling — clamped ONCE at the dispatch entry (model capability ∩ risk cap)', () => {
+    async function dispatchWithCount(metadata: Record<string, unknown>, count: number) {
+      const { service, prisma, pointsService } = createService();
+      prisma.image_generations.create.mockImplementation(async (args: any) => ({ id: 'gen-1', ...args.data }));
+      const callImageApi = jest.spyOn(service, 'callImageApi').mockResolvedValue({
+        images: ['data:image/png;base64,A'],
+        appliedSettings: { size: '1024x1024', count: 1, coerced: false, notes: [] },
+      });
+      jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://cdn.test/a.png']);
+
+      const request = {
+        mode: 'generate',
+        prompt: 'A scene',
+        modelConfig: { ...IMAGE_MODEL_CONFIG, metadata },
+        template: {},
+        variables: {},
+        settings: { size: '1024x1024@1K' },
+      } as never;
+
+      await service.generateAndPersistImage(
+        { userId: 'user-1', templateId: 'tpl-1', modelConfigId: 'image-model-1' },
+        request,
+        count,
+      );
+      return { callImageApi, pointsService };
+    }
+
+    it('clamps to metadata.limits.maxCount when the model can only produce one image', async () => {
+      const { callImageApi, pointsService } = await dispatchWithCount(
+        { protocolKey: 'openai-images@v1', limits: { maxCount: 1 } },
+        4,
+      );
+
+      expect(callImageApi).toHaveBeenCalledWith(expect.anything(), 1);
+      // 冻结额也跟着张数走：clamp 必须发生在 createHold 之前，否则会按 4 张冻结。
+      expect(pointsService.createHold).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ amount: 90 }),
+      );
+    });
+
+    it('clamps to the risk hard cap when the model claims a higher capability', async () => {
+      const { callImageApi } = await dispatchWithCount(
+        { protocolKey: 'openai-images@v1', limits: { maxCount: 99 } },
+        99,
+      );
+
+      expect(callImageApi).toHaveBeenCalledWith(expect.anything(), 4);
+    });
+
+    it('falls back to the risk hard cap when the model declares no limit', async () => {
+      const { callImageApi } = await dispatchWithCount({ protocolKey: 'openai-images@v1' }, 9);
+
+      expect(callImageApi).toHaveBeenCalledWith(expect.anything(), 4);
+    });
   });
 
   it('FIX-4: rejects an over-ceiling resolution before creating a hold', async () => {
@@ -1215,7 +1233,6 @@ describe('ImageGenerationFlowService', () => {
         count: 1,
         coerced: false,
         notes: [],
-        kind: 'gpt-image',
       },
     });
     jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
@@ -1261,7 +1278,6 @@ describe('ImageGenerationFlowService', () => {
         count: 1,
         coerced: false,
         notes: [],
-        kind: 'gpt-image',
       },
     });
     jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
@@ -1305,7 +1321,6 @@ describe('ImageGenerationFlowService', () => {
         count: 1,
         coerced: false,
         notes: [],
-        kind: 'gpt-image',
       },
     });
     jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);

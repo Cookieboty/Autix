@@ -3,6 +3,7 @@ import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { ModelConfigRepository } from './model-config.repository';
 import { ModelConfigService, toClientModelConfig } from './model-config.service';
 import type { LocalizedText } from '@autix/domain/model';
+import type { PricingSchema } from '@autix/domain/pricing';
 
 /**
  * `{ cn: '...' }` is deliberately not a valid `LocalizedText` at the type
@@ -697,5 +698,248 @@ describe('ModelConfigService ajv compile smoke on save', () => {
         paramsSchema: UNCOMPILABLE_PARAMS_SCHEMA,
       } as never),
     ).rejects.toThrow(BadRequestException);
+  });
+});
+
+/**
+ * 墙 3（§15.2）：保存期的**跨配置**校验 —— paramsSchema ⟷ metadata.protocolKey 的 preset
+ * 必须双向闭合。前两层（结构校验、ajv 编译）各自只看一份配置；一个 wire 参数在 preset 里
+ * 没有绑定、或 protocolKey 指向一个不存在的 preset，两层都放行，然后在真实下单时静默丢参数
+ * / 抛未捕获异常。任一层失败即拒绝保存 —— 不做「警告但允许保存」。
+ */
+describe('ModelConfigService — 保存期第 3 层：schema ⟷ preset 闭合校验', () => {
+  const IMAGE_METADATA = {
+    protocolKey: 'openai-images@v1',
+    operations: ['generate', 'edit'],
+    limits: { maxCount: 4 },
+  };
+
+  /** 与 gatewayOpenAIV1 双向闭合的 schema（seed-pricing.schemas.ts 的形状）。 */
+  const CLOSED_IMAGE_PARAMS_SCHEMA = {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object' as const,
+    required: ['size', 'quality', 'resolution'],
+    properties: {
+      size: {
+        type: 'string' as const,
+        enum: ['1024x1024@1K', '2048x2048@2K'],
+        default: '1024x1024@1K',
+        'x-ui': { role: 'wire' as const, control: 'size-grid' as const },
+      },
+      quality: {
+        type: 'string' as const,
+        enum: ['low', 'high'],
+        default: 'low',
+        'x-ui': { role: 'both' as const, control: 'chips' as const },
+      },
+      resolution: {
+        type: 'string' as const,
+        enum: ['1K', '2K'],
+        default: '1K',
+        'x-ui': {
+          role: 'derived' as const,
+          control: 'hidden' as const,
+          derivedFrom: { param: 'size', via: 'imagePricingResolution' as const },
+        },
+      },
+      referenceImages: {
+        type: 'integer' as const,
+        minimum: 0,
+        maximum: 4,
+        default: 0,
+        'x-ui': { role: 'pricing' as const, control: 'hidden' as const },
+      },
+      seed: { type: 'string' as const, 'x-ui': { role: 'wire' as const, control: 'hidden' as const } },
+      negativePrompt: {
+        type: 'string' as const,
+        'x-ui': { role: 'wire' as const, control: 'hidden' as const },
+      },
+    },
+  };
+
+  // 图片模型在 ModelType 里没有独立成员：它是 general + capabilities:['image']。
+  const IMAGE_PRICING_SCHEMA: PricingSchema = {
+    terms: [
+      { id: 'base', op: 'add' as const, const: 1 },
+      { id: 'quality', op: 'mul' as const, table: { param: 'quality', values: { low: 15, high: 350 } } },
+      { id: 'resolution', op: 'mul' as const, table: { param: 'resolution', values: { '1K': 1, '2K': 2 } } },
+    ],
+  };
+
+  function existingImageModel() {
+    return {
+      id: 'image-model-1',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+      metadata: IMAGE_METADATA,
+      paramsSchema: CLOSED_IMAGE_PARAMS_SCHEMA,
+      pricingSchema: IMAGE_PRICING_SCHEMA,
+    } as never;
+  }
+
+  it('accepts a schema that is closed against the preset (create)', async () => {
+    const { service, prisma } = createService();
+
+    await expect(
+      service.createSystemModel(
+        {
+          name: 'Image',
+          model: 'gemini-3-pro-image',
+          type: ModelType.general,
+          capabilities: ['image'],
+          metadata: IMAGE_METADATA,
+          paramsSchema: CLOSED_IMAGE_PARAMS_SCHEMA,
+          pricingSchema: IMAGE_PRICING_SCHEMA,
+        },
+        'admin-1',
+      ),
+    ).resolves.toBeDefined();
+    expect(prisma.model_configs.create).toHaveBeenCalled();
+  });
+
+  it('rejects saving a schema whose wire param the preset cannot send (create)', async () => {
+    const { service, prisma } = createService();
+
+    // guidanceScale: role wire，但 gatewayOpenAIV1 没有它的绑定 → 上游永远收不到它，
+    // 用户以为调了参数、其实被静默丢弃。前两层都放行这份 schema。
+    await expect(
+      service.createSystemModel(
+        {
+          name: 'Image',
+          model: 'gemini-3-pro-image',
+          type: ModelType.general,
+          capabilities: ['image'],
+          metadata: IMAGE_METADATA,
+          paramsSchema: {
+            ...CLOSED_IMAGE_PARAMS_SCHEMA,
+            properties: {
+              ...CLOSED_IMAGE_PARAMS_SCHEMA.properties,
+              // minimum/maximum 齐全 → 第 1 层（结构校验）放行、第 2 层（ajv 编译）放行。
+              // 它只可能被第 3 层拦下：preset 没有 guidanceScale 的绑定。
+              guidanceScale: {
+                type: 'number' as const,
+                minimum: 1,
+                maximum: 20,
+                default: 7,
+                'x-ui': { role: 'wire' as const, control: 'slider' as const },
+              },
+            },
+          },
+          pricingSchema: IMAGE_PRICING_SCHEMA,
+        },
+        'admin-1',
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.model_configs.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects saving a model whose protocolKey resolves to no preset (create)', async () => {
+    const { service, prisma } = createService();
+
+    await expect(
+      service.createSystemModel(
+        {
+          name: 'Image',
+          model: 'gemini-3-pro-image',
+          type: ModelType.general,
+          capabilities: ['image'],
+          metadata: { protocolKey: 'nope@v9', operations: ['generate'] },
+          paramsSchema: CLOSED_IMAGE_PARAMS_SCHEMA,
+          pricingSchema: IMAGE_PRICING_SCHEMA,
+        },
+        'admin-1',
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.model_configs.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unclosed paramsSchema on the UPDATE path — admin edits go through update, not create', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue(existingImageModel());
+
+    await expect(
+      service.updateSystemModel('image-model-1', {
+        paramsSchema: {
+          ...CLOSED_IMAGE_PARAMS_SCHEMA,
+          properties: {
+            ...CLOSED_IMAGE_PARAMS_SCHEMA.properties,
+            guidanceScale: {
+              type: 'number' as const,
+              minimum: 1,
+              maximum: 20,
+              default: 7,
+              'x-ui': { role: 'wire' as const, control: 'slider' as const },
+            },
+          },
+        },
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.model_configs.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects switching metadata.protocolKey to an unregistered preset, even when paramsSchema is untouched', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue(existingImageModel());
+
+    // metadata 单独改也必须重跑第 3 层：否则把 protocolKey 改成一个不存在的 preset，
+    // 保存成功、下单时 resolveImagePreset 抛未捕获异常 → 500。
+    await expect(
+      service.updateSystemModel('image-model-1', {
+        metadata: { ...IMAGE_METADATA, protocolKey: 'nope@v9' },
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.model_configs.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects declaring an operation the preset does not implement', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue(existingImageModel());
+
+    await expect(
+      service.updateSystemModel('image-model-1', {
+        // referenceImages 存在但 edit 端点… gatewayOpenAIV1 两个操作都有；
+        // 换一个真实的闭合破坏：删掉 referenceImages 后仍声明 edit。
+        paramsSchema: {
+          ...CLOSED_IMAGE_PARAMS_SCHEMA,
+          properties: {
+            size: CLOSED_IMAGE_PARAMS_SCHEMA.properties.size,
+            quality: CLOSED_IMAGE_PARAMS_SCHEMA.properties.quality,
+            resolution: CLOSED_IMAGE_PARAMS_SCHEMA.properties.resolution,
+            seed: CLOSED_IMAGE_PARAMS_SCHEMA.properties.seed,
+            negativePrompt: CLOSED_IMAGE_PARAMS_SCHEMA.properties.negativePrompt,
+          },
+        },
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.model_configs.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts a closed update', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue(existingImageModel());
+
+    await expect(
+      service.updateSystemModel('image-model-1', {
+        paramsSchema: CLOSED_IMAGE_PARAMS_SCHEMA,
+      }),
+    ).resolves.toBeDefined();
+    expect(prisma.model_configs.update).toHaveBeenCalled();
+  });
+
+  it('does not apply the protocol check to a model that declares no protocolKey (text models)', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'text-model-1',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+      metadata: {},
+      paramsSchema: VALID_PARAMS_SCHEMA,
+      pricingSchema: VALID_PRICING_SCHEMA,
+    } as never);
+
+    await expect(
+      service.updateSystemModel('text-model-1', { paramsSchema: VALID_PARAMS_SCHEMA }),
+    ).resolves.toBeDefined();
+    expect(prisma.model_configs.update).toHaveBeenCalled();
   });
 });
