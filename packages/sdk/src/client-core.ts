@@ -345,7 +345,7 @@ export async function uploadToPresignedUrl(
 }
 
 export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string): AxiosInstance {
-  const instance = axios.create({ timeout: 10000 });
+  const instance = axios.create({ timeout: 60000 });
 
   instance.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
     if (!config.baseURL) {
