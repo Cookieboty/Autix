@@ -240,7 +240,9 @@ export function ImageGeneratorStudio({
       // count（spec §11 第 2 期：透传 schema 参数，count 从不是 schema 属性）——
       // 骨架占位卡的张数改用 imageCapability 的模型默认值，目前所有能力表都是 1。
       count: imageCapability.defaults.count,
-      size: typeof payload.settings.size === 'string' ? payload.settings.size : undefined,
+      // 整个 schema 参数包交给占位块自己解析比例：比例参数的键名逐模型不同
+      // （多数模型是 aspectRatio，只有 size-grid 模型才有 size），这里不能只挑 size。
+      settings: payload.settings,
     });
     setMode('history');
     setGenerating(true);

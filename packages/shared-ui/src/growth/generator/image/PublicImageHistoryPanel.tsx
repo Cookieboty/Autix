@@ -24,6 +24,7 @@ import type {
 } from './public-image-generation';
 import type { TemplateDensity } from '../generator-studio-helpers';
 import { PublishToGalleryDialog } from './PublishToGalleryDialog';
+import { formatImageSizeLabel, naturalAspectRatio, resolveSettingsAspectRatio } from './image-aspect';
 import { dedupeGenerationIds, galleryPostActions, summarizeSettled } from './gallery-interaction-model';
 import { DeleteGenerationsDialog } from './DeleteGenerationsDialog';
 import { Button } from '../../../ui/button';
@@ -33,8 +34,12 @@ export type PendingImageGenerationCard = {
   prompt: string;
   model: string;
   count: number;
-  /** 生成时选择的尺寸/比例（如 "1024x1536" / "3:4"），占位块据此按比例渲染 */
-  size?: string;
+  /**
+   * 本次生成提交的 schema 参数包。占位块据此解析比例渲染 —— 传整个 bag 而不是
+   * 单个 size 串，因为比例参数的键名逐模型不同（aspectRatio / size），
+   * 见 resolveSettingsAspectRatio。
+   */
+  settings?: Record<string, unknown>;
 };
 
 // 历史 Tab：横向 justified 行布局；行高由密度档位决定（档位越密行越矮），滑块调整行高
@@ -45,18 +50,6 @@ const HISTORY_ROW_HEIGHT: Record<TemplateDensity, number> = {
   dense: 340,
   xdense: 260,
 };
-
-/** 从尺寸串解析宽高比（w/h）：支持 "1024x1024" / "3:4" / "1024×1024@1K"，无法解析回退 1 */
-function parseAspectRatio(size?: string): number {
-  if (!size) return 1;
-  const match = size.match(/(\d+)\s*[x:×]\s*(\d+)/i);
-  if (match) {
-    const w = Number(match[1]);
-    const h = Number(match[2]);
-    if (w > 0 && h > 0) return w / h;
-  }
-  return 1;
-}
 
 const HISTORY_GAP = 3;
 
@@ -166,6 +159,18 @@ export function PublicImageHistoryPanel({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { ref: containerRef, width: containerWidth } = useElementWidth<HTMLDivElement>();
+  /**
+   * 图片加载完成后按 naturalWidth/naturalHeight 校正出的真实比例（key 同 imageKey）。
+   * 加载前用 settings 的比例占位，加载后以图片自身为准 —— 厂商实际返回的尺寸未必
+   * 等于请求值。
+   */
+  const [naturalRatios, setNaturalRatios] = useState<Record<string, number>>({});
+
+  const rememberNaturalRatio = (key: string, element: HTMLImageElement) => {
+    const ratio = naturalAspectRatio(element);
+    if (ratio === undefined) return;
+    setNaturalRatios((prev) => (prev[key] === ratio ? prev : { ...prev, [key]: ratio }));
+  };
 
   const selectionActive = selectedKeys.size > 0;
   useEffect(() => {
@@ -207,7 +212,7 @@ export function PublicImageHistoryPanel({
   }
 
   const targetHeight = HISTORY_ROW_HEIGHT[density];
-  const pendingRatio = parseAspectRatio(pending?.size);
+  const pendingRatio = resolveSettingsAspectRatio(pending?.settings);
 
   type HistoryCell =
     | { kind: 'pending'; ratio: number; showLabel: boolean; key: string }
@@ -230,13 +235,17 @@ export function PublicImageHistoryPanel({
         }))
       : []),
     ...items.flatMap((item) =>
-      item.images.map((image) => ({
-        kind: 'image' as const,
-        ratio: parseAspectRatio(typeof item.settings.size === 'string' ? item.settings.size : undefined),
-        item,
-        image,
-        key: imageKey(item.id, image),
-      })),
+      item.images.map((image) => {
+        const key = imageKey(item.id, image);
+        return {
+          kind: 'image' as const,
+          // 加载完成的图以真实比例为准，未加载的先按本次生成选择的比例占位
+          ratio: naturalRatios[key] ?? resolveSettingsAspectRatio(item.settings),
+          item,
+          image,
+          key,
+        };
+      }),
     ),
   ];
 
@@ -323,6 +332,11 @@ export function PublicImageHistoryPanel({
                     alt={image.prompt ?? item.prompt}
                     loading="lazy"
                     className="h-full w-full object-cover"
+                    // 命中缓存的图不会触发 onLoad（挂载时已 complete），两条路都要读
+                    ref={(element) => {
+                      if (element?.complete) rememberNaturalRatio(key, element);
+                    }}
+                    onLoad={(event) => rememberNaturalRatio(key, event.currentTarget)}
                   />
                   {/* 点击：多选态下切换选中，否则打开详情 */}
                   <button
@@ -687,7 +701,7 @@ function PublicImageHistoryDialog({
                 <HistoryInfoRow label={t('model')} value={item.model || t('auto')} />
                 <HistoryInfoRow label={t('createdAt')} value={formatTime(item.createdAt, locale)} />
                 <HistoryInfoRow label={t('imageCount')} value={String(images.length)} />
-                <HistoryInfoRow label={t('imageSize')} value={String(item.settings.size || '-')} />
+                <HistoryInfoRow label={t('imageSize')} value={formatImageSizeLabel(item.settings) ?? '-'} />
               </div>
             </section>
           </div>
