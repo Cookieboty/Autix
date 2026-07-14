@@ -153,14 +153,12 @@ export function InteractiveCollectionBands({
         {collections.map((collection, index) => {
           const isActive = collection.slug === active?.slug;
           return (
-            <a
+            <div
               key={collection.slug}
-              href={`/community/${collection.slug}`}
-              className={`group relative overflow-hidden rounded-md border px-4 py-4 transition duration-300 ${
-                isActive
+              className={`group relative overflow-hidden rounded-md border px-4 py-4 transition duration-300 ${isActive
                   ? 'border-growth-accent/40 bg-accent'
                   : 'border-border bg-background/24 hover:border-input hover:bg-secondary'
-              }`}
+                }`}
               onMouseEnter={() => setActiveSlug(collection.slug)}
               onFocus={() => setActiveSlug(collection.slug)}
             >
@@ -189,7 +187,7 @@ export function InteractiveCollectionBands({
                   </span>
                 ))}
               </div>
-            </a>
+            </div>
           );
         })}
       </div>
@@ -261,11 +259,10 @@ export function KineticStepCards({
             <a
               key={`${section.title}-${index}`}
               href={section.href ?? ctaHref ?? '/ai/image'}
-              className={`group relative overflow-hidden rounded-md border p-4 transition duration-300 ${
-                isActive
+              className={`group relative overflow-hidden rounded-md border p-4 transition duration-300 ${isActive
                   ? 'min-h-36 border-growth-accent/40 bg-accent'
                   : 'min-h-28 border-border bg-background/24 hover:border-input hover:bg-secondary'
-              }`}
+                }`}
               onMouseEnter={() => setActiveIndex(index)}
               onFocus={() => setActiveIndex(index)}
             >

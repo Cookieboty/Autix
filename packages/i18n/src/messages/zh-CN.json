@@ -570,12 +570,9 @@
     "collapseSidebar": "收起侧边栏",
     "expandSidebar": "展开侧边栏",
     "tools": "工具",
-    "myContent": "我的内容",
     "myResources": "我的资源",
     "myFavorites": "我的收藏",
     "myPublished": "我的发布",
-    "generationHistory": "生成历史",
-    "browseHistory": "浏览历史",
     "membershipOverview": "会员概览",
     "upgrade": "升级会员",
     "pointsHistory": "积分流水",
@@ -3553,20 +3550,6 @@
       "imageVideo": "图片 · 视频",
       "hotRecommendations": "热门推荐"
     },
-    "community": {
-      "promo": "社区推荐",
-      "eyebrow": "Feed",
-      "title": "社区推荐",
-      "subtitle": "图片与视频模板",
-      "search": "搜索模板",
-      "statTemplates": "全部模板",
-      "statImages": "图片",
-      "statVideos": "视频",
-      "feedEyebrow": "Feed",
-      "feedTitle": "社区推荐",
-      "moreVideo": "视频模板",
-      "empty": "暂无推荐模板"
-    },
     "list": {
       "sortNewest": "最新",
       "sortPopular": "热度",
@@ -3642,7 +3625,6 @@
     "nav": {
       "video": "视频",
       "presets": "预设",
-      "community": "社区",
       "home": "首页",
       "image": "图片",
       "me": "我的"
@@ -3682,7 +3664,6 @@
         "marketingStudio": "营销工作室",
         "presets": "预设",
         "viralPresets": "爆款预设",
-        "community": "社区",
         "originalSeries": "原创系列",
         "pricing": "价格",
         "marketplace": "市场",
@@ -3793,7 +3774,6 @@
       "studio": {
         "topPromo": "全场 {zhe} 折优惠，包含 GPT-Image 2、Nano Banana 与会员开通",
         "history": "历史",
-        "community": "社区",
         "templates": "模板",
         "templatesEmpty": "暂无图片模板",
         "howItWorks": "使用方式",
@@ -3880,7 +3860,6 @@
           "explore": "探索",
           "image": "图片",
           "video": "视频",
-          "community": "社区",
           "new": "New",
           "marketing": "营销工作室",
           "cinema": "电影工作室",
@@ -4185,7 +4164,6 @@
         "portrait": "人像",
         "publicPage": "公开页",
         "creationFlow": "创作流程",
-        "community": "社区",
         "public": "公开",
         "creative": "创意"
       },

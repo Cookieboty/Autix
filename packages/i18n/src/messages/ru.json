@@ -578,12 +578,9 @@
     "collapseSidebar": "Свернуть боковую панель",
     "expandSidebar": "Развернуть боковую панель",
     "tools": "Инструменты",
-    "myContent": "Мой контент",
     "myResources": "Мои ресурсы",
     "myFavorites": "Избранное",
     "myPublished": "Опубликованное",
-    "generationHistory": "История генерации",
-    "browseHistory": "История просмотров",
     "membershipOverview": "Обзор подписки",
     "pointsHistory": "История баллов",
     "rewardsCenter": "Центр наград",
@@ -2919,20 +2916,6 @@
       "imageVideo": "Изображения · Видео",
       "hotRecommendations": "Популярные рекомендации"
     },
-    "community": {
-      "promo": "Community picks",
-      "eyebrow": "Feed",
-      "title": "Community picks",
-      "subtitle": "Image and video templates",
-      "search": "Search templates",
-      "statTemplates": "All templates",
-      "statImages": "Images",
-      "statVideos": "Videos",
-      "feedEyebrow": "Feed",
-      "feedTitle": "Community picks",
-      "moreVideo": "Video templates",
-      "empty": "No recommendations yet"
-    },
     "list": {
       "sortNewest": "Новые",
       "sortPopular": "Популярные",
@@ -3306,7 +3289,6 @@
     "nav": {
       "video": "Video",
       "presets": "Presets",
-      "community": "Community",
       "home": "Home",
       "image": "Image",
       "me": "Me"
@@ -3346,7 +3328,6 @@
         "marketingStudio": "Маркетинг-студия",
         "presets": "Пресеты",
         "viralPresets": "Вирусные пресеты",
-        "community": "Сообщество",
         "originalSeries": "Original Series",
         "pricing": "Тарифы",
         "marketplace": "Marketplace",
@@ -3457,7 +3438,6 @@
       "studio": {
         "topPromo": "-{percent}% на всё, включая GPT-Image 2, Nano Banana и подписки",
         "history": "History",
-        "community": "Community",
         "templates": "Templates",
         "templatesEmpty": "No image templates yet",
         "howItWorks": "How it works",
@@ -3544,7 +3524,6 @@
           "explore": "Explore",
           "image": "Image",
           "video": "Video",
-          "community": "Community",
           "new": "New",
           "marketing": "Marketing Studio",
           "cinema": "Cinema Studio",
@@ -3849,7 +3828,6 @@
         "portrait": "portrait",
         "publicPage": "Public page",
         "creationFlow": "Creation flow",
-        "community": "community",
         "public": "public",
         "creative": "creative"
       },

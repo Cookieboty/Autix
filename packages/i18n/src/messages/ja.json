@@ -578,12 +578,9 @@
     "collapseSidebar": "サイドバーを折りたたむ",
     "expandSidebar": "サイドバーを展開",
     "tools": "ツール",
-    "myContent": "マイコンテンツ",
     "myResources": "マイリソース",
     "myFavorites": "お気に入り",
     "myPublished": "公開済み",
-    "generationHistory": "生成履歴",
-    "browseHistory": "閲覧履歴",
     "membershipOverview": "メンバーシップ概要",
     "pointsHistory": "ポイント履歴",
     "rewardsCenter": "報酬センター",
@@ -2919,20 +2916,6 @@
       "imageVideo": "画像 · 動画",
       "hotRecommendations": "人気おすすめ"
     },
-    "community": {
-      "promo": "Community picks",
-      "eyebrow": "Feed",
-      "title": "Community picks",
-      "subtitle": "Image and video templates",
-      "search": "Search templates",
-      "statTemplates": "All templates",
-      "statImages": "Images",
-      "statVideos": "Videos",
-      "feedEyebrow": "Feed",
-      "feedTitle": "Community picks",
-      "moreVideo": "Video templates",
-      "empty": "No recommendations yet"
-    },
     "list": {
       "sortNewest": "最新",
       "sortPopular": "人気",
@@ -3306,7 +3289,6 @@
     "nav": {
       "video": "Video",
       "presets": "Presets",
-      "community": "Community",
       "home": "Home",
       "image": "Image",
       "me": "Me"
@@ -3346,7 +3328,6 @@
         "marketingStudio": "マーケティングスタジオ",
         "presets": "プリセット",
         "viralPresets": "バイラルプリセット",
-        "community": "コミュニティ",
         "originalSeries": "Original Series",
         "pricing": "料金",
         "marketplace": "Marketplace",
@@ -3457,7 +3438,6 @@
       "studio": {
         "topPromo": "全商品 {percent}% オフ（GPT-Image 2、Nano Banana、会員登録を含む）",
         "history": "History",
-        "community": "Community",
         "templates": "Templates",
         "templatesEmpty": "No image templates yet",
         "howItWorks": "How it works",
@@ -3544,7 +3524,6 @@
           "explore": "Explore",
           "image": "Image",
           "video": "Video",
-          "community": "Community",
           "new": "New",
           "marketing": "Marketing Studio",
           "cinema": "Cinema Studio",
@@ -3849,7 +3828,6 @@
         "portrait": "portrait",
         "publicPage": "Public page",
         "creationFlow": "Creation flow",
-        "community": "community",
         "public": "public",
         "creative": "creative"
       },

@@ -255,9 +255,8 @@ export function CollectionGrid({ collections }: { collections: PublicGrowthColle
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {collections.map((collection) => (
-        <a
+        <div
           key={collection.slug}
-          href={`/community/${collection.slug}`}
           className="group relative min-h-72 overflow-hidden rounded-md border border-border bg-secondary"
         >
           {collection.heroMedia ? (
@@ -280,7 +279,7 @@ export function CollectionGrid({ collections }: { collections: PublicGrowthColle
             <h3 className="text-2xl font-semibold">{collection.title}</h3>
             <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{collection.description}</p>
           </div>
-        </a>
+        </div>
       ))}
     </div>
   );

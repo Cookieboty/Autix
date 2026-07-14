@@ -175,7 +175,6 @@ export function AppSidebar({
   const displayEmail = userAny?.email || '';
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const isLibrary = normalizedPathname.startsWith('/library');
-  const isResources = normalizedPathname.startsWith('/resources');
   const isMembership = normalizedPathname.startsWith('/membership');
   const isMaterials = normalizedPathname.startsWith('/materials');
   // const isDraw = normalizedPathname === '/draw';
@@ -214,12 +213,6 @@ export function AppSidebar({
       icon: Images,
       href: '/materials',
       active: isMaterials,
-    },
-    {
-      label: t('myContent'),
-      icon: BookOpen,
-      href: '/resources?tab=generations',
-      active: isResources,
     },
   ];
   const navItems = customNavItems ?? defaultNavItems;

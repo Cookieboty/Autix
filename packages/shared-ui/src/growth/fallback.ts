@@ -86,46 +86,46 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
     posterUrl?: string;
     mediaType?: PublicGrowthMediaItem['mediaType'];
   }> = [
-    {
-      sourceIndex: 0,
-      id: 'fallback-product-poster',
-      mediaUrl: image('photo-1526947425960-945c6e72858f'),
-      href: '/ai/image',
-      badge: t('fallback.badges.growth'),
-    },
-    {
-      sourceIndex: 1,
-      id: 'fallback-fashion-motion',
-      mediaUrl: video('high-impact-mini.mp4'),
-      posterUrl: image('photo-1515886657613-9f3515b0c78f'),
-      mediaType: 'video',
-      href: '/ai/video',
-      badge: t('media.video'),
-    },
-    {
-      sourceIndex: 2,
-      id: 'fallback-launch-room',
-      mediaUrl: image('photo-1522202176988-66273c2fd55f'),
-      href: '/marketing-studio',
-      badge: t('fallback.badges.growth'),
-    },
-    {
-      sourceIndex: 3,
-      id: 'fallback-edit-board',
-      mediaUrl: image('photo-1518005020951-eccb494ad742'),
-      href: '/draw',
-      badge: t('fallback.badges.edit'),
-    },
-    {
-      sourceIndex: 4,
-      id: 'fallback-world-frame',
-      mediaUrl: video('action-v2-mini.mp4'),
-      posterUrl: image('photo-1500530855697-b586d89ba3ee'),
-      mediaType: 'video',
-      href: '/original-series',
-      badge: t('fallback.badges.series'),
-    },
-  ];
+      {
+        sourceIndex: 0,
+        id: 'fallback-product-poster',
+        mediaUrl: image('photo-1526947425960-945c6e72858f'),
+        href: '/ai/image',
+        badge: t('fallback.badges.growth'),
+      },
+      {
+        sourceIndex: 1,
+        id: 'fallback-fashion-motion',
+        mediaUrl: video('high-impact-mini.mp4'),
+        posterUrl: image('photo-1515886657613-9f3515b0c78f'),
+        mediaType: 'video',
+        href: '/ai/video',
+        badge: t('media.video'),
+      },
+      {
+        sourceIndex: 2,
+        id: 'fallback-launch-room',
+        mediaUrl: image('photo-1522202176988-66273c2fd55f'),
+        href: '/marketing-studio',
+        badge: t('fallback.badges.growth'),
+      },
+      {
+        sourceIndex: 3,
+        id: 'fallback-edit-board',
+        mediaUrl: image('photo-1518005020951-eccb494ad742'),
+        href: '/draw',
+        badge: t('fallback.badges.edit'),
+      },
+      {
+        sourceIndex: 4,
+        id: 'fallback-world-frame',
+        mediaUrl: video('action-v2-mini.mp4'),
+        posterUrl: image('photo-1500530855697-b586d89ba3ee'),
+        mediaType: 'video',
+        href: '/original-series',
+        badge: t('fallback.badges.series'),
+      },
+    ];
 
   return [
     ...baseItems,
@@ -157,7 +157,6 @@ export function getFallbackPage(t: GrowthTranslator, slug = 'marketing-studio'):
     tags: [
       t('fallback.tags.publicPage'),
       t('fallback.tags.creationFlow'),
-      t('fallback.tags.community'),
     ],
     sections: [
       {

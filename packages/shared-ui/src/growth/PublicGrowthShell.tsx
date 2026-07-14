@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Compass,
   Home,
   Image as ImageIcon,
   UserRound,
@@ -27,7 +26,6 @@ const FOOTER_GROUPS: Array<{ titleKey: string; links: FooterLink[] }> = [
     links: [
       { labelKey: 'explore', href: '/' },
       { labelKey: 'pricing', href: '/pricing' },
-      { labelKey: 'community', href: '/' },
       { labelKey: 'canvas', href: '/draw' },
       { labelKey: 'marketingStudio', href: '/marketing-studio' },
       { labelKey: 'cinemaStudio', href: '/original-series' },
@@ -62,7 +60,6 @@ const FOOTER_GROUPS: Array<{ titleKey: string; links: FooterLink[] }> = [
     links: [
       { labelKey: 'presets', href: '/presets' },
       { labelKey: 'viralPresets', href: '/viral-presets' },
-      { labelKey: 'community', href: '/' },
       { labelKey: 'membership', href: '/membership' },
       { labelKey: 'pricing', href: '/pricing' },
     ],
@@ -154,21 +151,20 @@ export function MobilePublicTabs() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
   const mobileTabs = [
-    { label: t('home'), href: '/', icon: Home },
-    { label: t('image'), href: '/ai/image', icon: ImageIcon },
-    { label: t('video'), href: '/ai/video', icon: Video },
-    { label: t('community'), href: '/', icon: Compass },
-    { label: t('me'), href: '/profile', icon: UserRound, auth: true },
+    { id: 'home', label: t('home'), href: '/', icon: Home },
+    { id: 'image', label: t('image'), href: '/ai/image', icon: ImageIcon },
+    { id: 'video', label: t('video'), href: '/ai/video', icon: Video },
+    { id: 'me', label: t('me'), href: '/profile', icon: UserRound, auth: true },
   ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur-xl md:hidden">
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {mobileTabs.map((item) => {
           const Icon = item.icon;
           return (
             <button
-              key={item.href}
+              key={item.id}
               type="button"
               onClick={() => {
                 if (item.auth && !isAuthenticated) {
@@ -199,7 +195,7 @@ export function PublicGrowthShell({
 }: {
   promo?: { label?: string; href?: string };
   children: React.ReactNode;
-  navKind?: 'home' | 'image' | 'video' | 'community';
+  navKind?: 'home' | 'image' | 'video';
   /** false 时不渲染导航（由外层持久 (public) layout 提供），用于纳入持久导航的页面（首页/pricing） */
   showNav?: boolean;
   /** false 时不渲染顶部横幅（由外层持久 (public) layout 在导航上方提供） */
