@@ -1,5 +1,10 @@
 import { applyParamDefaults, deriveParams, validateParams, validateParamsSchema } from '@autix/domain/pricing';
-import { resolveImagePricingResolution } from '@autix/domain/image';
+import {
+  IMAGE_MODEL_CAPABILITIES,
+  detectImageModelKind,
+  resolveImagePricingResolution,
+  type ImageModelHint,
+} from '@autix/domain/image';
 import { buildImageParamsSchema, type ModelSchemaHint } from './seed-pricing.schemas';
 
 // 三个探测 imageModelKind 的固定 hint —— 用 metadata.imageModelKind 显式钉住 kind
@@ -50,6 +55,29 @@ describe('buildImageParamsSchema', () => {
     expect(ui.derivedFrom).toEqual({ param: 'size', via: 'imagePricingResolution' });
     // derive 在 validate 之前跑（spec §6.2），所以 required 里保留 resolution 是自洽的
     expect(geminiSchema.required).toContain('resolution');
+  });
+
+  it('size.optionLabels covers every enum token with the capability\'s human labels', () => {
+    // 覆盖 size-grid 的显示层：optionLabels 缺失或只覆盖部分 enum 时，SchemaForm
+    // 会把没映射到的 token 原样显示成裸 'WxH@tier' 字符串（silent degradation）。
+    // 用 IMAGE_MODEL_CAPABILITIES 里真实的 cap.sizes 反推期望值，而不是重新调用
+    // buildImageParamsSchema 内部同样的映射逻辑，否则这个断言测的只是"自己等于自己"。
+    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
+      const modelSchema = buildImageParamsSchema(model);
+      const kind = detectImageModelKind({
+        provider: model.provider,
+        model: model.model,
+        metadata: model.metadata as ImageModelHint['metadata'],
+      });
+      const cap = IMAGE_MODEL_CAPABILITIES[kind];
+      const expectedLabels = Object.fromEntries(cap.sizes.map((size) => [size.value, size.label]));
+      const ui = modelSchema.properties.size['x-ui']!;
+
+      expect(ui.optionLabels).toEqual(expectedLabels);
+      for (const token of modelSchema.properties.size.enum ?? []) {
+        expect(ui.optionLabels?.[String(token)]).toBe(expectedLabels[String(token)]);
+      }
+    }
   });
 
   it('every size enum token parses to a pricing tier (spec §7.2 规则 7)', () => {

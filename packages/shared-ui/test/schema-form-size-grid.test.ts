@@ -93,3 +93,50 @@ describe('buildSizeGridView —— size-grid 的读模型（纯函数）', () =>
     expect(view.aspectOptions).toHaveLength(3);
   });
 });
+
+describe('buildSizeGridView.pickAspect —— 切换长宽比、保留分辨率档位', () => {
+  const OPTIONS = [
+    { value: '1024x1024@1K', label: '1:1' },
+    { value: '1344x768@1K', label: '16:9' },
+    { value: '2048x2048@2K', label: '1:1' },
+  ];
+
+  // OPTIONS 里 2K 只有 1:1，没有 16:9 —— 不够用来验证「同 tier 优先」，
+  // 补一份两个 tier 都有 1:1 和 16:9 的 fixture 才能真正压中 selectImageSizeAspect
+  // 的「同 tier 优先」分支（size-selection.ts:194 的 sameResolution）。
+  const OPTIONS_BOTH_TIERS = [
+    { value: '1024x1024@1K', label: '1:1' },
+    { value: '1344x768@1K', label: '16:9' },
+    { value: '2048x2048@2K', label: '1:1' },
+    { value: '2688x1536@2K', label: '16:9' },
+  ];
+
+  test('tier grouping: picking a different aspect preserves the current tier when that tier has it', () => {
+    const view = buildSizeGridView(OPTIONS_BOTH_TIERS, 'tier', '2048x2048@2K');
+    expect(view.pickAspect('16:9')).toBe('2688x1536@2K'); // 2K 保住了，不是退化成 1K
+  });
+
+  test('tier grouping: falls back to another tier only when the current tier lacks the aspect — the real selectImageSizeAspect guarantee, not "always stays on tier"', () => {
+    // OPTIONS 的 2K 组没有 16:9：selectImageSizeAspect 只保证「同 tier 优先」，
+    // 找不到时会遍历其它 group，不保证停留在当前 tier。
+    const view = buildSizeGridView(OPTIONS, 'tier', '2048x2048@2K');
+    expect(view.pickAspect('16:9')).toBe('1344x768@1K');
+  });
+
+  test('unknown groupBy (flat fallback): resolves a value by matching option.value, never throws', () => {
+    const view = buildSizeGridView(OPTIONS, 'colour', '1024x1024@1K');
+    expect(() => view.pickAspect('1344x768@1K')).not.toThrow();
+    expect(view.pickAspect('1344x768@1K')).toBe('1344x768@1K');
+  });
+
+  test('unknown groupBy (flat fallback): resolves a value by matching option.label too', () => {
+    const view = buildSizeGridView(OPTIONS, 'colour', '1024x1024@1K');
+    expect(view.pickAspect('16:9')).toBe('1344x768@1K');
+  });
+
+  test('unknown groupBy (flat fallback): an unmatched value falls back to currentValue, never throws', () => {
+    const view = buildSizeGridView(OPTIONS, 'colour', '1024x1024@1K');
+    expect(() => view.pickAspect('does-not-exist')).not.toThrow();
+    expect(view.pickAspect('does-not-exist')).toBe('1024x1024@1K');
+  });
+});
