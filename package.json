@@ -6,7 +6,7 @@
   "scripts": {
     "clean:ports": "for port in 3100 4000 5173; do lsof -ti :$port | xargs kill -9 2>/dev/null; done; echo 'Ports cleaned'",
     "dev": "bun run dev:web",
-    "dev:web": "bun run clean:ports && bun run db:deploy && turbo run dev --filter=@autix/web --filter=@autix/api",
+    "dev:web": "bun run clean:ports && turbo run dev --filter=@autix/web --filter=@autix/api",
     "dev:api": "bun run clean:ports && bun run db:deploy && bun run db:seed:pricing && turbo run dev --filter=@autix/api",
     "dev:desktop": "bun run clean:ports && bun run db:deploy && bun run db:seed:pricing && turbo run dev --filter=@autix/desktop --filter=@autix/api",
     "build": "turbo run build",
