@@ -37,4 +37,21 @@ describe('setPath', () => {
     setPath(body, 'generationConfig.responseModalities', ['IMAGE']);
     expect(body).toEqual({ generationConfig: { seed: 7, responseModalities: ['IMAGE'] } });
   });
+
+  it('rejects a segment with a non-numeric index', () => {
+    const body: Record<string, unknown> = {};
+    expect(() => setPath(body, 'a[x]', 1)).toThrow(/"a\[x\]"/);
+    expect(() => setPath(body, 'a[x]', 1)).toThrow(/"a\[x\]"\s+in\s+"a\[x\]"/);
+  });
+
+  it('rejects a segment with unbalanced/nested brackets', () => {
+    const body: Record<string, unknown> = {};
+    expect(() => setPath(body, 'a[[0]', 1)).toThrow(/"a\[\[0\]"/);
+    expect(() => setPath(body, 'a[[0]', 1)).toThrow(/in "a\[\[0\]"/);
+  });
+
+  it('rejects an empty segment produced by a doubled dot', () => {
+    const body: Record<string, unknown> = {};
+    expect(() => setPath(body, 'a..b', 1)).toThrow(/""\s+in\s+"a\.\.b"/);
+  });
 });
