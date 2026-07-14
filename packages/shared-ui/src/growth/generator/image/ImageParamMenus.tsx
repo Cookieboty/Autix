@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { Check, ChevronDown, Search, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-store';
 import { ModelVendorIcon } from '../../../brand';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../ui/popover';
 
-function ImageParamButton({
+export function ImageParamButton({
   icon,
   label,
   showArrow = false,
@@ -23,6 +23,24 @@ function ImageParamButton({
       <span className="text-foreground/70">{icon}</span>
       <span>{label}</span>
       {showArrow ? <ChevronDown className="size-3.5 text-foreground/38" /> : null}
+    </span>
+  );
+}
+
+/** 比例图标：按 W:H 画一个等比例的圆角描边矩形；auto/非比例值用星标 */
+export function AspectRatioIcon({ value, className = 'size-4' }: { value: string; className?: string }) {
+  if (!value || !value.includes(':')) {
+    return <Sparkles className={className} />;
+  }
+  const [wRaw, hRaw] = value.split(':');
+  const w = Number(wRaw) || 1;
+  const h = Number(hRaw) || 1;
+  const max = 15;
+  const rw = w >= h ? max : Math.max(6, Math.round((w / h) * max));
+  const rh = h >= w ? max : Math.max(6, Math.round((h / w) * max));
+  return (
+    <span className={`grid place-items-center ${className}`} aria-hidden>
+      <span className="rounded-[3px] border-[1.5px] border-current" style={{ width: rw, height: rh }} />
     </span>
   );
 }
@@ -125,6 +143,73 @@ export function ImageModelParamMenu({
             );
           })}
         </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function ImageOptionParamMenu({
+  icon,
+  label,
+  title,
+  options,
+  value,
+  onChange,
+  renderOptionIcon,
+}: {
+  icon: ReactNode;
+  label: string;
+  title: string;
+  options: Array<{ label: string; value: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  /** 每个选项前的图标（如比例菜单渲染对应比例的矩形图标） */
+  renderOptionIcon?: (value: string) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (options.length <= 1) {
+    return <ImageParamButton icon={icon} label={label} />;
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="cursor-pointer text-left">
+          <ImageParamButton icon={icon} label={label} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="w-56 gap-0 overflow-hidden rounded-2xl border border-white/10 bg-[rgba(28,30,32,0.86)] p-1.5 text-foreground backdrop-blur-[32px]"
+      >
+        <div className="px-2.5 py-1.5 text-xs font-semibold text-foreground/45">{title}</div>
+        <div className="max-h-72 overflow-y-auto">
+          {options.map((option) => {
+            const active = value === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={`flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 text-left text-sm font-semibold transition ${active
+                  ? 'bg-white/[0.06] text-foreground'
+                  : 'text-foreground/82 hover:bg-white/[0.04]'
+                  }`}
+              >
+                {renderOptionIcon ? (
+                  <span className="shrink-0 text-foreground/70">{renderOptionIcon(option.value)}</span>
+                ) : null}
+                <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                {active ? <Check className="size-4 shrink-0 text-growth-accent" /> : null}
+              </button>
+            );
+          })}
         </div>
       </PopoverContent>
     </Popover>

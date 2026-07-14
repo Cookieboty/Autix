@@ -17,7 +17,7 @@ import { useTranslations } from 'next-intl';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import { publicGeneratorActions, type ModelConfigItem } from '@autix/shared-store';
 import { MagneticButton, SpotlightPanel } from '../../GrowthInteractions';
-import { SchemaForm, translateSchemaKey, useSchemaForm } from '../../../pricing';
+import { translateSchemaKey, useSchemaForm } from '../../../pricing';
 import {
   getImageReferenceUploadLimit,
 } from '../../generator-image-presenters';
@@ -26,6 +26,7 @@ import { OfferStrip } from '../parts';
 import type { PublicUploadedReference } from '../generator-studio-helpers';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../ui/tooltip';
 import { ImageModelParamMenu } from './ImageParamMenus';
+import { ImageSchemaParamMenus } from './ImageSchemaParamMenus';
 import {
   buildPublicImageEstimateInput,
   buildPublicImageGenerationSettings,
@@ -376,13 +377,9 @@ export function ImageComposer({
                   {t('draw')}
                 </Link>
                 */}
-              </div>
-              {paramsSchema && pricingSchema ? (
-                <div className="min-w-[240px] max-w-sm flex-1">
-                  <SchemaForm
+                {paramsSchema ? (
+                  <ImageSchemaParamMenus
                     paramsSchema={paramsSchema}
-                    pricingSchema={pricingSchema}
-                    pricingContext={pricingContext}
                     form={form}
                     translateLabel={(labelKey, fallback) =>
                       translateSchemaKey(tParams, 'pricing.params.', labelKey, fallback)
@@ -390,9 +387,11 @@ export function ImageComposer({
                     translateOption={(optionLabelKey, fallback) =>
                       translateSchemaKey(tOptions, 'pricing.options.', optionLabelKey, fallback)
                     }
+                    aspectTitle={t('aspectRatio')}
+                    resolutionTitle={t('selectResolution')}
                   />
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
           </div>
 
