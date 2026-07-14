@@ -39,7 +39,10 @@ export class GalleryRepository {
   }
 
   /**
-   * 按来源生成记录查「活着的」广场帖 —— 活帖定义全局唯一：status <> REMOVED。
+   * 按来源生成记录查「活着的」广场帖 —— 活帖定义全局唯一：status NOT IN (REMOVED, DRAFT)。
+   * DRAFT 是私人草稿，本就不是"广场里活着的作品"，不占这个坑——否则 createDraft（不做归属
+   * 校验，imageGenerationId 是 DTO 里任意字符串）建的一条草稿就能把这次生成的投稿坑焊死，
+   * 导致真正的作者之后 createSubmission 被自己的（或被冒名顶替的）草稿短路甚至撞库 500。
    * 与 DB 的 partial unique index（gallery_posts_image_generation_active_uniq）同一条规则，
    * 两处必须逐字一致，否则服务层放行的写入会被索引拒绝（或反之）。
    */
@@ -48,7 +51,7 @@ export class GalleryRepository {
       where: {
         imageGenerationId,
         authorId,
-        status: { not: GalleryStatus.REMOVED },
+        status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
       },
       select: { id: true, status: true },
     });

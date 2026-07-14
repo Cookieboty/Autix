@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { ResourceType } from '../../platform/prisma/generated';
+import { GalleryStatus, ResourceType } from '../../platform/prisma/generated';
+import { GalleryRepository } from './gallery.repository';
 import { GalleryService } from './gallery.service';
 
 /**
@@ -932,5 +933,116 @@ describe('createSubmission —— 一次生成至多一条活着的广场帖', (
     const result = await service.createSubmission('user-1', dto);
 
     expect((result as { id: string }).id).toBe('post-raced');
+  });
+});
+
+// ── createSubmission：DRAFT 不占「一次生成至多一条活帖」的坑（Task 2 审阅发现的回归）───
+
+/**
+ * `createDraft` 不做归属校验，`imageGenerationId` 是 DTO 里未经校验的任意字符串——任何人
+ * 都能把它填成别人（或自己）某次生成的 id 建一条 DRAFT。若 DRAFT 被
+ * `findActivePostByImageGenerationId` 当成「活帖」，就会占住「一次生成至多一条活帖」的坑，
+ * 导致真正的作者之后调用 createSubmission 时被这条 DRAFT 幂等短路（或撞库唯一索引后回查
+ * 又查到它），永远发不出自己的投稿。
+ *
+ * 这里不用 makeService 的手写 lookup mock ——那个 mock 本身就是「repo 已经过滤好之后的结果」，
+ * 测不出过滤条件本身对不对。要真正锁住 gallery.repository.ts 里的 status 过滤条件，必须接入
+ * 真实 GalleryRepository，配一张只解释标准 Prisma where 子句（相等 / notIn / not）的假
+ * gallery_posts 表——这样"DRAFT 是否被当成活帖"完全由生产代码的 where 子句决定，而不是由
+ * 测试自己重新写一遍判断逻辑。
+ */
+function matchesWhere(row: Record<string, unknown>, where: Record<string, unknown>): boolean {
+  return Object.entries(where).every(([key, condition]) => {
+    const value = row[key];
+    if (condition && typeof condition === 'object') {
+      const c = condition as { notIn?: unknown[]; not?: unknown };
+      if (c.notIn) return !c.notIn.includes(value);
+      if ('not' in c) return value !== c.not;
+      return true;
+    }
+    return value === condition;
+  });
+}
+
+function makeFakeGalleryPostsTable(rows: Array<Record<string, unknown>>) {
+  let seq = 0;
+  return {
+    findFirst: async ({ where }: { where: Record<string, unknown> }) => {
+      const match = rows.find((row) => matchesWhere(row, where));
+      return match ? { id: match.id, status: match.status } : null;
+    },
+    create: async ({ data }: { data: Record<string, unknown> }) => {
+      seq += 1;
+      const row = { id: `post-${seq}`, ...data };
+      rows.push(row);
+      return row;
+    },
+  };
+}
+
+describe('GalleryRepository + GalleryService.createSubmission —— DRAFT 不占坑（回归）', () => {
+  const authorId = 'user-1';
+  const genId = 'gen-1';
+
+  const generationRow = {
+    userId: authorId,
+    resolvedPrompt: 'a cat',
+    modelUsed: 'gpt-image',
+    width: 1024,
+    height: 1024,
+    referenceImage: null,
+    generatedImages: [`${R2_PUBLIC_BASE}/a.png`],
+  };
+
+  function wireRealService(existingPost: Record<string, unknown> | null) {
+    const rows: Array<Record<string, unknown>> = existingPost ? [existingPost] : [];
+    const prisma = {
+      gallery_posts: makeFakeGalleryPostsTable(rows),
+      image_generations: { findUnique: async () => generationRow },
+    };
+    const repo = new GalleryRepository(prisma as never);
+    const r2 = { getPublicBaseUrl: async () => R2_PUBLIC_BASE };
+    const service = new GalleryService(repo, {} as never, r2 as never);
+    return { service, rows };
+  }
+
+  it('已存在一条 DRAFT（同一次生成）时，createSubmission 正常新建 PENDING 帖，而不是把 DRAFT 幂等返回', async () => {
+    const { service, rows } = wireRealService({
+      id: 'draft-existing',
+      imageGenerationId: genId,
+      authorId,
+      status: GalleryStatus.DRAFT,
+    });
+
+    const result = await service.createSubmission(authorId, {
+      kind: 'IMAGE',
+      category: 'portrait',
+      sourceType: 'FROM_GENERATION',
+      imageGenerationId: genId,
+    } as never);
+
+    expect((result as { id: string; status: string }).id).not.toBe('draft-existing');
+    expect((result as { id: string; status: string }).status).toBe(GalleryStatus.PENDING);
+    // 原 DRAFT 仍留在表里，新帖是另建的一条——而不是把 DRAFT 原地幂等返回。
+    expect(rows).toHaveLength(2);
+  });
+
+  it('对照组：存在一条 PENDING（真活帖）时，仍然幂等返回该帖，不新建', async () => {
+    const { service, rows } = wireRealService({
+      id: 'pending-existing',
+      imageGenerationId: genId,
+      authorId,
+      status: GalleryStatus.PENDING,
+    });
+
+    const result = await service.createSubmission(authorId, {
+      kind: 'IMAGE',
+      category: 'portrait',
+      sourceType: 'FROM_GENERATION',
+      imageGenerationId: genId,
+    } as never);
+
+    expect((result as { id: string }).id).toBe('pending-existing');
+    expect(rows).toHaveLength(1);
   });
 });
