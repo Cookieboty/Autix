@@ -3,6 +3,15 @@ packages:
   - 'services/*'
   - 'packages/*'
 
+# A flat node_modules, mirroring the previous bunfig.toml `linker = "hoisted"`.
+# pnpm 11 reads this here, NOT from .npmrc — putting it in .npmrc is silently
+# ignored and you get the default isolated (symlinked) layout instead.
+#
+# Two reasons it belongs here: electron-builder (clients/desktop) does not
+# support the isolated layout, and the symlink-heavy virtual store makes the
+# Next/Turbopack dev watchers walk a far larger graph.
+nodeLinker: hoisted
+
 # Postinstall scripts pnpm is allowed to run. Everything here either downloads a
 # native binary or generates an engine; without it the package is inert.
 allowBuilds:
