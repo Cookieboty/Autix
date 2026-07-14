@@ -186,7 +186,7 @@ export function HomeTemplateFlow({
                 {videoLabel}
               </Link>
               <Link
-                href="/ai/image?mode=templates"
+                href="/ai/image?mode=gallery"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-black text-primary-foreground transition hover:bg-info"
               >
                 <Layers3 className="size-4" />

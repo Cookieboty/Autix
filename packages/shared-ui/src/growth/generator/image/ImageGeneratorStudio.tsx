@@ -15,19 +15,29 @@ import {
   type ModelConfigItem,
 } from '@autix/shared-store';
 import { resolveTemplatePrompt } from '../media-inputs';
+import { GalleryDetailDialog } from '../../detail/GalleryDetailDialog';
+import { useGalleryPostModal } from '../../detail/useGalleryPostModal';
 import type { PublicGrowthMediaItem } from '../../types';
 import { ModeTabs, StudioDensitySlider } from '../parts';
-import type { ImageStudioMode, TemplateDensity } from '../generator-studio-helpers';
+import type {
+  ImageStudioMode,
+  PublicUploadedReference,
+  TemplateDensity,
+} from '../generator-studio-helpers';
 import { ImageComposer } from './ImageComposer';
 import { resolveFavoriteAction, resolveLikeAction } from './gallery-interaction-model';
 import { PublicImageTemplateWall, type GalleryCardInteraction } from './ImageTemplateWall';
 import { PublicImageHistoryPanel, type PendingImageGenerationCard } from './PublicImageHistoryPanel';
-import { PublicImageTemplateDialog } from './ImageTemplateDialog';
+import { buildStudioSearch, parseStudioMode } from './gallery-url';
 import {
   buildPublicImageHistoryItem,
   type PublicImageGenerationPayload,
+  type PublicImageHistoryImage,
   type PublicImageHistoryItem,
 } from './public-image-generation';
+
+/** 广场墙每页条数：首屏与续页同宽，首屏这批同时也是唯一播入场动画的一批。 */
+const GALLERY_PAGE_SIZE = 30;
 
 /**
  * 广场作品 → 模板卡片形状映射：只填模板墙/详情弹窗实际读取的字段，
@@ -46,15 +56,43 @@ function galleryItemToTemplateCard(item: GalleryFeedItem): ImageTemplate {
     prompt: post.prompt ?? post.description ?? '',
     coverImage: cover,
     exampleImages: post.mediaUrls,
-    authorName: post.authorSnapshot?.displayName ?? '',
-    authorUrl: post.authorSnapshot?.avatarUrl ?? '',
+    authorName: item.author?.nickname ?? '',
+    authorUrl: item.author?.avatar ?? '',
     category: post.category,
     likeCount: metrics.likeCount,
     viewCount: metrics.viewCount,
     useCount: 0,
-    modelHint: post.model ?? '',
+    // 卡片上展示别名；厂商串仍在 feed 的 post.model 里（详情/跳转用）
+    modelHint: post.modelName ?? post.model ?? '',
   };
   return card as ImageTemplate;
+}
+
+/**
+ * feed → 卡片宽高比（width/height）：瀑布流分列要靠它估列高。
+ * 优先用 post.width/height，退而解析 aspectRatio 串（"3:4"/"1024x1536"），都没有则返回
+ * undefined 交给墙那边按竖图兜底——这两个字段之前在卡片映射里被丢掉了。
+ */
+function galleryItemToAspectRatio(item: GalleryFeedItem): number | undefined {
+  const { width, height, aspectRatio } = item.post;
+  if (width && height && width > 0 && height > 0) return width / height;
+  const match = aspectRatio?.match(/(\d+)\s*[x:×]\s*(\d+)/i);
+  if (match) {
+    const w = Number(match[1]);
+    const h = Number(match[2]);
+    if (w > 0 && h > 0) return w / h;
+  }
+  return undefined;
+}
+
+/** 一页 feed 的宽高比表；比例解析不出来的直接不进表，由墙那边兜底。 */
+function collectAspectRatios(items: GalleryFeedItem[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const item of items) {
+    const ratio = galleryItemToAspectRatio(item);
+    if (ratio) map[item.post.id] = ratio;
+  }
+  return map;
 }
 
 /** feed → 互动态：登录态才有 liked/favorited（匿名是 undefined，不是 false）。 */
@@ -80,6 +118,7 @@ export function ImageGeneratorStudio({
   onModelChange,
   initialMode = 'history',
   initialPrompt,
+  syncUrl = false,
 }: {
   items: PublicGrowthMediaItem[];
   imageCapability: ImageModelCapability;
@@ -96,19 +135,35 @@ export function ImageGeneratorStudio({
   initialMode?: ImageStudioMode;
   /** Plan C Task 12：广场「recreate」跳转预填 prompt——复用 appliedTemplate 机制，仅挂载时应用一次。 */
   initialPrompt?: string | null;
+  /**
+   * 把 Tab / 广场详情写进浏览器地址栏（pushState，不刷新页面）。Web 端开；桌面端是
+   * HashRouter、地址栏对用户不可见，开了没意义。
+   */
+  syncUrl?: boolean;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const [mode, setMode] = useState<ImageStudioMode>(initialMode);
-  const templateMode = mode === 'templates';
+  const galleryMode = mode === 'gallery';
   const [templateDensity, setTemplateDensity] = useState<TemplateDensity>('normal');
   const [templates, setTemplates] = useState<ImageTemplate[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
+  // 初值为 true：数据请求在 effect 里才发起，初值给 false 的话首帧会先渲染一遍「无数据」，
+  // 下一帧才切到加载态——表现就是刷新时空状态闪一下。进页面就该是加载中。
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templatesLoadingMore, setTemplatesLoadingMore] = useState(false);
+  const [templatesCursor, setTemplatesCursor] = useState<string | null>(null);
+  /** 卡片宽高比（id → width/height）：瀑布流分列估列高用；只增不改，保证已落位的卡不换列 */
+  const [templateAspects, setTemplateAspects] = useState<Record<string, number>>({});
   const [interactions, setInteractions] = useState<Record<string, GalleryCardInteraction>>({});
   const [historyItems, setHistoryItems] = useState<PublicImageHistoryItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [pendingGeneration, setPendingGeneration] = useState<PendingImageGenerationCard | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<ImageTemplate | null>(null);
+  /**
+   * 广场作品的原始 feed（按 postId 索引）。瀑布流卡片吃的是映射后的 ImageTemplate，
+   * 但详情弹窗与首页共用、吃的是 GalleryFeedItem 原始形状 —— 映射会丢掉 metrics /
+   * tags / width·height 等字段，所以原件必须留着。
+   */
+  const [galleryFeed, setGalleryFeed] = useState<Record<string, GalleryFeedItem>>({});
   const [historySelectionActive, setHistorySelectionActive] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
@@ -117,6 +172,45 @@ export function ImageGeneratorStudio({
     title: string;
     prompt: string;
   } | null>(null);
+  /** 历史详情弹窗点 Reference 后要塞回输入框的参考图（每次换新 id，Composer 据此追加）。 */
+  const [appliedReference, setAppliedReference] = useState<PublicUploadedReference | null>(null);
+  /** Recreate 指令：把 prompt + 参考图带回输入框（模型由父级切换）。每次换新 id。 */
+  const [appliedRecreate, setAppliedRecreate] = useState<{
+    id: string;
+    prompt: string;
+    referenceImages: string[];
+  } | null>(null);
+
+  /**
+   * 广场作品详情：**本地弹窗 + 只改地址栏**（不做路由导航）。
+   *
+   * feed 里已经有这条作品的完整数据，直接开弹窗、零请求、瞬开；地址栏由 History API
+   * 改成 /gallery/<id>，刷新时才由那条真实路由渲染完整页。
+   */
+  const galleryModal = useGalleryPostModal();
+
+  const openGalleryPost = (template: ImageTemplate) => {
+    const item = galleryFeed[template.id];
+    if (item) galleryModal.open(item);
+  };
+
+  /** 切 Tab：写进地址栏（replace，不留历史记录——切 Tab 不该占一条「后退」）。 */
+  const changeMode = (next: ImageStudioMode) => {
+    setMode(next);
+    if (!syncUrl || typeof window === 'undefined') return;
+    // 原生 History API 而不是 router.replace：后者会走一趟服务端、整页重挂载，
+    // 正在生成的任务和输入框内容都会没。切 Tab 只要地址栏变，不要导航。
+    const search = buildStudioSearch(window.location.search, next);
+    window.history.replaceState(null, '', `${window.location.pathname}${search}`);
+  };
+
+  // 浏览器前进/后退：地址栏里的 ?mode= 是 Tab 的真相来源
+  useEffect(() => {
+    if (!syncUrl || typeof window === 'undefined') return;
+    const handlePopState = () => setMode(parseStudioMode(window.location.search));
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [syncUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,18 +218,25 @@ export function ImageGeneratorStudio({
     // 数据源改为广场（gallery_posts）已发布作品；沿用模板墙/详情弹窗的交互，
     // 把广场作品映射成模板卡片形状（description 充当 prompt）。
     publicGalleryActions
-      .listFeed({ kind: 'IMAGE', limit: 60 })
-      .then((feed) => {
+      .listFeed({ kind: 'IMAGE', limit: GALLERY_PAGE_SIZE })
+      .then((page) => {
         if (cancelled) return;
-        setTemplates(feed.map(galleryItemToTemplateCard));
+        setTemplates(page.items.map(galleryItemToTemplateCard));
         setInteractions(
-          Object.fromEntries(feed.map((item) => [item.post.id, galleryItemToInteraction(item)])),
+          Object.fromEntries(
+            page.items.map((item) => [item.post.id, galleryItemToInteraction(item)]),
+          ),
         );
+        setGalleryFeed(Object.fromEntries(page.items.map((item) => [item.post.id, item])));
+        setTemplateAspects(collectAspectRatios(page.items));
+        setTemplatesCursor(page.nextCursor);
       })
       .catch(() => {
         if (!cancelled) {
           setTemplates([]);
           setInteractions({});
+          setTemplateAspects({});
+          setTemplatesCursor(null);
         }
       })
       .finally(() => {
@@ -145,6 +246,44 @@ export function ImageGeneratorStudio({
       cancelled = true;
     };
   }, []);
+
+  /** 触底加载下一页。游标为空即到底；失败时清掉游标止损，避免哨兵反复重试打爆接口。 */
+  const loadMoreTemplates = useCallback(() => {
+    if (!templatesCursor || templatesLoadingMore) return;
+    setTemplatesLoadingMore(true);
+    publicGalleryActions
+      .listFeed({ kind: 'IMAGE', limit: GALLERY_PAGE_SIZE, cursor: templatesCursor })
+      .then((page) => {
+        setTemplates((prev) => {
+          // 热度排序下游标翻页可能回吐已见过的帖子，按 id 去重，否则 React key 会撞
+          const seen = new Set(prev.map((template) => template.id));
+          const next = page.items
+            .map(galleryItemToTemplateCard)
+            .filter((template) => !seen.has(template.id));
+          return next.length ? [...prev, ...next] : prev;
+        });
+        setInteractions((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            page.items
+              .filter((item) => !(item.post.id in prev))
+              .map((item) => [item.post.id, galleryItemToInteraction(item)]),
+          ),
+        }));
+        setGalleryFeed((prev) => ({
+          ...prev,
+          ...Object.fromEntries(page.items.map((item) => [item.post.id, item])),
+        }));
+        setTemplateAspects((prev) => ({ ...collectAspectRatios(page.items), ...prev }));
+        setTemplatesCursor(page.nextCursor);
+      })
+      .catch(() => {
+        setTemplatesCursor(null);
+      })
+      .finally(() => {
+        setTemplatesLoadingMore(false);
+      });
+  }, [templatesCursor, templatesLoadingMore]);
 
   const loadHistory = useCallback(async () => {
     if (!isAuthenticated) {
@@ -162,13 +301,13 @@ export function ImageGeneratorStudio({
           model: item.modelUsed,
           createdAt: item.createdAt,
           galleryPost: item.galleryPost,
-          // settings 现在是透传 bag（spec §11 第 2 期）：历史回填只需要展示用的
-          // size/quality，不再伪造 guidanceScale/steps/stylePreset 等已下线的
-          // 固定字段——PublicImageHistoryItem.settings 的类型不再要求它们。
-          settings: {
-            size: String(item.settings?.size ?? ''),
-            quality: item.settings?.quality ? String(item.settings.quality) : undefined,
-          },
+          modelConfigId: item.modelConfigId ?? null,
+          referenceImages: (item.referenceImages ?? []).map((ref) => ref.url),
+          // settings 是透传 bag（spec §11 第 2 期），这里原样带过来，不要挑字段重捏：
+          // 比例参数的键名逐模型不同（多数模型是 aspectRatio，只有 size-grid 模型才有
+          // size），之前只摘 { size, quality } 会把 aspectRatio 整个丢掉——历史图因此
+          // 全部退化成 1:1、详情里的 Size 显示 "-"。
+          settings: item.settings ?? {},
           images: (item.images?.length
             ? item.images
             : item.generatedImages.map((url, index) => ({
@@ -207,23 +346,67 @@ export function ImageGeneratorStudio({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const useTemplatePrompt = (template: ImageTemplate) => {
-    const prompt = resolveTemplatePrompt(template) || template.prompt;
+  /** 广场作品「使用提示词」：把该作品的 prompt 填进输入框（详情弹窗与卡片共用）。 */
+  const useGalleryPrompt = (item: GalleryFeedItem) => {
+    const prompt = item.post.prompt ?? item.post.description ?? '';
+    if (!prompt) return;
     setAppliedTemplate({
-      id: `${template.id}:${Date.now()}`,
-      title: template.title,
+      id: `${item.post.id}:${Date.now()}`,
+      title: prompt.slice(0, 40),
       prompt,
     });
-    setSelectedTemplate(null);
   };
 
-  // 历史图片 Recreate：把该次生成的 prompt 应用到输入框
+  /** 广场作品「参考图」：把作品的图带进输入框当参考图（图已在对象存储上，无需再上传）。 */
+  const useGalleryAsReference = (item: GalleryFeedItem) => {
+    const url = item.post.coverImage ?? item.post.mediaUrls[0];
+    if (!url) return;
+    setAppliedReference({
+      id: `gallery-ref-${item.post.id}:${Date.now()}`,
+      url,
+      name: `reference-${item.post.id}.png`,
+    });
+  };
+
+  /** 卡片上的「引用」按钮：同上，卡片给的是映射件，转回原始 feed item。 */
+  const useTemplateAsReference = (template: ImageTemplate) => {
+    const item = galleryFeed[template.id];
+    if (item) useGalleryAsReference(item);
+  };
+
+  /** 瀑布流卡片上的「使用」按钮走的是映射后的卡片形状，转回原始 feed item 后同上。 */
+  const useTemplatePrompt = (template: ImageTemplate) => {
+    const item = galleryFeed[template.id];
+    if (item) {
+      useGalleryPrompt(item);
+      return;
+    }
+    // feed 里找不到（理论上不会发生）——退回卡片自带的 prompt，不让按钮变哑巴
+    const prompt = resolveTemplatePrompt(template) || template.prompt;
+    setAppliedTemplate({ id: `${template.id}:${Date.now()}`, title: template.title, prompt });
+  };
+
+  /**
+   * 历史图片 Recreate：把该次生成的**模型 + prompt + 参考图**带回输入框，不回填参数、
+   * 也不自动提交——参数留给用户自己选，生成由用户点击触发。
+   */
   const handleRecreate = (item: PublicImageHistoryItem) => {
-    if (!item.prompt) return;
-    setAppliedTemplate({
-      id: `history-${item.id}:${Date.now()}`,
-      title: item.prompt.slice(0, 40),
+    if (item.modelConfigId && item.modelConfigId !== selectedModelId) {
+      onModelChange(item.modelConfigId);
+    }
+    setAppliedRecreate({
+      id: `recreate-${item.id}:${Date.now()}`,
       prompt: item.prompt,
+      referenceImages: item.referenceImages ?? [],
+    });
+  };
+
+  // 历史图片 Reference：把该图作为参考图塞回输入框（图已在对象存储上，无需再上传）
+  const handleUseAsReference = (image: PublicImageHistoryImage) => {
+    setAppliedReference({
+      id: `history-ref-${image.generationId ?? ''}-${image.index}:${Date.now()}`,
+      url: image.url,
+      name: `reference-${image.index + 1}.png`,
     });
   };
 
@@ -244,7 +427,7 @@ export function ImageGeneratorStudio({
       // （多数模型是 aspectRatio，只有 size-grid 模型才有 size），这里不能只挑 size。
       settings: payload.settings,
     });
-    setMode('history');
+    changeMode('history');
     setGenerating(true);
     try {
       const data = await publicGeneratorActions.generateImage({
@@ -258,6 +441,9 @@ export function ImageGeneratorStudio({
         data,
         request: payload,
         createdAt: new Date().toISOString(),
+        // 刚生成的这条也要能 Recreate：模型 id / 参考图不在 generate 的响应里，
+        // 从本次请求补上（重拉历史时服务端会给同样的值）。
+        modelConfigId: selectedModelId,
       });
       setHistoryItems((prev) => [nextHistoryItem, ...prev]);
     } finally {
@@ -370,21 +556,26 @@ export function ImageGeneratorStudio({
     <div className="relative h-full">
       {/* 背景由 PublicGeneratorStudioView 的全屏固定底层统一提供，此处不再自带背景，避免滑动时错位漏底 */}
       <main className="relative h-full overflow-hidden">
-      {templateMode ? (
+      {galleryMode ? (
         <PublicImageTemplateWall
           templates={templates}
           loading={templatesLoading}
+          loadingMore={templatesLoadingMore}
+          hasMore={Boolean(templatesCursor)}
+          onLoadMore={loadMoreTemplates}
+          animatedCount={GALLERY_PAGE_SIZE}
+          aspectRatios={templateAspects}
           density={templateDensity}
-          onSelectTemplate={setSelectedTemplate}
+          onSelectTemplate={openGalleryPost}
           onUseTemplate={useTemplatePrompt}
           interactions={interactions}
           onToggleLike={handleToggleLike}
-          onToggleFavorite={handleToggleFavorite}
+          onUseAsReference={useTemplateAsReference}
         />
       ) : null}
-      {templateMode ? <div className="growth-template-scroll-overlay pointer-events-none absolute inset-0" /> : null}
+      {galleryMode ? <div className="growth-template-scroll-overlay pointer-events-none absolute inset-0" /> : null}
 
-      {!templateMode ? (
+      {!galleryMode ? (
         mode === 'history' && (historyItems.length > 0 || pendingGeneration) ? (
           // 历史画廊：全屏铺满、横向 justified 行布局（固定行高，滑块调行高）
           <div className="relative z-10 h-full overflow-y-auto overscroll-contain px-[3px] pb-36 pt-14">
@@ -394,6 +585,7 @@ export function ImageGeneratorStudio({
               density={templateDensity}
               pending={pendingGeneration}
               onRecreate={handleRecreate}
+              onUseAsReference={handleUseAsReference}
               onSelectionActiveChange={setHistorySelectionActive}
               onHistoryChanged={() => void loadHistory()}
             />
@@ -420,7 +612,7 @@ export function ImageGeneratorStudio({
         className={`pointer-events-none fixed inset-x-0 bottom-[30px] z-40 transition-all duration-300 ${historySelectionActive ? 'translate-y-8 opacity-0 [&_*]:!pointer-events-none' : 'translate-y-0 opacity-100'}`}
       >
         <ImageComposer
-          communityMode={templateMode}
+          communityMode={galleryMode}
           imageModels={imageModels}
           selectedModel={selectedModel}
           selectedModelId={selectedModelId}
@@ -430,18 +622,30 @@ export function ImageGeneratorStudio({
           pricingSchema={pricingSchema}
           pricingContext={pricingContext}
           appliedTemplate={appliedTemplate}
+          appliedReference={appliedReference}
+          appliedRecreate={appliedRecreate}
           generating={generating}
           onGenerate={handleGenerate}
           onModelChange={onModelChange}
         />
       </div>
-      <PublicImageTemplateDialog
-        template={selectedTemplate}
-        onClose={() => setSelectedTemplate(null)}
-        onUsePrompt={useTemplatePrompt}
-        interactions={interactions}
+
+      {/* 广场作品详情：本地弹窗（数据来自 feed，瞬开），地址栏由 useGalleryPostModal 改成
+          /gallery/<id>——刷新才走那条真实路由的完整页 */}
+      <GalleryDetailDialog
+        item={galleryModal.item}
+        onClose={galleryModal.close}
+        interaction={galleryModal.item ? interactions[galleryModal.item.post.id] : undefined}
         onToggleLike={handleToggleLike}
         onToggleFavorite={handleToggleFavorite}
+        onRecreate={(item) => {
+          useGalleryPrompt(item);
+          galleryModal.close();
+        }}
+        onUseAsReference={(item) => {
+          useGalleryAsReference(item);
+          galleryModal.close();
+        }}
       />
       </main>
 
@@ -449,7 +653,7 @@ export function ImageGeneratorStudio({
           左右两个控件浮在内容之上；整层不拦截点击，仅控件本身可交互 */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 px-4 py-2 md:px-6">
         <div className="pointer-events-auto">
-          <ModeTabs active={mode} onChange={setMode} />
+          <ModeTabs active={mode} onChange={changeMode} />
         </div>
         <div className="pointer-events-auto">
           <StudioDensitySlider
