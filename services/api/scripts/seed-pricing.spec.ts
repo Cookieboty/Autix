@@ -156,3 +156,73 @@ describe('SEED_MODELS image metadata (protocolKey / operations / limits)', () =>
     }
   });
 });
+
+// Task 8 stub-property discrimination: seed / negativePrompt / quality stubs must not have defaults
+// to prevent silent production regressions when applyParamDefaults fills them and wire projection
+// starts leaking them into upstream bodies.
+describe('stub properties must not have defaults', () => {
+  it('seed stub has no default, is not required, is wire+hidden', () => {
+    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
+      const schema = buildImageParamsSchema(model);
+      expect(schema.properties.seed).toBeDefined();
+      expect(schema.properties.seed.type).toBe('integer');
+      expect(schema.properties.seed['x-ui']?.role).toBe('wire');
+      expect(schema.properties.seed['x-ui']?.control).toBe('hidden');
+      expect(schema.properties.seed.default).toBeUndefined();
+      expect(schema.required).not.toContain('seed');
+    }
+  });
+
+  it('negativePrompt stub has no default, is not required, is wire+hidden', () => {
+    // negativePrompt is only present when cap.supportsNegativePrompt !== 'none'
+    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
+      const schema = buildImageParamsSchema(model);
+      const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind({
+        provider: model.provider,
+        model: model.model,
+        metadata: model.metadata as ImageModelHint['metadata'],
+      })];
+      if (cap.supportsNegativePrompt !== 'none') {
+        expect(schema.properties.negativePrompt).toBeDefined();
+        expect(schema.properties.negativePrompt.type).toBe('string');
+        expect(schema.properties.negativePrompt['x-ui']?.role).toBe('wire');
+        expect(schema.properties.negativePrompt['x-ui']?.control).toBe('hidden');
+        expect(schema.properties.negativePrompt.default).toBeUndefined();
+        expect(schema.required).not.toContain('negativePrompt');
+      }
+    }
+  });
+
+  it('quality stub (for models with no quality axis) has no default, is not required, is wire+hidden', () => {
+    // Test gemini models which have no quality axis
+    const geminiSchema = buildImageParamsSchema(GEMINI_3_PRO);
+    const geminCap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind({
+      provider: GEMINI_3_PRO.provider,
+      model: GEMINI_3_PRO.model,
+      metadata: GEMINI_3_PRO.metadata as ImageModelHint['metadata'],
+    })];
+    expect(geminCap.qualities.length).toBe(0); // Confirm no quality axis
+    expect(geminiSchema.properties.quality).toBeDefined();
+    expect(geminiSchema.properties.quality['x-ui']?.role).toBe('wire');
+    expect(geminiSchema.properties.quality['x-ui']?.control).toBe('hidden');
+    expect(geminiSchema.properties.quality.default).toBeUndefined();
+    expect(geminiSchema.required).not.toContain('quality');
+  });
+
+  it('quality is the real priced control (role: both) for models with quality axis', () => {
+    // gpt-image has quality axis
+    const schema = buildImageParamsSchema(GPT_IMAGE);
+    const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind({
+      provider: GPT_IMAGE.provider,
+      model: GPT_IMAGE.model,
+      metadata: GPT_IMAGE.metadata as ImageModelHint['metadata'],
+    })];
+    expect(cap.qualities.length).toBeGreaterThan(0); // Confirm has quality axis
+    expect(schema.properties.quality).toBeDefined();
+    expect(schema.properties.quality['x-ui']?.role).toBe('both');
+    expect(schema.properties.quality['x-ui']?.control).toBe('chips');
+    expect(schema.properties.quality.default).toBeDefined();
+    expect(schema.properties.quality.enum).toBeDefined();
+    expect(schema.required).toContain('quality');
+  });
+});
