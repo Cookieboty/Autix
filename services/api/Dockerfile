@@ -28,7 +28,11 @@ RUN pnpm --filter @autix/i18n build
 RUN pnpm --filter @autix/domain build
 RUN pnpm --filter @autix/database build
 RUN pnpm --filter @autix/ai-adapters build
-RUN cd services/api && rm -rf dist tsconfig.tsbuildinfo && pnpm exec nest build
+
+# nest 现在用 SWC 编译（typeCheck: false），只转译不校验类型 —— 以前 tsc 构建时会拦住
+# 类型错误，现在不会。这一步把那道闸门放回来：镜像构建通过 ⇒ 类型是干净的。
+RUN pnpm --filter @autix/api run typecheck
+RUN pnpm --filter @autix/api run build
 
 # --- Production dependencies (API + its workspace closure only) ---
 # `--filter @autix/api...` installs the API and everything it depends on, so the
