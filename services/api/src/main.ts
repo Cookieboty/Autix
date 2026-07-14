@@ -20,17 +20,9 @@ async function bootstrap() {
   // per-request AbortSignal the single timeout authority by disabling Node's
   // global fetch (undici) default headersTimeout/bodyTimeout (~5min), which
   // would otherwise abort slow-but-valid generations before our 10min limit.
-  // No-op on Bun (prod) / when undici isn't resolvable.
-  try {
-    // Non-literal specifier so TS doesn't static-resolve undici at build time
-    // (it's only a transitive dep). Resolves at runtime under Node (dev);
-    // throws and is ignored under Bun (prod), which has no such default cap.
-    const undiciSpecifier: string = 'undici';
-    const { setGlobalDispatcher, Agent } = await import(undiciSpecifier);
-    setGlobalDispatcher(new Agent({ headersTimeout: 0, bodyTimeout: 0 }));
-  } catch {
-    /* undici unavailable or Bun runtime — nothing to configure */
-  }
+  // undici is a direct dependency precisely so this cannot silently no-op.
+  const { setGlobalDispatcher, Agent } = await import('undici');
+  setGlobalDispatcher(new Agent({ headersTimeout: 0, bodyTimeout: 0 }));
 
   const app = await NestFactory.create(AppModule, { bodyParser: false });
   // 代理部署下需配置 trust proxy，否则限流/req.ip 取到的是负载均衡器 IP（所有用户同一桶）。

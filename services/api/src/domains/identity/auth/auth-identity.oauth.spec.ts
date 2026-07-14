@@ -2,17 +2,17 @@ import { AuthIdentityRepository } from './auth-identity.repository';
 
 function txMock() {
   return {
-    user: { create: jest.fn().mockResolvedValue({ id: 'newU' }) },
-    systemRegistration: { create: jest.fn().mockResolvedValue({}) },
-    role: { findFirst: jest.fn().mockResolvedValue({ id: 'roleU' }) },
-    userRole: { create: jest.fn().mockResolvedValue({}) },
-    userAccount: { create: jest.fn().mockResolvedValue({}) },
+    user: { create: vi.fn().mockResolvedValue({ id: 'newU' }) },
+    systemRegistration: { create: vi.fn().mockResolvedValue({}) },
+    role: { findFirst: vi.fn().mockResolvedValue({ id: 'roleU' }) },
+    userRole: { create: vi.fn().mockResolvedValue({}) },
+    userAccount: { create: vi.fn().mockResolvedValue({}) },
   };
 }
 
 describe('AuthIdentityRepository OAuth methods', () => {
   it('findUserAccount 命中返回 userId', async () => {
-    const prisma = { userAccount: { findUnique: jest.fn().mockResolvedValue({ userId: 'u9' }) } };
+    const prisma = { userAccount: { findUnique: vi.fn().mockResolvedValue({ userId: 'u9' }) } };
     const repo = new AuthIdentityRepository(prisma as any);
     const r = await repo.findUserAccount('google', 'sub-1');
     expect(prisma.userAccount.findUnique).toHaveBeenCalledWith({
@@ -24,7 +24,7 @@ describe('AuthIdentityRepository OAuth methods', () => {
 
   it('createOAuthUser 在事务内建 ACTIVE 用户 + APPROVED 注册 + 默认角色 + UserAccount', async () => {
     const tx = txMock();
-    const prisma = { $transaction: jest.fn(async (fn: any) => fn(tx)) };
+    const prisma = { $transaction: vi.fn(async (fn: any) => fn(tx)) };
     const repo = new AuthIdentityRepository(prisma as any);
     const res = await repo.createOAuthUser({
       username: 'gh_alice', email: 'a@x.com', systemId: 's1', defaultRoleCode: 'USER',
@@ -46,7 +46,7 @@ describe('AuthIdentityRepository OAuth methods', () => {
 
   it('createOAuthUser 写入 emailVerified', async () => {
     const tx = txMock();
-    const prisma = { $transaction: jest.fn(async (fn: any) => fn(tx)) };
+    const prisma = { $transaction: vi.fn(async (fn: any) => fn(tx)) };
     const repo = new AuthIdentityRepository(prisma as any);
     await repo.createOAuthUser({
       username: 'gh_x', email: 'gh_7@no-email.oauth.local', systemId: 's1', defaultRoleCode: 'USER',
@@ -60,8 +60,8 @@ describe('AuthIdentityRepository OAuth methods', () => {
 
   it('createOAuthUser 在缺默认角色时抛错（与激活流程一致，不静默跳过）', async () => {
     const tx = txMock();
-    tx.role.findFirst = jest.fn().mockResolvedValue(null);
-    const prisma = { $transaction: jest.fn(async (fn: any) => fn(tx)) };
+    tx.role.findFirst = vi.fn().mockResolvedValue(null);
+    const prisma = { $transaction: vi.fn(async (fn: any) => fn(tx)) };
     const repo = new AuthIdentityRepository(prisma as any);
     await expect(
       repo.createOAuthUser({
@@ -77,16 +77,16 @@ describe('AuthIdentityRepository OAuth methods', () => {
 describe('绑定仓库方法', () => {
   it('hasOtherCredential：有密码则 true', async () => {
     const prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ password: 'hash' }) },
-      userAccount: { count: jest.fn().mockResolvedValue(0) },
+      user: { findUnique: vi.fn().mockResolvedValue({ password: 'hash' }) },
+      userAccount: { count: vi.fn().mockResolvedValue(0) },
     };
     const repo = new AuthIdentityRepository(prisma as any);
     expect(await repo.hasOtherCredential('u1', 'github')).toBe(true);
   });
   it('hasOtherCredential：无密码但有其它三方则 true', async () => {
     const prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ password: null }) },
-      userAccount: { count: jest.fn().mockResolvedValue(1) },
+      user: { findUnique: vi.fn().mockResolvedValue({ password: null }) },
+      userAccount: { count: vi.fn().mockResolvedValue(1) },
     };
     const repo = new AuthIdentityRepository(prisma as any);
     expect(await repo.hasOtherCredential('u1', 'github')).toBe(true);
@@ -94,8 +94,8 @@ describe('绑定仓库方法', () => {
   });
   it('hasOtherCredential：无密码且无其它三方则 false', async () => {
     const prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ password: null }) },
-      userAccount: { count: jest.fn().mockResolvedValue(0) },
+      user: { findUnique: vi.fn().mockResolvedValue({ password: null }) },
+      userAccount: { count: vi.fn().mockResolvedValue(0) },
     };
     const repo = new AuthIdentityRepository(prisma as any);
     expect(await repo.hasOtherCredential('u1', 'github')).toBe(false);

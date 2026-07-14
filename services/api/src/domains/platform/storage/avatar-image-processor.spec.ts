@@ -16,9 +16,9 @@ import { AvatarImageProcessor } from './avatar-image-processor.service';
 
 function makeR2Stub() {
   return {
-    downloadObject: jest.fn(),
-    uploadBuffer: jest.fn(),
-    getPublicUrl: jest.fn(async (key: string) => `https://cdn.mock.local/${key}`),
+    downloadObject: vi.fn(),
+    uploadBuffer: vi.fn(),
+    getPublicUrl: vi.fn(async (key: string) => `https://cdn.mock.local/${key}`),
   } as any;
 }
 

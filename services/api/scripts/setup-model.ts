@@ -1,7 +1,7 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * 快速配置模型脚本
- * 用法: bun run scripts/setup-model.ts
+ * 用法: pnpm exec tsx scripts/setup-model.ts
  */
 
 import { input, select } from '@inquirer/prompts';

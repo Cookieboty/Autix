@@ -1,7 +1,7 @@
 import { PointsRepository } from './points.repository';
 
 function buildTx() {
-  const updateMany = jest.fn(async () => ({ count: 1 }));
+  const updateMany = vi.fn(async () => ({ count: 1 }));
   return { tx: { point_grants: { updateMany } }, updateMany };
 }
 
@@ -44,7 +44,7 @@ describe('PointsRepository expiry guard (FIX-11)', () => {
 
 describe('PointsRepository.findHoldByIdWithinTx', () => {
   it('reads a hold by id from the given client', async () => {
-    const findUnique = jest.fn().mockResolvedValue({ id: 'hold-1' });
+    const findUnique = vi.fn().mockResolvedValue({ id: 'hold-1' });
     const repo = new PointsRepository({} as never);
 
     const result = await repo.findHoldByIdWithinTx({ point_holds: { findUnique } } as never, 'hold-1');
@@ -54,7 +54,7 @@ describe('PointsRepository.findHoldByIdWithinTx', () => {
   });
 
   it('findHoldById reads through the default prisma client', async () => {
-    const findUnique = jest.fn().mockResolvedValue({ id: 'hold-2' });
+    const findUnique = vi.fn().mockResolvedValue({ id: 'hold-2' });
     const repo = new PointsRepository({ point_holds: { findUnique } } as never);
 
     const result = await repo.findHoldById('hold-2');

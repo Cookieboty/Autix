@@ -1,8 +1,8 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * 多资源市场种子数据(Skills / MCP / Agents / Video Templates)
  *
- * 用法: bun run --filter=@autix/api seed:resources
+ * 用法: pnpm --filter @autix/api seed:resources
  * 环境变量:
  *   DATABASE_URL       必填，指向合并后的 autix 数据库
  *   AUTHOR_ID          可选,默认 "seed-author"(与 seed-templates.ts 共用)

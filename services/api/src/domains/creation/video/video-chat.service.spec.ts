@@ -1,46 +1,47 @@
+import type { Mock } from 'vitest';
 import { VideoChatService } from './video-chat.service';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 
 function createService() {
   const modelConfigService = {
-    getConfigForOrchestrator: jest.fn().mockResolvedValue({ id: 'model-1', model: 'gpt-4o-mini' }),
-    findDefaultByTypeForUser: jest.fn().mockResolvedValue({ id: 'model-1', model: 'gpt-4o-mini' }),
+    getConfigForOrchestrator: vi.fn().mockResolvedValue({ id: 'model-1', model: 'gpt-4o-mini' }),
+    findDefaultByTypeForUser: vi.fn().mockResolvedValue({ id: 'model-1', model: 'gpt-4o-mini' }),
   };
   const repository = {
-    findConversationMessages: jest.fn().mockResolvedValue([]),
-    findVideoDirectorProject: jest.fn().mockResolvedValue({
+    findConversationMessages: vi.fn().mockResolvedValue([]),
+    findVideoDirectorProject: vi.fn().mockResolvedValue({
       title: '专业视频工作台',
       clips: [],
     }),
-    findClipAtOrder: jest.fn().mockResolvedValue(null),
-    createClip: jest.fn().mockResolvedValue({ id: 'clip-1' }),
-    updateClip: jest.fn().mockResolvedValue({ id: 'clip-1' }),
-    findNextClipOrder: jest.fn().mockResolvedValue(1),
-    persistVideoDirectorTurn: jest.fn().mockResolvedValue(undefined),
+    findClipAtOrder: vi.fn().mockResolvedValue(null),
+    createClip: vi.fn().mockResolvedValue({ id: 'clip-1' }),
+    updateClip: vi.fn().mockResolvedValue({ id: 'clip-1' }),
+    findNextClipOrder: vi.fn().mockResolvedValue(1),
+    persistVideoDirectorTurn: vi.fn().mockResolvedValue(undefined),
   };
   const systemPromptService = {
-    render: jest.fn().mockResolvedValue({
+    render: vi.fn().mockResolvedValue({
       content: 'You are a video director assistant.',
     }),
   };
   const pointsService = {
-    estimateCost: jest.fn().mockResolvedValue({
+    estimateCost: vi.fn().mockResolvedValue({
       estimatedCost: 10,
       taskType: 'video_template_optimize',
       modelConfigId: 'model-1',
       breakdown: [],
       pricingSnapshot: { ruleId: 'rule-video-director' },
     }),
-    createHold: jest.fn().mockResolvedValue({
+    createHold: vi.fn().mockResolvedValue({
       hold: { id: 'hold-1' },
       balance: 990,
     }),
-    quoteHoldFromSnapshot: jest.fn().mockResolvedValue(8),
-    confirmHold: jest.fn().mockResolvedValue({ confirmed: true }),
-    refundHold: jest.fn().mockResolvedValue({ refunded: true }),
+    quoteHoldFromSnapshot: vi.fn().mockResolvedValue(8),
+    confirmHold: vi.fn().mockResolvedValue({ confirmed: true }),
+    refundHold: vi.fn().mockResolvedValue({ refunded: true }),
   };
   const membershipService = {
-    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
+    resolveActiveMembershipLevel: vi.fn().mockResolvedValue(2),
   };
   const service = new VideoChatService(
     modelConfigService as never,
@@ -58,12 +59,12 @@ function mockAssistant(
   options: { reject?: boolean; usage?: Record<string, number> } = {},
 ) {
   const invoke = options.reject
-    ? jest.fn().mockRejectedValue(new Error(content))
-    : jest.fn().mockResolvedValue({
+    ? vi.fn().mockRejectedValue(new Error(content))
+    : vi.fn().mockResolvedValue({
         content,
         usage_metadata: options.usage,
       });
-  (service as unknown as { prepareAssistantInvocation: jest.Mock }).prepareAssistantInvocation = jest
+  (service as unknown as { prepareAssistantInvocation: Mock }).prepareAssistantInvocation = vi
     .fn()
     .mockResolvedValue({
       config: { id: 'model-1', model: 'gpt-4o-mini', provider: 'openai' },

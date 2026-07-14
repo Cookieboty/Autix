@@ -4,14 +4,14 @@ function createDeps(libraryEnabled?: boolean): ContextBuilderDeps {
   return {
     libraryEnabled,
     searchService: {
-      similaritySearch: jest.fn(),
+      similaritySearch: vi.fn(),
     } as never,
     repository: {
-      findLatestWorkflowStepArtifacts: jest.fn().mockResolvedValue([]),
-      findConversationResources: jest.fn().mockResolvedValue([]),
-      findSkillsByIds: jest.fn().mockResolvedValue([]),
-      findSingleAgentsByIds: jest.fn().mockResolvedValue([]),
-      findMcpServersByIds: jest.fn().mockResolvedValue([]),
+      findLatestWorkflowStepArtifacts: vi.fn().mockResolvedValue([]),
+      findConversationResources: vi.fn().mockResolvedValue([]),
+      findSkillsByIds: vi.fn().mockResolvedValue([]),
+      findSingleAgentsByIds: vi.fn().mockResolvedValue([]),
+      findMcpServersByIds: vi.fn().mockResolvedValue([]),
     } as never,
   };
 }

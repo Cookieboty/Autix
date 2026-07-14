@@ -1,9 +1,9 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * 图片模板种子脚本（幂等，按 title+authorId 去重）。
  * Docker 生产环境启动时在 migrate deploy 之后运行。
  *
- * 用法: bun run scripts/seed-templates.ts
+ * 用法: pnpm --filter @autix/api seed:templates
  * 环境变量: DATABASE_URL
  *          AUTHOR_ID (可选，默认用 "seed-author")
  */

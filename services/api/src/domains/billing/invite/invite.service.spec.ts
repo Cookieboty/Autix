@@ -35,8 +35,8 @@ function makeService(overrides?: {
 
   const tx = {
     invite_records: {
-      updateMany: jest.fn(async () => ({ count: claimedCount })),
-      create: jest.fn(async (args: { data: Record<string, unknown> }) => ({
+      updateMany: vi.fn(async () => ({ count: claimedCount })),
+      create: vi.fn(async (args: { data: Record<string, unknown> }) => ({
         id: 'record-1',
         ...args.data,
       })),
@@ -45,25 +45,25 @@ function makeService(overrides?: {
 
   const prisma = {
     invite_codes: {
-      findUnique: jest.fn(async () => overrides?.inviteCode ?? null),
+      findUnique: vi.fn(async () => overrides?.inviteCode ?? null),
     },
     invite_records: {
-      findUnique: jest.fn(async () => overrides?.existingRecord ?? overrides?.record ?? null),
-      count: jest.fn(async () => rewardedCount),
-      create: jest.fn(async (args: { data: Record<string, unknown> }) => ({
+      findUnique: vi.fn(async () => overrides?.existingRecord ?? overrides?.record ?? null),
+      count: vi.fn(async () => rewardedCount),
+      create: vi.fn(async (args: { data: Record<string, unknown> }) => ({
         id: 'record-1',
         ...args.data,
       })),
     },
-    $transaction: jest.fn(async (cb: (transaction: typeof tx) => Promise<unknown>) => cb(tx)),
+    $transaction: vi.fn(async (cb: (transaction: typeof tx) => Promise<unknown>) => cb(tx)),
   };
 
   const systemSettingsService = {
-    getBoolean: jest.fn(async () => inviteSharingEnabled),
+    getBoolean: vi.fn(async () => inviteSharingEnabled),
   };
   const campaignRewardService = {
-    findCampaignByCode: jest.fn(async () => campaign),
-    grantCampaignRewardWithinTx: jest.fn(async () => ({ status: 'granted' })),
+    findCampaignByCode: vi.fn(async () => campaign),
+    grantCampaignRewardWithinTx: vi.fn(async () => ({ status: 'granted' })),
   };
 
   const service = new InviteService(

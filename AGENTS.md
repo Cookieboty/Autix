@@ -13,9 +13,11 @@
 
 ## 运行时
 
-- **使用 Bun 运行**：本项目使用 Bun（`bun run`、`bun test` 等），不要使用 npm/yarn/pnpm。
-- `package.json` 中的 scripts 使用 Bun 执行。
-- 新增命令、文档示例、验证说明都以 Bun 为准。
+- **使用 pnpm 运行**：本项目使用 pnpm（`pnpm install`、`pnpm run` 等），不要使用 npm/yarn/bun。
+  pnpm 版本由 `package.json` 的 `packageManager` 字段锁定，`corepack enable pnpm` 即可接管。
+- `package.json` 中的 scripts 由 pnpm 执行；TypeScript 脚本通过 `tsx` 运行。
+- 测试统一使用 Vitest（`pnpm run test` / `pnpm exec vitest run <file>`）。
+- 新增命令、文档示例、验证说明都以 pnpm 为准。
 
 ## Git 与内部文档
 
@@ -214,20 +216,20 @@ dto/                  入参 DTO
 常用验证命令：
 
 ```bash
-bun run typecheck
-bun run test
-bun run lint
-bun run arch:check
+pnpm run typecheck
+pnpm run test
+pnpm run lint
+pnpm run arch:check
 git diff HEAD --check
 ```
 
 局部改动优先跑局部：
 
 ```bash
-bun run --filter @autix/shared-ui typecheck
-bun run --filter @autix/shared-ui test
-bun run --filter @autix/api typecheck
-bun test path/to/file.spec.ts
+pnpm --filter @autix/shared-ui run typecheck
+pnpm --filter @autix/shared-ui run test
+pnpm --filter @autix/api run typecheck
+pnpm exec vitest run path/to/file.spec.ts
 ```
 
 验收要求：
@@ -240,7 +242,7 @@ bun test path/to/file.spec.ts
 ### 禁止无意义的测试与命令
 
 - **不做多余的测试**。只跑与本次改动直接相关的 spec；改了哪个文件就跑哪个 spec，不要为了"保险"跑全量套件。
-- 定位失败用 `bun test path/to/one.spec.ts`（秒级出结果），不要用 `bun test src` 或 `bun run test` 扫全量——后者动辄数分钟且淹没真正的失败点。
+- 定位失败用 `pnpm exec vitest run path/to/one.spec.ts`（秒级出结果），不要用 `pnpm exec vitest run src` 或 `pnpm run test` 扫全量——后者动辄数分钟且淹没真正的失败点。
 - **不运行没有意义输出的 shell 命令**。命令必须能直接回答当前问题；不确定能产出什么就不要执行。
 - 不为了"确认一下"重复跑已经跑过、结果未变的命令。
 - 遇到既有的失败（改动前就红），先用干净 HEAD 确认，然后**如实报告并跳过**，不要顺手去修无关的红。

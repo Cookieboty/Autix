@@ -20,18 +20,18 @@ function buildOrder(input: Partial<any> = {}) {
 
 function buildHarness(order: any, membership: any) {
   const tx = {};
-  const updateUserMembershipByUserIdWithinTx = jest.fn(async () => membership);
-  const lockWithinTx = jest.fn(async () => order);
+  const updateUserMembershipByUserIdWithinTx = vi.fn(async () => membership);
+  const lockWithinTx = vi.fn(async () => order);
   const orderRepo: any = {
     runInTransaction: async (cb: any) => cb(tx),
     findByIdWithinTxOrThrow: async () => order,
     lockWithinTx,
-    clearPendingMembershipChangeForOrderWithinTx: jest.fn(async () => ({ count: 0 })),
+    clearPendingMembershipChangeForOrderWithinTx: vi.fn(async () => ({ count: 0 })),
     findUserMembershipWithLevelWithinTx: async () => membership,
     updateUserMembershipByUserIdWithinTx,
     updateWithinTx: async (_tx: any, _id: string, _data: any) => ({ ...order, status: OrderStatus.REFUNDED }),
   };
-  const paymentEventRepo: any = { upsertRefundEventWithinTx: jest.fn(async () => ({})) };
+  const paymentEventRepo: any = { upsertRefundEventWithinTx: vi.fn(async () => ({})) };
   const pointReclaimService: any = {
     reclaimAvailableOrderPointsWithinTx: async () => ({
       pointsReclaimed: 0,

@@ -2,7 +2,7 @@ import { VideoAssetPersistenceService } from './video-asset-persistence.service'
 
 function makeService() {
   const r2Service = {
-    uploadBuffer: jest.fn(async () => ({ publicUrl: 'https://cdn.test/v.mp4' })),
+    uploadBuffer: vi.fn(async () => ({ publicUrl: 'https://cdn.test/v.mp4' })),
   };
   const service = new VideoAssetPersistenceService(r2Service as never);
 
@@ -11,14 +11,14 @@ function makeService() {
 
 describe('VideoAssetPersistenceService', () => {
   afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('downloads the provider video and uploads it to R2', async () => {
     const { service, r2Service } = makeService();
     const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
     }) as never;
@@ -42,11 +42,11 @@ describe('VideoAssetPersistenceService', () => {
   });
 
   it('returns null after upload retries are exhausted', async () => {
-    jest.useFakeTimers();
-    jest.spyOn(global, 'setTimeout');
+    vi.useFakeTimers();
+    vi.spyOn(global, 'setTimeout');
     const { service, r2Service } = makeService();
     const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
     }) as never;
@@ -56,9 +56,9 @@ describe('VideoAssetPersistenceService', () => {
       'gen-1',
     );
     await Promise.resolve();
-    jest.runAllTimers();
+    vi.runAllTimers();
     await Promise.resolve();
-    jest.runAllTimers();
+    vi.runAllTimers();
 
     await expect(pending).resolves.toBeNull();
     expect(global.fetch).toHaveBeenCalledTimes(3);

@@ -2,7 +2,7 @@ import { RiskScoringService } from './risk-scoring.service';
 
 function buildService(overrides: any = {}) {
   const repo: any = {
-    gatherUserSignals: jest.fn(async () => overrides.signals ?? {
+    gatherUserSignals: vi.fn(async () => overrides.signals ?? {
       sameIpUsers: 0,
       sameDeviceUsers: 0,
       inviteTotal: 0,
@@ -10,11 +10,11 @@ function buildService(overrides: any = {}) {
       paidOrders: 0,
       refundedOrders: 0,
     }),
-    getRiskProfile: jest.fn(async () => overrides.profile ?? null),
-    upsertRiskProfile: jest.fn(async (userId: string, data: any) => ({ userId, ...data })),
-    updateRiskScore: jest.fn(async () => ({})),
-    createRiskEvent: jest.fn(async () => ({})),
-    listEvaluationCandidateIds: jest.fn(async () => overrides.candidates ?? []),
+    getRiskProfile: vi.fn(async () => overrides.profile ?? null),
+    upsertRiskProfile: vi.fn(async (userId: string, data: any) => ({ userId, ...data })),
+    updateRiskScore: vi.fn(async () => ({})),
+    createRiskEvent: vi.fn(async () => ({})),
+    listEvaluationCandidateIds: vi.fn(async () => overrides.candidates ?? []),
   };
   const service = new RiskScoringService(repo);
   return { service, repo };
@@ -74,7 +74,7 @@ describe('RiskScoringService.evaluateUser', () => {
 describe('RiskScoringService.evaluatePending', () => {
   it('evaluates each candidate and returns the count', async () => {
     const { service, repo } = buildService({ candidates: ['a', 'b', 'c'] });
-    const spy = jest.spyOn(service, 'evaluateUser').mockResolvedValue({} as never);
+    const spy = vi.spyOn(service, 'evaluateUser').mockResolvedValue({} as never);
 
     const n = await service.evaluatePending();
 

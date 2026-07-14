@@ -2,11 +2,11 @@ import { AuthController } from './auth.controller';
 
 function makeController() {
   const stepUp = {
-    assertPasswordlessUser: jest.fn().mockResolvedValue(undefined),
-    requestOtp: jest.fn().mockResolvedValue({ kind: 'otp', requestId: 'otp-1' }),
+    assertPasswordlessUser: vi.fn().mockResolvedValue(undefined),
+    requestOtp: vi.fn().mockResolvedValue({ kind: 'otp', requestId: 'otp-1' }),
   };
   const oauth = {
-    startReauth: jest.fn().mockResolvedValue({
+    startReauth: vi.fn().mockResolvedValue({
       kind: 'redirect',
       provider: 'google',
       authorizeUrl: 'https://example.com/reauth',

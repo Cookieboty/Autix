@@ -12,7 +12,7 @@ interface ViewRow {
  * Plan C Task 11：历史列表去重 + 游标翻页。
  *
  * 本仓库没有跑真实 Postgres 的集成测试基建（docker-compose 的 postgres 服务只挂给部署容器，
- * CI 也不跑 `bun test`；见 favorite-library.service.spec.ts / system-settings.service.spec.ts
+ * CI 也不跑 `pnpm test`；见 favorite-library.service.spec.ts / system-settings.service.spec.ts
  * 等既有 `$queryRaw` spec 的一致惯例：全部是内存 fake，不连真实 DB）。
  *
  * 这里的 fake `$queryRaw` 保留真正的 tagged-template 调用形态（`(strings, ...values)`），

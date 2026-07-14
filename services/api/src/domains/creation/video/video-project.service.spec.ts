@@ -9,27 +9,27 @@ import {
 function createService() {
   const prisma = {
     video_projects: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      findMany: jest.fn().mockResolvedValue([]),
-      count: jest.fn().mockResolvedValue(0),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
+      count: vi.fn().mockResolvedValue(0),
     },
     conversations: {
-      create: jest.fn(),
+      create: vi.fn(),
     },
     video_project_shares: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
     },
   };
   const modelConfigService = {
-    findDefaultByType: jest.fn(),
+    findDefaultByType: vi.fn(),
   };
   const repository = new VideoProjectRepository(prisma as never);
   const service = new VideoProjectService(repository, modelConfigService as never);
-  service.getProject = jest.fn().mockResolvedValue({ id: 'project-1', clips: [] }) as never;
+  service.getProject = vi.fn().mockResolvedValue({ id: 'project-1', clips: [] }) as never;
   return { service, prisma };
 }
 

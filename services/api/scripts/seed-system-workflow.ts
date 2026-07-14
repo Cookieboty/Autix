@@ -1,9 +1,9 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * 仅初始化默认系统工作流（幂等）。
  * Docker 启动时在 migrate deploy 之后、应用启动之前运行。
  *
- * 用法: bun run scripts/seed-system-workflow.ts
+ * 用法: pnpm exec tsx scripts/seed-system-workflow.ts
  * 环境变量: DATABASE_URL 必填，指向合并后的 autix 数据库
  */
 

@@ -47,40 +47,40 @@ function buildPointsServiceWithTaskPricing(taskPricingService: Partial<TaskPrici
 function createTx() {
   return {
     user_points: {
-      upsert: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-      findUnique: jest.fn(),
-      findUniqueOrThrow: jest.fn().mockResolvedValue({ balance: 0 }),
+      upsert: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn().mockResolvedValue({ balance: 0 }),
     },
     points_records: {
-      create: jest.fn().mockResolvedValue({}),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-      findFirst: jest.fn(),
+      create: vi.fn().mockResolvedValue({}),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findFirst: vi.fn(),
     },
     point_grants: {
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-      findMany: jest.fn(),
-      count: jest.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findMany: vi.fn(),
+      count: vi.fn(),
     },
     point_holds: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(async () => null),
-      update: jest.fn(),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(async () => null),
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     point_hold_items: {
-      create: jest.fn(),
+      create: vi.fn(),
     },
   };
 }
 
 function createPrisma(tx: ReturnType<typeof createTx>) {
   return {
-    $transaction: jest.fn((fn: (t: unknown) => unknown) => fn(tx)),
+    $transaction: vi.fn((fn: (t: unknown) => unknown) => fn(tx)),
     // findHoldById() reads through `this.prisma` directly (not a $transaction
     // callback), so the non-tx mock needs its own point_holds.findUnique. Sharing
     // the tx's mock keeps `tx.point_holds.findUnique.mockResolvedValue(...)` working
@@ -657,7 +657,7 @@ describe('PointsService.quoteHoldFromSnapshot', () => {
 
 describe('PointsService.estimateCost — new engine', () => {
   it('delegates to TaskPricingEstimatorService with the new input shape', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({
+    const estimateCost = vi.fn().mockResolvedValue({
       estimatedCost: 90,
       taskType: 'image_generation',
       modelConfigId: 'model-1',
@@ -681,7 +681,7 @@ describe('PointsService.estimateCost — new engine', () => {
   });
 
   it('propagates the BadRequestException thrown by the new engine instead of returning a fallback price', async () => {
-    const estimateCost = jest
+    const estimateCost = vi
       .fn()
       .mockRejectedValue(new BadRequestException('模型未配置计价规则(pricingSchema): model-1'));
     const service = buildPointsServiceWithTaskPricing({ estimateCost } as never);

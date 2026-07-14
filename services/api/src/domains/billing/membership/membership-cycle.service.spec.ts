@@ -4,23 +4,23 @@ import { MembershipCycleService } from './membership-cycle.service';
 function createRepository() {
   const tx = {
     user_memberships: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     membership_plans: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
     point_grants: {
-      findFirst: jest.fn(),
-      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
     },
   };
   return {
-    expireMemberships: jest.fn(),
-    findPendingMembershipChanges: jest.fn(),
-    findActiveMembershipsForSubscriptionPoints: jest.fn(),
-    findPlan: jest.fn(),
-    findSubscriptionGrantBySourceInTx: jest.fn((txArg: typeof tx, sourceId: string) =>
+    expireMemberships: vi.fn(),
+    findPendingMembershipChanges: vi.fn(),
+    findActiveMembershipsForSubscriptionPoints: vi.fn(),
+    findPlan: vi.fn(),
+    findSubscriptionGrantBySourceInTx: vi.fn((txArg: typeof tx, sourceId: string) =>
       txArg.point_grants.findFirst({
         where: {
           sourceEvent: PointLedgerEventType.subscription_grant,
@@ -28,7 +28,7 @@ function createRepository() {
         },
       }),
     ),
-    findPreviousSubscriptionGrantsInTx: jest.fn(
+    findPreviousSubscriptionGrantsInTx: vi.fn(
       (
         txArg: typeof tx,
         input: { userId: string; previousCycleStart: Date; cycleStart: Date },
@@ -43,28 +43,28 @@ function createRepository() {
           }),
         }),
     ),
-    findMembershipInTx: jest.fn((txArg: typeof tx, id: string) =>
+    findMembershipInTx: vi.fn((txArg: typeof tx, id: string) =>
       txArg.user_memberships.findUnique({ where: { id } }),
     ),
-    findPlanWithLevelInTx: jest.fn((txArg: typeof tx, id: string) =>
+    findPlanWithLevelInTx: vi.fn((txArg: typeof tx, id: string) =>
       txArg.membership_plans.findUnique({
         where: { id },
         include: { level: true },
       }),
     ),
-    activatePendingPlanInTx: jest.fn((txArg: typeof tx, id: string, data: unknown) =>
+    activatePendingPlanInTx: vi.fn((txArg: typeof tx, id: string, data: unknown) =>
       txArg.user_memberships.update({ where: { id }, data }),
     ),
-    clearMissingPendingPlanInTx: jest.fn(),
+    clearMissingPendingPlanInTx: vi.fn(),
     _tx: tx,
-    runTransaction: jest.fn((fn: (tx: unknown) => unknown) => fn(tx)),
+    runTransaction: vi.fn((fn: (tx: unknown) => unknown) => fn(tx)),
   };
 }
 
 function createService(repository = createRepository()) {
   const points = {
-    expireGrants: jest.fn().mockResolvedValue({ expiredGrants: 0, expiredAmount: 0 }),
-    grantPointsWithinTx: jest.fn(async (_tx: unknown, _userId: string, input: any) => ({
+    expireGrants: vi.fn().mockResolvedValue({ expiredGrants: 0, expiredAmount: 0 }),
+    grantPointsWithinTx: vi.fn(async (_tx: unknown, _userId: string, input: any) => ({
       grant: { id: `grant-${input.sourceId}` },
       balance: input.amount,
     })),
@@ -108,7 +108,7 @@ describe('MembershipCycleService', () => {
     ]);
     repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
     repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
-      point_grants: { findFirst: jest.fn().mockResolvedValue(null) },
+      point_grants: { findFirst: vi.fn().mockResolvedValue(null) },
     }));
 
     const result = await service.grantDueSubscriptionPoints(
@@ -157,7 +157,7 @@ describe('MembershipCycleService', () => {
     ]);
     repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
     repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) =>
-      fn({ point_grants: { findFirst: jest.fn().mockResolvedValue(null) } }),
+      fn({ point_grants: { findFirst: vi.fn().mockResolvedValue(null) } }),
     );
     points.grantPointsWithinTx.mockRejectedValue(
       Object.assign(new Error('unique violation'), { code: 'P2002' }),
@@ -186,7 +186,7 @@ describe('MembershipCycleService', () => {
     ]);
     repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
     repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
-      point_grants: { findFirst: jest.fn().mockResolvedValue({ id: 'existing-grant' }) },
+      point_grants: { findFirst: vi.fn().mockResolvedValue({ id: 'existing-grant' }) },
     }));
 
     const result = await service.grantDueSubscriptionPoints(
@@ -218,7 +218,7 @@ describe('MembershipCycleService', () => {
     ]);
     repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
     repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
-      point_grants: { findFirst: jest.fn().mockResolvedValue(null) },
+      point_grants: { findFirst: vi.fn().mockResolvedValue(null) },
     }));
 
     const result = await service.grantDueSubscriptionPoints(
@@ -410,7 +410,7 @@ describe('MembershipCycleService', () => {
 
     // 第一次：cycle sourceId 不存在 -> 发放成功
     repository.runTransaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
-      fn({ point_grants: { findFirst: jest.fn().mockResolvedValue(null) } }),
+      fn({ point_grants: { findFirst: vi.fn().mockResolvedValue(null) } }),
     );
     const first = await service.grantDueSubscriptionPoints(
       new Date('2026-02-15T00:00:00.000Z'),
@@ -420,7 +420,7 @@ describe('MembershipCycleService', () => {
 
     // 第二次：同一个月再次跑 cron，应识别到 cycle sourceId 已存在 -> 跳过
     repository.runTransaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
-      fn({ point_grants: { findFirst: jest.fn().mockResolvedValue({ id: 'existing' }) } }),
+      fn({ point_grants: { findFirst: vi.fn().mockResolvedValue({ id: 'existing' }) } }),
     );
     const second = await service.grantDueSubscriptionPoints(
       new Date('2026-02-15T01:00:00.000Z'),

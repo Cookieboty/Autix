@@ -3,12 +3,12 @@ import { MarketplaceResourceCrudRepository } from './marketplace-resource-crud.r
 
 function delegateMock() {
   return {
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    count: jest.fn(),
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    count: vi.fn(),
   };
 }
 

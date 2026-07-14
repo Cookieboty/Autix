@@ -4,7 +4,7 @@ import { MarketplaceAcquisitionRepository } from './marketplace-acquisition.repo
 function createPrismaMock() {
   const tx = {
     user_resource_acquisitions: {
-      create: jest.fn().mockResolvedValue({ id: 'acq-1' }),
+      create: vi.fn().mockResolvedValue({ id: 'acq-1' }),
     },
   };
 
@@ -12,13 +12,13 @@ function createPrismaMock() {
     tx,
     prisma: {
       user_resource_acquisitions: {
-        findUnique: jest.fn(),
-        findMany: jest.fn(),
+        findUnique: vi.fn(),
+        findMany: vi.fn(),
       },
       user_points: {
-        findUnique: jest.fn(),
+        findUnique: vi.fn(),
       },
-      $transaction: jest.fn((fn: (transaction: typeof tx) => unknown) =>
+      $transaction: vi.fn((fn: (transaction: typeof tx) => unknown) =>
         fn(tx),
       ),
     },
@@ -29,7 +29,7 @@ describe('MarketplaceAcquisitionRepository', () => {
   it('creates acquisition after the transaction callback runs', async () => {
     const { prisma, tx } = createPrismaMock();
     const repository = new MarketplaceAcquisitionRepository(prisma as never);
-    const beforeCreate = jest.fn().mockResolvedValue(undefined);
+    const beforeCreate = vi.fn().mockResolvedValue(undefined);
 
     await repository.createAcquisitionInTransaction(
       {

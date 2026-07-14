@@ -1,19 +1,19 @@
 import { RegistrationService } from './registration.service';
 
 function buildRegistrationService() {
-  const settlePendingInvitationReward = jest.fn(async () => ({}));
+  const settlePendingInvitationReward = vi.fn(async () => ({}));
   const registrationRepository: any = {
-    findById: jest.fn(async () => ({
+    findById: vi.fn(async () => ({
       id: 'reg-1',
       status: 'PENDING',
       systemId: 'sys-1',
       userId: 'user-1',
     })),
-    findRoleBySystemAndCode: jest.fn(async () => ({ id: 'role-1' })),
-    approveRegistration: jest.fn(async () => ({})),
-    findApprovalEmailUser: jest.fn(async () => ({ email: 'a@b.c', username: 'u' })),
+    findRoleBySystemAndCode: vi.fn(async () => ({ id: 'role-1' })),
+    approveRegistration: vi.fn(async () => ({})),
+    findApprovalEmailUser: vi.fn(async () => ({ email: 'a@b.c', username: 'u' })),
   };
-  const mailService: any = { sendApprovalEmail: jest.fn(() => ({ catch: () => {} })) };
+  const mailService: any = { sendApprovalEmail: vi.fn(() => ({ catch: () => {} })) };
   const inviteService: any = { settlePendingInvitationReward };
   const service = new RegistrationService(
     registrationRepository,

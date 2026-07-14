@@ -27,7 +27,7 @@ describe('GitHubProvider', () => {
   });
 
   it('exchangeCode 透传 code_verifier 给 token 交换', async () => {
-    const exchange = jest.fn(async () => ({ accessToken: 'gho_x' }));
+    const exchange = vi.fn(async () => ({ accessToken: 'gho_x' }));
     await makeProvider({ exchange }).exchangeCode({ code: 'c', codeVerifier: 'v1' });
     expect(exchange).toHaveBeenCalledWith('c', 'v1', expect.objectContaining({ clientId: 'cid' }));
   });

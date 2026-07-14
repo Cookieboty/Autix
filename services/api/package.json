@@ -5,17 +5,17 @@
   "scripts": {
     "dev": "dotenv -e ../../.env -- nest start --watch",
     "build": "rm -rf dist *.tsbuildinfo && nest build",
-    "start": "dotenv -e ../../.env -- bun run dist/main.js",
+    "start": "dotenv -e ../../.env -- node dist/main.js",
     "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.scripts.json --noEmit",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json --noEmit",
-    "test": "bun test src",
-    "seed:templates": "dotenv -e ../../.env -- bun run scripts/seed-templates.ts",
-    "seed:resources": "dotenv -e ../../.env -- bun run scripts/seed-resources.ts",
-    "seed:membership": "dotenv -e ../../.env -- bun run scripts/seed-membership.ts",
-    "seed:pricing": "dotenv -e ../../.env -- bun run scripts/seed-pricing.ts",
-    "fix:api-key": "dotenv -e ../../.env -- bun run scripts/fix-api-key-simple.ts",
-    "fix:model": "dotenv -e ../../.env -- bun run scripts/quick-fix-model.ts",
-    "update:model-key": "dotenv -e ../../.env -- bun run scripts/update-model-key.ts"
+    "test": "vitest run",
+    "seed:templates": "dotenv -e ../../.env -- tsx scripts/seed-templates.ts",
+    "seed:resources": "dotenv -e ../../.env -- tsx scripts/seed-resources.ts",
+    "seed:membership": "dotenv -e ../../.env -- tsx scripts/seed-membership.ts",
+    "seed:pricing": "dotenv -e ../../.env -- tsx scripts/seed-pricing.ts",
+    "fix:api-key": "dotenv -e ../../.env -- tsx scripts/fix-api-key-simple.ts",
+    "fix:model": "dotenv -e ../../.env -- tsx scripts/quick-fix-model.ts",
+    "update:model-key": "dotenv -e ../../.env -- tsx scripts/update-model-key.ts"
   },
   "dependencies": {
     "@autix/ai-adapters": "workspace:*",
@@ -64,8 +64,9 @@
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
     "sharp": "^0.32.6",
+    "undici": "^7.28.0",
     "uuid": "^13.0.0",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@inquirer/prompts": "^8.4.2",
@@ -80,6 +81,8 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/uuid": "^11.0.0",
     "prisma": "^7.7.0",
-    "typescript": "^5.7.0"
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.7"
   }
 }

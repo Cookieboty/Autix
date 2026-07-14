@@ -2,14 +2,14 @@ import { OrderType } from '../../../platform/prisma/generated';
 import { OrderPointReclaimService } from './order-point-reclaim.service';
 
 function buildHarness(grant: any, userPoints: any) {
-  const updateUserPointsWithinTx = jest.fn(async () => ({ balance: userPoints.balance }));
-  const updatePointGrantWithinTx = jest.fn(async () => ({}));
+  const updateUserPointsWithinTx = vi.fn(async () => ({ balance: userPoints.balance }));
+  const updatePointGrantWithinTx = vi.fn(async () => ({}));
   const orderRepo: any = {
     findPointGrantsByOrderEventsWithinTx: async () => [grant],
     findUserPointsWithinTx: async () => userPoints,
     updatePointGrantWithinTx,
     updateUserPointsWithinTx,
-    createPointsRecordWithinTx: jest.fn(async () => ({})),
+    createPointsRecordWithinTx: vi.fn(async () => ({})),
   };
   const service = new OrderPointReclaimService(orderRepo);
   return { service, updateUserPointsWithinTx, updatePointGrantWithinTx };

@@ -60,7 +60,7 @@ describe('workflow step helpers', () => {
   });
 
   it('persists step artifacts with the existing schema fields', async () => {
-    const createWorkflowStepArtifact = jest.fn().mockResolvedValue({ id: 'artifact-1' });
+    const createWorkflowStepArtifact = vi.fn().mockResolvedValue({ id: 'artifact-1' });
 
     const result = await persistStepArtifact(
       { createWorkflowStepArtifact } as never,
@@ -86,8 +86,8 @@ describe('workflow step helpers', () => {
   it('creates tracked models for platform models and skips tracking for user-owned models', () => {
     const baseModel = { name: 'base' } as unknown as BaseChatModel;
     const trackedModel = { name: 'tracked' } as unknown as BaseChatModel;
-    const createModel = jest.fn().mockReturnValue(baseModel);
-    const createTracked = jest.fn().mockReturnValue(trackedModel);
+    const createModel = vi.fn().mockReturnValue(baseModel);
+    const createTracked = vi.fn().mockReturnValue(trackedModel);
     const billing = {} as never;
     const modelConfig = toRuntimeModelConfig({
       id: 'model-1',
@@ -143,7 +143,7 @@ describe('workflow step helpers', () => {
     expect(resolveCriticPassThreshold(0)).toBe(0.7);
     expect(resolveCriticPassThreshold('0.85')).toBe(0.85);
 
-    const findModelConfig = jest.fn().mockResolvedValue({
+    const findModelConfig = vi.fn().mockResolvedValue({
       id: 'critic-1',
       model: 'gpt-4.1',
       provider: 'openai',

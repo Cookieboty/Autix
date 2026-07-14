@@ -6,8 +6,8 @@ import { RateLimitedException } from './rate-limit.service';
 
 function runFilter(exception: unknown) {
   const response = {
-    status: jest.fn(),
-    json: jest.fn(),
+    status: vi.fn(),
+    json: vi.fn(),
   };
   response.status.mockReturnValue(response);
   const host = {
@@ -16,7 +16,7 @@ function runFilter(exception: unknown) {
       getRequest: () => ({ lang: 'zh-CN' }),
     }),
   };
-  const i18n = { t: jest.fn((_lang: string, key: string) => key) };
+  const i18n = { t: vi.fn((_lang: string, key: string) => key) };
 
   new AllExceptionsFilter(i18n as unknown as I18nService).catch(
     exception,

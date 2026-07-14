@@ -3,14 +3,14 @@ import { AuthSessionRepository } from './auth-session.repository';
 
 function createRepository(status = 'ACTIVE') {
   const tx = {
-    $queryRaw: jest.fn().mockResolvedValue([{ status }]),
+    $queryRaw: vi.fn().mockResolvedValue([{ status }]),
     userSession: {
-      create: jest.fn().mockResolvedValue({ id: 'session-1', refreshToken: 'refresh-1' }),
+      create: vi.fn().mockResolvedValue({ id: 'session-1', refreshToken: 'refresh-1' }),
     },
-    user: { update: jest.fn().mockResolvedValue({}) },
+    user: { update: vi.fn().mockResolvedValue({}) },
   };
   const prisma = {
-    $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+    $transaction: vi.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
   };
   return { repository: new AuthSessionRepository(prisma as any), tx, prisma };
 }

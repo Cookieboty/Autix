@@ -58,16 +58,16 @@ function makeService(options: {
   };
 
   const prisma = {
-    $transaction: jest.fn(async (callback: any) => callback(prisma)),
+    $transaction: vi.fn(async (callback: any) => callback(prisma)),
     video_clips: {
-      findUnique: jest.fn(async (args: any) => {
+      findUnique: vi.fn(async (args: any) => {
         if (args.where?.id === 'clip-1') return clip;
         if (args.where?.projectId_order) return null;
         return null;
       }),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      findMany: jest.fn(async (args: any) => {
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      findMany: vi.fn(async (args: any) => {
         if (args.where?.projectId === 'project-1' && args.orderBy?.order === 'asc') {
           return options.projectClips ?? [clip];
         }
@@ -76,23 +76,23 @@ function makeService(options: {
       }),
     },
     video_projects: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     video_clip_generations: {
-      create: jest.fn(async (args: any) => ({
+      create: vi.fn(async (args: any) => ({
         id: args.data.id,
         clipId: 'clip-1',
         projectId: 'project-1',
         userId: 'user-1',
         status: VideoGenStatus.pending,
       })),
-      update: jest.fn(),
-      findFirst: jest.fn(),
-      findUnique: jest.fn(),
+      update: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
     },
     point_holds: {
-      findFirst: jest.fn(async () => ({
+      findFirst: vi.fn(async () => ({
         id: 'hold-1',
         userId: 'user-1',
         status: PointHoldStatus.PENDING,
@@ -100,52 +100,52 @@ function makeService(options: {
     },
   };
   const pointsService = {
-    estimateCost: jest.fn(async () => ({
+    estimateCost: vi.fn(async () => ({
       estimatedCost: 1600,
       taskType: 'video_generation',
       modelConfigId: 'model-config-1',
       breakdown: [],
       pricingSnapshot: { ruleId: 'rule-video' },
     })),
-    createHold: jest.fn(async () => ({
+    createHold: vi.fn(async () => ({
       hold: { id: 'hold-1' },
       balance: 4900,
     })),
-    findPendingHoldByTask: jest.fn(async () => ({ id: 'hold-1', userId: 'user-1' })),
-    confirmHold: jest.fn(async () => ({
+    findPendingHoldByTask: vi.fn(async () => ({ id: 'hold-1', userId: 'user-1' })),
+    confirmHold: vi.fn(async () => ({
       confirmed: true,
       hold: { id: 'hold-1', userId: 'user-1', status: PointHoldStatus.CONFIRMED },
       balance: 3300,
     })),
-    confirmHoldWithinTx: jest.fn(async () => ({
+    confirmHoldWithinTx: vi.fn(async () => ({
       confirmed: true,
       hold: { id: 'hold-1', userId: 'user-1', status: PointHoldStatus.CONFIRMED },
       balance: 3300,
     })),
-    refundHold: jest.fn(async () => ({
+    refundHold: vi.fn(async () => ({
       refunded: true,
       amount: 1600,
       balance: 6500,
     })),
-    refundHoldWithinTx: jest.fn(async () => ({
+    refundHoldWithinTx: vi.fn(async () => ({
       refunded: true,
       amount: 1600,
       balance: 6500,
     })),
   };
   const r2Service = {
-    uploadBuffer: jest.fn(async (_buffer: Buffer, _opts: any) => ({
+    uploadBuffer: vi.fn(async (_buffer: Buffer, _opts: any) => ({
       publicUrl: 'https://cdn.test/video.mp4',
     })),
   };
   const modelConfigService = {
-    findDefaultByType: jest.fn(async (_type: ModelType) => ({
+    findDefaultByType: vi.fn(async (_type: ModelType) => ({
       id: 'model-config-1',
       name: 'Seedance',
       model: options.modelConfig?.model ?? 'seedance-pro',
       ...options.modelConfig,
     })),
-    getConfigForOrchestrator: jest.fn(async (id: string) => ({
+    getConfigForOrchestrator: vi.fn(async (id: string) => ({
       id,
       model: 'seedance-pro',
       baseUrl: null,
@@ -154,26 +154,26 @@ function makeService(options: {
     })),
   };
   const seedanceApi = {
-    buildContent: jest.fn((materials: any[], prompt: string) => [
+    buildContent: vi.fn((materials: any[], prompt: string) => [
       { type: 'text', text: prompt },
       ...materials.map((material) => ({
         type: 'image_url',
         image_url: { url: material.url },
       })),
     ]),
-    buildTaskRequest: jest.fn((opts: any) => ({
+    buildTaskRequest: vi.fn((opts: any) => ({
       model: opts.model,
       content: opts.content,
       resolution: opts.resolution,
       ratio: opts.ratio,
       duration: opts.duration,
     })),
-    createTask: jest.fn(async () => ({ id: 'seedance-task-1' })),
-    queryTask: jest.fn(),
+    createTask: vi.fn(async () => ({ id: 'seedance-task-1' })),
+    queryTask: vi.fn(),
   };
   const modelResolver = {
-    probeDefaultVideoModel: jest.fn(),
-    resolveForGeneration: jest.fn(async () => {
+    probeDefaultVideoModel: vi.fn(),
+    resolveForGeneration: vi.fn(async () => {
       let modelConfigId = (clip.params as { modelConfigId?: string }).modelConfigId;
       if (!modelConfigId) {
         const def = await modelConfigService.findDefaultByType(ModelType.video);
@@ -201,14 +201,14 @@ function makeService(options: {
         baseUrl: modelConfig.baseUrl,
       };
     }),
-    getApiKeyForClipParams: jest.fn(async (params: any) => {
+    getApiKeyForClipParams: vi.fn(async (params: any) => {
       const modelConfigId = params?.modelConfigId;
       if (!modelConfigId) return null;
       const modelConfig =
         await modelConfigService.getConfigForOrchestrator(modelConfigId);
       return modelConfig.apiKey ?? null;
     }),
-    getApiKeyForClipParamsOrThrow: jest.fn(async (params: any) => {
+    getApiKeyForClipParamsOrThrow: vi.fn(async (params: any) => {
       const modelConfigId = params?.modelConfigId;
       if (!modelConfigId) throw new Error('Clip 未配置模型，无法刷新');
       const modelConfig =
@@ -216,7 +216,7 @@ function makeService(options: {
       if (!modelConfig.apiKey) throw new Error('视频模型缺少 API Key 配置');
       return modelConfig.apiKey;
     }),
-    resolveApiContextForClipParams: jest.fn(async (params: any) => {
+    resolveApiContextForClipParams: vi.fn(async (params: any) => {
       const modelConfigId = params?.modelConfigId;
       if (!modelConfigId) return null;
       const modelConfig =
@@ -229,7 +229,7 @@ function makeService(options: {
         model: modelConfig.model,
       };
     }),
-    resolveApiContextForClipParamsOrThrow: jest.fn(async (params: any) => {
+    resolveApiContextForClipParamsOrThrow: vi.fn(async (params: any) => {
       const modelConfigId = params?.modelConfigId;
       if (!modelConfigId) throw new Error('Clip 未配置模型，无法刷新');
       const modelConfig =
@@ -243,9 +243,9 @@ function makeService(options: {
       };
     }),
   };
-  const callbackUrlBuilder = { build: jest.fn(() => undefined) };
+  const callbackUrlBuilder = { build: vi.fn(() => undefined) };
   const videoAssets = {
-    persistProviderVideo: jest.fn(async (sourceUrl?: string) => {
+    persistProviderVideo: vi.fn(async (sourceUrl?: string) => {
       if (!sourceUrl) return null;
       const response = await fetch(sourceUrl);
       if (!response.ok) return null;
@@ -259,7 +259,7 @@ function makeService(options: {
     }),
   };
   const membershipService = {
-    resolveVideoEntitlements: jest.fn(async () => ({
+    resolveVideoEntitlements: vi.fn(async () => ({
       enabled: true,
       maxResolution: '1080p' as const,
       maxDurationSeconds: 30,
@@ -268,17 +268,17 @@ function makeService(options: {
       level: 3,
       source: 'membership' as const,
     })),
-    assertVideoEntitlement: jest.fn(() => { }),
+    assertVideoEntitlement: vi.fn(() => { }),
   };
   const riskService = {
-    assertVideoRequest: jest.fn(async () => ({ active: 0, limit: 4 })),
-    assertHardLimits: jest.fn(() => { }),
-    assertConcurrency: jest.fn(async () => ({ active: 0, limit: 4 })),
+    assertVideoRequest: vi.fn(async () => ({ active: 0, limit: 4 })),
+    assertHardLimits: vi.fn(() => { }),
+    assertConcurrency: vi.fn(async () => ({ active: 0, limit: 4 })),
   };
   const projectStatusConvergence = {
-    recalculateProjectStatus: jest.fn(async () => undefined),
-    convergeAfterClipFailure: jest.fn(async () => undefined),
-    cascadeFailDependents: jest.fn(async () => undefined),
+    recalculateProjectStatus: vi.fn(async () => undefined),
+    convergeAfterClipFailure: vi.fn(async () => undefined),
+    cascadeFailDependents: vi.fn(async () => undefined),
   };
   const holdReconciliation = new VideoGenerationHoldReconciliationService(
     pointsService as never,
@@ -898,7 +898,7 @@ describe('VideoGenerationFlowService billing', () => {
     const { service, pointsService, r2Service, projectStatusConvergence } =
       makeService();
     const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
     }) as never;
@@ -937,7 +937,7 @@ describe('VideoGenerationFlowService billing', () => {
       new Error('ledger confirm failed'),
     );
     const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
     }) as never;

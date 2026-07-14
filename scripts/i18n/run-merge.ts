@@ -1,6 +1,6 @@
 // 一次性迁移脚本：已用于把 web/desktop 两套 messages 合并到 packages/i18n/src/messages 单一源。
 // 迁移已完成后 WEB_DIR / DESKTOP_DIR 两个源目录已被删除，重跑本脚本会因找不到源文件而报错。
-// 单一源现由 scripts/check-i18n-consistency.ts（bun run i18n:check）守护；若确需重新合并，
+// 单一源现由 scripts/check-i18n-consistency.ts（pnpm run i18n:check）守护；若确需重新合并，
 // 请先恢复两端原始 messages 目录再运行。保留此文件仅作迁移过程留档。
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';

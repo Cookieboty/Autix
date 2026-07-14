@@ -2,18 +2,18 @@ import { RiskService } from './risk.service';
 
 function buildService(overrides: any = {}) {
   const repo: any = {
-    listRiskProfiles: jest.fn(async () => overrides.profiles ?? []),
-    countRiskProfiles: jest.fn(async () => overrides.total ?? 0),
-    findInvitersFor: jest.fn(async () => overrides.inviters ?? new Map()),
-    countInviteesFor: jest.fn(async () => overrides.inviteeCounts ?? new Map()),
-    getRiskProfile: jest.fn(async () => overrides.profile ?? null),
-    findInviter: jest.fn(async () => overrides.inviter ?? null),
-    listInvitees: jest.fn(async () => overrides.invitees ?? []),
-    listRiskEvents: jest.fn(async () => overrides.events ?? []),
-    upsertRiskProfile: jest.fn(async (userId: string, data: any) => ({ userId, ...data })),
-    createRiskEvent: jest.fn(async () => ({})),
-    setUserStatus: jest.fn(async () => ({})),
-    clawbackInviteRewardForInvitee: jest.fn(async () => ({ grants: 1, clawedBack: 100 })),
+    listRiskProfiles: vi.fn(async () => overrides.profiles ?? []),
+    countRiskProfiles: vi.fn(async () => overrides.total ?? 0),
+    findInvitersFor: vi.fn(async () => overrides.inviters ?? new Map()),
+    countInviteesFor: vi.fn(async () => overrides.inviteeCounts ?? new Map()),
+    getRiskProfile: vi.fn(async () => overrides.profile ?? null),
+    findInviter: vi.fn(async () => overrides.inviter ?? null),
+    listInvitees: vi.fn(async () => overrides.invitees ?? []),
+    listRiskEvents: vi.fn(async () => overrides.events ?? []),
+    upsertRiskProfile: vi.fn(async (userId: string, data: any) => ({ userId, ...data })),
+    createRiskEvent: vi.fn(async () => ({})),
+    setUserStatus: vi.fn(async () => ({})),
+    clawbackInviteRewardForInvitee: vi.fn(async () => ({ grants: 1, clawedBack: 100 })),
   };
   const service = new RiskService(repo);
   return { service, repo };

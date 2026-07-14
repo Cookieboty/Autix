@@ -1,19 +1,21 @@
 import { ChatFallbackService } from './chat-fallback.service';
 import type { WorkflowStepEvent } from './workflow.types';
 
-const invoke = jest.fn();
+// vi.mock is hoisted above this module's bindings, so its factory cannot close
+// over a plain const — vi.hoisted lifts the spy up with it.
+const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
 
-jest.mock('../model.factory', () => ({
-  createChatModelFromDbConfig: jest.fn(() => ({ invoke })),
+vi.mock('../model.factory', () => ({
+  createChatModelFromDbConfig: vi.fn(() => ({ invoke })),
 }));
 
-jest.mock('../billing/llm-call-tracker', () => ({
-  createTrackedModel: jest.fn((model) => model),
+vi.mock('../billing/llm-call-tracker', () => ({
+  createTrackedModel: vi.fn((model) => model),
 }));
 
 function createService() {
   const modelConfigService = {
-    getConfigForOrchestrator: jest.fn().mockResolvedValue({
+    getConfigForOrchestrator: vi.fn().mockResolvedValue({
       id: 'chat-model',
       model: 'gpt-4o',
       name: 'GPT',
@@ -21,21 +23,21 @@ function createService() {
       type: 'general',
       capabilities: ['text'],
     }),
-    findDefaultByTypeForUser: jest.fn().mockResolvedValue({ id: 'chat-model' }),
+    findDefaultByTypeForUser: vi.fn().mockResolvedValue({ id: 'chat-model' }),
   };
   const billing = {};
   const systemPromptService = {
-    render: jest.fn().mockResolvedValue({ content: 'system prompt with image tool' }),
+    render: vi.fn().mockResolvedValue({ content: 'system prompt with image tool' }),
   };
   const imageGenerationFlowService = {
-    resolveImageRequest: jest.fn().mockImplementation(async (input) => ({
+    resolveImageRequest: vi.fn().mockImplementation(async (input) => ({
       mode: input.sourceImages?.length ? 'edit' : 'generate',
       prompt: input.promptOverride,
       modelConfig: { model: 'gpt-image-2' },
       sourceImages: input.sourceImages,
       referenceImages: input.referenceImages,
     })),
-    generateAndPersistImage: jest.fn().mockResolvedValue({
+    generateAndPersistImage: vi.fn().mockResolvedValue({
       images: [{ url: 'https://cdn/img-1.png', generationId: 'gen-1', index: 0, prompt: 'a cat' }],
       prompt: 'a cat',
       model: 'gpt-image-2',

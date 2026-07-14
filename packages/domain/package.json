@@ -79,6 +79,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@types/node": "^22",
     "typescript": "^5.7.0",
     "vitest": "^4.1.7"
   },

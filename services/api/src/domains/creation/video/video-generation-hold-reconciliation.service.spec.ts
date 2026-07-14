@@ -30,12 +30,12 @@ function makeService(
 
   const tx = {
     point_holds: {
-      findFirst: jest.fn(async () => latestHold),
+      findFirst: vi.fn(async () => latestHold),
     },
   };
   const pointsService = {
-    findPendingHoldByTask: jest.fn(async () => pendingHold),
-    confirmHold: jest.fn(async () => ({
+    findPendingHoldByTask: vi.fn(async () => pendingHold),
+    confirmHold: vi.fn(async () => ({
       confirmed: true,
       hold: {
         id: 'hold-1',
@@ -44,7 +44,7 @@ function makeService(
       },
       balance: 3000,
     })),
-    confirmHoldWithinTx: jest.fn(async () => ({
+    confirmHoldWithinTx: vi.fn(async () => ({
       confirmed: true,
       hold: {
         id: 'hold-1',
@@ -53,12 +53,12 @@ function makeService(
       },
       balance: 3000,
     })),
-    refundHold: jest.fn(async () => ({
+    refundHold: vi.fn(async () => ({
       refunded: true,
       amount: 1600,
       balance: 4600,
     })),
-    refundHoldWithinTx: jest.fn(async () => ({
+    refundHoldWithinTx: vi.fn(async () => ({
       refunded: true,
       amount: 1600,
       balance: 4600,

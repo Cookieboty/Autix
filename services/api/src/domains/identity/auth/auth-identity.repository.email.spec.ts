@@ -4,7 +4,7 @@ import { AuthIdentityRepository } from './auth-identity.repository';
 describe('AuthIdentityRepository.setPendingEmail', () => {
   it('uses a conditional write so deletion cannot be followed by a PII write-back', async () => {
     const prisma = {
-      user: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      user: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     };
     const repository = new AuthIdentityRepository(prisma as any);
 
@@ -18,7 +18,7 @@ describe('AuthIdentityRepository.setPendingEmail', () => {
 
   it('reports account unavailable when the conditional write loses to deletion', async () => {
     const prisma = {
-      user: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      user: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
     };
     const repository = new AuthIdentityRepository(prisma as any);
 
@@ -28,7 +28,7 @@ describe('AuthIdentityRepository.setPendingEmail', () => {
 
   it('applies a verified email only when it is still the current pending request', async () => {
     const prisma = {
-      user: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      user: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     };
     const repository = new AuthIdentityRepository(prisma as any);
 

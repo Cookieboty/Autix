@@ -1,28 +1,32 @@
 import { ArtifactType, ModelType } from '../../platform/prisma/generated';
 import { ArtifactService } from './artifact.service';
 
-const mockStream = jest.fn(async function* () {
-  yield { content: '优化后' };
-  yield { content: '内容' };
-});
+// vi.mock is hoisted above this module's bindings, so its factory cannot close
+// over a plain const — vi.hoisted lifts the spy up with it.
+const { mockStream } = vi.hoisted(() => ({
+  mockStream: vi.fn(async function* () {
+    yield { content: '优化后' };
+    yield { content: '内容' };
+  }),
+}));
 
-jest.mock('../llm/model.factory', () => ({
-  createChatModelFromDbConfig: jest.fn(() => ({
+vi.mock('../llm/model.factory', () => ({
+  createChatModelFromDbConfig: vi.fn(() => ({
     stream: mockStream,
   })),
 }));
 
 function createResponse() {
   return {
-    setHeader: jest.fn(),
-    write: jest.fn(),
-    end: jest.fn(),
+    setHeader: vi.fn(),
+    write: vi.fn(),
+    end: vi.fn(),
   };
 }
 
 function createService() {
   const artifactRepository = {
-    findByIdWithLatestVersion: jest.fn().mockResolvedValue({
+    findByIdWithLatestVersion: vi.fn().mockResolvedValue({
       id: 'artifact-1',
       conversationId: 'conversation-1',
       userId: 'user-1',
@@ -38,10 +42,10 @@ function createService() {
         },
       ],
     }),
-    updateArtifactWithVersion: jest.fn().mockResolvedValue({ id: 'artifact-1' }),
+    updateArtifactWithVersion: vi.fn().mockResolvedValue({ id: 'artifact-1' }),
   };
   const modelConfigService = {
-    findDefaultByType: jest.fn().mockResolvedValue({
+    findDefaultByType: vi.fn().mockResolvedValue({
       id: 'model-1',
       model: 'gpt-4o-mini',
       provider: 'openai-official',
@@ -50,7 +54,7 @@ function createService() {
       type: ModelType.general,
       metadata: {},
     }),
-    findDefaultByTypeForUser: jest.fn().mockResolvedValue({
+    findDefaultByTypeForUser: vi.fn().mockResolvedValue({
       id: 'model-1',
       model: 'gpt-4o-mini',
       provider: 'openai-official',
@@ -61,9 +65,9 @@ function createService() {
     }),
   };
   const billing = {
-    hold: jest.fn().mockResolvedValue({ holdId: 'hold-1', balance: 985 }),
-    confirm: jest.fn(),
-    refund: jest.fn(),
+    hold: vi.fn().mockResolvedValue({ holdId: 'hold-1', balance: 985 }),
+    confirm: vi.fn(),
+    refund: vi.fn(),
   };
 
   return {

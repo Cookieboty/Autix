@@ -7,7 +7,7 @@
  * Safe to run multiple times — skips if data already exists.
  *
  * Usage:
- *   DATABASE_URL=postgresql://autix:pass@postgres:5432/autix bun run scripts/migrate-legacy-data.ts
+ *   DATABASE_URL=postgresql://autix:pass@postgres:5432/autix pnpm exec tsx scripts/migrate-legacy-data.ts
  */
 
 import pg from 'pg';

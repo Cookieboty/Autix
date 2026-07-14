@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import { splitErrorMessage } from '../src/chat/chat-error-message';
 
 describe('chat error message helpers', () => {

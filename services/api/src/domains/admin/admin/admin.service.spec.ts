@@ -4,8 +4,8 @@ import type { AuthUser } from '@autix/domain';
 
 function buildService() {
   const adminRepository = {
-    createPointsPackage: jest.fn().mockResolvedValue({ id: 'pkg-1' }),
-    updatePointsPackage: jest.fn().mockResolvedValue({ id: 'pkg-1' }),
+    createPointsPackage: vi.fn().mockResolvedValue({ id: 'pkg-1' }),
+    updatePointsPackage: vi.fn().mockResolvedValue({ id: 'pkg-1' }),
   } as any;
 
   const service = new AdminService(

@@ -1,9 +1,9 @@
 import { AuthService } from './auth.service';
 
 function buildAuthService() {
-  const settlePendingInvitationReward = jest.fn(async () => ({}));
+  const settlePendingInvitationReward = vi.fn(async () => ({}));
   const jwtService: any = {
-    verify: jest.fn(() => ({
+    verify: vi.fn(() => ({
       sub: 'user-1',
       purpose: 'email-activation',
       systemId: 'sys-1',
@@ -12,13 +12,13 @@ function buildAuthService() {
   };
   const mailService: any = {};
   const inviteService: any = { settlePendingInvitationReward };
-  const campaignRewardService: any = { grantRegistrationBonus: jest.fn(async () => null) };
+  const campaignRewardService: any = { grantRegistrationBonus: vi.fn(async () => null) };
   const identityRepository: any = {
-    findUserById: jest.fn(async () => ({ id: 'user-1', status: 'PENDING' })),
-    findSystemById: jest.fn(async () => ({ id: 'sys-1', autoApprove: true })),
-    findRegistrationByUserAndSystem: jest.fn(async () => ({ id: 'reg-1', status: 'PENDING_ACTIVATION' })),
-    findRoleBySystemAndCode: jest.fn(async () => ({ id: 'role-1' })),
-    activateRegistration: jest.fn(async () => ({})),
+    findUserById: vi.fn(async () => ({ id: 'user-1', status: 'PENDING' })),
+    findSystemById: vi.fn(async () => ({ id: 'sys-1', autoApprove: true })),
+    findRegistrationByUserAndSystem: vi.fn(async () => ({ id: 'reg-1', status: 'PENDING_ACTIVATION' })),
+    findRoleBySystemAndCode: vi.fn(async () => ({ id: 'role-1' })),
+    activateRegistration: vi.fn(async () => ({})),
   };
   const sessionRepository: any = {};
   const tokenFactory: any = {};

@@ -16,31 +16,31 @@ const RESOURCE = {
 
 function createDelegate(resource = RESOURCE) {
   return {
-    findMany: jest.fn().mockResolvedValue([resource]),
-    findUnique: jest.fn().mockResolvedValue(resource),
-    create: jest.fn().mockResolvedValue(resource),
-    update: jest.fn().mockResolvedValue({ ...resource, likeCount: resource.likeCount + 1 }),
-    delete: jest.fn().mockResolvedValue(resource),
-    count: jest.fn().mockResolvedValue(1),
+    findMany: vi.fn().mockResolvedValue([resource]),
+    findUnique: vi.fn().mockResolvedValue(resource),
+    create: vi.fn().mockResolvedValue(resource),
+    update: vi.fn().mockResolvedValue({ ...resource, likeCount: resource.likeCount + 1 }),
+    delete: vi.fn().mockResolvedValue(resource),
+    count: vi.fn().mockResolvedValue(1),
   };
 }
 
 function createPrisma() {
   return {
     resource_likes: {
-      findUnique: jest.fn().mockResolvedValue(null),
-      create: jest.fn().mockResolvedValue({}),
-      delete: jest.fn().mockResolvedValue({}),
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue({}),
+      delete: vi.fn().mockResolvedValue({}),
     },
     resource_favorites: {
-      findUnique: jest.fn().mockResolvedValue(null),
-      create: jest.fn().mockResolvedValue({}),
-      delete: jest.fn().mockResolvedValue({}),
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue({}),
+      delete: vi.fn().mockResolvedValue({}),
     },
     resource_views: {
-      create: jest.fn().mockResolvedValue({}),
-      count: jest.fn().mockResolvedValue(2),
-      groupBy: jest.fn().mockResolvedValue([
+      create: vi.fn().mockResolvedValue({}),
+      count: vi.fn().mockResolvedValue(2),
+      groupBy: vi.fn().mockResolvedValue([
         { resourceId: 'tpl-1', _count: { _all: 2 } },
       ]),
     },

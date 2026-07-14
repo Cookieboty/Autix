@@ -9,20 +9,20 @@ function makeResolver(options: {
   baseUrl?: string | null;
 } = {}) {
   const repository = {
-    updateClipParams: jest.fn(),
+    updateClipParams: vi.fn(),
   };
   const modelConfigService = {
-    findDefaultByType: jest.fn(async () =>
+    findDefaultByType: vi.fn(async () =>
       options.defaultModel === undefined
         ? { id: 'model-default', name: 'Seedance', model: 'seedance-pro' }
         : options.defaultModel,
     ),
-    findDefaultByTypeForUser: jest.fn(async () =>
+    findDefaultByTypeForUser: vi.fn(async () =>
       options.defaultModel === undefined
         ? { id: 'model-default', name: 'Seedance', model: 'seedance-pro' }
         : options.defaultModel,
     ),
-    getConfigForOrchestrator: jest.fn(async (id: string) => ({
+    getConfigForOrchestrator: vi.fn(async (id: string) => ({
       id,
       model: 'seedance-pro',
       baseUrl: options.baseUrl === undefined ? 'https://seedance.test' : options.baseUrl,

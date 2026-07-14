@@ -3,22 +3,22 @@ import { MaterialFoldersService } from './material-folders.service';
 
 function buildService(overrides: { repo?: any; canUse?: boolean; favoriteLibrary?: any } = {}) {
   const repo = {
-    findManyByUser: jest.fn().mockResolvedValue([]),
-    countAssetsGroupedByFolder: jest.fn().mockResolvedValue([]),
-    findOwned: jest.fn(),
-    findActiveByName: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockImplementation((d: any) => ({ id: 'f-new', ...d })),
-    update: jest.fn().mockImplementation((id: string, d: any) => ({ id, ...d })),
+    findManyByUser: vi.fn().mockResolvedValue([]),
+    countAssetsGroupedByFolder: vi.fn().mockResolvedValue([]),
+    findOwned: vi.fn(),
+    findActiveByName: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockImplementation((d: any) => ({ id: 'f-new', ...d })),
+    update: vi.fn().mockImplementation((id: string, d: any) => ({ id, ...d })),
     ...(overrides.repo ?? {}),
   };
   const materialsService = {
-    assertCanAddOrUse: jest.fn().mockImplementation(async () => {
+    assertCanAddOrUse: vi.fn().mockImplementation(async () => {
       if (overrides.canUse === false) throw new ForbiddenException('需要有效会员');
       return { canUse: true };
     }),
   };
   const favoriteLibrary = {
-    deleteFolder: jest.fn().mockResolvedValue(undefined),
+    deleteFolder: vi.fn().mockResolvedValue(undefined),
     ...(overrides.favoriteLibrary ?? {}),
   };
   const service = new MaterialFoldersService(repo as never, materialsService as never, favoriteLibrary as never);

@@ -21,18 +21,18 @@ function promptRow(overrides: Partial<SystemPromptRow> = {}): SystemPromptRow {
 
 function createService() {
   const repository = {
-    ensureTable: jest.fn(async () => undefined),
-    findAll: jest.fn(async () => [] as SystemPromptRow[]),
-    findById: jest.fn(async () => null as SystemPromptRow | null),
-    existsByKeyVersion: jest.fn(async () => false),
-    createDraft: jest.fn(
+    ensureTable: vi.fn(async () => undefined),
+    findAll: vi.fn(async () => [] as SystemPromptRow[]),
+    findById: vi.fn(async () => null as SystemPromptRow | null),
+    existsByKeyVersion: vi.fn(async () => false),
+    createDraft: vi.fn(
       async (
         input: Pick<SystemPromptRow, 'key' | 'name' | 'description' | 'version' | 'content'> & {
           variables: string[];
         },
       ) => promptRow({ ...input, status: 'draft' }),
     ),
-    updateDraft: jest.fn(
+    updateDraft: vi.fn(
       async (
         input: Pick<
           SystemPromptRow,
@@ -42,7 +42,7 @@ function createService() {
         },
       ) => promptRow({ ...input, status: 'draft' }),
     ),
-    publish: jest.fn(async (row: Pick<SystemPromptRow, 'id' | 'key'>) =>
+    publish: vi.fn(async (row: Pick<SystemPromptRow, 'id' | 'key'>) =>
       promptRow({
         id: row.id,
         key: row.key,
@@ -50,7 +50,7 @@ function createService() {
         publishedAt: new Date('2026-06-16T01:00:00.000Z'),
       }),
     ),
-    findActiveByKey: jest.fn(async () => null as SystemPromptRow | null),
+    findActiveByKey: vi.fn(async () => null as SystemPromptRow | null),
   };
 
   return {

@@ -2,12 +2,12 @@ import { MaterialFoldersRepository } from './material-folders.repository';
 
 function delegateMock() {
   return {
-    findMany: jest.fn(),
-    findFirst: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    updateMany: jest.fn(),
-    groupBy: jest.fn(),
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    groupBy: vi.fn(),
   };
 }
 
@@ -19,7 +19,7 @@ function createPrismaMock() {
   const mock = {
     material_folders,
     material_assets,
-    $transaction: jest.fn(async (fn: any) => fn({ material_folders: tx_folders, material_assets: tx_assets })),
+    $transaction: vi.fn(async (fn: any) => fn({ material_folders: tx_folders, material_assets: tx_assets })),
     _tx: { material_folders: tx_folders, material_assets: tx_assets },
   };
   return mock;

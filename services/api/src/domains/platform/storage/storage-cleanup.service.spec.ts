@@ -1,26 +1,27 @@
+import type { Mock } from 'vitest';
 import { StorageCleanupService } from './storage-cleanup.service';
 
 type PrismaMock = {
   pending_uploads: {
-    findMany: jest.Mock;
-    updateMany: jest.Mock;
+    findMany: Mock;
+    updateMany: Mock;
   };
   storage_cleanup_tasks: {
-    create: jest.Mock;
-    findUnique: jest.Mock;
-    updateMany: jest.Mock;
+    create: Mock;
+    findUnique: Mock;
+    updateMany: Mock;
   };
   user: {
-    findFirst: jest.Mock;
+    findFirst: Mock;
   };
-  $executeRaw: jest.Mock;
-  $queryRaw: jest.Mock;
-  $transaction: jest.Mock;
+  $executeRaw: Mock;
+  $queryRaw: Mock;
+  $transaction: Mock;
 };
 
 type R2Mock = {
-  objectExists: jest.Mock;
-  deleteObject: jest.Mock;
+  objectExists: Mock;
+  deleteObject: Mock;
 };
 
 const NOW = new Date('2026-08-01T00:00:00.000Z');
@@ -29,25 +30,25 @@ const ACTIVE_LEASE = new Date('2026-08-01T00:05:00.000Z');
 function deps() {
   const prisma: PrismaMock = {
     pending_uploads: {
-      findMany: jest.fn().mockResolvedValue([]),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     storage_cleanup_tasks: {
-      create: jest.fn().mockResolvedValue(undefined),
-      findUnique: jest.fn(),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      create: vi.fn().mockResolvedValue(undefined),
+      findUnique: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     user: {
-      findFirst: jest.fn().mockResolvedValue(null),
+      findFirst: vi.fn().mockResolvedValue(null),
     },
-    $executeRaw: jest.fn().mockResolvedValue(0),
-    $queryRaw: jest.fn(),
-    $transaction: jest.fn(),
+    $executeRaw: vi.fn().mockResolvedValue(0),
+    $queryRaw: vi.fn(),
+    $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (tx: PrismaMock) => unknown) => fn(prisma));
   const r2: R2Mock = {
-    objectExists: jest.fn(),
-    deleteObject: jest.fn(),
+    objectExists: vi.fn(),
+    deleteObject: vi.fn(),
   };
   const svc = new StorageCleanupService(prisma as never, r2 as never);
   return { prisma, r2, svc };

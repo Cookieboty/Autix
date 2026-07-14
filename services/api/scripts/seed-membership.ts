@@ -1,7 +1,7 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * 会员 & 积分基础数据种子脚本
- * 用法: bun run --filter=@autix/api seed:membership （从根目录注入 .env）
+ * 用法: pnpm --filter @autix/api seed:membership （从根目录注入 .env）
  * 环境变量: DATABASE_URL
  */
 

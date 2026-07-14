@@ -14,12 +14,12 @@ function makeAdminService(overrides: {
     membershipRevoked: false,
   };
   const orderService: any = {
-    getOrderForAdmin: jest.fn().mockResolvedValue(order),
-    refundOrder: jest.fn().mockResolvedValue(refundResult),
+    getOrderForAdmin: vi.fn().mockResolvedValue(order),
+    refundOrder: vi.fn().mockResolvedValue(refundResult),
   };
-  const cancelSubscriptionImmediately = jest.fn().mockResolvedValue({ id: 'sub_123' });
-  const stripePaymentService: any = { createRefund: jest.fn(), cancelSubscriptionImmediately };
-  const auditStore: any = { record: jest.fn() };
+  const cancelSubscriptionImmediately = vi.fn().mockResolvedValue({ id: 'sub_123' });
+  const stripePaymentService: any = { createRefund: vi.fn(), cancelSubscriptionImmediately };
+  const auditStore: any = { record: vi.fn() };
   const service = new AdminService(
     {} as never,
     {} as never,

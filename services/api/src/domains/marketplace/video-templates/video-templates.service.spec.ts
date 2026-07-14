@@ -1,11 +1,12 @@
+import type { Mock } from 'vitest';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { VideoTemplatesService } from './video-templates.service';
 
 interface BuildOverrides {
-  pointsService?: Partial<{ estimateCost: jest.Mock }>;
+  pointsService?: Partial<{ estimateCost: Mock }>;
   templates?: Array<Record<string, unknown>>;
-  r2?: Partial<{ getPublicBaseUrl: jest.Mock }>;
+  r2?: Partial<{ getPublicBaseUrl: Mock }>;
 }
 
 /** 测试用站内存储域名基准，与 r2 mock 的 getPublicBaseUrl 返回值保持一致（Task 4.5）。 */
@@ -61,78 +62,78 @@ function createMocks(overrides: BuildOverrides = {}) {
   const templates = overrides.templates ?? [APPROVED_TPL, PENDING_TPL, SYSTEM_TPL];
   const tx = {
     video_generations: {
-      create: jest.fn(async (args: any) => ({ id: args.data.id, ...args.data })),
+      create: vi.fn(async (args: any) => ({ id: args.data.id, ...args.data })),
     },
     video_templates: {
-      update: jest.fn(async () => ({})),
+      update: vi.fn(async () => ({})),
     },
   };
   const prisma = {
     video_templates: {
-      findUnique: jest.fn(async (args: any) => templates.find((t) => t.id === args.where.id) ?? null),
-      findMany: jest.fn(async (args: any = {}) => templates.filter((t) => matchesWhere(t, args.where))),
-      count: jest.fn(async (args: any = {}) => templates.filter((t) => matchesWhere(t, args.where)).length),
-      update: jest.fn(async () => ({})),
+      findUnique: vi.fn(async (args: any) => templates.find((t) => t.id === args.where.id) ?? null),
+      findMany: vi.fn(async (args: any = {}) => templates.filter((t) => matchesWhere(t, args.where))),
+      count: vi.fn(async (args: any = {}) => templates.filter((t) => matchesWhere(t, args.where)).length),
+      update: vi.fn(async () => ({})),
     },
     resource_views: {
-      count: jest.fn(async () => 0),
-      groupBy: jest.fn(async () => []),
-      create: jest.fn(async () => ({})),
+      count: vi.fn(async () => 0),
+      groupBy: vi.fn(async () => []),
+      create: vi.fn(async () => ({})),
     },
     resource_likes: {
-      findUnique: jest.fn(async () => null),
-      create: jest.fn(async (args: any) => ({ id: 'like-1', ...args.data })),
-      delete: jest.fn(async () => ({})),
+      findUnique: vi.fn(async () => null),
+      create: vi.fn(async (args: any) => ({ id: 'like-1', ...args.data })),
+      delete: vi.fn(async () => ({})),
     },
     resource_favorites: {
-      findUnique: jest.fn(async () => null),
-      create: jest.fn(async (args: any) => ({ id: 'fav-1', ...args.data })),
-      delete: jest.fn(async () => ({})),
+      findUnique: vi.fn(async () => null),
+      create: vi.fn(async (args: any) => ({ id: 'fav-1', ...args.data })),
+      delete: vi.fn(async () => ({})),
     },
-    $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(tx)),
+    $transaction: vi.fn((fn: (tx: unknown) => unknown) => fn(tx)),
   };
   const points = {
-    estimateCost: jest.fn(async () => ({
+    estimateCost: vi.fn(async () => ({
       estimatedCost: 1600,
       taskType: 'video_generation',
       modelConfigId: 'model-1',
       breakdown: [],
       pricingSnapshot: { ruleId: 'rule-video' },
     })),
-    createHold: jest.fn(async (_userId: string, _input: unknown) => ({ hold: { id: 'hold-1' }, balance: 4900 })),
-    confirmHold: jest.fn(),
-    refundHold: jest.fn(),
+    createHold: vi.fn(async (_userId: string, _input: unknown) => ({ hold: { id: 'hold-1' }, balance: 4900 })),
+    confirmHold: vi.fn(),
+    refundHold: vi.fn(),
     ...overrides.pointsService,
   };
   const models = {
-    getConfigForOrchestrator: jest.fn(),
+    getConfigForOrchestrator: vi.fn(),
   };
   const generations = {
-    createVideoGeneration: jest.fn(async (args: any) => ({
+    createVideoGeneration: vi.fn(async (args: any) => ({
       id: args.id,
       ...args,
       status: 'pending',
     })),
   };
   const membership = {
-    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
+    resolveActiveMembershipLevel: vi.fn().mockResolvedValue(2),
   };
   const resources = {
-    delegateFor: jest.fn(() => prisma.video_templates),
-    createVideoTemplate: jest.fn(async (data: any) => ({ id: 'tpl-new', ...data })),
-    updateVideoTemplate: jest.fn(async (id: string, data: any) => ({ id, ...data })),
+    delegateFor: vi.fn(() => prisma.video_templates),
+    createVideoTemplate: vi.fn(async (data: any) => ({ id: 'tpl-new', ...data })),
+    updateVideoTemplate: vi.fn(async (id: string, data: any) => ({ id, ...data })),
   };
   const r2 = {
-    getPublicBaseUrl: jest.fn().mockResolvedValue(R2_PUBLIC_BASE),
+    getPublicBaseUrl: vi.fn().mockResolvedValue(R2_PUBLIC_BASE),
     ...(overrides.r2 ?? {}),
   };
   const metrics = {
-    getMetrics: jest.fn().mockResolvedValue({ favoriteCount: 0 }),
-    getMetricsMap: jest.fn().mockResolvedValue(new Map()),
+    getMetrics: vi.fn().mockResolvedValue({ favoriteCount: 0 }),
+    getMetricsMap: vi.fn().mockResolvedValue(new Map()),
   };
   const favoriteLibrary = {
-    favorite: jest.fn().mockResolvedValue({ favorited: true }),
-    unfavorite: jest.fn().mockResolvedValue({ favorited: false }),
+    favorite: vi.fn().mockResolvedValue({ favorited: true }),
+    unfavorite: vi.fn().mockResolvedValue({ favorited: false }),
   };
   const resourceInteractions = new ResourceInteractionRepository(prisma as never);
   const service = new VideoTemplatesService(
@@ -337,7 +338,7 @@ describe('VideoTemplatesService.createGeneration billing', () => {
 
 describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', () => {
   it('packs seconds/resolution/referenceImages into params', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({
+    const estimateCost = vi.fn().mockResolvedValue({
       taskType: 'video_generation',
       estimatedCost: 320,
       pricingSnapshot: {},
@@ -362,7 +363,7 @@ describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', 
   });
 
   it('omits modelConfigId entirely when not provided (no bogus fallback)', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({
+    const estimateCost = vi.fn().mockResolvedValue({
       taskType: 'video_generation',
       estimatedCost: 320,
       pricingSnapshot: {},
@@ -385,7 +386,7 @@ describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', 
   });
 
   it('propagates the estimator rejection without a metered fallback', async () => {
-    const estimateCost = jest.fn().mockRejectedValue(new BadRequestException('模型未绑定任务'));
+    const estimateCost = vi.fn().mockRejectedValue(new BadRequestException('模型未绑定任务'));
     const service = buildVideoTemplatesService({ pointsService: { estimateCost } });
 
     await expect(

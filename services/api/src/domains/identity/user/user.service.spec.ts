@@ -24,16 +24,16 @@ function mockUser(overrides: Record<string, unknown> = {}) {
 
 function createTx() {
   return {
-    $queryRaw: jest.fn().mockResolvedValue([{ status: 'PENDING', avatarStorageKey: null }]),
-    user: { update: jest.fn().mockResolvedValue({}) },
-    userSession: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
-    storage_cleanup_tasks: { create: jest.fn().mockResolvedValue({}) },
+    $queryRaw: vi.fn().mockResolvedValue([{ status: 'PENDING', avatarStorageKey: null }]),
+    user: { update: vi.fn().mockResolvedValue({}) },
+    userSession: { deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    storage_cleanup_tasks: { create: vi.fn().mockResolvedValue({}) },
     systemRegistration: {
-      findMany: jest.fn().mockResolvedValue([]),
-      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
-    role: { findFirst: jest.fn().mockResolvedValue(null) },
-    userRole: { upsert: jest.fn().mockResolvedValue({}) },
+    role: { findFirst: vi.fn().mockResolvedValue(null) },
+    userRole: { upsert: vi.fn().mockResolvedValue({}) },
   };
 }
 
@@ -43,13 +43,13 @@ function createPrisma(
 ) {
   return {
     user: {
-      findUnique: jest.fn().mockResolvedValue(mockUser(userOverrides)),
-      findMany: jest.fn().mockResolvedValue([]),
-      findFirst: jest.fn().mockResolvedValue(null),
-      count: jest.fn().mockResolvedValue(0),
+      findUnique: vi.fn().mockResolvedValue(mockUser(userOverrides)),
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
+      count: vi.fn().mockResolvedValue(0),
     },
-    userSession: { deleteMany: jest.fn().mockResolvedValue({}) },
-    $transaction: jest.fn((fn: (t: unknown) => unknown) => fn(tx)),
+    userSession: { deleteMany: vi.fn().mockResolvedValue({}) },
+    $transaction: vi.fn((fn: (t: unknown) => unknown) => fn(tx)),
   };
 }
 

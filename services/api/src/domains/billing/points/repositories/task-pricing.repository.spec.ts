@@ -2,10 +2,10 @@ import { TaskPricingRepository } from './task-pricing.repository';
 
 function buildPrisma() {
   return {
-    task_definitions: { findUnique: jest.fn(), findMany: jest.fn() },
-    task_model_bindings: { findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn() },
-    model_configs: { findUnique: jest.fn() },
-    pricing_discounts: { findMany: jest.fn() },
+    task_definitions: { findUnique: vi.fn(), findMany: vi.fn() },
+    task_model_bindings: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+    model_configs: { findUnique: vi.fn() },
+    pricing_discounts: { findMany: vi.fn() },
   };
 }
 

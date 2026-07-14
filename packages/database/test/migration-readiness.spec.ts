@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import {
   buildBaselineResolveCommands,
   classifyMigrationReadiness,
@@ -96,8 +95,8 @@ describe('migration readiness classification', () => {
 
   test('generates explicit resolve commands without applying them', () => {
     expect(buildBaselineResolveCommands(localMigrations.map((migration) => migration.name))).toEqual([
-      'bun --cwd packages/database --bun prisma migrate resolve --applied 00_init --schema prisma/schema.prisma',
-      'bun --cwd packages/database --bun prisma migrate resolve --applied 20260712000000_user_account_deletion --schema prisma/schema.prisma',
+      'pnpm --filter @autix/database exec prisma migrate resolve --applied 00_init --schema prisma/schema.prisma',
+      'pnpm --filter @autix/database exec prisma migrate resolve --applied 20260712000000_user_account_deletion --schema prisma/schema.prisma',
     ]);
   });
 

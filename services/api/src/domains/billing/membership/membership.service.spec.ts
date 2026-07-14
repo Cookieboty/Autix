@@ -5,7 +5,7 @@ import { MembershipService, type VideoEntitlement } from './membership.service';
 describe('MembershipService.video gating', () => {
   function buildService(membership: any) {
     const repository = {
-      findUserMembershipWithLevel: jest.fn().mockResolvedValue(membership),
+      findUserMembershipWithLevel: vi.fn().mockResolvedValue(membership),
     } as any;
     return new MembershipService(repository, {} as any);
   }
@@ -83,10 +83,10 @@ describe('MembershipService.video gating', () => {
 describe('MembershipService.admin writes', () => {
   function buildAdminWriteService() {
     const repository = {
-      createLevel: jest.fn().mockResolvedValue({ id: 'level-1' }),
-      updateLevel: jest.fn().mockResolvedValue({ id: 'level-1' }),
-      createPlan: jest.fn().mockResolvedValue({ id: 'plan-1' }),
-      updatePlan: jest.fn().mockResolvedValue({ id: 'plan-1' }),
+      createLevel: vi.fn().mockResolvedValue({ id: 'level-1' }),
+      updateLevel: vi.fn().mockResolvedValue({ id: 'level-1' }),
+      createPlan: vi.fn().mockResolvedValue({ id: 'plan-1' }),
+      updatePlan: vi.fn().mockResolvedValue({ id: 'plan-1' }),
     } as any;
     return { repository, service: new MembershipService(repository, {} as any) };
   }

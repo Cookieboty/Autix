@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import {
   createEmptyVideoFrame,
   createVideoMaterialFromFile,
@@ -30,15 +29,15 @@ describe('video input utils', () => {
       name: 'template-1',
       type: 'image',
     });
-    expect(materials[0]?.id).toStartWith('tpl-mat-');
-    expect(materials[0]?.id).toEndWith('-0');
+    expect(materials[0]?.id).toMatch(/^tpl-mat-/);
+    expect(materials[0]?.id).toMatch(/-0$/);
     expect(materials[1]).toMatchObject({
       url: 'https://cdn.example.com/two.mp4',
       name: 'template-2',
       type: 'video',
     });
-    expect(materials[1]?.id).toStartWith('tpl-mat-');
-    expect(materials[1]?.id).toEndWith('-1');
+    expect(materials[1]?.id).toMatch(/^tpl-mat-/);
+    expect(materials[1]?.id).toMatch(/-1$/);
   });
 
   test('creates two slots for first/last frame mode and ignores non-images', () => {
@@ -53,11 +52,11 @@ describe('video input utils', () => {
 
     expect(frames).toHaveLength(2);
     expect(frames[0]).toMatchObject({ material: materials[0], duration: 7 });
-    expect(frames[0]?.id).toStartWith('frame-');
-    expect(frames[0]?.id).toEndWith('-0');
+    expect(frames[0]?.id).toMatch(/^frame-/);
+    expect(frames[0]?.id).toMatch(/-0$/);
     expect(frames[1]).toMatchObject({ material: materials[2], duration: 7 });
-    expect(frames[1]?.id).toStartWith('frame-');
-    expect(frames[1]?.id).toEndWith('-1');
+    expect(frames[1]?.id).toMatch(/^frame-/);
+    expect(frames[1]?.id).toMatch(/-1$/);
   });
 
   test('pads empty first/last and smart multiframe modes with placeholder frames', () => {
@@ -69,18 +68,18 @@ describe('video input utils', () => {
       material: null,
       duration: DEFAULT_VIDEO_FRAME_DURATION,
     });
-    expect(firstLastFrames[0]?.id).toStartWith('frame-');
-    expect(firstLastFrames[0]?.id).toEndWith('-0');
+    expect(firstLastFrames[0]?.id).toMatch(/^frame-/);
+    expect(firstLastFrames[0]?.id).toMatch(/-0$/);
     expect(firstLastFrames[1]).toMatchObject({
       material: null,
       duration: DEFAULT_VIDEO_FRAME_DURATION,
     });
-    expect(firstLastFrames[1]?.id).toStartWith('frame-');
-    expect(firstLastFrames[1]?.id).toEndWith('-1');
+    expect(firstLastFrames[1]?.id).toMatch(/^frame-/);
+    expect(firstLastFrames[1]?.id).toMatch(/-1$/);
     expect(smartFrames).toHaveLength(1);
     expect(smartFrames[0]).toMatchObject({ material: null, duration: 6 });
-    expect(smartFrames[0]?.id).toStartWith('frame-');
-    expect(smartFrames[0]?.id).toEndWith('-0');
+    expect(smartFrames[0]?.id).toMatch(/^frame-/);
+    expect(smartFrames[0]?.id).toMatch(/-0$/);
   });
 
   test('creates file-backed materials with audio optionally disabled', () => {
@@ -99,13 +98,13 @@ describe('video input utils', () => {
       name: 'voice.mp3',
       type: 'audio',
     });
-    expect(audioMaterial.id).toEndWith('-audio');
+    expect(audioMaterial.id).toMatch(/-audio$/);
     expect(frameMaterial).toMatchObject({
       url: 'data:audio',
       name: 'voice.mp3',
       type: 'image',
     });
-    expect(frameMaterial.id).toEndWith('-frame');
+    expect(frameMaterial.id).toMatch(/-frame$/);
   });
 
   test('swaps first and last frame materials while preserving extra frames', () => {
@@ -170,7 +169,7 @@ describe('video input utils', () => {
       material: newMaterial,
       duration: DEFAULT_VIDEO_FRAME_DURATION,
     });
-    expect(appended[2]?.id).toStartWith('frame-');
-    expect(appended[2]?.id).toEndWith('-1');
+    expect(appended[2]?.id).toMatch(/^frame-/);
+    expect(appended[2]?.id).toMatch(/-1$/);
   });
 });

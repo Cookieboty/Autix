@@ -2,15 +2,15 @@ import { StepUpRepository } from './step-up.repository';
 
 function makeRepository(lockedSessions: Array<{ id: string }>) {
   const tx = {
-    $queryRaw: jest.fn().mockResolvedValue(lockedSessions),
-    step_up_proofs: { create: jest.fn().mockResolvedValue({}) },
+    $queryRaw: vi.fn().mockResolvedValue(lockedSessions),
+    step_up_proofs: { create: vi.fn().mockResolvedValue({}) },
     email_otps: {
-      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-      create: jest.fn().mockResolvedValue({ id: 'otp-1', expiresAt: new Date() }),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      create: vi.fn().mockResolvedValue({ id: 'otp-1', expiresAt: new Date() }),
     },
   };
   const prisma = {
-    $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+    $transaction: vi.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
   };
   return { repository: new StepUpRepository(prisma as never), tx };
 }

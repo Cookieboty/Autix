@@ -3,14 +3,14 @@ import { TasksController } from './tasks.controller';
 
 describe('TasksController.listTasks / listModels', () => {
   it('listTasks delegates to TasksService', async () => {
-    const tasksService = { listTasks: jest.fn().mockResolvedValue([{ taskType: 'image_generation' }]) };
+    const tasksService = { listTasks: vi.fn().mockResolvedValue([{ taskType: 'image_generation' }]) };
     const controller = new TasksController(tasksService as never, {} as never, {} as never);
 
     expect(await controller.listTasks()).toEqual([{ taskType: 'image_generation' }]);
   });
 
   it('listModels resolves the caller (optional) and the Accept-Language locale before delegating', async () => {
-    const tasksService = { listModelsForTask: jest.fn().mockResolvedValue([]) };
+    const tasksService = { listModelsForTask: vi.fn().mockResolvedValue([]) };
     const controller = new TasksController(tasksService as never, {} as never, {} as never);
 
     await controller.listModels('image_generation', { id: 'user-1' } as never, 'zh-CN,zh;q=0.9');
@@ -22,7 +22,7 @@ describe('TasksController.listTasks / listModels', () => {
   });
 
   it('listModels passes userId: undefined for an anonymous caller and defaults locale to en', async () => {
-    const tasksService = { listModelsForTask: jest.fn().mockResolvedValue([]) };
+    const tasksService = { listModelsForTask: vi.fn().mockResolvedValue([]) };
     const controller = new TasksController(tasksService as never, {} as never, {} as never);
 
     await controller.listModels('image_generation', undefined, undefined);
@@ -36,8 +36,8 @@ describe('TasksController.listTasks / listModels', () => {
 
 describe('TasksController.quote', () => {
   it('resolves the caller membership level before estimating', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({ estimatedCost: 1, breakdown: [], pricingSnapshot: {} });
-    const membershipService = { resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2) };
+    const estimateCost = vi.fn().mockResolvedValue({ estimatedCost: 1, breakdown: [], pricingSnapshot: {} });
+    const membershipService = { resolveActiveMembershipLevel: vi.fn().mockResolvedValue(2) };
     const controller = new TasksController(
       {} as never,
       { estimateCost } as never,
@@ -51,8 +51,8 @@ describe('TasksController.quote', () => {
   });
 
   it('defaults to membershipLevel 0 for anonymous callers', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({ estimatedCost: 1, breakdown: [], pricingSnapshot: {} });
-    const membershipService = { resolveActiveMembershipLevel: jest.fn() };
+    const estimateCost = vi.fn().mockResolvedValue({ estimatedCost: 1, breakdown: [], pricingSnapshot: {} });
+    const membershipService = { resolveActiveMembershipLevel: vi.fn() };
     const controller = new TasksController(
       {} as never,
       { estimateCost } as never,
@@ -67,12 +67,12 @@ describe('TasksController.quote', () => {
 
   it('returns total/breakdown (NOT the frozen snapshot) mapped from PointsService.estimateCost, and forwards modelConfigId/params/usage', async () => {
     const snapshot = { schemaVersion: 1, modelConfigId: 'model-1' };
-    const estimateCost = jest.fn().mockResolvedValue({
+    const estimateCost = vi.fn().mockResolvedValue({
       estimatedCost: 42,
       breakdown: [{ id: 'base', amount: 42 }],
       pricingSnapshot: snapshot,
     });
-    const membershipService = { resolveActiveMembershipLevel: jest.fn().mockResolvedValue(0) };
+    const membershipService = { resolveActiveMembershipLevel: vi.fn().mockResolvedValue(0) };
     const controller = new TasksController(
       {} as never,
       { estimateCost } as never,
@@ -98,12 +98,12 @@ describe('TasksController.quote', () => {
   });
 
   it('never creates a hold — quote is display-only pricing, not a real charge', async () => {
-    const createHold = jest.fn();
+    const createHold = vi.fn();
     const pointsService = {
-      estimateCost: jest.fn().mockResolvedValue({ estimatedCost: 1, breakdown: [], pricingSnapshot: {} }),
+      estimateCost: vi.fn().mockResolvedValue({ estimatedCost: 1, breakdown: [], pricingSnapshot: {} }),
       createHold,
     };
-    const membershipService = { resolveActiveMembershipLevel: jest.fn().mockResolvedValue(0) };
+    const membershipService = { resolveActiveMembershipLevel: vi.fn().mockResolvedValue(0) };
     const controller = new TasksController({} as never, pointsService as never, membershipService as never);
 
     await controller.quote('image_generation', { params: {} } as never, undefined);
@@ -113,8 +113,8 @@ describe('TasksController.quote', () => {
 
   it('propagates a pricing rejection (invalid params, unknown task, missing binding) as-is — no invented price', async () => {
     const rejection = new BadRequestException({ message: '参数不合法', violations: ['quality'] });
-    const estimateCost = jest.fn().mockRejectedValue(rejection);
-    const membershipService = { resolveActiveMembershipLevel: jest.fn().mockResolvedValue(0) };
+    const estimateCost = vi.fn().mockRejectedValue(rejection);
+    const membershipService = { resolveActiveMembershipLevel: vi.fn().mockResolvedValue(0) };
     const controller = new TasksController(
       {} as never,
       { estimateCost } as never,

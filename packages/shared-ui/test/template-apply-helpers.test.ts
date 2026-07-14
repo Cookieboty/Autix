@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import type { VideoTemplate } from '@autix/sdk';
 import { resolveVideoModelCapability } from '@autix/domain';
 import { applyTemplateToStudioForm } from '../src/growth/generator/video/template-apply.helpers';

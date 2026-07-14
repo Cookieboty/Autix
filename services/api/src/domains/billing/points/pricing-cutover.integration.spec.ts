@@ -27,16 +27,16 @@ const PRICING_SCHEMA = {
 
 function buildRepo() {
   return {
-    findTaskDefinition: jest.fn().mockResolvedValue({ taskType: 'image_generation', isActive: true, fixedCostSchema: null }),
-    findBinding: jest.fn().mockResolvedValue({
+    findTaskDefinition: vi.fn().mockResolvedValue({ taskType: 'image_generation', isActive: true, fixedCostSchema: null }),
+    findBinding: vi.fn().mockResolvedValue({
       taskType: 'image_generation', modelConfigId: 'model-1',
       multiplier: { toString: () => '1.000' }, isActive: true, isDefault: true,
     }),
-    findDefaultBinding: jest.fn().mockResolvedValue(null),
-    findModelPricingConfig: jest.fn().mockResolvedValue({
+    findDefaultBinding: vi.fn().mockResolvedValue(null),
+    findModelPricingConfig: vi.fn().mockResolvedValue({
       id: 'model-1', name: 'GPT Image', paramsSchema: PARAMS_SCHEMA, pricingSchema: PRICING_SCHEMA, schemaVersion: 1,
     }),
-    findActiveDiscounts: jest.fn().mockResolvedValue([]),
+    findActiveDiscounts: vi.fn().mockResolvedValue([]),
   };
 }
 
@@ -107,7 +107,7 @@ describe('pricing cutover — ajv rejects out-of-range params', () => {
 describe('pricing cutover — discount stacking end to end', () => {
   it('combines the best non-stackable discount with all stackable ones through TaskPricingEstimatorService', async () => {
     const repo = buildRepo();
-    repo.findActiveDiscounts = jest.fn().mockResolvedValue([
+    repo.findActiveDiscounts = vi.fn().mockResolvedValue([
       { id: 'a', code: 'A', factor: { toString: () => '0.900' }, scope: {}, stackable: false, priority: 0, effectiveFrom: null, effectiveTo: null, isActive: true },
       { id: 'b', code: 'B', factor: { toString: () => '0.700' }, scope: {}, stackable: false, priority: 0, effectiveFrom: null, effectiveTo: null, isActive: true },
       { id: 'c', code: 'C', factor: { toString: () => '0.950' }, scope: {}, stackable: true, priority: 0, effectiveFrom: null, effectiveTo: null, isActive: true },
@@ -130,7 +130,7 @@ describe('pricing cutover — discount stacking end to end', () => {
 describe('pricing cutover — NULL pricingSchema is a hard 400, never a free generation', () => {
   it('never returns estimatedCost 0 due to an unconfigured model', async () => {
     const repo = buildRepo();
-    repo.findModelPricingConfig = jest.fn().mockResolvedValue({
+    repo.findModelPricingConfig = vi.fn().mockResolvedValue({
       id: 'model-1', name: 'Unconfigured', paramsSchema: null, pricingSchema: null, schemaVersion: 1,
     });
     const service = new TaskPricingEstimatorService(repo as never);
@@ -142,7 +142,7 @@ describe('pricing cutover — NULL pricingSchema is a hard 400, never a free gen
 
   it('never returns estimatedCost 0 due to a missing task-model binding', async () => {
     const repo = buildRepo();
-    repo.findBinding = jest.fn().mockResolvedValue(null);
+    repo.findBinding = vi.fn().mockResolvedValue(null);
     const service = new TaskPricingEstimatorService(repo as never);
 
     await expect(

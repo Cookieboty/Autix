@@ -27,24 +27,24 @@ const VALID_PRICING_SCHEMA = {
 
 function createService() {
   const prisma = {
-    $transaction: jest.fn(async (callback) => callback(prisma)),
+    $transaction: vi.fn(async (callback) => callback(prisma)),
     model_config_membership_levels: {
-      deleteMany: jest.fn(async () => ({ count: 0 })),
-      createMany: jest.fn(async () => ({ count: 0 })),
+      deleteMany: vi.fn(async () => ({ count: 0 })),
+      createMany: vi.fn(async () => ({ count: 0 })),
     },
     model_configs: {
-      findMany: jest.fn(async () => []),
-      findFirst: jest.fn(async () => null),
-      create: jest.fn(async ({ data }) => ({ id: 'model-1', ...data })),
-      update: jest.fn(async ({ data }) => ({ id: 'model-1', ...data })),
-      updateMany: jest.fn(async () => ({ count: 0 })),
-      delete: jest.fn(async ({ where }) => ({ id: where.id })),
-      findUnique: jest.fn(async () => null),
+      findMany: vi.fn(async () => []),
+      findFirst: vi.fn(async () => null),
+      create: vi.fn(async ({ data }) => ({ id: 'model-1', ...data })),
+      update: vi.fn(async ({ data }) => ({ id: 'model-1', ...data })),
+      updateMany: vi.fn(async () => ({ count: 0 })),
+      delete: vi.fn(async ({ where }) => ({ id: where.id })),
+      findUnique: vi.fn(async () => null),
     },
   };
   const modelConfigRepository = new ModelConfigRepository(prisma as never);
   const membershipService = {
-    resolveActiveMembershipLevelId: jest.fn(async (): Promise<string | null> => null),
+    resolveActiveMembershipLevelId: vi.fn(async (): Promise<string | null> => null),
   };
 
   return {
@@ -312,7 +312,7 @@ describe('ModelConfigService getConfigForOrchestrator hardening', () => {
 
 describe('ModelConfigRepository.findSystemModels select fields', () => {
   it('selects paramsSchema, pricingSchema, schemaVersion and description', async () => {
-    const findMany = jest.fn().mockResolvedValue([]);
+    const findMany = vi.fn().mockResolvedValue([]);
     const repo = new ModelConfigRepository({ model_configs: { findMany } } as never);
 
     await repo.findSystemModels();
