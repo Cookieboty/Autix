@@ -20,7 +20,7 @@ export function ModeTabs({
   const t = useTranslations('publicGrowth.generator.studio');
   const tabs = [
     { id: 'history' as const, label: t('history'), icon: History },
-    { id: 'templates' as const, label: t('templates'), icon: WandSparkles },
+    { id: 'templates' as const, label: t('gallery'), icon: WandSparkles },
   ];
 
   const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.id === active));
