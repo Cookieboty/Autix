@@ -5,7 +5,10 @@ import {
   resolveImagePricingResolution,
   type ImageModelHint,
 } from '@autix/domain/image';
+import { readImageModelMetadata, supportsImageOperation } from '@autix/domain/model';
+import { PROTOCOL_PRESETS, validateModelProtocolConfig } from '@autix/ai-adapters/image';
 import { buildImageParamsSchema, type ModelSchemaHint } from './seed-pricing.schemas';
+import { SEED_MODELS } from './seed-pricing.models';
 
 // 三个探测 imageModelKind 的固定 hint —— 用 metadata.imageModelKind 显式钉住 kind
 // （detectImageModelKind:41 优先读它），而不是靠 model-id 嗅探 —— 后者一旦改了 seed
@@ -113,5 +116,43 @@ describe('buildImageParamsSchema', () => {
     const geminiSchema = buildImageParamsSchema(GEMINI_3_PRO);
     const params = deriveParams(geminiSchema, { size: '2048x2048@2K', resolution: '1K', quality: 'high' });
     expect(params.resolution).toBe('2K');
+  });
+});
+
+// Task 8：SEED_MODELS 的每个 image 行必须显式声明 protocolKey / operations / limits——
+// preset 路由（Task 9）读的就是它们，第 1 期只落了读取 helper，没有任何 seed 写这三个字段。
+describe('SEED_MODELS image metadata (protocolKey / operations / limits)', () => {
+  const imageRows = SEED_MODELS.filter((m) => m.capabilities.includes('image'));
+
+  it('seeds protocolKey / operations / limits on every image model', () => {
+    for (const row of imageRows) {
+      const meta = readImageModelMetadata(row.metadata);
+      expect(meta.protocolKey).toBe('openai-images@v1');
+      expect(meta.operations?.length).toBeGreaterThan(0);
+      expect(meta.limits?.maxCount).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('seeded metadata + seeded schema pass the cross-config validator (spec §7.2)', () => {
+    for (const row of imageRows) {
+      const schema = buildImageParamsSchema(row);
+      const preset = PROTOCOL_PRESETS[readImageModelMetadata(row.metadata).protocolKey!];
+      const violations = validateModelProtocolConfig({ paramsSchema: schema, metadata: row.metadata, preset });
+      expect(violations).toEqual([]); // ← 构建期校验（spec §7.2：CI 对所有 preset × 所有 seed 模型跑一次）
+    }
+  });
+
+  it('declares edit only for models whose capability actually supports source images', () => {
+    for (const row of imageRows) {
+      const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(row as ImageModelHint)];
+      expect(supportsImageOperation(row.metadata, 'edit')).toBe(cap.supportsSourceImage);
+    }
+  });
+
+  it('limits.maxCount matches the capability table (spec: 第 3 期会删掉能力表，metadata 现在必须与它一致)', () => {
+    for (const row of imageRows) {
+      const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(row as ImageModelHint)];
+      expect(readImageModelMetadata(row.metadata).limits?.maxCount).toBe(cap.maxCount);
+    }
   });
 });

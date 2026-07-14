@@ -60,9 +60,12 @@ export function buildImageParamsSchema(model: ModelSchemaHint): ParamsSchema {
     required.push('size');
   }
 
-  // quality：仅当模型确有质量档位时给（gemini flash/pro 无质量轴 → 不给该属性，
-  // 运行时发来的空 quality 会被 normalizeImageQuality 归一成 undefined 而丢弃）。
-  // role: both —— 它既计价，也要发给上游。
+  // quality：preset.paramBindings.quality（omitWhen: 'empty'）对所有图片模型统一暴露，
+  // 但只有模型确有质量档位时才真正可选（gemini flash/pro 无质量轴，运行时发来的空
+  // quality 会被 normalizeImageQuality 归一成 undefined 而丢弃）。role: both —— 它既
+  // 计价，也要发给上游。无质量轴的模型仍需要一个 stub 属性（role: wire / control:
+  // hidden，无 enum、无 default、不进 required）——否则 preset 的 quality 绑定在这些
+  // 模型上找不到对应属性，会被 spec §7.2 规则 1b 判成「绑定永远不会触发」。
   if (cap.qualities.length > 0) {
     const values = cap.qualities;
     const fallback = values.includes(cap.defaults.quality) ? cap.defaults.quality : values[0];
@@ -80,6 +83,11 @@ export function buildImageParamsSchema(model: ModelSchemaHint): ParamsSchema {
       },
     };
     required.push('quality');
+  } else {
+    properties.quality = {
+      type: 'string',
+      'x-ui': { role: 'wire', control: 'hidden' },
+    };
   }
 
   // resolution：**派生参数**（spec §6.2）。服务端按 size 算，前端传什么都被覆盖 ——
@@ -117,6 +125,27 @@ export function buildImageParamsSchema(model: ModelSchemaHint): ParamsSchema {
     default: 0,
     'x-ui': { role: 'pricing', control: 'hidden' },
   };
+
+  // seed：网关协议（gatewayOpenAIV1.paramBindings.seed）对所有图片模型统一暴露的透传参数
+  // （omitWhen: 'empty' —— 不传就不发）。role: 'wire'，不计价、不在 required——可选。
+  // 不进 CHOICE_CONTROLS 名单，'hidden' 控件因此不要求 enum（spec §7.2 规则 1a/1b：
+  // 每个 preset.paramBindings 的 key 都必须在 paramsSchema 里能找到对应属性，否则
+  // 该绑定永远不会触发——这条属性正是补上这个闭合）。
+  properties.seed = {
+    type: 'integer',
+    'x-ui': { role: 'wire', control: 'hidden' },
+  };
+
+  // negativePrompt：preset 用 strategy: 'prompt-inject' 把它拼进 prompt（而非独立字段）。
+  // 只在模型确实支持负向提示时暴露——'none' 的模型没有对应能力，硬塞这个属性只会让
+  // 用户以为填了有效，实际被服务端忽略（cap.supportsNegativePrompt 消费点见
+  // packages/domain/src/image/coerce.ts）。
+  if (cap.supportsNegativePrompt !== 'none') {
+    properties.negativePrompt = {
+      type: 'string',
+      'x-ui': { role: 'wire', control: 'hidden' },
+    };
+  }
 
   return { $schema: JSON_SCHEMA_DRAFT, type: 'object', required, properties };
 }
