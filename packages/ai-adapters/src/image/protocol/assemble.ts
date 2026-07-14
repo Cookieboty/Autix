@@ -79,13 +79,26 @@ export function assembleImageRequest(req: ImageCallRequest): AssembledRequest {
       continue;
     }
     if (isStrategy(binding)) continue;   // prompt-inject 已处理；ignore 是显式丢弃
-    const specs = Array.isArray(binding) ? binding : [binding];
-    for (const spec of specs) {
+    if (!Array.isArray(binding)) {
+      // 单路径绑定：applied[name] 就是这个标量本身（今天所有已存在的 preset 都走这条路）。
+      const value = resolveValue(binding, raw);
+      if (binding.omitWhen === 'empty' && isEmpty(value)) continue;
+      setPath(body, binding.path, value);
+      applied[name] = value;
+      continue;
+    }
+    // 数组绑定：一个参数写往多条上游路径，每条路径可能有各自的 valueMap/transform、
+    // 解析出不同的值——没有单一标量能诚实代表"这个参数被发到了几个不同字段、且值不同"
+    // 这件事，所以这里记 Record<path, resolvedValue>（§4.4：applied 必须等于真正发出去的值）。
+    // 被 omitWhen:'empty' 跳过的路径不计入；若这个参数的所有路径都被跳过，则它完全不出现在 applied 里。
+    const perPath: Record<string, unknown> = {};
+    for (const spec of binding) {
       const value = resolveValue(spec, raw);
       if (spec.omitWhen === 'empty' && isEmpty(value)) continue;
       setPath(body, spec.path, value);
-      applied[name] = value;
+      perPath[spec.path] = value;
     }
+    if (Object.keys(perPath).length > 0) applied[name] = perPath;
   }
 
   const url = buildEndpoint(req.baseUrl, endpoint.path.replace('{model}', req.model));

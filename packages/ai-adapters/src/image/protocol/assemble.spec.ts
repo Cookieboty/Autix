@@ -65,6 +65,10 @@ describe('assembleImageRequest — sync-json', () => {
     expect(out.body).not.toHaveProperty('negativePrompt');
     expect(out.promptOverride).toBe('a cat\navoid: blurry');
     expect(out.body?.prompt).toBe('a cat\navoid: blurry');
+    // applied.params 对 prompt-inject 记的是模板渲染前的原始值 'blurry'，不是渲染后落进
+    // prompt 里的 'avoid: blurry' —— 渲染后的完整 prompt 已经由 out.promptOverride 单独
+    // 记录了，applied 这里只需要诚实反映「用户传的这个参数值是什么」。
+    expect(out.applied.params.negativePrompt).toBe('blurry');
   });
 
   it('drops an explicitly ignored param without a warning-worthy surprise', () => {
@@ -99,6 +103,45 @@ describe('assembleImageRequest — sync-json', () => {
     };
     const out = assembleImageRequest({ ...BASE, preset, params: { size: '1024x1024@1K' } });
     expect(out.body?.generationConfig).toEqual({ image: { aspectRatio: '1:1', imageSize: '1K' } });
+    // 数组绑定没有单一标量能诚实代表"发到了两个不同字段、值还不同"——applied.params.size
+    // 必须是按路径分开记录的 Record<path, resolvedValue>，两条路径的值都不能丢。
+    expect(out.applied.params.size).toEqual({
+      'generationConfig.image.aspectRatio': '1:1',
+      'generationConfig.image.imageSize': '1K',
+    });
+  });
+
+  it('omits only the skipped path from applied when an array binding has a mix of omitWhen:empty specs', () => {
+    const preset: ProtocolPreset = {
+      ...PRESET,
+      paramBindings: {
+        seed: [
+          { path: 'generationConfig.seed', omitWhen: 'empty' },
+          { path: 'generationConfig.seedEcho' },
+        ],
+      },
+    };
+    const out = assembleImageRequest({ ...BASE, preset, params: { seed: '' } });
+    expect(out.body).toEqual({
+      model: 'nano-banana', prompt: 'a cat', n: 2, response_format: 'b64_json',
+      generationConfig: { seedEcho: '' },
+    });
+    expect(out.applied.params.seed).toEqual({ 'generationConfig.seedEcho': '' });
+  });
+
+  it('drops the param from applied entirely when every spec of an array binding is omitWhen:empty and skipped', () => {
+    const preset: ProtocolPreset = {
+      ...PRESET,
+      paramBindings: {
+        seed: [
+          { path: 'generationConfig.seed', omitWhen: 'empty' },
+          { path: 'generationConfig.seedEcho', omitWhen: 'empty' },
+        ],
+      },
+    };
+    const out = assembleImageRequest({ ...BASE, preset, params: { seed: '' } });
+    expect(out.body).not.toHaveProperty('generationConfig');
+    expect(out.applied.params).not.toHaveProperty('seed');
   });
 
   it('reports fan-out instead of binding n when the preset has no n field', () => {
