@@ -38,6 +38,22 @@ export class GalleryRepository {
     return this.prisma.gallery_posts.create({ data });
   }
 
+  /**
+   * 按来源生成记录查「活着的」广场帖 —— 活帖定义全局唯一：status <> REMOVED。
+   * 与 DB 的 partial unique index（gallery_posts_image_generation_active_uniq）同一条规则，
+   * 两处必须逐字一致，否则服务层放行的写入会被索引拒绝（或反之）。
+   */
+  findActivePostByImageGenerationId(imageGenerationId: string, authorId: string) {
+    return this.prisma.gallery_posts.findFirst({
+      where: {
+        imageGenerationId,
+        authorId,
+        status: { not: GalleryStatus.REMOVED },
+      },
+      select: { id: true, status: true },
+    });
+  }
+
   update(id: string, data: Prisma.gallery_postsUncheckedUpdateInput) {
     return this.prisma.gallery_posts.update({ where: { id }, data });
   }

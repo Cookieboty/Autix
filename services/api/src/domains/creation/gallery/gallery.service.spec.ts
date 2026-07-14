@@ -35,6 +35,10 @@ function makeService(overrides: {
   posts?: Record<string, Record<string, unknown>>;
   captureUpdate?: (id: string, data: Record<string, unknown>) => void;
   r2PublicBaseUrl?: string;
+  activePosts?: Record<string, { id: string; status: string } | null>;
+  captureCreate?: (data: Record<string, unknown>) => void;
+  createImpl?: (data: Record<string, unknown>) => Promise<unknown>;
+  findActivePostImpl?: (imageGenerationId: string) => Promise<{ id: string; status: string } | null>;
 }) {
   const repo = {
     findImageGenerationOwner:
@@ -43,7 +47,14 @@ function makeService(overrides: {
     findVideoGenerationOwner: async () => null,
     isReferenceImagePubliclyReusable: async () =>
       overrides.isReferenceImagePubliclyReusable ?? false,
-    create: async (data: Record<string, unknown>) => ({ id: 'post-1', ...data }),
+    findActivePostByImageGenerationId:
+      overrides.findActivePostImpl ??
+      (async (imageGenerationId: string) => overrides.activePosts?.[imageGenerationId] ?? null),
+    create: async (data: Record<string, unknown>) => {
+      if (overrides.createImpl) return overrides.createImpl(data);
+      overrides.captureCreate?.(data);
+      return { id: 'post-new', ...data };
+    },
     findById: async (id: string) => overrides.posts?.[id] ?? null,
     update: async (id: string, data: Record<string, unknown>) => {
       overrides.captureUpdate?.(id, data);
@@ -115,13 +126,13 @@ describe('GalleryService.createSubmission — fail-closed 归属校验', () => {
 
   it('generation 属于作者本人 → 放行并成功创建投稿', async () => {
     const service = makeService({ imageGenerations: { [myGenId]: myGen } });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
       imageGenerationId: myGenId,
     } as never);
-    expect(post.id).toBe('post-1');
+    expect(post.id).toBe('post-new');
     expect(post.mediaUrls).toEqual(myGen.generatedImages);
     expect(post.coverImage).toBe(myGen.generatedImages![0]);
   });
@@ -146,7 +157,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
       imageGenerations: { [myGenId]: myGen },
       isReferenceImagePubliclyReusable: false,
     });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -165,7 +176,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
       imageGenerations: { [myGenId]: myGen },
       isReferenceImagePubliclyReusable: false,
     });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -180,7 +191,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
       imageGenerations: { [myGenId]: myGen },
       isReferenceImagePubliclyReusable: true,
     });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -194,7 +205,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
       imageGenerations: { [myGenId]: myGen },
       isReferenceImagePubliclyReusable: false,
     });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -205,7 +216,7 @@ describe('GalleryService.createSubmission — 元数据快照 + 参考图授权'
 
   it('USER_UPLOAD 来源不触发归属校验、不快照元数据', async () => {
     const service = makeService({});
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'USER_UPLOAD',
@@ -232,7 +243,7 @@ describe('GalleryService.createSubmission — Task 4.5：站内来源写入守�
 
   it('FROM_GENERATION 忽略 DTO mediaUrls，用 generation.generatedImages', async () => {
     const service = makeService({ imageGenerations: { [myGenId]: myGen } });
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'FROM_GENERATION',
@@ -284,7 +295,7 @@ describe('GalleryService.createSubmission — Task 4.5：站内来源写入守�
 
   it('USER_UPLOAD 站内 mediaUrls/coverImage 全部放行', async () => {
     const service = makeService({});
-    const post = await service.createSubmission(authorId, {
+    const post: any = await service.createSubmission(authorId, {
       kind: 'IMAGE',
       category: 'ai_generated',
       sourceType: 'USER_UPLOAD',
@@ -856,4 +867,70 @@ describe('GalleryService.recreate — 仅 PUBLISHED，读快照 + referenceCount
       expect(recordReference).not.toHaveBeenCalled();
     },
   );
+});
+
+// ── createSubmission 投稿幂等（Task 2）────────────────────────────────────
+
+describe('createSubmission —— 一次生成至多一条活着的广场帖', () => {
+  const dto = {
+    kind: 'IMAGE',
+    category: 'portrait',
+    sourceType: 'FROM_GENERATION',
+    imageGenerationId: 'gen-1',
+  } as never;
+
+  const generation = {
+    userId: 'user-1',
+    resolvedPrompt: 'a cat',
+    modelUsed: 'gpt-image',
+    width: 1024,
+    height: 1024,
+    referenceImage: null,
+    generatedImages: [`${R2_PUBLIC_BASE}/a.png`, `${R2_PUBLIC_BASE}/b.png`],
+  };
+
+  it('已存在活帖时幂等返回该帖，不新建', async () => {
+    const created: unknown[] = [];
+    const service = makeService({
+      imageGenerations: { 'gen-1': generation },
+      activePosts: { 'gen-1': { id: 'post-existing', status: 'PENDING' } },
+      captureCreate: (data) => created.push(data),
+    });
+
+    const result = await service.createSubmission('user-1', dto);
+
+    expect((result as { id: string }).id).toBe('post-existing');
+    expect(created).toHaveLength(0);
+  });
+
+  it('没有活帖时正常新建 PENDING 帖', async () => {
+    const created: unknown[] = [];
+    const service = makeService({
+      imageGenerations: { 'gen-1': generation },
+      activePosts: {},
+      captureCreate: (data) => created.push(data),
+    });
+
+    await service.createSubmission('user-1', dto);
+
+    expect(created).toHaveLength(1);
+    expect((created[0] as { status: string }).status).toBe('PENDING');
+  });
+
+  it('并发抢跑撞 DB 唯一索引（P2002）时回查并返回已有帖，不冒泡成 500', async () => {
+    let activePost: { id: string; status: string } | null = null;
+    const service = makeService({
+      imageGenerations: { 'gen-1': generation },
+      // 首次查为空（放行到 create），create 抛 P2002，回查时另一方已写入
+      findActivePostImpl: async () => activePost,
+      createImpl: async () => {
+        activePost = { id: 'post-raced', status: 'PENDING' };
+        throw Object.assign(new Error('unique'), { code: 'P2002' });
+      },
+    });
+
+    const result = await service.createSubmission('user-1', dto);
+
+    expect((result as { id: string }).id).toBe('post-raced');
+  });
 });

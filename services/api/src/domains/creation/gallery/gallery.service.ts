@@ -198,10 +198,24 @@ export class GalleryService {
    * POST /gallery：完整投稿，先审后发 → 直接 PENDING，不设 publishedAt。
    * FROM_GENERATION 来源的 prompt/model/width/height/referenceImage 从服务端生成记录快照，
    * 不采信 DTO（DTO 本就不携带这些字段）。
+   *
+   * 幂等：一次生成至多一条活着的广场帖（status <> REMOVED）。已有活帖 → 直接返回该帖，
+   * 不新建。理由：FROM_GENERATION 的媒体是从生成记录派生的整次生成全部图，按「每张图」
+   * 重复投稿只会产出内容完全相同的重复帖；且「下架后再投稿」若放行，会绕开 republish
+   * 让同一次生成在广场里有两条命。
    */
   async createSubmission(authorId: string, dto: CreateGalleryPostDto) {
     assertSource(dto as GallerySourcePayload, 'author');
     const generation = await this.assertOwnership(dto, authorId);
+
+    if (dto.imageGenerationId) {
+      const existing = await this.repo.findActivePostByImageGenerationId(
+        dto.imageGenerationId,
+        authorId,
+      );
+      if (existing) return existing;
+    }
+
     const snapshot = await this.buildGenerationSnapshot(
       generation,
       authorId,
@@ -209,7 +223,7 @@ export class GalleryService {
     );
     const media = await this.resolveSubmissionMedia(dto.sourceType, dto, generation);
 
-    return this.repo.create({
+    const data = {
       kind: dto.kind,
       title: dto.title,
       description: dto.description,
@@ -231,7 +245,27 @@ export class GalleryService {
       referenceImage: snapshot?.referenceImage ?? null,
       status: GalleryStatus.PENDING,
       authorId,
-    });
+    };
+
+    try {
+      return await this.repo.create(data);
+    } catch (err) {
+      // 并发抢跑：两个请求同时通过上面的 findActive 检查，DB partial unique index 是唯一性的
+      // 最终保证——抢输的一方命中 P2002 后回查，返回抢赢方那条，而不是把异常冒泡成 500。
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError ||
+        (err as { code?: string })?.code === 'P2002'
+      ) {
+        if ((err as { code?: string }).code === 'P2002' && dto.imageGenerationId) {
+          const raced = await this.repo.findActivePostByImageGenerationId(
+            dto.imageGenerationId,
+            authorId,
+          );
+          if (raced) return raced;
+        }
+      }
+      throw err;
+    }
   }
 
   /**
