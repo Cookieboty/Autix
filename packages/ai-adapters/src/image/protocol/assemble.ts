@@ -94,13 +94,14 @@ export function assembleImageRequest(req: ImageCallRequest): AssembledRequest {
     headers[preset.auth.name] = preset.auth.template.replace('{apiKey}', req.apiKey);
   }
 
-  // 约定：`ProtocolPreset.transport` 是整个 preset 对象的单一传输形态标记，本意是描述
-  // "generate" 这个主操作的传输形态。带 `multipart` spec 的 preset，其 `edit` 操作总是走
-  // multipart 分支——这是通过把这类 preset 的 transport 直接设为 'multipart' 来体现的
-  // （而不是按 operation 分别声明 transport）。因此若某家族 generate 走 sync-json、edit
-  // 走 multipart（如上传原图），需要拆成两个 preset 对象，各自的 transport 描述自己的形态；
-  // 不能指望同一个 preset 对同一份 transport 字段在不同 operation 下有不同解读。
-  if (preset.transport === 'multipart') {
+  // 约定：`ProtocolPreset.transport` 描述的是 "generate" 这个主操作的传输形态，preset
+  // 本身没有按 operation 分别声明 transport 的字段（YAGNI——现在没有 generate 本身就是
+  // multipart 的协议）。因此 `edit` 是否走 multipart，不看 `transport`，而看这个 preset
+  // 是否声明了 `multipart` spec：带 `multipart` spec 的 preset，其 `edit` 操作总是走
+  // multipart 分支，即便 `transport` 写的是 'sync-json'（那描述的是 generate）。
+  // 若将来出现 generate 本身也是 multipart 的协议，再把 `transport` 下放到
+  // `EndpointSpec`——现在不做。
+  if (preset.transport === 'multipart' || (operation === 'edit' && preset.multipart)) {
     const mp = preset.multipart;
     if (!mp) throw new Error(`Preset "${preset.key}" is multipart but has no multipart spec`);
     const fields: Record<string, string> = {};
