@@ -1,7 +1,7 @@
 import type { VideoProjectShareDetail } from '@autix/shared-store';
 
 function getApiOrigin(): string {
-  return (process.env.API_URL || 'http://localhost:4000')
+  return (process.env.API_URL || 'http://localhost:4100')
     .replace(/\/+$/, '')
     .replace(/\/api$/, '');
 }

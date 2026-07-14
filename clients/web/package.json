@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "wait-on tcp:4000 && dotenv -e ../../.env -- next dev --port 3100",
+    "dev": "wait-on tcp:4100 && dotenv -e ../../.env -- next dev --port 3100",
     "build": "dotenv -e ../../.env -- next build --webpack",
     "start": "dotenv -e ../../.env -- next start --port 3100",
     "typecheck": "tsc --noEmit",

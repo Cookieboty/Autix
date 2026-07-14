@@ -2,7 +2,7 @@ import { DEFAULT_LANGUAGE } from '@autix/i18n';
 import type { MembershipLevel, PointsPackage } from '@autix/sdk';
 
 function getApiOrigin(): string {
-  return (process.env.API_URL || 'http://localhost:4000')
+  return (process.env.API_URL || 'http://localhost:4100')
     .replace(/\/+$/, '')
     .replace(/\/api$/, '');
 }
