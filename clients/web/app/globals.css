@@ -1107,14 +1107,6 @@ body {
   background-size: 42px 42px;
 }
 
-/* MarketplaceCommunityView hero grid — 80px */
-.growth-grid-noise-community {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 80px 80px;
-}
-
 /* GrowthPageView hero grid — 54px */
 .growth-grid-noise-page {
   background-image:
@@ -1131,11 +1123,6 @@ body {
 /* PublicCreationDetailView hero overlay — fades to bg at 62% */
 .growth-hero-bg-fade-strong {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), var(--background) 62%, var(--background) 100%);
-}
-
-/* CommunityCollectionView horizontal hero side overlay */
-.growth-collection-hero-overlay {
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.42));
 }
 
 /* MediaCard lighter bottom fade overlay (0.78) */
@@ -1161,25 +1148,6 @@ body {
 /* PublicGeneratorEntryView / GeneratorPreviewDeck featured card overlay (0.04→0.84) */
 .growth-gen-entry-overlay {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.84));
-}
-
-/* MarketplaceCommunityView FeaturedTemplate gradient overlay */
-.growth-featured-template-overlay {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.28) 46%, rgba(0, 0, 0, 0.9) 100%);
-}
-
-/* MarketplaceCommunityView CompactTemplateCard gradient overlay */
-.growth-compact-template-overlay {
-  background: linear-gradient(180deg, transparent 15%, rgba(0, 0, 0, 0.82) 100%);
-}
-
-/* MarketplaceCommunityView flow section side fades (match card bg) */
-.growth-flow-fade-left {
-  background: linear-gradient(90deg, var(--card), transparent);
-}
-
-.growth-flow-fade-right {
-  background: linear-gradient(270deg, var(--card), transparent);
 }
 
 /* Growth-accent divider line (left→transparent) */

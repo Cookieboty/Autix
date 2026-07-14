@@ -9,7 +9,7 @@ import { buildDiscountTranslationValues } from './discount';
 import { buildGeneratorNavItems } from './generator-nav-items';
 import { PublicAccountMenu } from './PublicAccountMenu';
 
-export type PublicGeneratorAppNavKind = 'home' | 'image' | 'video' | 'community';
+export type PublicGeneratorAppNavKind = 'home' | 'image' | 'video';
 
 /** 由当前路由推导导航种类（持久单实例场景下不再靠 props 静态传入） */
 function deriveNavKind(pathname: string): PublicGeneratorAppNavKind {
@@ -22,7 +22,6 @@ const NAV_LABEL_FALLBACKS: Record<string, string> = {
   explore: 'Explore',
   image: 'Image',
   video: 'Video',
-  community: 'Community',
   marketing: 'Marketing Studio',
   cinema: 'Cinema Studio',
   originals: 'Originals',
@@ -40,7 +39,7 @@ export function PublicGeneratorAppNav({
   kind: kindProp,
   variant: variantProp,
 }: {
-  /** 不传则由 pathname 推导（持久单实例用）；显式传用于非持久场景（如 shell 内的 community/presets） */
+  /** 不传则由 pathname 推导（持久单实例用）；显式传用于非持久场景（如 shell 内的 presets） */
   kind?: PublicGeneratorAppNavKind;
   /** contained：定宽居中（首页/pricing）；fluid：全宽 + 始终收缩（功能页 image/video）。不传按 kind 推导 */
   variant?: 'contained' | 'fluid';

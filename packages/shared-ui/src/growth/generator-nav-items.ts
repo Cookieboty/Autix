@@ -8,7 +8,7 @@ export type GeneratorNavItem = {
 };
 
 export function buildGeneratorNavItems(
-  kind: 'home' | 'image' | 'video' | 'community',
+  kind: 'home' | 'image' | 'video',
 ): GeneratorNavItem[] {
   return [
     { key: 'explore', href: '/', active: kind === 'home' },

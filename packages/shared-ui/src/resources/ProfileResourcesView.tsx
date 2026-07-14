@@ -14,7 +14,6 @@ import {
   Badge,
   Button,
   Card,
-  SidebarTrigger,
   Table,
   TableBody,
   TableCell,
@@ -348,66 +347,6 @@ export function ProfileResourcesPaginationBar({
         >
           {t('pagination.next')}
         </Button>
-      </div>
-    </div>
-  );
-}
-
-export function ProfileResourcesView({
-  titleKey = 'contentTitle',
-  activeTab,
-  rows,
-  loading,
-  tabs = DEFAULT_PROFILE_RESOURCE_TABS,
-  showSidebarTrigger = true,
-  pagination,
-  onPageChange,
-  onTabChange,
-  onClickRow,
-}: {
-  titleKey?: string;
-  activeTab: MeTab;
-  rows: ProfileResourceRow[];
-  loading: boolean;
-  tabs?: ProfileResourcesTab[];
-  showSidebarTrigger?: boolean;
-  pagination?: ProfileResourcesPagination;
-  onPageChange?: (page: number) => void;
-  onTabChange: (tab: MeTab) => void;
-  onClickRow: (type: ResourceType | undefined, id: string | undefined) => void;
-}) {
-  const t = useTranslations('profile.resources');
-
-  return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
-        {showSidebarTrigger && <SidebarTrigger className="-ml-1" />}
-        <h1 className={`${showSidebarTrigger ? 'ml-1 ' : ''}text-sm font-semibold text-foreground`}>
-          {t(titleKey)}
-        </h1>
-      </div>
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <ProfileResourcesTabStrip
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={onTabChange}
-        />
-
-        <div className="mt-4">
-          <ProfileResourcesPanel
-            rows={rows}
-            tab={activeTab}
-            loading={loading}
-            onClickRow={onClickRow}
-          />
-
-          {!loading && pagination && onPageChange && (
-            <ProfileResourcesPaginationBar
-              pagination={pagination}
-              onPageChange={onPageChange}
-            />
-          )}
-        </div>
       </div>
     </div>
   );

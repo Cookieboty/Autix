@@ -594,9 +594,7 @@ export function countGrowthViolations(src: string): { color: number; inlineZh: n
 export const RATCHET_GOVERNED_DIRS = [
   'packages/shared-ui/src/growth',
 ];
-export const RATCHET_GOVERNED_EXTRA_FILES = [
-  'packages/shared-ui/src/marketplace/MarketplaceCommunityView.tsx',
-];
+export const RATCHET_GOVERNED_EXTRA_FILES: string[] = [];
 
 export type RatchetCounts = { color: number; inlineZh: number };
 

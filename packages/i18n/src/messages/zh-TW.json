@@ -577,12 +577,9 @@
     "collapseSidebar": "收起側邊欄",
     "expandSidebar": "展開側邊欄",
     "tools": "工具",
-    "myContent": "我的內容",
     "myResources": "我的資源",
     "myFavorites": "我的收藏",
     "myPublished": "我的發布",
-    "generationHistory": "生成歷史",
-    "browseHistory": "瀏覽歷史",
     "membershipOverview": "會員概覽",
     "pointsHistory": "積分流水",
     "rewardsCenter": "獎勵中心",
@@ -2863,20 +2860,6 @@
       "imageVideo": "圖片 · 影片",
       "hotRecommendations": "熱門推薦"
     },
-    "community": {
-      "promo": "社群推薦",
-      "eyebrow": "Feed",
-      "title": "社群推薦",
-      "subtitle": "圖片與影片模板",
-      "search": "搜尋模板",
-      "statTemplates": "全部模板",
-      "statImages": "圖片",
-      "statVideos": "影片",
-      "feedEyebrow": "Feed",
-      "feedTitle": "社群推薦",
-      "moreVideo": "影片模板",
-      "empty": "暫無推薦模板"
-    },
     "list": {
       "sortNewest": "最新",
       "sortPopular": "熱度",
@@ -3250,7 +3233,6 @@
     "nav": {
       "video": "影片",
       "presets": "預設",
-      "community": "社群",
       "home": "首頁",
       "image": "圖片",
       "me": "我的"
@@ -3290,7 +3272,6 @@
         "marketingStudio": "行銷工作室",
         "presets": "預設",
         "viralPresets": "爆款預設",
-        "community": "社群",
         "originalSeries": "原創系列",
         "pricing": "價格",
         "marketplace": "市集",
@@ -3401,7 +3382,6 @@
       "studio": {
         "topPromo": "全站 {zhe} 折優惠，包含 GPT-Image 2、Nano Banana 與會員開通",
         "history": "歷史",
-        "community": "社群",
         "templates": "範本",
         "templatesEmpty": "暫無圖片範本",
         "howItWorks": "使用方式",
@@ -3488,7 +3468,6 @@
           "explore": "探索",
           "image": "圖片",
           "video": "影片",
-          "community": "社群",
           "new": "New",
           "marketing": "行銷工作室",
           "cinema": "電影工作室",
@@ -3793,7 +3772,6 @@
         "portrait": "人像",
         "publicPage": "公開頁",
         "creationFlow": "創作流程",
-        "community": "社群",
         "public": "公開",
         "creative": "創意"
       },

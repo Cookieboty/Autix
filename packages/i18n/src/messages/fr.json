@@ -578,12 +578,9 @@
     "collapseSidebar": "Réduire la barre latérale",
     "expandSidebar": "Développer la barre latérale",
     "tools": "Outils",
-    "myContent": "Mon contenu",
     "myResources": "Mes ressources",
     "myFavorites": "Mes favoris",
     "myPublished": "Mes publications",
-    "generationHistory": "Historique de génération",
-    "browseHistory": "Historique de navigation",
     "membershipOverview": "Aperçu abonnement",
     "pointsHistory": "Historique des points",
     "rewardsCenter": "Centre des récompenses",
@@ -2863,20 +2860,6 @@
       "imageVideo": "Images · Vidéos",
       "hotRecommendations": "Recommandations populaires"
     },
-    "community": {
-      "promo": "Sélections communauté",
-      "eyebrow": "Feed",
-      "title": "Sélections communauté",
-      "subtitle": "Modèles image et vidéo",
-      "search": "Rechercher des modèles",
-      "statTemplates": "Tous les modèles",
-      "statImages": "Images",
-      "statVideos": "Vidéos",
-      "feedEyebrow": "Feed",
-      "feedTitle": "Sélections communauté",
-      "moreVideo": "Modèles vidéo",
-      "empty": "Aucune recommandation pour le moment"
-    },
     "list": {
       "sortNewest": "Plus récent",
       "sortPopular": "Popularité",
@@ -3586,7 +3569,6 @@
     "nav": {
       "video": "Video",
       "presets": "Presets",
-      "community": "Community",
       "home": "Home",
       "image": "Image",
       "me": "Me"
@@ -3626,7 +3608,6 @@
         "marketingStudio": "Studio marketing",
         "presets": "Préréglages",
         "viralPresets": "Préréglages viraux",
-        "community": "Communauté",
         "originalSeries": "Original Series",
         "pricing": "Tarifs",
         "marketplace": "Marketplace",
@@ -3737,7 +3718,6 @@
       "studio": {
         "topPromo": "{percent}% de réduction sur tout, y compris GPT-Image 2, Nano Banana et les abonnements",
         "history": "History",
-        "community": "Community",
         "templates": "Templates",
         "templatesEmpty": "No image templates yet",
         "howItWorks": "How it works",
@@ -3824,7 +3804,6 @@
           "explore": "Explore",
           "image": "Image",
           "video": "Video",
-          "community": "Community",
           "new": "New",
           "marketing": "Marketing Studio",
           "cinema": "Cinema Studio",
@@ -4129,7 +4108,6 @@
         "portrait": "portrait",
         "publicPage": "Public page",
         "creationFlow": "Creation flow",
-        "community": "community",
         "public": "public",
         "creative": "creative"
       },

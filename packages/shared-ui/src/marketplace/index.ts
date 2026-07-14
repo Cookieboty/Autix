@@ -4,7 +4,6 @@ export * from './ResourceGrid';
 export * from './ResourcePanel';
 export * from './MarketplaceDetailScreen';
 export * from './MarketplaceHomeView';
-export * from './MarketplaceCommunityView';
 export * from './MarketplaceListView';
 export * from './MarketplaceRouteState';
 export * from './MarketplaceTopNav';
