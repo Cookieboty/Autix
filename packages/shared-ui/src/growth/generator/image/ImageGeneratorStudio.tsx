@@ -13,7 +13,7 @@ import {
   type ImageTemplate,
   type ModelConfigItem,
 } from '@autix/shared-store';
-import { resolveTemplatePrompt } from '../../../image/studio/constants';
+import { resolveTemplatePrompt } from '../media-inputs';
 import type { PublicGrowthMediaItem } from '../../types';
 import { ModeTabs, StudioDensitySlider } from '../parts';
 import type { ImageStudioMode, TemplateDensity } from '../generator-studio-helpers';

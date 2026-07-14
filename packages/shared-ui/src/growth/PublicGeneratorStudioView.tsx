@@ -75,7 +75,7 @@ export function PublicGeneratorStudioView({
   const selectedVideoModelValue = selectedVideoModel?.id ?? initialModel ?? null;
 
   // image_generation 的 TaskModel 列表（paramsSchema/pricingSchema/multiplier/
-  // discountFactor）——照 useImageStudioWorkspaceController.ts:170-184 既有的取法抄，
+  // discountFactor）——沿用已删除的图片工作台前端既有的取法，
   // 独立于 imageModels（ModelConfigItem，驱动模型选择器）单独拉取，按 modelConfigId
   // 关联给 ImageComposer 用。paramsSchema 缺失 -> ImageComposer 不渲染参数控件
   // （spec §12：DEFAULT_IMAGE_KIND「未识别模型拿到别的模型尺寸表」的洞由此消失）。

@@ -9,7 +9,7 @@ import {
   publicGeneratorActions,
   type PublicImageHistoryItem,
 } from '@autix/shared-store';
-import { readFilesAsDataUrls } from '../../../image/studio/constants';
+import { readFilesAsDataUrls } from '../media-inputs';
 import type { PublicVideoReference } from '../generator-studio-helpers';
 
 type PublicVideoMediaTab = 'uploads' | 'generations';

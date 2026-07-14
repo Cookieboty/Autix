@@ -21,7 +21,7 @@ import { SchemaForm, translateSchemaKey, useSchemaForm } from '../../../pricing'
 import {
   getImageReferenceUploadLimit,
 } from '../../generator-image-presenters';
-import { readFilesAsDataUrls } from '../../../image/studio/constants';
+import { readFilesAsDataUrls } from '../media-inputs';
 import { OfferStrip } from '../parts';
 import type { PublicUploadedReference } from '../generator-studio-helpers';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../ui/tooltip';

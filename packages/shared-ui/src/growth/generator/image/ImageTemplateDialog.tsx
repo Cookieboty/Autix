@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, Copy, Image as ImageIcon, Info, Sparkles, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ImageTemplate } from '@autix/shared-store';
-import { resolveTemplatePrompt } from '../../../image/studio/constants';
+import { resolveTemplatePrompt } from '../media-inputs';
 import { imageTemplateCover } from '../generator-studio-helpers';
 
 export function PublicImageTemplateDialog({
