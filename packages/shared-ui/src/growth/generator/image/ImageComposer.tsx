@@ -1,11 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ClipboardEvent } from 'react';
 import {
   Coins,
-  Diamond,
-  Gauge,
   Globe2,
   ImagePlus,
   Loader2,
@@ -16,17 +14,10 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Link } from '../../../navigation';
-import {
-  buildImageSizeResolutionGroups,
-  getUniqueImageAspectOptions,
-  resolveImageSizeSelection,
-  selectImageSizeAspect,
-  selectImageSizeResolution,
-  type ImageModelCapability,
-} from '@autix/domain/image';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import { publicGeneratorActions, type ModelConfigItem } from '@autix/shared-store';
 import { MagneticButton, SpotlightPanel } from '../../GrowthInteractions';
+import { SchemaForm, translateSchemaKey, useSchemaForm } from '../../../pricing';
 import {
   getImageReferenceUploadLimit,
 } from '../../generator-image-presenters';
@@ -34,7 +25,7 @@ import { readFilesAsDataUrls } from '../../../image/studio/constants';
 import { OfferStrip } from '../parts';
 import type { PublicUploadedReference } from '../generator-studio-helpers';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../ui/tooltip';
-import { AspectRatioIcon, ImageModelParamMenu, ImageOptionParamMenu } from './ImageParamMenus';
+import { ImageModelParamMenu } from './ImageParamMenus';
 import {
   buildPublicImageEstimateInput,
   buildPublicImageGenerationSettings,
@@ -51,24 +42,34 @@ function limitPublicUploadedReferences(
 
 export function ImageComposer({
   communityMode,
-  imageCapability,
   imageModels,
   selectedModel,
   selectedModelId,
   selectedModelValue,
   modelsLoading,
+  paramsSchema,
+  pricingSchema,
+  pricingContext,
   appliedTemplate,
   generating,
   onGenerate,
   onModelChange,
 }: {
   communityMode: boolean;
-  imageCapability: ImageModelCapability;
   imageModels: ModelConfigItem[];
   selectedModel: ModelConfigItem | null;
   selectedModelId: string | null;
   selectedModelValue?: string | null;
   modelsLoading: boolean;
+  /**
+   * 当前选中模型的计价 schema（pricingActions.getTaskModels('image_generation')）。
+   * 缺失（尚未拉到 / 模型不在计价表里）→ 不渲染参数控件、不允许生成——
+   * 不再 fallback 到静态能力表（spec §12：DEFAULT_IMAGE_KIND 那条「未识别模型
+   * 拿到 gemini-3-pro-image 尺寸表，用户能选到该模型根本不支持的 4K」的洞由此消失）。
+   */
+  paramsSchema: ParamsSchema | undefined;
+  pricingSchema: PricingSchema | undefined;
+  pricingContext: { multiplier: number; discountFactor: number };
   appliedTemplate?: { id: string; title: string; prompt: string } | null;
   generating: boolean;
   onGenerate: (payload: PublicImageGenerationPayload) => Promise<void>;
@@ -76,12 +77,10 @@ export function ImageComposer({
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const tImagePrompt = useTranslations('imageStudio.prompt');
-  // 画质档位显示名走 i18n(pricing.options.<value>)；capability.qualities 只存 value token。
+  const tParams = useTranslations('pricing.params');
+  // 画质档位显示名走 i18n(pricing.options.<value>)。
   const tOptions = useTranslations('pricing.options');
   const [prompt, setPrompt] = useState('');
-  const [size, setSize] = useState(imageCapability.defaults.size);
-  const [quality, setQuality] = useState(imageCapability.defaults.quality);
-  const [count, setCount] = useState(imageCapability.defaults.count);
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
   const [uploadedRefs, setUploadedRefs] = useState<PublicUploadedReference[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -90,12 +89,15 @@ export function ImageComposer({
   const [generateError, setGenerateError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const sizeGroups = useMemo(() => buildImageSizeResolutionGroups(imageCapability), [imageCapability]);
-  const selectedSize = resolveImageSizeSelection(size, sizeGroups);
-  const selectedGroup = selectedSize.group;
-  const aspectOptions = useMemo(() => getUniqueImageAspectOptions(sizeGroups), [sizeGroups]);
+
+  const schemaMissing = !paramsSchema || !pricingSchema;
+  // schema 缺失时不喂 schema 给 useSchemaForm（返回 {}），而不是喂一个「假装存在」的
+  // schema——form.params 因此天然是空对象，handleGenerate 会把一个没有 size 的
+  // settings 发给服务端，由服务端的 required 校验拒绝，而不是前端伪造一个默认值。
+  const form = useSchemaForm(schemaMissing ? undefined : paramsSchema);
+
   const modelLabel = selectedModel?.name ?? '';
-  const uploadLimit = getImageReferenceUploadLimit(imageCapability);
+  const uploadLimit = getImageReferenceUploadLimit(paramsSchema);
   const canUploadReference = uploadLimit > 0;
   const uploadSlotsRemaining = Math.max(0, uploadLimit - uploadedRefs.length);
   const hasUploadedRefs = uploadedRefs.length > 0;
@@ -128,25 +130,11 @@ export function ImageComposer({
   }, []);
 
   useEffect(() => {
-    setSize((current) =>
-      imageCapability.sizes.some((option) => option.value === current)
-        ? current
-        : imageCapability.defaults.size,
-    );
-    setQuality((current) =>
-      !imageCapability.qualities.length ||
-        imageCapability.qualities.includes(current)
-        ? current
-        : imageCapability.defaults.quality,
-    );
-    setCount((current) =>
-      Math.min(Math.max(1, current), imageCapability.maxCount || 1),
-    );
-    setUploadedRefs((current) => limitPublicUploadedReferences(current, getImageReferenceUploadLimit(imageCapability)));
-  }, [imageCapability]);
+    setUploadedRefs((current) => limitPublicUploadedReferences(current, uploadLimit));
+  }, [uploadLimit]);
 
   useEffect(() => {
-    if (!selectedModelId || !selectedModel) {
+    if (!selectedModelId || !selectedModel || schemaMissing) {
       setEstimateCost(null);
       setEstimateLoading(false);
       return;
@@ -158,7 +146,9 @@ export function ImageComposer({
       publicGeneratorActions
         .estimateGeneration(
           buildPublicImageEstimateInput({
-            settings: buildPublicImageGenerationSettings({ size, quality, count }),
+            // 报价参数 == 生成参数：同一个 form.params 引用，只在这里补上真实
+            // 上传张数（referenceImages 是隐藏计价参数，表单里恒为 schema 默认值 0）。
+            params: form.params,
             model: selectedModel,
             selectedModelId,
             referenceImages: uploadedRefs.length,
@@ -179,7 +169,7 @@ export function ImageComposer({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [selectedModelId, selectedModel, size, quality, count, uploadedRefs.length]);
+  }, [selectedModelId, selectedModel, schemaMissing, form.params, uploadedRefs.length]);
 
   const openUploadDialog = () => {
     if (!canUploadReference || uploadSlotsRemaining <= 0 || uploading) return;
@@ -247,7 +237,9 @@ export function ImageComposer({
       setGenerateError(t('promptRequired'));
       return;
     }
-    const settings = buildPublicImageGenerationSettings({ size, quality, count });
+    // 生成用的 settings —— 与上面报价用的是同一个 form.params（spec §11 第 2 期
+    // 验收标准第 7 条：报价参数与生成参数必须是同一个对象）。
+    const settings = buildPublicImageGenerationSettings(form.params);
     setGenerateError(null);
     try {
       await onGenerate({
@@ -338,105 +330,75 @@ export function ImageComposer({
                 onPaste={handlePaste}
               />
             </div>
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              <ImageModelParamMenu
-                label={modelLabel}
-                models={imageModels}
-                selectedModelId={selectedModelId}
-                onChange={onModelChange}
-              />
-              <ImageOptionParamMenu
-                icon={<AspectRatioIcon value={selectedSize.option?.aspectValue ?? size} className="size-4" />}
-                label={selectedSize.option?.label ?? selectedSize.option?.aspectValue ?? t('auto')}
-                title={t('aspectRatio')}
-                options={aspectOptions.map((option) => ({
-                  label: option.label,
-                  value: option.aspectValue,
-                }))}
-                value={selectedSize.option?.aspectValue ?? size}
-                onChange={(nextAspect) =>
-                  setSize((current) => selectImageSizeAspect(current, nextAspect, sizeGroups))
-                }
-                renderOptionIcon={(optionValue) => (
-                  <AspectRatioIcon value={optionValue} className="size-4" />
-                )}
-              />
-              {sizeGroups.length > 1 ? (
-                <ImageOptionParamMenu
-                  icon={<Diamond className="size-4" />}
-                  label={selectedGroup?.label ?? t('auto')}
-                  title={t('selectResolution')}
-                  options={sizeGroups.map((group) => ({
-                    label: group.label,
-                    value: group.value,
-                  }))}
-                  value={selectedGroup?.value ?? ''}
-                  onChange={(nextResolution) =>
-                    setSize((current) =>
-                      selectImageSizeResolution(current, nextResolution, sizeGroups),
-                    )
-                  }
+            <div className="mt-2.5 flex flex-wrap items-start gap-3">
+              <div className="flex flex-wrap gap-1.5">
+                <ImageModelParamMenu
+                  label={modelLabel}
+                  models={imageModels}
+                  selectedModelId={selectedModelId}
+                  onChange={onModelChange}
                 />
-              ) : null}
-              {imageCapability.qualities.length > 0 ? (
-                <ImageOptionParamMenu
-                  icon={<Gauge className="size-4" />}
-                  label={tOptions.has(quality) ? tOptions(quality) : quality}
-                  title={t('selectQuality')}
-                  options={imageCapability.qualities.map((value) => ({
-                    value,
-                    label: tOptions.has(value) ? tOptions(value) : value,
-                  }))}
-                  value={quality}
-                  onChange={setQuality}
-                />
-              ) : null}
-              {/* 生成张数(count)控件已下线：张数由业务逻辑吃掉，不再作为用户可调项。
-                  count 仍保留在 state 里(恒为模型默认值)供估价/生成使用。 */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-pressed={visibility === 'public'}
-                    onClick={() =>
-                      setVisibility((current) => (current === 'private' ? 'public' : 'private'))
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-pressed={visibility === 'public'}
+                      onClick={() =>
+                        setVisibility((current) => (current === 'private' ? 'public' : 'private'))
+                      }
+                      className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
+                    >
+                      {visibility === 'private' ? (
+                        <Lock className="size-4" />
+                      ) : (
+                        <Globe2 className="size-4 text-growth-accent" />
+                      )}
+                      {visibility === 'private' ? t('private') : t('public')}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[260px] text-left">
+                    <p className="flex items-start gap-1.5">
+                      <Lock className="mt-0.5 size-3.5 shrink-0" />
+                      <span>{t('privateHint')}</span>
+                    </p>
+                    <p className="mt-1.5 flex items-start gap-1.5">
+                      <Globe2 className="mt-0.5 size-3.5 shrink-0" />
+                      <span>{t('publicHint')}</span>
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+                {/* 「绘制」只是跳转 /draw 的导航链接，无生成相关后端逻辑，暂隐藏（需要时取消注释即可）
+                <Link
+                  href="/draw"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
+                >
+                  <Pencil className="size-4" />
+                  {t('draw')}
+                </Link>
+                */}
+              </div>
+              {paramsSchema && pricingSchema ? (
+                <div className="min-w-[240px] max-w-sm flex-1">
+                  <SchemaForm
+                    paramsSchema={paramsSchema}
+                    pricingSchema={pricingSchema}
+                    pricingContext={pricingContext}
+                    form={form}
+                    translateLabel={(labelKey, fallback) =>
+                      translateSchemaKey(tParams, 'pricing.params.', labelKey, fallback)
                     }
-                    className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
-                  >
-                    {visibility === 'private' ? (
-                      <Lock className="size-4" />
-                    ) : (
-                      <Globe2 className="size-4 text-growth-accent" />
-                    )}
-                    {visibility === 'private' ? t('private') : t('public')}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[260px] text-left">
-                  <p className="flex items-start gap-1.5">
-                    <Lock className="mt-0.5 size-3.5 shrink-0" />
-                    <span>{t('privateHint')}</span>
-                  </p>
-                  <p className="mt-1.5 flex items-start gap-1.5">
-                    <Globe2 className="mt-0.5 size-3.5 shrink-0" />
-                    <span>{t('publicHint')}</span>
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-              {/* 「绘制」只是跳转 /draw 的导航链接，无生成相关后端逻辑，暂隐藏（需要时取消注释即可）
-              <Link
-                href="/draw"
-                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-background/22 px-3 text-sm font-semibold text-foreground/78 transition hover:bg-secondary hover:text-foreground"
-              >
-                <Pencil className="size-4" />
-                {t('draw')}
-              </Link>
-              */}
+                    translateOption={(optionLabelKey, fallback) =>
+                      translateSchemaKey(tOptions, 'pricing.options.', optionLabelKey, fallback)
+                    }
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
 
           <MagneticButton
             type="button"
-            disabled={generating}
+            disabled={generating || schemaMissing}
             onClick={() => void handleGenerate()}
             className="growth-generator-generate inline-flex h-full max-h-[94px] flex-col items-center justify-center gap-0.5 self-end rounded-2xl bg-growth-accent px-5 text-base font-black text-background hover:bg-foreground disabled:cursor-wait disabled:opacity-75"
           >

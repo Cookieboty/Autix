@@ -27,12 +27,21 @@ describe('resolveImageCapabilityFromModelParam', () => {
 });
 
 describe('getImageReferenceUploadLimit', () => {
-  test('uses the shared image workbench cap for models with reference image support', () => {
-    expect(getImageReferenceUploadLimit({ supportsReferenceImage: true })).toBe(8);
+  // spec §12：上限唯一来自 paramsSchema.properties.referenceImages.maximum，不再是
+  // 静态能力表的 supportsReferenceImage。变异测试：换一个 maximum 数字，返回值必须
+  // 跟着变，而不是恒为写死的 8。
+  test('comes from paramsSchema.properties.referenceImages.maximum, not a hardcoded 8', () => {
+    expect(
+      getImageReferenceUploadLimit({ properties: { referenceImages: { type: 'integer', maximum: 3 } } }),
+    ).toBe(3);
   });
 
-  test('disables uploads when the model does not support reference images', () => {
-    expect(getImageReferenceUploadLimit({ supportsReferenceImage: false })).toBe(0);
+  test('is 0 when the model cannot take reference images', () => {
+    expect(getImageReferenceUploadLimit({ properties: {} })).toBe(0);
+  });
+
+  test('is 0 when paramsSchema itself is missing (schema not loaded yet)', () => {
+    expect(getImageReferenceUploadLimit(undefined)).toBe(0);
   });
 });
 

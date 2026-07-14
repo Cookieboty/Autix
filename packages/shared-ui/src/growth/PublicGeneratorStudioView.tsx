@@ -7,11 +7,14 @@ import {
   IMAGE_MODEL_CAPABILITIES,
   type ImageModelCapability,
 } from '@autix/domain/image';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import {
   hasImageCapability,
   isVideoModel,
   listPublicAvailableModels,
+  pricingActions,
   type ModelConfigItem,
+  type TaskModel,
 } from '@autix/shared-store';
 import { getFallbackItems } from './fallback';
 import {
@@ -70,6 +73,37 @@ export function PublicGeneratorStudioView({
   );
   const selectedImageModelValue = selectedImageModel?.id ?? initialModel ?? null;
   const selectedVideoModelValue = selectedVideoModel?.id ?? initialModel ?? null;
+
+  // image_generation 的 TaskModel 列表（paramsSchema/pricingSchema/multiplier/
+  // discountFactor）——照 useImageStudioWorkspaceController.ts:170-184 既有的取法抄，
+  // 独立于 imageModels（ModelConfigItem，驱动模型选择器）单独拉取，按 modelConfigId
+  // 关联给 ImageComposer 用。paramsSchema 缺失 -> ImageComposer 不渲染参数控件
+  // （spec §12：DEFAULT_IMAGE_KIND「未识别模型拿到别的模型尺寸表」的洞由此消失）。
+  const [imageTaskModels, setImageTaskModels] = useState<TaskModel[]>([]);
+  useEffect(() => {
+    if (kind !== 'image') return;
+    let cancelled = false;
+    pricingActions
+      .getTaskModels('image_generation')
+      .then((models) => {
+        if (!cancelled) setImageTaskModels(models);
+      })
+      .catch(() => {
+        if (!cancelled) setImageTaskModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [kind]);
+  const selectedImageTaskModel = imageTaskModels.find(
+    (model) => model.modelConfigId === selectedImageModelId,
+  );
+  const imageParamsSchema = selectedImageTaskModel?.paramsSchema as unknown as ParamsSchema | undefined;
+  const imagePricingSchema = selectedImageTaskModel?.pricingSchema as unknown as PricingSchema | undefined;
+  const imagePricingContext = {
+    multiplier: selectedImageTaskModel?.multiplier ?? 1,
+    discountFactor: selectedImageTaskModel?.discountFactor ?? 1,
+  };
 
   useEffect(() => {
     if (kind !== 'image') {
@@ -195,6 +229,9 @@ export function PublicGeneratorStudioView({
           selectedModelId={selectedImageModelId}
           selectedModelValue={selectedImageModelValue}
           modelsLoading={imageModelsLoading}
+          paramsSchema={imageParamsSchema}
+          pricingSchema={imagePricingSchema}
+          pricingContext={imagePricingContext}
           onModelChange={setSelectedImageModelId}
           initialMode={initialMode}
           initialPrompt={initialPrompt}

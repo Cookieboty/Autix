@@ -117,11 +117,16 @@ export function buildImageParamsSchema(model: ModelSchemaHint): ParamsSchema {
   // 生成张数(quantity)不进图像 schema：按业务要求，张数由业务逻辑在下单时吃掉，
   // schema 只描述「一张」的参数与价格。故这里不再生成 quantity 属性/控件。
 
-  // 隐藏计价参数：按真实上传张数收费。刻意不设 maximum —— 张数来自服务端计数而非
-  // 用户任填，设上限只会在参考图偏多时 ajv 400；hold 本就按真实数量扣费。
+  // 隐藏计价参数：按真实上传张数收费。原先刻意不设 maximum（张数来自服务端计数而非
+  // 用户任填，怕设上限会在参考图偏多时 ajv 400）——但第 2 期公开生成器的上传上限
+  // （getImageReferenceUploadLimit）改成唯一读这个 maximum，不设的话上传功能会恒
+  // 拿到 0（详见 packages/shared-ui/src/growth/generator-image-presenters.ts）。
+  // 这里补上 maximum，与既有的「共享图片工作台上传上限」口径（cap.supportsReferenceImage
+  // ? 8 : 0）保持一致——hold 仍按真实数量扣费，maximum 只是前端上传口的硬上限。
   properties.referenceImages = {
     type: 'integer',
     minimum: 0,
+    maximum: cap.supportsReferenceImage ? 8 : 0,
     default: 0,
     'x-ui': { role: 'pricing', control: 'hidden' },
   };

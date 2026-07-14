@@ -97,6 +97,24 @@ describe('buildImageParamsSchema', () => {
     expect(schema.properties.referenceImages['x-ui']!.role).toBe('pricing');
   });
 
+  // 变异测试：公开生成器的 getImageReferenceUploadLimit 唯一读这个 maximum
+  // （packages/shared-ui/src/growth/generator-image-presenters.ts）——不设它会让上传
+  // 上限恒为 0，上传功能直接废掉（spec §12 / task-11 brief 第 6 步）。
+  it('caps referenceImages.maximum by the capability\'s reference-image support', () => {
+    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
+      const modelSchema = buildImageParamsSchema(model);
+      const kind = detectImageModelKind({
+        provider: model.provider,
+        model: model.model,
+        metadata: model.metadata as ImageModelHint['metadata'],
+      });
+      const cap = IMAGE_MODEL_CAPABILITIES[kind];
+      expect(modelSchema.properties.referenceImages.maximum).toBe(
+        cap.supportsReferenceImage ? 8 : 0,
+      );
+    }
+  });
+
   it('passes its own structural validator', () => {
     // 新标的 role 必须通过 Task 1 的白名单校验。
     expect(validateParamsSchema(schema)).toEqual([]);

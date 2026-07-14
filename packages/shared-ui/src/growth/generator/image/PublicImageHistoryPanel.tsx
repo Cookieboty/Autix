@@ -228,7 +228,7 @@ export function PublicImageHistoryPanel({
         .filter((image) => !hiddenKeys.has(imageKey(item.id, image)))
         .map((image) => ({
           kind: 'image' as const,
-          ratio: parseAspectRatio(item.settings.size),
+          ratio: parseAspectRatio(typeof item.settings.size === 'string' ? item.settings.size : undefined),
           item,
           image,
           key: imageKey(item.id, image),

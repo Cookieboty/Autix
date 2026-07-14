@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { ImageModelCapability } from '@autix/domain/image';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import {
   publicGalleryActions,
   publicGeneratorActions,
@@ -58,6 +59,9 @@ export function ImageGeneratorStudio({
   selectedModelId,
   selectedModelValue,
   modelsLoading,
+  paramsSchema,
+  pricingSchema,
+  pricingContext,
   onModelChange,
   initialMode = 'history',
   initialPrompt,
@@ -69,6 +73,10 @@ export function ImageGeneratorStudio({
   selectedModelId: string | null;
   selectedModelValue?: string | null;
   modelsLoading: boolean;
+  /** image_generation 的 TaskModel schema（pricingActions.getTaskModels），逐级透传给 ImageComposer。 */
+  paramsSchema: ParamsSchema | undefined;
+  pricingSchema: PricingSchema | undefined;
+  pricingContext: { multiplier: number; discountFactor: number };
   onModelChange: (modelId: string) => void;
   initialMode?: ImageStudioMode;
   /** Plan C Task 12：广场「recreate」跳转预填 prompt——复用 appliedTemplate 机制，仅挂载时应用一次。 */
@@ -135,15 +143,12 @@ export function ImageGeneratorStudio({
               prompt: item.resolvedPrompt,
               model: item.modelUsed,
               createdAt: item.createdAt,
+              // settings 现在是透传 bag（spec §11 第 2 期）：历史回填只需要展示用的
+              // size/quality，不再伪造 guidanceScale/steps/stylePreset 等已下线的
+              // 固定字段——PublicImageHistoryItem.settings 的类型不再要求它们。
               settings: {
                 size: String(item.settings?.size ?? ''),
                 quality: item.settings?.quality ? String(item.settings.quality) : undefined,
-                count: item.images.length || item.generatedImages.length || 1,
-                guidanceScale: 7,
-                steps: 30,
-                promptTuning: 'auto',
-                stylePreset: 'general',
-                skipPromptTuning: true,
               },
               images: (item.images?.length
                 ? item.images
@@ -214,8 +219,11 @@ export function ImageGeneratorStudio({
       id: `pending-image-${Date.now()}`,
       prompt: payload.prompt,
       model: selectedModel?.name ?? payload.model,
-      count: payload.settings.count,
-      size: payload.settings.size,
+      // 生成张数已下线为用户可调项（业务逻辑固定吃掉），settings 里也不再携带
+      // count（spec §11 第 2 期：透传 schema 参数，count 从不是 schema 属性）——
+      // 骨架占位卡的张数改用 imageCapability 的模型默认值，目前所有能力表都是 1。
+      count: imageCapability.defaults.count,
+      size: typeof payload.settings.size === 'string' ? payload.settings.size : undefined,
     });
     setMode('history');
     setGenerating(true);
@@ -290,12 +298,14 @@ export function ImageGeneratorStudio({
       >
         <ImageComposer
           communityMode={templateMode}
-          imageCapability={imageCapability}
           imageModels={imageModels}
           selectedModel={selectedModel}
           selectedModelId={selectedModelId}
           selectedModelValue={selectedModelValue}
           modelsLoading={modelsLoading}
+          paramsSchema={paramsSchema}
+          pricingSchema={pricingSchema}
+          pricingContext={pricingContext}
           appliedTemplate={appliedTemplate}
           generating={generating}
           onGenerate={handleGenerate}

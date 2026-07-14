@@ -19,10 +19,16 @@ export function resolveImageCapabilityFromModelParam(
   return IMAGE_MODEL_CAPABILITIES[kind];
 }
 
+/**
+ * 公开生成器的参考图上传上限 —— 唯一来自模型 paramsSchema.properties.referenceImages
+ * .maximum（spec §12）。paramsSchema 缺失（尚未拉到 / 模型不识别）时返回 0：不再
+ * fallback 到静态能力表的 supportsReferenceImage，那条路径正是 DEFAULT_IMAGE_KIND
+ * 洞的来源之一——未识别模型会被静默当成 gemini-3-pro-image 的能力表。
+ */
 export function getImageReferenceUploadLimit(
-  capability: Pick<ImageModelCapability, 'supportsReferenceImage'>,
-) {
-  return capability.supportsReferenceImage ? 8 : 0;
+  paramsSchema: { properties?: Record<string, { maximum?: number }> } | undefined,
+): number {
+  return paramsSchema?.properties?.referenceImages?.maximum ?? 0;
 }
 
 function normalizeModelHint(value: string | null | undefined) {
