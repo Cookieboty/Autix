@@ -71,11 +71,21 @@ export function assembleImageRequest(req: ImageCallRequest): AssembledRequest {
     setPath(body, core.count.path, req.count);
   }
 
-  // ③ param bindings —— 双向闭合由跨配置校验器保证（Task 7）；这里对无绑定的参数记 coercion
+  // 被复合绑定消费掉的统一参数（如 gpt-image 的 aspectRatio / resolution 一起拼出 size）。
+  // 它们没有自己的直接绑定，但**不是**被丢弃的——不能记成 coercion。
+  const composedSources = new Set<string>();
+  for (const binding of Object.values(preset.paramBindings)) {
+    if (isStrategy(binding) || Array.isArray(binding) || !binding.composeFrom) continue;
+    for (const source of binding.composeFrom) composedSources.add(source);
+  }
+
+  // ③ param bindings —— 双向闭合由跨配置校验器保证；这里对无绑定的参数记 coercion
   for (const [name, raw] of Object.entries(req.params)) {
     const binding = preset.paramBindings[name];
     if (binding === undefined) {
-      coercions.push(`param "${name}" has no binding in preset "${preset.key}" — dropped`);
+      if (!composedSources.has(name)) {
+        coercions.push(`param "${name}" has no binding in preset "${preset.key}" — dropped`);
+      }
       continue;
     }
     if (isStrategy(binding)) continue;   // prompt-inject 已处理；ignore 是显式丢弃
@@ -99,6 +109,30 @@ export function assembleImageRequest(req: ImageCallRequest): AssembledRequest {
       perPath[spec.path] = value;
     }
     if (Object.keys(perPath).length > 0) applied[name] = perPath;
+  }
+
+  // ④ 复合绑定：绑定名不对应任何统一参数，取值由 composeFrom 的几个参数拼 key 后查表。
+  // gpt-image 的 size = (aspectRatio × resolution) 查表——一元 valueMap 表达不了。
+  for (const [name, binding] of Object.entries(preset.paramBindings)) {
+    if (isStrategy(binding) || Array.isArray(binding) || !binding.composeFrom) continue;
+
+    const parts = binding.composeFrom.map((source) => req.params[source]);
+    // 源参数缺一不可：拼不出 key 就整条绑定不发，而不是发一个半截的值上去
+    if (parts.some(isEmpty)) continue;
+
+    const key = parts.map(String).join(binding.join ?? '@');
+    const mapped = binding.valueMap ? binding.valueMap[key] : key;
+    if (mapped === undefined) {
+      // 查不到表 = 该模型的 schema 允许了一个 preset 映射不出的组合。跨配置校验器
+      // 本该在保存期拦住（规则 8），这里只是运行期的最后一道兜底，绝不静默发一个错值。
+      coercions.push(
+        `composed binding "${name}" has no valueMap entry for "${key}" in preset "${preset.key}" — dropped`,
+      );
+      continue;
+    }
+    const value = binding.transform ? TRANSFORMS[binding.transform](mapped) : mapped;
+    setPath(body, binding.path, value);
+    applied[name] = value;
   }
 
   const url = buildEndpoint(req.baseUrl, endpoint.path.replace('{model}', req.model));

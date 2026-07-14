@@ -8,8 +8,8 @@ import {
   type ParamsSchema,
   type PricingSchema,
 } from '@autix/domain/pricing';
-import { detectImageModelKind, type ImageModelHint } from '@autix/domain/image';
-import { buildImageParamsSchema, buildVideoParamsSchema } from './seed-pricing.schemas';
+import { buildVideoParamsSchema } from './seed-pricing.schemas';
+import { buildImageParamsSchema, IMAGE_MODEL_PARAMS } from './seed-image-params';
 import { SEED_MODELS, DEFAULT_MULTIPLIER, imageMetadataFor } from './seed-pricing.models';
 import { createPrismaClient } from './db';
 
@@ -113,18 +113,20 @@ async function seedModelProtocolMetadata(): Promise<void> {
     select: { id: true, provider: true, model: true, metadata: true },
   });
   for (const model of models) {
-    const kind = detectImageModelKind({
-      provider: model.provider,
-      model: model.model,
-      metadata: model.metadata as ImageModelHint['metadata'],
-    });
+    // 未登记在 IMAGE_MODEL_PARAMS 里的模型（运营手动加的、或已下线的）——**跳过，不猜**。
+    // 老代码正是靠"猜一个 kind"把未知模型悄悄按别的模型的参数表处理，用户因此能选到
+    // 该模型根本不支持的档位。
+    if (!IMAGE_MODEL_PARAMS[model.model]) {
+      console.warn(`[seed] skip protocol metadata → ${model.model}（未登记在 IMAGE_MODEL_PARAMS）`);
+      continue;
+    }
     const existing = (model.metadata ?? {}) as Record<string, unknown>;
-    const merged = { ...existing, ...imageMetadataFor(kind) };
+    const merged = { ...existing, ...imageMetadataFor(model.model) };
     await prisma.model_configs.update({
       where: { id: model.id },
       data: { metadata: toInputJson(merged) },
     });
-    console.info(`[seed] protocol metadata → ${model.model} (${kind})`);
+    console.info(`[seed] protocol metadata → ${model.model}`);
   }
 }
 
@@ -157,34 +159,53 @@ async function seedTasks() {
  * 未列出的模型沿用 MODEL_PRESETS 的通用 pricingSchema。
  */
 const MODEL_PRICING: Record<string, PricingSchema> = {
-  // —— 图像：单张积分 × quantity ——
-  'gpt-image-2': {
+  // —— 图像：单张积分（档位/质量查表）。张数由业务层乘算，schema 只算一张 ——
+  // 档位 key 必须覆盖该模型 schema 里 resolution 的**每一个** enum 值，否则查表落空
+  // 走 fallback，用户选了 4K 却按默认档收费。
+  'gpt-image-2-official': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
-      { id: 'quality', op: 'add', table: { param: 'quality', values: { low: 3, medium: 27, high: 106 } } },    ],
+      { id: 'quality', op: 'add', table: { param: 'quality', values: { low: 3, medium: 27, high: 106 } } },
+    ],
+  },
+  'gemini-3-pro-image-preview': {
+    terms: [
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '1K': 34, '2K': 51, '4K': 75 } } },
+    ],
   },
   'gemini-3.1-flash-image-preview': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 23, '1K': 34, '2K': 51, '4K': 75 } } },    ],
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '1K': 34, '2K': 51, '4K': 75 } } },
+    ],
   },
   'gemini-3.1-flash-lite-image': {
     terms: [
-      { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 12, '1K': 17, '2K': 26, '4K': 38 } } },    ],
+      { id: 'perImage', op: 'add', const: 17 },
+    ],
   },
-  'doubao-seedream-5-0-260128': {
+  'gemini-2.5-flash-image': {
+    terms: [
+      { id: 'perImage', op: 'add', const: 17 },
+    ],
+  },
+  'doubao-seedream-4-5': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
-      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '512px': 23, '1K': 23, '2K': 23, '4K': 45 } } },    ],
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '4K': 45 } } },
+    ],
   },
-  'qwen-image-2.0': {
+  'doubao-seedream-5-0-lite': {
     terms: [
-      { id: 'perImage', op: 'add', const: 20 },    ],
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '3K': 34 } } },
+    ],
   },
   'MiniMax-Image-01': {
     terms: [
-      { id: 'perImage', op: 'add', const: 15 },    ],
+      { id: 'perImage', op: 'add', const: 15 },
+    ],
   },
   // —— 视频：每秒积分 × seconds ——
   'doubao-seedance-2.0': {

@@ -14,48 +14,47 @@ jest.mock('../model.factory', () => ({
 // 断言的是「真正发出去的 HTTP 请求体」，而不是一个手写 mock adapter 对协议的复述 ——
 // 老 mock 自己重新实现了一遍 kind 嗅探与 body 拼装，它绿不代表线上对。
 
-/** 第 2 期翻转后的图片 paramsSchema（seed-pricing.schemas.ts 的形状）。 */
+/**
+ * 图片 paramsSchema：**统一参数词汇**（seed-image-params.ts 的形状）。
+ * 前端只认识 aspectRatio / resolution / quality；`size`、`aspect_ratio` 这些
+ * 厂商原生字段只活在 preset 的绑定表里。
+ */
 const IMAGE_PARAMS_SCHEMA = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
-  required: ['size', 'quality', 'resolution'],
+  required: ['aspectRatio', 'resolution', 'quality'],
   properties: {
-    size: {
+    aspectRatio: {
       type: 'string',
-      enum: ['1024x1024@1K', '2048x2048@2K'],
-      default: '1024x1024@1K',
-      'x-ui': { role: 'wire', control: 'size-grid' },
-    },
-    quality: {
-      type: 'string',
-      enum: ['low', 'medium', 'high'],
-      default: 'medium',
-      'x-ui': { role: 'both', control: 'chips' },
+      enum: ['1:1', '16:9'],
+      default: '1:1',
+      'x-ui': { role: 'wire', control: 'select' },
     },
     resolution: {
       type: 'string',
       enum: ['1K', '2K'],
       default: '1K',
-      'x-ui': {
-        role: 'derived',
-        control: 'hidden',
-        derivedFrom: { param: 'size', via: 'imagePricingResolution' },
-      },
+      'x-ui': { role: 'both', control: 'select' },
+    },
+    quality: {
+      type: 'string',
+      enum: ['low', 'medium', 'high'],
+      default: 'medium',
+      'x-ui': { role: 'both', control: 'select' },
     },
     referenceImages: {
       type: 'integer',
       minimum: 0,
       default: 0,
-      'x-ui': { role: 'pricing', control: 'hidden' },
+      'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 16 },
     },
-    seed: { type: 'string', 'x-ui': { role: 'wire', control: 'hidden' } },
   },
 };
 
 const IMAGE_MODEL_CONFIG = {
   id: 'image-model-1',
-  model: 'gemini-3-pro-image',
-  provider: 'openai-compatible',
+  model: 'gpt-image-2-official',
+  provider: 'amux',
   baseUrl: 'https://api.example.com/v1',
   apiKey: 'key',
   metadata: {
@@ -702,22 +701,24 @@ describe('ImageGenerationFlowService', () => {
     global.fetch = fetchMock as never;
 
     const result = await service.callImageApi(
-      imageRequest({ settings: { size: '1024x1024@1K', quality: 'high' } }),
+      imageRequest({ settings: { aspectRatio: '1:1', resolution: '1K', quality: 'high' } }),
       2,
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/v1/images/generations');
+    // 上游收到的是**原生字段**：gpt-image 要像素尺寸，而不是「比例」「档位」。
+    // aspectRatio / resolution 这两个统一参数在这里被复合成 size —— 前端从没见过 size。
     expect(sentBody(fetchMock)).toEqual({
       response_format: 'b64_json',
-      model: 'gemini-3-pro-image',
+      model: 'gpt-image-2-official',
       prompt: 'A scene',
       n: 2,
       size: '1024x1024',
       quality: 'high',
     });
     expect(result.images).toEqual(['https://img.test/1.png']);
-    // appliedSettings = 真正发出去的值（§4.4）：size 已被 preset 剥掉 @tier 后缀。
+    // appliedSettings = 真正发出去的值（§4.4）
     expect(result.appliedSettings).toEqual({
       size: '1024x1024',
       quality: 'high',
@@ -729,22 +730,23 @@ describe('ImageGenerationFlowService', () => {
     global.fetch = originalFetch;
   });
 
-  it('strips the @tier suffix before it reaches the upstream (the Nano Banana fix)', async () => {
+  it('composes the upstream pixel size from (aspectRatio × resolution) — the vendor field never reaches the frontend', async () => {
     const { service } = createService();
     const originalFetch = global.fetch;
     const fetchMock = jest.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'AAA' }] }));
     global.fetch = fetchMock as never;
 
     const result = await service.callImageApi(
-      imageRequest({ settings: { size: '2048x2048@2K', quality: 'high' } }),
+      imageRequest({ settings: { aspectRatio: '16:9', resolution: '2K', quality: 'high' } }),
       1,
     );
 
-    // 老 kind 嗅探把 `2048x2048@2K` 原样发给不认识 @tier 的端点 → 400 → 「重试 safe
-    // defaults」（同一个 1024x1024@1K，从没修好过任何东西）。preset 的 stripTierSuffix
-    // 从根上消除了这个失败模式。
-    expect(sentBody(fetchMock).size).toBe('2048x2048');
-    expect(result.appliedSettings.size).toBe('2048x2048');
+    // 前端只选了「16:9」和「2K」。gpt-image 收的却是像素——这个映射只活在 preset 的
+    // 绑定表里（composeFrom + valueMap），前端和 schema 里都没有 size 这个名字。
+    expect(sentBody(fetchMock).size).toBe('2048x1152');
+    expect(sentBody(fetchMock).aspectRatio).toBeUndefined();
+    expect(sentBody(fetchMock).resolution).toBeUndefined();
+    expect(result.appliedSettings.size).toBe('2048x1152');
     expect(result.images).toEqual(['data:image/png;base64,AAA']);
 
     global.fetch = originalFetch;

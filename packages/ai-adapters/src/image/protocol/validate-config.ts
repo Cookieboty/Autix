@@ -38,11 +38,19 @@ export function validateModelProtocolConfig(input: {
 
   const operations: ImageOperation[] = meta.operations ?? [];
 
+  // 复合绑定（composeFrom）消费掉的统一参数：它们没有自己的直接绑定，但**已被发出去**。
+  // 规则 1a 必须认这笔账，否则 gpt-image 的 aspectRatio/resolution 会被误判成「发不出去」。
+  const composedSources = new Set<string>();
+  for (const binding of Object.values(preset.paramBindings)) {
+    if (isStrategy(binding) || Array.isArray(binding) || !binding.composeFrom) continue;
+    for (const source of binding.composeFrom) composedSources.add(source);
+  }
+
   // 规则 1a：正向闭合
   for (const [name, property] of Object.entries(properties)) {
     const role = property['x-ui']?.role ?? 'both';
     if (!WIRE_ROLES.has(role)) continue;
-    if (preset.paramBindings[name] === undefined) {
+    if (preset.paramBindings[name] === undefined && !composedSources.has(name)) {
       violations.push({
         code: 'WIRE_PARAM_NOT_BOUND', param: name,
         message: `param "${name}" (role: ${role}) has no binding in preset "${preset.key}" — it would be silently dropped`,
@@ -52,12 +60,49 @@ export function validateModelProtocolConfig(input: {
 
   // 规则 1b + 规则 4
   for (const [name, binding] of Object.entries(preset.paramBindings)) {
+    // 复合绑定的**名字**不必是 schema 里的属性（gpt-image 的 `size` 就不是——它是
+    // (aspectRatio × resolution) 的函数）。要校验的是它的**源参数**都存在且不是 derived，
+    // 以及查表覆盖了源参数 enum 的每一个组合（规则 8，见下）。
+    const composed =
+      !isStrategy(binding) && !Array.isArray(binding) && binding.composeFrom ? binding : undefined;
+    if (composed) {
+      const sources = composed.composeFrom!;
+      const present = sources.filter((source) => properties[source]);
+      // 一个源都没有 = 这条复合绑定对该模型整体惰性（同上，超集 preset 的常态）。
+      // 但**部分存在**是真 bug：拼不出完整的 key，绑定永远查不到表，参数被静默丢掉。
+      if (present.length > 0 && present.length < sources.length) {
+        violations.push({
+          code: 'BINDING_TARGETS_UNKNOWN_PARAM', param: name,
+          message: `preset "${preset.key}" composes "${name}" from [${sources.join(', ')}], but this model's paramsSchema only has [${present.join(', ')}] — the key can never be composed and the binding would be silently dropped`,
+        });
+      }
+      for (const source of present) {
+        const sourceProperty = properties[source]!;
+        if ((sourceProperty['x-ui']?.role ?? 'both') === 'derived') {
+          violations.push({
+            code: 'BINDING_TARGETS_DERIVED_PARAM', param: source,
+            message: `preset "${preset.key}" composes "${name}" from derived param "${source}" — derived params are computed for pricing, never sent upstream`,
+          });
+        }
+      }
+      if (composed.transform && !(composed.transform in TRANSFORMS)) {
+        violations.push({
+          code: 'UNKNOWN_TRANSFORM', param: name,
+          message: `binding for "${name}" uses unknown transform "${composed.transform}"`,
+        });
+      }
+      continue;
+    }
+
     const property = properties[name];
     if (!property) {
-      violations.push({
-        code: 'BINDING_TARGETS_UNKNOWN_PARAM', param: name,
-        message: `preset "${preset.key}" binds "${name}", which does not exist in this model's paramsSchema — the binding never fires`,
-      });
+      // 一个厂商 preset 会被同厂商、能力不同的多个模型共用（gemini 里只有 3.1-flash
+      // 有 thinkingLevel），所以它必然绑定一个**超集**。对某个具体模型来说，绑定了它
+      // 没有的参数是**惰性**的——assemble 遍历的是 req.params，绑定不会凭空造出一个值。
+      //
+      // 「preset 绑了一个谁都没有的参数」（作者拼错了）仍然要抓，但那是**注册表级**的
+      // 检查（每个绑定至少被一个模型认领），不是逐模型的——否则会逼着同厂商所有模型
+      // 长成一样。见 seed-pricing.spec.ts 的「preset 的每个绑定都至少被一个模型认领」。
       continue;
     }
     if ((property['x-ui']?.role ?? 'both') === 'derived') {
@@ -119,6 +164,37 @@ export function validateModelProtocolConfig(input: {
         violations.push({
           code: 'UNPARSEABLE_SOURCE_TOKEN', param: derivedFrom.param,
           message: `"${name}" derives from "${derivedFrom.param}" via ${derivedFrom.via}, but token "${token}" is unparseable — it would silently fall back to a default tier`,
+        });
+      }
+    }
+  }
+
+  // 规则 8：复合绑定的查表必须覆盖源参数 enum 的**每一个笛卡尔组合**。
+  //
+  // 为什么是「每一个」而不是「大多数」：gpt-image 的 size 由 (aspectRatio × resolution)
+  // 查表得出。schema 允许用户选 21:9，而 valueMap 里没有 `21:9@4K` —— 结果不是报错，
+  // 是这个参数被**静默丢掉**，上游按自己的默认尺寸出图，用户拿到一张比例完全不对的图，
+  // 而且按 4K 收了费。这条规则就是在保存期拦住这种 schema 与 preset 的分叉。
+  for (const [name, binding] of Object.entries(preset.paramBindings)) {
+    if (isStrategy(binding) || Array.isArray(binding) || !binding.composeFrom) continue;
+    if (!binding.valueMap) continue; // 无查表 = 直接拼出来的字符串就是要发的值
+
+    const enums = binding.composeFrom.map((source) => {
+      const values = properties[source]?.enum;
+      return (values ?? []).map(String);
+    });
+    if (enums.some((values) => values.length === 0)) continue; // 源参数不存在/无 enum：由规则 1b 兜
+
+    const join = binding.join ?? '@';
+    const keys = enums.reduce<string[]>(
+      (acc, values) => acc.flatMap((prefix) => values.map((value) => (prefix ? `${prefix}${join}${value}` : value))),
+      [''],
+    );
+    for (const key of keys) {
+      if (binding.valueMap[key] === undefined) {
+        violations.push({
+          code: 'COMPOSED_BINDING_MISSING_COMBO', param: name,
+          message: `preset "${preset.key}" composes "${name}" from [${binding.composeFrom.join(', ')}], but its valueMap has no entry for "${key}" — that combination is selectable in this model's schema and would be silently dropped`,
         });
       }
     }

@@ -1,8 +1,23 @@
-import { gatewayOpenAIV1 } from './presets/gateway-openai-v1';
+import {
+  doubaoImagesV1,
+  geminiImagesV1,
+  minimaxImagesV1,
+  openaiImagesV1,
+} from './presets/vendors';
 import type { ProtocolPreset } from './types';
 
+/**
+ * 已注册的协议 preset。模型经 `metadata.protocolKey` 路由到这里。
+ *
+ * 四家共用同一套传输形态（OpenAI 兼容端点 / Bearer / `data[]` 响应），差异全在
+ * body 字段——这正是 preset 机制存在的理由：把「统一参数 → 原生字段」的映射变成
+ * **声明**，而不是散在三个手写 adapter 里的 if/else。
+ */
 export const PROTOCOL_PRESETS: Record<string, ProtocolPreset> = {
-  [gatewayOpenAIV1.key]: gatewayOpenAIV1,
+  [openaiImagesV1.key]: openaiImagesV1,
+  [doubaoImagesV1.key]: doubaoImagesV1,
+  [geminiImagesV1.key]: geminiImagesV1,
+  [minimaxImagesV1.key]: minimaxImagesV1,
 };
 
 /**

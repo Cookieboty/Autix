@@ -21,6 +21,18 @@ export type TransformKey = 'stripTierSuffix';
 /** Binding specification for a preset parameter */
 export interface BindingSpec {
   path: string; // 'size' | 'generationConfig.seed' | '$url.model'
+  /**
+   * 该绑定的取值由**多个**统一参数拼成，而不是绑定名对应的那一个。
+   * 拼出来的 key 再过 `valueMap`（二元/多元查表）。
+   *
+   * 存在的理由：gpt-image 收的是像素尺寸 `WxH`，而前端只选「比例」和「档位」——
+   * `size` 不对应任何单个统一参数，它是 (aspectRatio, resolution) 的函数。一元
+   * valueMap 表达不了这个。绑定名（这里是 `size`）因此**不必是 schema 里的属性**，
+   * 但 `composeFrom` 里的每一个**必须是**（跨配置校验器规则 1b 据此放行）。
+   */
+  composeFrom?: string[];
+  /** `composeFrom` 拼 key 的分隔符，默认 `@` */
+  join?: string;
   valueMap?: Record<string, string>;
   transform?: TransformKey;
   omitWhen?: 'empty';

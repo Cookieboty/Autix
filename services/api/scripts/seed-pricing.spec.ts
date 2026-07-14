@@ -1,263 +1,153 @@
-import { applyParamDefaults, deriveParams, validateParams, validateParamsSchema } from '@autix/domain/pricing';
-import {
-  IMAGE_MODEL_CAPABILITIES,
-  detectImageModelKind,
-  resolveImagePricingResolution,
-  type ImageModelHint,
-} from '@autix/domain/image';
-import { readImageModelMetadata, supportsImageOperation } from '@autix/domain/model';
 import { PROTOCOL_PRESETS, validateModelProtocolConfig } from '@autix/ai-adapters/image';
-import { buildImageParamsSchema, type ModelSchemaHint } from './seed-pricing.schemas';
+import {
+  applyParamDefaults,
+  compileParamsSchema,
+  deriveParams,
+  validateParams,
+  validateParamsSchema,
+} from '@autix/domain/pricing';
+import { buildImageParamsSchema, IMAGE_MODEL_PARAMS } from './seed-image-params';
 import { SEED_MODELS } from './seed-pricing.models';
 
-// 三个探测 imageModelKind 的固定 hint —— 用 metadata.imageModelKind 显式钉住 kind
-// （detectImageModelKind:41 优先读它），而不是靠 model-id 嗅探 —— 后者一旦改了 seed
-// 里的 model id 就会静默换成别的 cap。
-const GPT_IMAGE: ModelSchemaHint = {
-  provider: null,
-  model: 'test-gpt-image',
-  metadata: { imageModelKind: 'gpt-image' },
-};
-const GEMINI_3_PRO: ModelSchemaHint = {
-  provider: null,
-  model: 'test-gemini-3-pro',
-  metadata: { imageModelKind: 'gemini-3-pro-image' },
-};
-const COMPATIBLE: ModelSchemaHint = {
-  provider: null,
-  model: 'test-compatible',
-  metadata: { imageModelKind: 'compatible' },
-};
+const IMAGE_ROWS = SEED_MODELS.filter((row) => row.capabilities.includes('image'));
 
-describe('buildImageParamsSchema', () => {
-  const schema = buildImageParamsSchema(GPT_IMAGE);
-
-  it('emits a size property carrying the real upstream token', () => {
-    // 上游真正要的 size 此前根本不在 schema 里（spec §3）——paramsSchema 一直只描述
-    // 「计价用到的那些参数」，而 size 不计价，于是它就漏了。
-    expect(schema.properties.size).toBeDefined();
-    expect(schema.properties.size.type).toBe('string');
-    expect(schema.properties.size.enum!.length).toBeGreaterThan(0);
+describe('buildImageParamsSchema — 逐模型参数表', () => {
+  it('每个 seed 的图片模型都登记在 IMAGE_MODEL_PARAMS 里', () => {
+    for (const row of IMAGE_ROWS) {
+      expect(IMAGE_MODEL_PARAMS[row.model]).toBeDefined();
+    }
+    expect(IMAGE_ROWS.length).toBeGreaterThan(0);
   });
 
-  it('size is the user-facing control: size-grid, with a default, and required', () => {
-    const geminiSchema = buildImageParamsSchema(GEMINI_3_PRO);
-    const ui = geminiSchema.properties.size['x-ui']!;
-    expect(ui.role).toBe('wire');
-    expect(ui.control).toBe('size-grid'); // 第 1 期是 'hidden'
-    expect(ui.groupBy).toBe('tier');
-    expect(geminiSchema.properties.size.default).toBeDefined(); // 第 1 期是 undefined
-    expect(geminiSchema.required).toContain('size'); // 第 1 期不在 required
+  it('未登记的模型直接抛 —— 不做静默兜底（老代码正是靠兜底让用户选到模型不支持的档位）', () => {
+    expect(() => buildImageParamsSchema({ model: 'no-such-model' })).toThrow(/no-such-model/);
   });
 
-  it('resolution is derived from size and never rendered', () => {
-    const geminiSchema = buildImageParamsSchema(GEMINI_3_PRO);
-    const ui = geminiSchema.properties.resolution['x-ui']!;
-    expect(ui.role).toBe('derived'); // 第 1 期是 'pricing'
-    expect(ui.control).toBe('hidden'); // 第 1 期是 'chips'
-    expect(ui.derivedFrom).toEqual({ param: 'size', via: 'imagePricingResolution' });
-    // derive 在 validate 之前跑（spec §6.2），所以 required 里保留 resolution 是自洽的
-    expect(geminiSchema.required).toContain('resolution');
-  });
-
-  it('size.optionLabels covers every enum token with the capability\'s human labels', () => {
-    // 覆盖 size-grid 的显示层：optionLabels 缺失或只覆盖部分 enum 时，SchemaForm
-    // 会把没映射到的 token 原样显示成裸 'WxH@tier' 字符串（silent degradation）。
-    // 用 IMAGE_MODEL_CAPABILITIES 里真实的 cap.sizes 反推期望值，而不是重新调用
-    // buildImageParamsSchema 内部同样的映射逻辑，否则这个断言测的只是"自己等于自己"。
-    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
-      const modelSchema = buildImageParamsSchema(model);
-      const kind = detectImageModelKind({
-        provider: model.provider,
-        model: model.model,
-        metadata: model.metadata as ImageModelHint['metadata'],
-      });
-      const cap = IMAGE_MODEL_CAPABILITIES[kind];
-      const expectedLabels = Object.fromEntries(cap.sizes.map((size) => [size.value, size.label]));
-      const ui = modelSchema.properties.size['x-ui']!;
-
-      expect(ui.optionLabels).toEqual(expectedLabels);
-      for (const token of modelSchema.properties.size.enum ?? []) {
-        expect(ui.optionLabels?.[String(token)]).toBe(expectedLabels[String(token)]);
-      }
+  it('schema 不含 n（生成张数）—— 它由业务层吃掉，preset 用 count 策略发给上游', () => {
+    for (const row of IMAGE_ROWS) {
+      const schema = buildImageParamsSchema({ model: row.model });
+      expect(schema.properties.n).toBeUndefined();
+      expect(schema.properties.count).toBeUndefined();
     }
   });
 
-  it('every size enum token parses to a pricing tier (spec §7.2 规则 7)', () => {
-    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
-      const modelSchema = buildImageParamsSchema(model);
-      for (const token of modelSchema.properties.size?.enum ?? []) {
-        expect(resolveImagePricingResolution(String(token))).toBeDefined();
-      }
+  it('参考图上传上限落在 x-ui.uploadMax，而不是 JSON-Schema 的 maximum', () => {
+    for (const row of IMAGE_ROWS) {
+      const refs = buildImageParamsSchema({ model: row.model }).properties.referenceImages;
+      expect(refs).toBeDefined();
+      expect(refs.maximum).toBeUndefined(); // maximum 会被 ajv 强制 → 多图的画布操作会 400
+      expect(refs['x-ui']!.uploadMax).toBe(IMAGE_MODEL_PARAMS[row.model].uploadMax);
+      expect(refs['x-ui']!.role).toBe('pricing'); // 只计价，不发给上游
     }
   });
 
-  it('marks quality as both and referenceImages as pricing', () => {
-    expect(schema.properties.quality['x-ui']!.role).toBe('both');
-    expect(schema.properties.referenceImages['x-ui']!.role).toBe('pricing');
-  });
-
-  // referenceImages 的值是「实际上传张数」，且被 ajv 校验（validateParams,
-  // strict: true）；这份 paramsSchema 是 chat / canvas / 公开生成器共享的同一份
-  // image_generation 任务 schema。canvas 的参考图选择没有上游数量上限，若这里设了
-  // JSON-Schema 的 maximum，canvas 里合法的 9+ 张组合参考图会在 hold 时被 ajv 400。
-  // 上传上限因此只能活在 x-ui.uploadMax（ajv 对 x-ui 整体 valid: true，零校验），
-  // 供公开生成器的 getImageReferenceUploadLimit 读。
-  it('does NOT set referenceImages.maximum, but does cap x-ui.uploadMax by reference-image support', () => {
-    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
-      const modelSchema = buildImageParamsSchema(model);
-      const kind = detectImageModelKind({
-        provider: model.provider,
-        model: model.model,
-        metadata: model.metadata as ImageModelHint['metadata'],
-      });
-      const cap = IMAGE_MODEL_CAPABILITIES[kind];
-      expect(modelSchema.properties.referenceImages.maximum).toBeUndefined();
-      expect(modelSchema.properties.referenceImages['x-ui']?.uploadMax).toBe(
-        cap.supportsReferenceImage ? 8 : 0,
-      );
+  // 回归守卫：referenceImages 的值是「实际附了几张图」，被 ajv 校验，而 image_generation
+  // 的 schema 是 chat/canvas/公开生成器共享的。canvas 的参考图数量上游无限制 —— 只要
+  // 有人给它设了 maximum，多图的画布操作就会在扣费前 400。
+  it('12 张参考图仍然通过校验（上传上限绝不能变成 ajv 硬约束）', () => {
+    for (const row of IMAGE_ROWS) {
+      const schema = buildImageParamsSchema({ model: row.model });
+      const params = deriveParams(schema, applyParamDefaults(schema, { referenceImages: 12 }));
+      expect(validateParams(schema, params)).toEqual([]);
     }
   });
 
-  // 回归守卫（本次修复的核心）：canvas 的参考图选择没有上游数量上限，一次 hold 可能
-  // 携带 12 张组合参考图（source + reference）。如果 referenceImages 设了 ajv 的
-  // maximum，这个对象会被 validateParams 判 400——这正是 Task 11 的 Critical bug。
-  // 这里直接对种子 schema 跑 validateParams，确保它必须放行。
-  it('validateParams passes a referenceImages count far above the old upload cap (canvas has no upstream limit)', () => {
-    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
-      const modelSchema = buildImageParamsSchema(model);
-      const withDefaults = applyParamDefaults(modelSchema, { referenceImages: 12 });
-      const derived = deriveParams(modelSchema, withDefaults);
-      expect(validateParams(modelSchema, derived)).toEqual([]);
+  it('每个模型的 schema 结构合法且能被 ajv 编译（墙 2：坏 schema 不能存进库）', () => {
+    for (const row of IMAGE_ROWS) {
+      const schema = buildImageParamsSchema({ model: row.model });
+      expect(validateParamsSchema(schema)).toEqual([]);
+      expect(compileParamsSchema(schema)).toEqual([]);
     }
   });
 
-  it('passes its own structural validator', () => {
-    // 新标的 role 必须通过 Task 1 的白名单校验。
-    expect(validateParamsSchema(schema)).toEqual([]);
-  });
-
-  // 变异测试：翻转后，applyParamDefaults → deriveParams → validateParams 必须自洽
-  it('defaults + derive together satisfy required — a caller sending nothing still validates', () => {
-    const geminiSchema = buildImageParamsSchema(GEMINI_3_PRO);
-    const withDefaults = applyParamDefaults(geminiSchema, {});
-    const derived = deriveParams(geminiSchema, withDefaults);
-    expect(derived.resolution).toBeDefined();
-    expect(validateParams(geminiSchema, derived)).toEqual([]);
-  });
-
-  // 变异测试：前端传一个便宜的 resolution，必须被 size 派生覆盖（堵住 spec §6.3 的洞）
-  it('a client-sent cheap resolution is overwritten by the one derived from size', () => {
-    const geminiSchema = buildImageParamsSchema(GEMINI_3_PRO);
-    const params = deriveParams(geminiSchema, { size: '2048x2048@2K', resolution: '1K', quality: 'high' });
-    expect(params.resolution).toBe('2K');
-  });
-});
-
-// Task 8：SEED_MODELS 的每个 image 行必须显式声明 protocolKey / operations / limits——
-// preset 路由（Task 9）读的就是它们，第 1 期只落了读取 helper，没有任何 seed 写这三个字段。
-describe('SEED_MODELS image metadata (protocolKey / operations / limits)', () => {
-  const imageRows = SEED_MODELS.filter((m) => m.capabilities.includes('image'));
-
-  it('seeds protocolKey / operations / limits on every image model', () => {
-    for (const row of imageRows) {
-      const meta = readImageModelMetadata(row.metadata);
-      expect(meta.protocolKey).toBe('openai-images@v1');
-      expect(meta.operations?.length).toBeGreaterThan(0);
-      expect(meta.limits?.maxCount).toBeGreaterThanOrEqual(1);
-    }
-  });
-
-  it('seeded metadata + seeded schema pass the cross-config validator (spec §7.2)', () => {
-    for (const row of imageRows) {
-      const schema = buildImageParamsSchema(row);
-      const preset = PROTOCOL_PRESETS[readImageModelMetadata(row.metadata).protocolKey!];
-      const violations = validateModelProtocolConfig({ paramsSchema: schema, metadata: row.metadata, preset });
-      expect(violations).toEqual([]); // ← 构建期校验（spec §7.2：CI 对所有 preset × 所有 seed 模型跑一次）
-    }
-  });
-
-  it('declares edit only for models whose capability actually supports source images', () => {
-    for (const row of imageRows) {
-      const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(row as ImageModelHint)];
-      expect(supportsImageOperation(row.metadata, 'edit')).toBe(cap.supportsSourceImage);
-    }
-  });
-
-  it('limits.maxCount matches the capability table (spec: 第 3 期会删掉能力表，metadata 现在必须与它一致)', () => {
-    for (const row of imageRows) {
-      const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(row as ImageModelHint)];
-      expect(readImageModelMetadata(row.metadata).limits?.maxCount).toBe(cap.maxCount);
+  it('调用方什么都不传时，默认值填完仍然满足 required', () => {
+    for (const row of IMAGE_ROWS) {
+      const schema = buildImageParamsSchema({ model: row.model });
+      const params = deriveParams(schema, applyParamDefaults(schema, {}));
+      expect(validateParams(schema, params)).toEqual([]);
     }
   });
 });
 
-// Task 8 stub-property discrimination: seed / negativePrompt / quality stubs must not have defaults
-// to prevent silent production regressions when applyParamDefaults fills them and wire projection
-// starts leaking them into upstream bodies.
-describe('stub properties must not have defaults', () => {
-  it('seed stub has no default, is not required, is wire+hidden', () => {
-    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
-      const schema = buildImageParamsSchema(model);
-      expect(schema.properties.seed).toBeDefined();
-      expect(schema.properties.seed.type).toBe('integer');
-      expect(schema.properties.seed['x-ui']?.role).toBe('wire');
-      expect(schema.properties.seed['x-ui']?.control).toBe('hidden');
-      expect(schema.properties.seed.default).toBeUndefined();
-      expect(schema.required).not.toContain('seed');
+describe('跨配置校验（spec §7.2 的构建期防线）', () => {
+  // paramsSchema 在 DB（运营可改）、preset 在代码——两份独立配置，会分叉。
+  // 这条断言就是 CI 对「所有 preset × 所有 seed 模型」跑的那一次。
+  it('每个 seed 模型的 schema + metadata + preset 零违规', () => {
+    for (const row of IMAGE_ROWS) {
+      const spec = IMAGE_MODEL_PARAMS[row.model];
+      const violations = validateModelProtocolConfig({
+        paramsSchema: buildImageParamsSchema({ model: row.model }),
+        metadata: row.metadata,
+        preset: PROTOCOL_PRESETS[spec.protocolKey],
+      });
+      expect({ model: row.model, violations }).toEqual({ model: row.model, violations: [] });
     }
   });
 
-  it('negativePrompt stub has no default, is not required, is wire+hidden', () => {
-    // negativePrompt is only present when cap.supportsNegativePrompt !== 'none'
-    for (const model of [GPT_IMAGE, GEMINI_3_PRO, COMPATIBLE]) {
-      const schema = buildImageParamsSchema(model);
-      const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind({
-        provider: model.provider,
-        model: model.model,
-        metadata: model.metadata as ImageModelHint['metadata'],
-      })];
-      if (cap.supportsNegativePrompt !== 'none') {
-        expect(schema.properties.negativePrompt).toBeDefined();
-        expect(schema.properties.negativePrompt.type).toBe('string');
-        expect(schema.properties.negativePrompt['x-ui']?.role).toBe('wire');
-        expect(schema.properties.negativePrompt['x-ui']?.control).toBe('hidden');
-        expect(schema.properties.negativePrompt.default).toBeUndefined();
-        expect(schema.required).not.toContain('negativePrompt');
+  it('每个模型的 protocolKey 都解析得到一个已注册的 preset', () => {
+    for (const row of IMAGE_ROWS) {
+      const { protocolKey } = IMAGE_MODEL_PARAMS[row.model];
+      expect(PROTOCOL_PRESETS[protocolKey]).toBeDefined();
+    }
+  });
+
+  // 逐模型的校验器**不再**因为「preset 绑了本模型没有的参数」而报错——厂商 preset 会被
+  // 同厂商能力不同的模型共用，必然绑定超集。作者拼错参数名的检查因此挪到这一层：
+  // preset 的每个绑定，必须至少被走该 preset 的某一个模型认领。
+  it('preset 的每个绑定都至少被一个模型认领（抓拼写错误）', () => {
+    for (const [protocolKey, preset] of Object.entries(PROTOCOL_PRESETS)) {
+      const claimed = new Set<string>();
+      for (const row of IMAGE_ROWS) {
+        const spec = IMAGE_MODEL_PARAMS[row.model];
+        if (spec.protocolKey !== protocolKey) continue;
+        for (const name of Object.keys(spec.properties)) claimed.add(name);
+      }
+      if (claimed.size === 0) continue; // 该 preset 暂无模型使用
+
+      for (const [name, binding] of Object.entries(preset.paramBindings)) {
+        const sources =
+          typeof binding === 'object' && binding !== null && 'composeFrom' in binding && binding.composeFrom
+            ? binding.composeFrom
+            : [name];
+        for (const source of sources) {
+          expect({ protocolKey, binding: source, claimed: claimed.has(source) })
+            .toEqual({ protocolKey, binding: source, claimed: true });
+        }
+      }
+    }
+  });
+});
+
+describe('统一参数词汇', () => {
+  it('前端只看到统一命名 —— 厂商原生字段名一个都不进 schema', () => {
+    const VENDOR_FIELDS = [
+      'aspect_ratio',
+      'image_size',
+      'enable_safety_checker',
+      'prompt_optimizer',
+      'output_format',
+      'thinking_level',
+    ];
+    for (const row of IMAGE_ROWS) {
+      const names = Object.keys(buildImageParamsSchema({ model: row.model }).properties);
+      for (const vendorField of VENDOR_FIELDS) {
+        expect(names).not.toContain(vendorField);
       }
     }
   });
 
-  it('quality stub (for models with no quality axis) has no default, is not required, is wire+hidden', () => {
-    // Test gemini models which have no quality axis
-    const geminiSchema = buildImageParamsSchema(GEMINI_3_PRO);
-    const geminCap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind({
-      provider: GEMINI_3_PRO.provider,
-      model: GEMINI_3_PRO.model,
-      metadata: GEMINI_3_PRO.metadata as ImageModelHint['metadata'],
-    })];
-    expect(geminCap.qualities.length).toBe(0); // Confirm no quality axis
-    expect(geminiSchema.properties.quality).toBeDefined();
-    expect(geminiSchema.properties.quality['x-ui']?.role).toBe('wire');
-    expect(geminiSchema.properties.quality['x-ui']?.control).toBe('hidden');
-    expect(geminiSchema.properties.quality.default).toBeUndefined();
-    expect(geminiSchema.required).not.toContain('quality');
+  it('模型不支持的参数，它的 schema 里就没有', () => {
+    // MiniMax 没有分辨率档位；gemini-2.5-flash 只有比例；只有 gpt-image 有质量轴
+    expect(buildImageParamsSchema({ model: 'MiniMax-Image-01' }).properties.resolution).toBeUndefined();
+    expect(buildImageParamsSchema({ model: 'gemini-2.5-flash-image' }).properties.resolution).toBeUndefined();
+    expect(buildImageParamsSchema({ model: 'doubao-seedream-4-5' }).properties.quality).toBeUndefined();
+    expect(buildImageParamsSchema({ model: 'gpt-image-2-official' }).properties.quality).toBeDefined();
   });
 
-  it('quality is the real priced control (role: both) for models with quality axis', () => {
-    // gpt-image has quality axis
-    const schema = buildImageParamsSchema(GPT_IMAGE);
-    const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind({
-      provider: GPT_IMAGE.provider,
-      model: GPT_IMAGE.model,
-      metadata: GPT_IMAGE.metadata as ImageModelHint['metadata'],
-    })];
-    expect(cap.qualities.length).toBeGreaterThan(0); // Confirm has quality axis
-    expect(schema.properties.quality).toBeDefined();
-    expect(schema.properties.quality['x-ui']?.role).toBe('both');
-    expect(schema.properties.quality['x-ui']?.control).toBe('chips');
-    expect(schema.properties.quality.default).toBeDefined();
-    expect(schema.properties.quality.enum).toBeDefined();
-    expect(schema.required).toContain('quality');
+  it('分辨率档位逐模型不同（doubao 5.0-lite 是 2K/3K，不是 2K/4K）', () => {
+    expect(buildImageParamsSchema({ model: 'doubao-seedream-4-5' }).properties.resolution.enum)
+      .toEqual(['2K', '4K']);
+    expect(buildImageParamsSchema({ model: 'doubao-seedream-5-0-lite' }).properties.resolution.enum)
+      .toEqual(['2K', '3K']);
   });
 });
