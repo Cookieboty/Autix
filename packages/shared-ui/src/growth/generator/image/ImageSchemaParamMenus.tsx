@@ -1,6 +1,6 @@
 'use client';
 
-import { Maximize2, Settings2, Sparkles } from 'lucide-react';
+import { Maximize2, Settings2, Shield, ShieldCheck, Sparkles } from 'lucide-react';
 import type { ParamsSchema } from '@autix/domain/pricing';
 import { buildSizeGridView, resolveOptionLabel, visibleEntries } from '../../../pricing';
 import type { UseSchemaFormResult } from '../../../pricing';
@@ -102,6 +102,27 @@ export function ImageSchemaParamMenus({
               value={current}
               onChange={(next) => form.setParam(name, next)}
             />
+          );
+        }
+
+        // 布尔开关 → 一个可点的 pill（和「Private」同款），不是下拉。
+        if (ui.control === 'switch') {
+          const on = form.params[name] === undefined ? property.default === true : form.params[name] === true;
+          return (
+            <button
+              key={name}
+              type="button"
+              aria-pressed={on}
+              onClick={() => form.setParam(name, !on)}
+              className={`inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
+                on
+                  ? 'border-growth-accent/60 bg-growth-accent/10 text-foreground'
+                  : 'border-border bg-background/22 text-foreground/60 hover:bg-secondary'
+              }`}
+            >
+              {on ? <ShieldCheck className="size-4 text-growth-accent" /> : <Shield className="size-4" />}
+              {label}
+            </button>
           );
         }
 
