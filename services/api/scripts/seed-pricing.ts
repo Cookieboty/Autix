@@ -110,14 +110,25 @@ async function seedModels() {
 async function seedModelProtocolMetadata(): Promise<void> {
   const models = await prisma.model_configs.findMany({
     where: { capabilities: { has: 'image' } },
-    select: { id: true, provider: true, model: true, metadata: true },
+    select: { id: true, provider: true, model: true, metadata: true, isActive: true },
   });
   for (const model of models) {
-    // 未登记在 IMAGE_MODEL_PARAMS 里的模型（运营手动加的、或已下线的）——**跳过，不猜**。
-    // 老代码正是靠"猜一个 kind"把未知模型悄悄按别的模型的参数表处理，用户因此能选到
-    // 该模型根本不支持的档位。
+    // 未登记在 IMAGE_MODEL_PARAMS 里的图片模型（已下线的、或运营手加的）——**退役，不猜**。
+    //
+    // 为什么不能只是"跳过"：这一行仍然 isActive，用户在模型下拉里选得到它。而它没有
+    // protocolKey、schema 也是旧的 → 选中就是一次 400。老代码正是靠"猜一个 kind"把未知
+    // 模型悄悄按别的模型的参数表处理，用户因此能选到该模型根本不支持的档位。
+    //
+    // 为什么是停用而不是 DELETE：image_generations 等表按 modelConfigId 外键引用它，
+    // 硬删会带走历史记录。停用后它从所有面向用户的列表里消失，历史仍可追溯。
     if (!IMAGE_MODEL_PARAMS[model.model]) {
-      console.warn(`[seed] skip protocol metadata → ${model.model}（未登记在 IMAGE_MODEL_PARAMS）`);
+      if (model.isActive) {
+        await prisma.model_configs.update({
+          where: { id: model.id },
+          data: { isActive: false },
+        });
+        console.warn(`[seed] retired ${model.model} —— 未登记在 IMAGE_MODEL_PARAMS，已停用（历史记录保留）`);
+      }
       continue;
     }
     const existing = (model.metadata ?? {}) as Record<string, unknown>;
@@ -268,6 +279,14 @@ async function seedModelSchemas() {
     // 但**只作用于 image/video**：受历史通用 schema bug 影响的就是这两类(quality 档位/
     // 分辨率不匹配)；text 模型走统一 text preset、无 per-model 差异，且更可能被运营调过
     // token 计价，故即使 force 也不动它们，避免误伤。
+    // 已退役的图片模型（不在 IMAGE_MODEL_PARAMS 里）：不给它生成 schema。
+    // buildImageParamsSchema 对未登记的 model id 是**直接抛**的（不做静默兜底），
+    // 不在这里跳过的话整个 seed 会在这一行崩掉。
+    if (key === 'image' && !IMAGE_MODEL_PARAMS[model.model]) {
+      skipped.add(model.id);
+      continue;
+    }
+
     const alreadyConfigured = model.paramsSchema !== null && model.pricingSchema !== null;
     const forceThis = FORCE_MODEL_SCHEMAS && key !== 'text';
     if (alreadyConfigured && !forceThis) {
