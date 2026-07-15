@@ -3,9 +3,8 @@ packages:
   - 'services/*'
   - 'packages/*'
 
-# A flat node_modules, mirroring the previous bunfig.toml `linker = "hoisted"`.
-# pnpm 11 reads this here, NOT from .npmrc — putting it in .npmrc is silently
-# ignored and you get the default isolated (symlinked) layout instead.
+# A flat node_modules. pnpm 11 reads this here, NOT from .npmrc — putting it in
+# .npmrc is silently ignored and you get the default isolated (symlinked) layout.
 #
 # Two reasons it belongs here: electron-builder (clients/desktop) does not
 # support the isolated layout, and the symlink-heavy virtual store makes the

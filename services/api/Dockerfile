@@ -36,9 +36,7 @@ RUN pnpm --filter @autix/api run build
 
 # --- Production dependencies (API + its workspace closure only) ---
 # `--filter @autix/api...` installs the API and everything it depends on, so the
-# web/desktop trees (Next, Electron) never land here. This replaces the old
-# "write empty stub package.json files" hack, which only existed because bun has
-# no filtered install.
+# web/desktop trees (Next, Electron) never land here.
 FROM node:22-slim AS prod-deps
 RUN corepack enable pnpm
 WORKDIR /app
@@ -98,9 +96,8 @@ RUN mkdir -p node_modules/@autix && \
     ln -s /app/packages/database node_modules/@autix/database
 
 # The CMD runs `db:prepare-cutover`, whose steps shell out to prisma, tsx and
-# dotenv — all devDependencies, which `--prod` above excludes. bun got these for
-# free (it runs TypeScript natively); Node does not, so install them explicitly
-# or the migration chain dies at container start.
+# dotenv — all devDependencies, which `--prod` above excludes. Install them
+# explicitly here, or the migration chain dies at container start.
 #
 # The prisma CLI version is derived from the @prisma/client actually installed:
 # Prisma refuses to run when the two drift, and hardcoding a version here would

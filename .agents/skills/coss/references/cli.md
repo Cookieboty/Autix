@@ -5,9 +5,8 @@ Use this guide when installing, previewing, or discovering coss components via t
 ## CLI Safety Rules
 
 - Always use the project's package runner:
-  - `npx shadcn@latest ...`
   - `pnpm dlx shadcn@latest ...`
-  - `bunx --bun shadcn@latest ...`
+  - `npx shadcn@latest ...`
 - Do not invent flags. Use only documented CLI flags.
 
 ## Core Commands for coss Usage

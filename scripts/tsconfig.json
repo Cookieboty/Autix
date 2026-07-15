@@ -1,8 +1,8 @@
 {
   // Used only by `tsx` when running the root scripts. check-i18n-consistency.ts
-  // reaches into clients/web, whose sources use the `@/*` alias — bun resolved
-  // that from the nearest tsconfig, but tsx reads the one at the cwd, so the
-  // mapping has to live here rather than polluting tsconfig.base.json.
+  // reaches into clients/web, whose sources use the `@/*` alias — tsx resolves
+  // paths from the tsconfig at the cwd (not the nearest one), so the mapping has
+  // to live here rather than polluting tsconfig.base.json.
   //
   // `paths` replaces (not merges with) the inherited map, so tsconfig.base.json's
   // @autix/* entries are repeated here — clients/web pulls them in transitively.
