@@ -1,21 +1,20 @@
 'use client';
 
 import type { ComponentType } from 'react';
-import { Gift, LogOut, Ticket, TimerReset, UserRound, Wallet } from 'lucide-react';
+import { LogOut, Ticket, TimerReset, UserRound, Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
 import { Link, usePathname, useRouter } from '../../navigation';
 
 /** 账户设置左侧导航项。href 为去掉 locale 前缀的应用内路径。 */
 type SettingsNavItem = {
-  key: 'profile' | 'gifts' | 'subscription' | 'usage' | 'promo';
+  key: 'profile' | 'subscription' | 'usage' | 'promo';
   href: string;
   icon: ComponentType<{ className?: string }>;
 };
 
 const NAV_ITEMS: SettingsNavItem[] = [
   { key: 'profile', href: '/me/settings', icon: UserRound },
-  { key: 'gifts', href: '/me/settings/gifts', icon: Gift },
   { key: 'subscription', href: '/me/settings/subscription', icon: Wallet },
   { key: 'usage', href: '/me/settings/usage', icon: TimerReset },
   { key: 'promo', href: '/me/settings/promo', icon: Ticket },
