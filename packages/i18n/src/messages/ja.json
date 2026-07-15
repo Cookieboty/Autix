@@ -3907,19 +3907,65 @@
         },
         "deleteAccount": "アカウントを削除",
         "comingSoon": "近日対応",
-        "usageTooltip": "{date} に {amount} クレジット消費"
+        "usageTooltip": "{date} に {amount} クレジット消費",
+        "languageTitle": "言語",
+        "languageBody": "インターフェースの言語を選択します。"
       },
       "usage": {
         "title": "使用状況",
         "subtitle": "クレジット消費の推移を確認できます。",
         "comingSoon": "使用状況の分析は近日公開予定です。",
-        "chartTitle": "クレジット消費（過去 30 日）"
+        "chartTitle": "クレジット消費（過去 30 日）",
+        "pageTitle": "使用履歴",
+        "pageSubtitle": "クレジットの使用状況・履歴・統計を確認",
+        "refresh": "更新",
+        "rangeLabel": "期間",
+        "range": {
+          "today": "今日",
+          "d7": "過去 7 日",
+          "month": "過去 1 か月",
+          "m3": "過去 3 か月",
+          "m6": "過去 6 か月",
+          "year": "過去 1 年",
+          "all": "全期間"
+        },
+        "bannerTitle": "{date} 以降のクレジット使用履歴を確認できます。",
+        "bannerBody": "システムの制限により、これより前のデータは表示できません。ご了承ください。",
+        "spendOverview": "消費の概要",
+        "creditsSpent": "消費クレジット",
+        "creditsEarned": "獲得クレジット",
+        "categories": "利用カテゴリ",
+        "transactions": "取引件数",
+        "historyTitle": "使用履歴",
+        "colCredits": "クレジット",
+        "colDate": "日時",
+        "filterAllCategories": "すべてのカテゴリ",
+        "filterAllActions": "すべての操作",
+        "actionSpent": "消費",
+        "actionEarned": "獲得",
+        "creditsUnit": "{amount} クレジット",
+        "show": "表示",
+        "pageOf": "{total} ページ中 {page} ページ",
+        "empty": "この期間の使用履歴はありません。",
+        "source": {
+          "MEMBERSHIP": "メンバーシップ",
+          "PACKAGE": "クレジットパック",
+          "TASK": "生成",
+          "INVITATION": "招待",
+          "ADMIN_GRANT": "管理者付与",
+          "AGENT_CALL": "エージェント呼び出し",
+          "CAMPAIGN": "キャンペーン",
+          "EXPIRATION": "失効"
+        }
       },
       "promo": {
         "title": "プロモコード",
         "subtitle": "コードを引き換えてクレジットや特典を獲得しましょう。",
-        "placeholder": "コードを入力",
-        "redeem": "引き換える"
+        "placeholder": "プロモコードを入力",
+        "redeem": "引き換える",
+        "heading": "プロモコード",
+        "claim": "利用する",
+        "comingSoon": "プロモコードの利用はまだ対応していません。"
       },
       "gifts": {
         "title": "ギフト",
@@ -3928,8 +3974,28 @@
       },
       "subscription": {
         "title": "サブスクリプション",
-        "subtitle": "プランと請求を管理します。",
-        "comingSoon": "サブスクリプション管理は近日公開予定です。"
+        "subtitle": "プラン・請求・請求書を管理",
+        "comingSoon": "サブスクリプション管理は近日公開予定です。",
+        "currentPlan": "現在のプラン",
+        "freePlan": "無料プラン",
+        "freePlanBody": "アップグレードするとクレジットや機能が増えます。",
+        "upgrade": "アップグレード",
+        "statusActive": "有効",
+        "statusCancelled": "キャンセル済み",
+        "statusExpired": "期限切れ",
+        "renewsOn": "{date} に更新",
+        "expiresOn": "{date} に期限切れ",
+        "cancelsOn": "{date} に解約",
+        "autoRenewOn": "自動更新オン",
+        "autoRenewOff": "自動更新オフ",
+        "manage": "管理",
+        "invoices": "請求書",
+        "invoiceEmpty": "請求書はまだありません。",
+        "download": "ダウンロード",
+        "statusPaid": "支払い済み",
+        "billingInfo": "請求情報",
+        "billingInfoBody": "Stripe で支払い方法・請求情報・請求書を管理します。",
+        "portalError": "請求ポータルを開けませんでした。もう一度お試しください。"
       },
       "editProfile": {
         "title": "プロフィールを編集",
@@ -3947,7 +4013,9 @@
         "saved": "プロフィールを更新しました",
         "errorGeneric": "エラーが発生しました。もう一度お試しください。",
         "errorAvatarType": "対応していない画像形式です。",
-        "errorAvatarSize": "画像は {maxMb}MB 未満にしてください。"
+        "errorAvatarSize": "画像は {maxMb}MB 未満にしてください。",
+        "nickname": "ニックネーム",
+        "nicknamePlaceholder": "表示名"
       }
     }
   },

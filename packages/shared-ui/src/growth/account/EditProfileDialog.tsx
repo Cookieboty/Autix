@@ -1,17 +1,22 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { AVATAR_UPLOAD_LIMITS, OWN_PROFILE_LIMITS, type UpdateOwnProfileInput } from '@autix/domain';
 import { authActions, useAuthStore } from '@autix/shared-store';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { toast } from '../../ui';
 
-const BIO_MAX = OWN_PROFILE_LIMITS.descriptionMaxLength;
+// 设计稿 Bio 计数上限为 300（DB/domain 允许 500，这里按稿取更严的 300）。
+const BIO_MAX = 300;
 
 const FIELD_CLASS =
-  'w-full rounded-lg bg-[rgb(24,25,28)] px-3.5 py-2.5 text-sm text-foreground outline-none ring-1 ring-inset ring-white/5 transition placeholder:text-foreground/35 focus:ring-growth-accent/60 disabled:cursor-not-allowed disabled:opacity-50';
+  'w-full rounded-lg bg-white/5 px-3.5 py-2.5 text-sm text-foreground outline-none transition placeholder:text-foreground/40 focus:ring-2 focus:ring-inset focus:ring-growth-accent disabled:cursor-not-allowed disabled:opacity-50';
+
+// 只读展示字段（如登录用 username，不可编辑）
+const READONLY_FIELD_CLASS =
+  'w-full cursor-not-allowed rounded-lg bg-white/5 px-3.5 py-2.5 text-sm text-foreground/60 outline-none';
 
 const SOCIAL_FIELDS = [
   { key: 'socialX', placeholder: 'x.com/' },
@@ -34,8 +39,9 @@ type FormState = Record<FormKey, string>;
 
 function toForm(user: ReturnType<typeof useAuthStore.getState>['user']): FormState {
   return {
-    // Username 字段回填 nickname，缺省用 username 兜底（不改动即不落库）
-    name: user?.nickname ?? user?.username ?? '',
+    // Nickname 框回填「当前有效显示名」，与头部展示一致（nickname → realName → username）。
+    // realName 是非自助字段（OAuth 带入等），这里仅作初值；未改动不落库，改动后写入 nickname 并在头部优先生效。
+    name: user?.nickname ?? user?.realName ?? user?.username ?? '',
     headline: user?.headline ?? '',
     bio: user?.description ?? '',
     location: user?.location ?? '',
@@ -138,15 +144,26 @@ export function EditProfileDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[86vh] flex-col gap-0 overflow-hidden border-0 bg-[rgb(20,21,24)] p-0 sm:max-w-[460px]">
-        <DialogHeader className="shrink-0 border-b border-white/5 px-5 py-4">
-          <DialogTitle className="text-base font-bold text-foreground">{t('editProfile.title')}</DialogTitle>
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[88vh] flex-col gap-0 overflow-hidden rounded-3xl border-0 bg-[rgb(22,23,26)] p-0 sm:max-w-[420px]"
+      >
+        <DialogHeader className="shrink-0 px-6 pt-5 pb-3">
+          <DialogTitle className="text-lg font-bold text-foreground">{t('editProfile.title')}</DialogTitle>
         </DialogHeader>
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          aria-label={t('editProfile.cancel')}
+          className="absolute right-4 top-4 z-10 grid size-8 place-items-center rounded-full text-foreground/70 outline-none transition hover:bg-white/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-growth-accent"
+        >
+          <X className="size-4" />
+        </button>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+        <div className="mx-3 mb-3 min-h-0 flex-1 space-y-5 overflow-y-auto rounded-2xl bg-white/5 px-5 py-5">
           {/* 头像 + 上传 */}
           <div className="flex items-center gap-3">
-            <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-xl font-black text-growth-accent growth-avatar-glow">
+            <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-xl font-black text-growth-accent">
               {user?.avatar ? (
                 <img src={user.avatar} alt={name0} className="h-full w-full object-cover" />
               ) : (
@@ -166,21 +183,26 @@ export function EditProfileDialog({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-2 rounded-lg bg-[rgb(24,25,28)] px-3.5 py-2 text-sm font-semibold text-foreground ring-1 ring-inset ring-white/5 transition hover:bg-[rgb(30,32,35)] disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-white/15 disabled:opacity-60"
             >
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
               {t('editProfile.upload')}
             </button>
           </div>
 
-          {/* Username → nickname */}
+          {/* Username → 只读展示（登录名，不可自助修改） */}
           <Field label={t('editProfile.username')}>
+            <input value={user?.username ?? ''} readOnly tabIndex={-1} className={READONLY_FIELD_CLASS} />
+          </Field>
+
+          {/* Nickname → 可编辑显示名 */}
+          <Field label={t('editProfile.nickname')}>
             <input
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
               maxLength={OWN_PROFILE_LIMITS.nicknameMaxLength}
               disabled={!nicknameEditable}
-              placeholder={user?.username ?? ''}
+              placeholder={t('editProfile.nicknamePlaceholder')}
               className={FIELD_CLASS}
             />
           </Field>
@@ -226,7 +248,7 @@ export function EditProfileDialog({
 
           {/* Socials */}
           <Field label={t('editProfile.socials')}>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {SOCIAL_FIELDS.map((s) => (
                 <input
                   key={s.key}
@@ -243,11 +265,11 @@ export function EditProfileDialog({
           {error ? <p className="text-sm text-red-400">{error}</p> : null}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-white/5 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-3 px-6 pb-5 pt-2">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-lg bg-[rgb(24,25,28)] px-5 py-2 text-sm font-semibold text-foreground ring-1 ring-inset ring-white/5 transition hover:bg-[rgb(30,32,35)]"
+            className="rounded-lg bg-[rgb(38,40,44)] px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-[rgb(46,48,52)]"
           >
             {t('editProfile.cancel')}
           </button>
@@ -255,7 +277,7 @@ export function EditProfileDialog({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-lg bg-foreground px-5 py-2 text-sm font-bold text-background transition hover:bg-foreground/90 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-2.5 text-sm font-bold text-black transition hover:bg-white/90 disabled:opacity-60"
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
             {t('editProfile.save')}
@@ -268,8 +290,8 @@ export function EditProfileDialog({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <span className="text-sm font-semibold text-foreground/85">{label}</span>
+    <div className="space-y-2">
+      <span className="text-[13px] font-medium text-foreground/65">{label}</span>
       {children}
     </div>
   );

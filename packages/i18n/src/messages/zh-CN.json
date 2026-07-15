@@ -4243,19 +4243,65 @@
         },
         "deleteAccount": "删除账户",
         "comingSoon": "即将支持",
-        "usageTooltip": "{date} 消耗 {amount} 额度"
+        "usageTooltip": "{date} 消耗 {amount} 额度",
+        "languageTitle": "语言",
+        "languageBody": "选择界面显示语言。"
       },
       "usage": {
         "title": "用量",
         "subtitle": "查看你的额度消耗趋势。",
         "comingSoon": "用量统计即将上线。",
-        "chartTitle": "额度消耗（近 30 天）"
+        "chartTitle": "额度消耗（近 30 天）",
+        "pageTitle": "使用记录",
+        "pageSubtitle": "查看额度用量、历史与统计",
+        "refresh": "刷新",
+        "rangeLabel": "范围",
+        "range": {
+          "today": "今天",
+          "d7": "近 7 天",
+          "month": "近一个月",
+          "m3": "近 3 个月",
+          "m6": "近 6 个月",
+          "year": "近一年",
+          "all": "全部"
+        },
+        "bannerTitle": "你可以查看自 {date} 起的额度使用记录。",
+        "bannerBody": "受系统限制，更早的数据暂不可用——感谢理解。",
+        "spendOverview": "消耗概览",
+        "creditsSpent": "已消耗额度",
+        "creditsEarned": "已获得额度",
+        "categories": "涉及分类",
+        "transactions": "流水条数",
+        "historyTitle": "使用记录",
+        "colCredits": "额度",
+        "colDate": "日期",
+        "filterAllCategories": "全部分类",
+        "filterAllActions": "全部动作",
+        "actionSpent": "消耗",
+        "actionEarned": "获得",
+        "creditsUnit": "{amount} 额度",
+        "show": "每页",
+        "pageOf": "第 {page} / {total} 页",
+        "empty": "该范围内暂无使用记录。",
+        "source": {
+          "MEMBERSHIP": "会员",
+          "PACKAGE": "加油包",
+          "TASK": "生成",
+          "INVITATION": "邀请",
+          "ADMIN_GRANT": "管理员发放",
+          "AGENT_CALL": "智能体调用",
+          "CAMPAIGN": "活动",
+          "EXPIRATION": "过期"
+        }
       },
       "promo": {
         "title": "兑换码",
         "subtitle": "兑换代码以获得额度或解锁权益。",
-        "placeholder": "输入你的兑换码",
-        "redeem": "兑换"
+        "placeholder": "输入兑换码",
+        "redeem": "兑换",
+        "heading": "兑换码",
+        "claim": "兑换",
+        "comingSoon": "兑换码功能暂未开放。"
       },
       "gifts": {
         "title": "礼包",
@@ -4264,8 +4310,28 @@
       },
       "subscription": {
         "title": "订阅",
-        "subtitle": "管理你的套餐与账单。",
-        "comingSoon": "订阅管理即将上线。"
+        "subtitle": "管理你的套餐、账单与发票",
+        "comingSoon": "订阅管理即将上线。",
+        "currentPlan": "当前套餐",
+        "freePlan": "免费版",
+        "freePlanBody": "升级以解锁更多额度与功能。",
+        "upgrade": "升级",
+        "statusActive": "生效中",
+        "statusCancelled": "已取消",
+        "statusExpired": "已过期",
+        "renewsOn": "{date} 续订",
+        "expiresOn": "{date} 到期",
+        "cancelsOn": "{date} 取消",
+        "autoRenewOn": "自动续订已开启",
+        "autoRenewOff": "自动续订已关闭",
+        "manage": "管理",
+        "invoices": "发票",
+        "invoiceEmpty": "暂无发票。",
+        "download": "下载",
+        "statusPaid": "已支付",
+        "billingInfo": "支付账单信息",
+        "billingInfoBody": "在 Stripe 管理支付方式、账单信息与发票。",
+        "portalError": "打开账单门户失败，请重试。"
       },
       "editProfile": {
         "title": "编辑资料",
@@ -4283,7 +4349,9 @@
         "saved": "资料已更新",
         "errorGeneric": "出错了，请重试。",
         "errorAvatarType": "不支持的图片格式。",
-        "errorAvatarSize": "图片需小于 {maxMb}MB。"
+        "errorAvatarSize": "图片需小于 {maxMb}MB。",
+        "nickname": "昵称",
+        "nicknamePlaceholder": "你的显示名"
       }
     }
   },

@@ -3907,19 +3907,65 @@
         },
         "deleteAccount": "Xóa tài khoản",
         "comingSoon": "Sắp có",
-        "usageTooltip": "Đã dùng {amount} tín dụng ({date})"
+        "usageTooltip": "Đã dùng {amount} tín dụng ({date})",
+        "languageTitle": "Ngôn ngữ",
+        "languageBody": "Chọn ngôn ngữ hiển thị giao diện."
       },
       "usage": {
         "title": "Sử dụng",
         "subtitle": "Theo dõi mức tiêu thụ tín dụng theo thời gian.",
         "comingSoon": "Phân tích sử dụng sắp ra mắt.",
-        "chartTitle": "Tín dụng đã dùng (30 ngày qua)"
+        "chartTitle": "Tín dụng đã dùng (30 ngày qua)",
+        "pageTitle": "Lịch sử sử dụng",
+        "pageSubtitle": "Xem mức dùng tín dụng, lịch sử và thống kê",
+        "refresh": "Làm mới",
+        "rangeLabel": "Khoảng",
+        "range": {
+          "today": "Hôm nay",
+          "d7": "7 ngày qua",
+          "month": "Tháng qua",
+          "m3": "3 tháng qua",
+          "m6": "6 tháng qua",
+          "year": "Năm qua",
+          "all": "Tất cả"
+        },
+        "bannerTitle": "Bạn có thể xem lịch sử dùng tín dụng từ {date}.",
+        "bannerBody": "Một số dữ liệu cũ hơn không khả dụng do giới hạn hệ thống — cảm ơn bạn đã thông cảm.",
+        "spendOverview": "Tổng quan chi tiêu",
+        "creditsSpent": "Tín dụng đã dùng",
+        "creditsEarned": "Tín dụng nhận được",
+        "categories": "Danh mục đã dùng",
+        "transactions": "Giao dịch",
+        "historyTitle": "Lịch sử sử dụng",
+        "colCredits": "Tín dụng",
+        "colDate": "Ngày",
+        "filterAllCategories": "Tất cả danh mục",
+        "filterAllActions": "Tất cả hành động",
+        "actionSpent": "Đã dùng",
+        "actionEarned": "Nhận được",
+        "creditsUnit": "{amount} tín dụng",
+        "show": "Hiện",
+        "pageOf": "Trang {page}/{total}",
+        "empty": "Không có bản ghi nào trong khoảng này.",
+        "source": {
+          "MEMBERSHIP": "Thành viên",
+          "PACKAGE": "Gói tín dụng",
+          "TASK": "Tạo",
+          "INVITATION": "Lời mời",
+          "ADMIN_GRANT": "Cấp bởi quản trị",
+          "AGENT_CALL": "Gọi agent",
+          "CAMPAIGN": "Chiến dịch",
+          "EXPIRATION": "Hết hạn"
+        }
       },
       "promo": {
         "title": "Mã khuyến mãi",
         "subtitle": "Đổi mã để nhận tín dụng hoặc mở khóa ưu đãi.",
-        "placeholder": "Nhập mã của bạn",
-        "redeem": "Đổi"
+        "placeholder": "Nhập mã khuyến mãi",
+        "redeem": "Đổi",
+        "heading": "Mã khuyến mãi",
+        "claim": "Đổi",
+        "comingSoon": "Tính năng đổi mã khuyến mãi chưa khả dụng."
       },
       "gifts": {
         "title": "Quà tặng",
@@ -3928,8 +3974,28 @@
       },
       "subscription": {
         "title": "Gói đăng ký",
-        "subtitle": "Quản lý gói và thanh toán của bạn.",
-        "comingSoon": "Quản lý gói đăng ký sắp ra mắt."
+        "subtitle": "Quản lý gói, thanh toán và hóa đơn",
+        "comingSoon": "Quản lý gói đăng ký sắp ra mắt.",
+        "currentPlan": "Gói hiện tại",
+        "freePlan": "Gói miễn phí",
+        "freePlanBody": "Nâng cấp để mở khóa thêm tín dụng và tính năng.",
+        "upgrade": "Nâng cấp",
+        "statusActive": "Đang hoạt động",
+        "statusCancelled": "Đã hủy",
+        "statusExpired": "Đã hết hạn",
+        "renewsOn": "Gia hạn vào {date}",
+        "expiresOn": "Hết hạn vào {date}",
+        "cancelsOn": "Hủy vào {date}",
+        "autoRenewOn": "Tự động gia hạn bật",
+        "autoRenewOff": "Tự động gia hạn tắt",
+        "manage": "Quản lý",
+        "invoices": "Hóa đơn",
+        "invoiceEmpty": "Chưa có hóa đơn.",
+        "download": "Tải xuống",
+        "statusPaid": "Đã thanh toán",
+        "billingInfo": "Thông tin thanh toán",
+        "billingInfoBody": "Quản lý phương thức thanh toán, thông tin thanh toán và hóa đơn trên Stripe.",
+        "portalError": "Không thể mở cổng thanh toán. Vui lòng thử lại."
       },
       "editProfile": {
         "title": "Chỉnh sửa hồ sơ",
@@ -3947,7 +4013,9 @@
         "saved": "Đã cập nhật hồ sơ",
         "errorGeneric": "Đã xảy ra lỗi. Vui lòng thử lại.",
         "errorAvatarType": "Định dạng ảnh không được hỗ trợ.",
-        "errorAvatarSize": "Ảnh phải nhỏ hơn {maxMb}MB."
+        "errorAvatarSize": "Ảnh phải nhỏ hơn {maxMb}MB.",
+        "nickname": "Biệt danh",
+        "nicknamePlaceholder": "Tên hiển thị của bạn"
       }
     }
   },

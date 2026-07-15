@@ -7,6 +7,7 @@ import {
   ChevronDown,
   FolderOpen,
   Image as ImageIcon,
+  Languages,
   Pencil,
   Settings2,
   Tag,
@@ -16,17 +17,21 @@ import {
 import { useTranslations } from 'next-intl';
 import {
   useAuthStore,
+  useLanguageStore,
   useMyMembershipQuery,
   usePointsBalanceQuery,
   usePointsSummaryQuery,
 } from '@autix/shared-store';
+import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, type SupportedLanguage } from '@autix/i18n';
 import { Link } from '../../navigation';
 import { Switch } from '../../ui/switch';
+import { Skeleton } from '../../ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { AccountUsageChart } from './AccountUsageChart';
 import { EditProfileDialog } from './EditProfileDialog';
 
 function displayName(user: ReturnType<typeof useAuthStore.getState>['user']) {
-  return user?.nickname || user?.realName || user?.username || user?.email || 'Amux';
+  return user?.nickname || user?.realName || user?.username || user?.email || '';
 }
 
 function ProfileAvatar({ name, avatar }: { name: string; avatar?: string | null }) {
@@ -58,6 +63,8 @@ export function AccountProfilePanel() {
   const pointsQuery = usePointsBalanceQuery(isAuthenticated);
   const pointsSummaryQuery = usePointsSummaryQuery(isAuthenticated);
   const membershipQuery = useMyMembershipQuery(isAuthenticated);
+  const language = useLanguageStore((s) => s.language);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deletionOpen, setDeletionOpen] = useState(true);
@@ -78,6 +85,10 @@ export function AccountProfilePanel() {
   const poolPercent = totalGranted > 0 ? Math.round((points / totalGranted) * 100) : 0;
 
   const allConfirmed = DELETION_ITEMS.every((item) => deletionConfirmed[item.key]);
+
+  // 用户或额度数据未就绪时先出骨架屏（避免闪现空名/占位文案）
+  const loading = !user || pointsQuery.isLoading || pointsSummaryQuery.isLoading;
+  if (loading) return <ProfileSkeleton />;
 
   return (
     <div className="space-y-6">
@@ -137,6 +148,39 @@ export function AccountProfilePanel() {
           </div>
           <AccountUsageChart className="mt-6" />
         </div>
+      </div>
+
+      {/* 语言切换 */}
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-[rgb(24,25,28)] p-5">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Languages className="size-4 text-foreground/60" />
+            {t('profile.languageTitle')}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-foreground/55">{t('profile.languageBody')}</p>
+        </div>
+        <Select value={language} onValueChange={(v) => void setLanguage(v as SupportedLanguage)}>
+          <SelectTrigger
+            size="sm"
+            className="h-9 min-w-[9rem] gap-1.5 rounded-lg border-0 bg-white/5 px-3 text-sm font-medium text-foreground shadow-none transition hover:bg-white/10 focus-visible:ring-1 focus-visible:ring-growth-accent"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent
+            align="end"
+            className="min-w-[9rem] border-0 bg-[rgb(32,33,37)] p-1.5 ring-1 ring-white/10 [&_.lucide-check]:text-growth-accent"
+          >
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <SelectItem
+                key={lang}
+                value={lang}
+                className="rounded-lg py-2 text-foreground/80 focus:bg-white/10 focus:text-foreground"
+              >
+                {LANGUAGE_LABELS[lang]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 自动发布开关（暂未支持：禁用 + 即将支持标识） */}
@@ -230,6 +274,27 @@ export function AccountProfilePanel() {
       </div>
 
       <EditProfileDialog open={editOpen} onOpenChange={setEditOpen} />
+    </div>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Skeleton className="size-16 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-52" />
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Skeleton className="h-32 rounded-2xl" />
+        <Skeleton className="h-32 rounded-2xl" />
+      </div>
+      <Skeleton className="h-20 rounded-2xl" />
+      <Skeleton className="h-20 rounded-2xl" />
+      <Skeleton className="h-40 rounded-2xl" />
     </div>
   );
 }
