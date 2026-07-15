@@ -95,5 +95,8 @@
     "next": {
       "optional": true
     }
-  }
+  },
+  "sideEffects": [
+    "**/*.css"
+  ]
 }
