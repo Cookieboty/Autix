@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "wait-on tcp:4000 && dotenv -e ../../.env -- next dev --port 3100",
+    "dev": "wait-on tcp:4000 && dotenv -e ../../.env -- cross-env NODE_OPTIONS=--max-old-space-size=2048 next dev --port 3100",
     "build": "dotenv -e ../../.env -- next build --webpack",
     "start": "dotenv -e ../../.env -- next start --port 3100",
     "typecheck": "tsc --noEmit",
@@ -56,6 +56,7 @@
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^6.0.2",
+    "cross-env": "^7.0.3",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
