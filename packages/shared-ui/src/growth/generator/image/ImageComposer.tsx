@@ -54,7 +54,6 @@ export function ImageComposer({
   appliedTemplate,
   appliedReference,
   appliedRecreate,
-  generating,
   onGenerate,
   onModelChange,
 }: {
@@ -89,7 +88,6 @@ export function ImageComposer({
     prompt: string;
     referenceImages: string[];
   } | null;
-  generating: boolean;
   onGenerate: (payload: PublicImageGenerationPayload) => Promise<void>;
   onModelChange: (modelId: string) => void;
 }) {
@@ -286,17 +284,13 @@ export function ImageComposer({
     // 验收标准第 7 条：报价参数与生成参数必须是同一个对象）。
     const settings = buildPublicImageGenerationSettings(form.params);
     setGenerateError(null);
-    try {
-      await onGenerate({
-        model,
-        prompt: trimmedPrompt,
-        referenceImages: uploadedRefs.map((ref) => ref.url),
-        settings,
-        visibility,
-      });
-    } catch (err) {
-      setGenerateError(err instanceof Error ? err.message : t('generateFailed'));
-    }
+    await onGenerate({
+      model,
+      prompt: trimmedPrompt,
+      referenceImages: uploadedRefs.map((ref) => ref.url),
+      settings,
+      visibility,
+    });
   };
 
   return (
@@ -442,20 +436,15 @@ export function ImageComposer({
 
           <MagneticButton
             type="button"
-            disabled={generating || schemaMissing}
+            disabled={schemaMissing}
             onClick={() => void handleGenerate()}
             className="growth-generator-generate inline-flex h-full max-h-[94px] flex-col items-center justify-center gap-0.5 self-end rounded-2xl bg-growth-accent px-5 text-base font-black text-background hover:bg-foreground disabled:cursor-wait disabled:opacity-75"
           >
             <span className="inline-flex items-center gap-2">
-              {generating ? t('generating') : t('generate')}
+              {t('generate')}
               <Sparkles className="size-4 fill-background" />
             </span>
-            {generating ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-background/70">
-                <Loader2 className="size-3 animate-spin" />
-                {t('stayHere')}
-              </span>
-            ) : estimateCost != null ? (
+            {estimateCost != null ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-background/66">
                 <Coins className="size-3.5" />
                 {tImagePrompt('costPoints', { points: estimateCost })}

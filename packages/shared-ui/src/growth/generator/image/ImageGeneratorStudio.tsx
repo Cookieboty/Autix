@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import type { ImageModelCapability } from '@autix/domain/image';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import {
@@ -156,8 +157,7 @@ export function ImageGeneratorStudio({
   const [interactions, setInteractions] = useState<Record<string, GalleryCardInteraction>>({});
   const [historyItems, setHistoryItems] = useState<PublicImageHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [pendingGeneration, setPendingGeneration] = useState<PendingImageGenerationCard | null>(null);
+  const [pendingGenerations, setPendingGenerations] = useState<PendingImageGenerationCard[]>([]);
   /**
    * 广场作品的原始 feed（按 postId 索引）。瀑布流卡片吃的是映射后的 ImageTemplate，
    * 但详情弹窗与首页共用、吃的是 GalleryFeedItem 原始形状 —— 映射会丢掉 metrics /
@@ -415,20 +415,23 @@ export function ImageGeneratorStudio({
       openAuthModal({ mode: 'entry', returnTo: '/ai/image' });
       return;
     }
-    setPendingGeneration({
-      id: `pending-image-${Date.now()}`,
-      prompt: payload.prompt,
-      model: selectedModel?.name ?? payload.model,
-      // 生成张数已下线为用户可调项（业务逻辑固定吃掉），settings 里也不再携带
-      // count（spec §11 第 2 期：透传 schema 参数，count 从不是 schema 属性）——
-      // 骨架占位卡的张数改用 imageCapability 的模型默认值，目前所有能力表都是 1。
-      count: imageCapability.defaults.count,
-      // 整个 schema 参数包交给占位块自己解析比例：比例参数的键名逐模型不同
-      // （多数模型是 aspectRatio，只有 size-grid 模型才有 size），这里不能只挑 size。
-      settings: payload.settings,
-    });
+    const cardId = `pending-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setPendingGenerations((prev) => [
+      {
+        id: cardId,
+        prompt: payload.prompt,
+        model: selectedModel?.name ?? payload.model,
+        // 生成张数已下线为用户可调项（业务逻辑固定吃掉），settings 里也不再携带
+        // count（spec §11 第 2 期：透传 schema 参数，count 从不是 schema 属性）——
+        // 骨架占位卡的张数改用 imageCapability 的模型默认值，目前所有能力表都是 1。
+        count: imageCapability.defaults.count,
+        // 整个 schema 参数包交给占位块自己解析比例：比例参数的键名逐模型不同
+        // （多数模型是 aspectRatio，只有 size-grid 模型才有 size），这里不能只挑 size。
+        settings: payload.settings,
+      },
+      ...prev,
+    ]);
     changeMode('history');
-    setGenerating(true);
     try {
       const data = await publicGeneratorActions.generateImage({
         model: payload.model,
@@ -446,9 +449,11 @@ export function ImageGeneratorStudio({
         modelConfigId: selectedModelId,
       });
       setHistoryItems((prev) => [nextHistoryItem, ...prev]);
+    } catch (err) {
+      // 服务端错误（含并发上限）统一 toast —— 多张并行时 inline 单槽无法表达哪张失败。
+      toast.error(err instanceof Error ? err.message : t('generateFailed'));
     } finally {
-      setGenerating(false);
-      setPendingGeneration(null);
+      setPendingGenerations((prev) => prev.filter((card) => card.id !== cardId));
     }
   };
 
@@ -576,14 +581,14 @@ export function ImageGeneratorStudio({
       {galleryMode ? <div className="growth-template-scroll-overlay pointer-events-none absolute inset-0" /> : null}
 
       {!galleryMode ? (
-        mode === 'history' && (historyItems.length > 0 || pendingGeneration) ? (
+        mode === 'history' && (historyItems.length > 0 || pendingGenerations.length > 0) ? (
           // 历史画廊：全屏铺满、横向 justified 行布局（固定行高，滑块调行高）
           <div className="relative z-10 h-full overflow-y-auto overscroll-contain px-[3px] pb-36 pt-14">
             <PublicImageHistoryPanel
               items={historyItems}
               loading={historyLoading}
               density={templateDensity}
-              pending={pendingGeneration}
+              pendingGenerations={pendingGenerations}
               onRecreate={handleRecreate}
               onUseAsReference={handleUseAsReference}
               onSelectionActiveChange={setHistorySelectionActive}
@@ -624,7 +629,6 @@ export function ImageGeneratorStudio({
           appliedTemplate={appliedTemplate}
           appliedReference={appliedReference}
           appliedRecreate={appliedRecreate}
-          generating={generating}
           onGenerate={handleGenerate}
           onModelChange={onModelChange}
         />

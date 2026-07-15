@@ -178,6 +178,8 @@ export const membershipAdminActions = {
     membershipAdminApi.createPackage(data),
   updatePackage: (id: string, data: Record<string, unknown>) =>
     membershipAdminApi.updatePackage(id, data),
+  deletePackage: (id: string) =>
+    membershipAdminApi.deletePackage(id),
 
   listOrders: async (params: AdminMembershipOrderParams = {}) => {
     const page = params.page ?? 1;

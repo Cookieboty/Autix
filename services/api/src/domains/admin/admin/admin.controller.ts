@@ -138,6 +138,14 @@ export class AdminController {
     return this.adminService.updatePointsPackage(user, id, body);
   }
 
+  @Delete('points/packages/:id')
+  async deletePointsPackage(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.deletePointsPackage(user, id);
+  }
+
   @Get('orders')
   async getOrders(
     @Query('page') page = '1',

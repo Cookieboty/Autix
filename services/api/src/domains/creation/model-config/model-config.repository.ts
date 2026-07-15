@@ -51,7 +51,7 @@ const modelWithMembershipInclude = {
 
 @Injectable()
 export class ModelConfigRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   findSystemModels() {
     // 管理端「系统模型配置」页（AdminGuard 保护）要能看到并管理**全部**模型，含 private——
@@ -85,9 +85,13 @@ export class ModelConfigRepository {
     });
   }
 
-  findPublicModel(id: string) {
+  /**
+   * 管理端 update/delete 的存在性查找：**按 id、不过滤 visibility**。口径必须与
+   * {@link findSystemModels}（列表展示全部模型含 private）一致，否则 private 模型在后台
+   */
+  findManageableSystemModel(id: string) {
     return this.prisma.model_configs.findFirst({
-      where: { id, visibility: ModelVisibility.public },
+      where: { id },
       include: modelWithMembershipInclude,
     });
   }

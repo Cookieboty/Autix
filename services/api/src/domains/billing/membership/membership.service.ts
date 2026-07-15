@@ -14,6 +14,7 @@ import {
 import { MembershipRepository } from './membership.repository';
 import { StripePaymentService } from '../order/stripe-payment.service';
 import {
+  assertImageConcurrency,
   assertImageEntitlement,
   resolveImageEntitlement,
   type ImageEntitlement,
@@ -160,6 +161,10 @@ export class MembershipService {
     requested: { size?: string | null; quality?: string | null },
   ): void {
     assertImageEntitlement(entitlement, requested);
+  }
+
+  assertImageConcurrency(activeCount: number, entitlement: ImageEntitlement): void {
+    assertImageConcurrency(activeCount, entitlement);
   }
 
   async getPublicLevels() {

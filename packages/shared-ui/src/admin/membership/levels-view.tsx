@@ -25,50 +25,16 @@ import {
   useUpdateAdminMembershipPlanMutation,
   type MembershipLevel,
 } from '@autix/shared-store';
-import { VIDEO_RESOLUTION_OPTIONS, type VideoResolution } from '@autix/domain/video';
+import { VIDEO_RESOLUTION_OPTIONS } from '@autix/domain/video';
+import {
+  type MembershipFeatureConfig,
+  DEFAULT_FEATURES,
+  cloneFeatures,
+  toFeatureConfig,
+  serializeFeatures,
+} from './levels-view.features';
 
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };
-
-type MembershipFeatureConfig = {
-  recommended: boolean;
-  removeWatermark: boolean;
-  commercialLicense: boolean;
-  seedance: {
-    enabled: boolean;
-    maxResolution: VideoResolution;
-    maxDurationSeconds: number;
-    concurrency: number;
-  };
-  queuePriority: string;
-  batchGeneration: string;
-  historyRetentionDays: number;
-  teamSpace: boolean;
-  invoice: string;
-};
-
-const DEFAULT_FEATURES: MembershipFeatureConfig = {
-  recommended: false,
-  removeWatermark: false,
-  commercialLicense: false,
-  seedance: {
-    enabled: false,
-    maxResolution: '720p',
-    maxDurationSeconds: 5,
-    concurrency: 1,
-  },
-  queuePriority: '',
-  batchGeneration: '',
-  historyRetentionDays: 30,
-  teamSpace: false,
-  invoice: '',
-};
-
-function cloneFeatures(features: MembershipFeatureConfig = DEFAULT_FEATURES): MembershipFeatureConfig {
-  return {
-    ...features,
-    seedance: { ...features.seedance },
-  };
-}
 
 function emptyLevelData() {
   return {
@@ -79,58 +45,6 @@ function emptyLevelData() {
     features: cloneFeatures(),
     isActive: true,
     sort: '',
-  };
-}
-
-function toFeatureConfig(features: MembershipLevel['features'] | unknown): MembershipFeatureConfig {
-  if (!features || Array.isArray(features) || typeof features !== 'object') {
-    return cloneFeatures();
-  }
-  const source = features as Record<string, unknown>;
-  const seedance = source.seedance && typeof source.seedance === 'object'
-    ? source.seedance as Record<string, unknown>
-    : {};
-  const maxResolution = VIDEO_RESOLUTION_OPTIONS.find(
-    (option) => option.value === seedance.maxResolution,
-  )?.value ?? '720p';
-  return {
-    recommended: Boolean(source.recommended),
-    removeWatermark: Boolean(source.removeWatermark),
-    commercialLicense: Boolean(source.commercialLicense),
-    seedance: {
-      enabled: Boolean(seedance.enabled),
-      maxResolution,
-      maxDurationSeconds: typeof seedance.maxDurationSeconds === 'number'
-        ? seedance.maxDurationSeconds
-        : 5,
-      concurrency: typeof seedance.concurrency === 'number' ? seedance.concurrency : 1,
-    },
-    queuePriority: typeof source.queuePriority === 'string' ? source.queuePriority : '',
-    batchGeneration: typeof source.batchGeneration === 'string' ? source.batchGeneration : '',
-    historyRetentionDays: typeof source.historyRetentionDays === 'number'
-      ? source.historyRetentionDays
-      : 30,
-    teamSpace: Boolean(source.teamSpace),
-    invoice: typeof source.invoice === 'string' ? source.invoice : '',
-  };
-}
-
-function serializeFeatures(features: MembershipFeatureConfig) {
-  return {
-    ...(features.recommended ? { recommended: true } : {}),
-    removeWatermark: features.removeWatermark,
-    commercialLicense: features.commercialLicense,
-    seedance: {
-      enabled: features.seedance.enabled,
-      maxResolution: features.seedance.maxResolution,
-      maxDurationSeconds: features.seedance.maxDurationSeconds,
-      concurrency: features.seedance.concurrency,
-    },
-    ...(features.queuePriority ? { queuePriority: features.queuePriority } : {}),
-    ...(features.batchGeneration ? { batchGeneration: features.batchGeneration } : {}),
-    historyRetentionDays: features.historyRetentionDays,
-    ...(features.teamSpace ? { teamSpace: true } : {}),
-    ...(features.invoice ? { invoice: features.invoice } : {}),
   };
 }
 
@@ -530,6 +444,9 @@ function FeatureConfigEditor({
   const updateSeedance = (partial: Partial<MembershipFeatureConfig['seedance']>) => {
     onChange({ ...value, seedance: { ...value.seedance, ...partial } });
   };
+  const updateImage = (partial: Partial<MembershipFeatureConfig['image']>) => {
+    onChange({ ...value, image: { ...value.image, ...partial } });
+  };
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-background/40 p-3">
@@ -618,6 +535,25 @@ function FeatureConfigEditor({
             </div>
           </div>
         )}
+      </div>
+
+      <div className="rounded-md border border-border p-3">
+        <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+          {t('benefitImageGeneration')}
+        </div>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+              {t('benefitImageConcurrency')}
+            </label>
+            <Input
+              type="number"
+              min={1}
+              value={String(value.image.concurrency)}
+              onChange={(e) => updateImage({ concurrency: Number(e.target.value) || 1 })}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

@@ -158,7 +158,7 @@ export class ModelConfigService {
   constructor(
     private readonly modelConfigRepository: ModelConfigRepository,
     private readonly membershipService: MembershipService,
-  ) {}
+  ) { }
 
   private maskApiKey<T extends { apiKey?: string | null; createdBy?: string | null }>(
     record: T,
@@ -275,19 +275,11 @@ export class ModelConfigService {
   }
 
   async updateSystemModel(id: string, dto: UpdateModelConfigDto) {
-    const existing = await this.modelConfigRepository.findPublicModel(id);
+    const existing = await this.modelConfigRepository.findManageableSystemModel(id);
     if (!existing) {
       throw new NotFoundException('模型配置不存在');
     }
 
-    // Only validate what is actually being written. `paramsSchema`/`pricingSchema`
-    // are legitimately NULL on models nobody has priced yet; an update that never
-    // touches either field (e.g. renaming a model, or fixing its description) must
-    // not be rejected just because those columns happen to be empty right now.
-    //
-    // `metadata` joins the trigger list because the 3rd layer (schema ⟷ preset 闭合)
-    // reads `metadata.protocolKey`: switching a model's protocol without touching its
-    // paramsSchema is exactly how the two configs get to diverge.
     if (
       dto.paramsSchema !== undefined ||
       dto.pricingSchema !== undefined ||
@@ -319,7 +311,7 @@ export class ModelConfigService {
   }
 
   async deleteSystemModel(id: string) {
-    const existing = await this.modelConfigRepository.findPublicModel(id);
+    const existing = await this.modelConfigRepository.findManageableSystemModel(id);
     if (!existing) {
       throw new NotFoundException('模型配置不存在');
     }

@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { Button, Input } from '../../ui';
 import { formatCurrency } from '../../format';
-import { Plus, Pencil, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   useAdminPointsPackagesQuery,
   useCreateAdminPointsPackageMutation,
   useUpdateAdminPointsPackageMutation,
+  useDeleteAdminPointsPackageMutation,
   type PointsPackage,
 } from '@autix/shared-store';
 
@@ -31,6 +32,7 @@ export function PointsPackagesView() {
   const { data: packages = [], isLoading: loading } = useAdminPointsPackagesQuery();
   const createPackageMutation = useCreateAdminPointsPackageMutation();
   const updatePackageMutation = useUpdateAdminPointsPackageMutation();
+  const deletePackageMutation = useDeleteAdminPointsPackageMutation();
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; data: Record<string, unknown> } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -65,6 +67,11 @@ export function PointsPackagesView() {
       id: pkg.id,
       data: { isActive: !pkg.isActive },
     });
+  };
+
+  const handleDeletePackage = async (pkg: PointsPackage) => {
+    if (!window.confirm(`${tCommon('confirmDelete')} ${pkg.name}?`)) return;
+    await deletePackageMutation.mutateAsync(pkg.id);
   };
 
   return (
@@ -124,6 +131,13 @@ export function PointsPackagesView() {
                   <td className="px-4 py-3 text-right">
                     <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setModal({ mode: 'edit', data: { ...pkg } })}>
                       <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      size="sm" variant="ghost" className="cursor-pointer"
+                      disabled={deletePackageMutation.isPending}
+                      onClick={() => handleDeletePackage(pkg)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </td>
                 </tr>

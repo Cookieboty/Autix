@@ -67,7 +67,7 @@ export function AdminSystemModelsView() {
   const models = modelsQuery.data ?? [];
   const membershipLevels = (membershipLevelsQuery.data ?? [])
     .filter((level) => level.isActive !== false);
-  const loading = modelsQuery.isLoading || modelsQuery.isFetching;
+  const loading = modelsQuery.isLoading;
   const queryError = modelsQuery.error
     ? readModelError(modelsQuery.error, t('loadFailed'))
     : null;

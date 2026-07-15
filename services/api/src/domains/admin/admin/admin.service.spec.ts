@@ -6,7 +6,10 @@ function buildService() {
   const adminRepository = {
     createPointsPackage: vi.fn().mockResolvedValue({ id: 'pkg-1' }),
     updatePointsPackage: vi.fn().mockResolvedValue({ id: 'pkg-1' }),
+    deletePointsPackage: vi.fn().mockResolvedValue({ id: 'pkg-1' }),
   } as any;
+
+  const auditStore = new AdminAuditStore();
 
   const service = new AdminService(
     adminRepository,
@@ -15,11 +18,11 @@ function buildService() {
     {} as any,
     {} as any,
     {} as any,
-    new AdminAuditStore(),
+    auditStore,
     {} as any,
   );
 
-  return { adminRepository, service };
+  return { adminRepository, auditStore, service };
 }
 
 const adminUser: AuthUser = {
@@ -82,5 +85,21 @@ describe('AdminService membership package writes', () => {
         isActive: false,
       },
     );
+  });
+
+  it('deletes points packages and records an audit entry', async () => {
+    const { adminRepository, auditStore, service } = buildService();
+
+    await service.deletePointsPackage(adminUser, 'pkg-1');
+
+    expect(adminRepository.deletePointsPackage).toHaveBeenCalledWith('pkg-1');
+
+    const { items } = auditStore.query({ action: 'points_packages.delete' });
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      action: 'points_packages.delete',
+      actorId: adminUser.id,
+      payload: { id: 'pkg-1' },
+    });
   });
 });

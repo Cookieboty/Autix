@@ -73,6 +73,54 @@ export const geminiImagesV1: ProtocolPreset = {
 };
 
 /**
+ * Gemini 原生 `generateContent` —— 与上面的 OpenAI 兼容 shim（`gemini-images@v1`）不同，
+ * 这是 Google 原生形态：model 进 URL、prompt/图片进 `contents[].parts[]`、`responseModalities`
+ * 声明出图、响应从 `candidates[*].content.parts[*].inlineData` 读。经网关原生透传时
+ * `baseUrl` 不应带 OpenAI 的 `/v1` 后缀（否则会拼成 `/v1/v1beta/...`）。
+ *
+ * - 鉴权：原生用 `x-goog-api-key`。若某网关的透传要 `Authorization: Bearer`，改这一行即可。
+ * - 张数：generateContent 单次产 1 张 → 走 fan-out，不发 `n`。
+ * - 图生图：输入图片以 base64 内联进 parts（见 `inlineImageEmbed` + execute 的 embedInlineImages）。
+ */
+export const geminiGenerateContentV1: ProtocolPreset = {
+  key: 'gemini-generate-content@v1',
+  transport: 'sync-json',
+  timeoutMs: COMMON.timeoutMs,
+  auth: { in: 'header', name: 'x-goog-api-key', template: '{apiKey}' },
+  endpoints: {
+    generate: { method: 'POST', path: '/v1beta/models/{model}:generateContent' },
+    edit: { method: 'POST', path: '/v1beta/models/{model}:generateContent' },
+  },
+  coreBindings: {
+    generate: {
+      model: { path: '$url.model' },
+      prompt: { path: 'contents[0].parts[0].text' },
+      count: { strategy: 'fan-out', maxConcurrency: 4 },
+    },
+    edit: {
+      model: { path: '$url.model' },
+      prompt: { path: 'contents[0].parts[0].text' },
+      count: { strategy: 'fan-out', maxConcurrency: 4 },
+      inputImages: { path: 'contents[0].parts' },
+    },
+  },
+  paramBindings: {
+    aspectRatio: { path: 'generationConfig.imageConfig.aspectRatio' },
+    resolution: { path: 'generationConfig.imageConfig.imageSize', omitWhen: 'empty' },
+    thinkingLevel: { path: 'generationConfig.thinkingConfig.thinkingLevel', omitWhen: 'empty' },
+  },
+  staticBody: { generationConfig: { responseModalities: ['IMAGE'] } },
+  inlineImageEmbed: { partsPath: 'contents[0].parts' },
+  response: {
+    itemsPath: 'candidates[*].content.parts[*]',
+    b64Field: 'inlineData.data',
+    mimeField: 'inlineData.mimeType',
+    defaultMime: 'image/png',
+  },
+  errorMapping: COMMON.errorMapping,
+};
+
+/**
  * MiniMax —— 没有分辨率档位；额外两个开关。
  */
 export const minimaxImagesV1: ProtocolPreset = {

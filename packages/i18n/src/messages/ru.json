@@ -3193,6 +3193,8 @@
     "benefitVideoResolution": "最高分辨率",
     "benefitVideoDuration": "最长时长（秒）",
     "benefitVideoConcurrency": "并发数",
+    "benefitImageGeneration": "Генерация изображений",
+    "benefitImageConcurrency": "Параллельные изображения",
     "benefitHistoryRetentionDays": "历史保存天数",
     "benefitQueuePriority": "队列优先级",
     "benefitQueuePriorityPlaceholder": "normal / high / highest",

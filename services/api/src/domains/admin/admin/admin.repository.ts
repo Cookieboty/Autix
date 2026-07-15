@@ -53,6 +53,10 @@ export class AdminRepository {
     return this.prisma.points_packages.update({ where: { id }, data });
   }
 
+  deletePointsPackage(id: string) {
+    return this.prisma.points_packages.delete({ where: { id } });
+  }
+
   async listOrders(input: {
     page: number;
     pageSize: number;

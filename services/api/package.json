@@ -11,7 +11,7 @@
     "test": "vitest run",
     "seed:templates": "dotenv -e ../../.env -- tsx scripts/seed-templates.ts",
     "seed:resources": "dotenv -e ../../.env -- tsx scripts/seed-resources.ts",
-    "seed:membership": "dotenv -e ../../.env -- tsx scripts/seed-membership.ts",
+    "seed:membership": "dotenv -e ../../.env -- pnpm --filter @autix/database run db:init-membership",
     "seed:pricing": "dotenv -e ../../.env -- tsx scripts/seed-pricing.ts",
     "fix:api-key": "dotenv -e ../../.env -- tsx scripts/fix-api-key-simple.ts",
     "fix:model": "dotenv -e ../../.env -- tsx scripts/quick-fix-model.ts",

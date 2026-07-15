@@ -69,6 +69,10 @@ export class PointsHoldService {
     return { scanned: stale.length, reclaimed };
   }
 
+  async countActiveHoldsByType(userId: string, taskType: string): Promise<number> {
+    return this.pointsRepo.countActiveHoldsByType(userId, taskType);
+  }
+
   async createHold(userId: string, input: CreateHoldInput) {
     this.ledgerService.assertPositiveAmount(input.amount);
 

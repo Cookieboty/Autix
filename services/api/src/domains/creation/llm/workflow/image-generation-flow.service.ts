@@ -54,6 +54,7 @@ import {
 } from './image-generation-flow.helpers';
 // isUserOwnedImageModel 已移除：自有模型不再免费，图片生成始终计费。
 import { assertImageHardLimits, resolveImageCountCeiling } from './image-generation-flow.risk';
+import { IMAGE_GENERATION_TASK_TYPE } from './image-generation-flow.holds';
 
 export type {
   AppliedImageSettings,
@@ -476,7 +477,7 @@ export class ImageGenerationFlowService {
     }
 
     this.logger.log(
-      `image api dispatch: mode=${request.mode} protocol=${callRequest.preset.key} model=${callRequest.model} count=${callRequest.count} params=${JSON.stringify(callRequest.params)} sourceImages=${callRequest.sourceImages?.length ?? 0} referenceImages=${callRequest.referenceImages?.length ?? 0}`,
+      `image api dispatch: mode=${request.mode} protocol=${callRequest.preset.key} operation=${callRequest.operation} baseUrl=${callRequest.baseUrl} model=${callRequest.model} count=${callRequest.count} params=${JSON.stringify(callRequest.params)} sourceImages=${callRequest.sourceImages?.length ?? 0} referenceImages=${callRequest.referenceImages?.length ?? 0}`,
     );
 
     try {
@@ -503,6 +504,14 @@ export class ImageGenerationFlowService {
         },
       };
     } catch (error) {
+      if (error instanceof ImageUpstreamError) {
+        // 上游失败的完整链路快照：无论哪一类（503/429/超时/params…）都先落一条结构化日志，
+        // 把「打的是哪个端点、上游回了什么」摊开——否则 503(upstream) 这类只会被最外层
+        // AllExceptionsFilter 打成一句没有 body 的 Unhandled exception，根因（上游原文）丢失。
+        this.logger.error(
+          `image upstream failed: model=${callRequest.model} protocol=${callRequest.preset.key} operation=${callRequest.operation} status=${error.httpStatus ?? '-'} classification=${error.classification} retryable=${error.retryable} endpoint=${error.endpoint ?? '-'} requestId=${error.requestId ?? '-'} retryAfter=${error.retryAfter ?? '-'} body=${error.upstreamBody ?? '-'}`,
+        );
+      }
       if (error instanceof ImageUpstreamError && error.classification === 'params') {
         // 参数不被上游接受 —— **不再「换一组 safe defaults 重试」**。那套重试用的
         // safe defaults 仍是同一个 1024x1024@1K，从未修好过任何东西，只是把上游多打
@@ -578,6 +587,14 @@ export class ImageGenerationFlowService {
       quality: request.settings?.quality,
     });
     assertImageHardLimits({ size: request.settings?.size, count: normalizedCount });
+
+    // FIX: 并发闸门 —— 统计在途 image_generation hold（PENDING/PROCESSING），
+    // 达到等级 concurrency 即拒绝。必须在 createHold 之前，避免把自己算进去。
+    const activeImageHolds = await this.pointsService.countActiveHoldsByType(
+      input.userId,
+      IMAGE_GENERATION_TASK_TYPE,
+    );
+    this.membershipService.assertImageConcurrency(activeImageHolds, imageEntitlement);
 
     const estimate = await this.pointsService.estimateCost(
       buildImageGenerationEstimateInput(request, membershipLevel),

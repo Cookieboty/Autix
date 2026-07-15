@@ -92,6 +92,13 @@ export interface ProtocolPreset {
   paramBindings: Record<string, BindingSpec | BindingSpec[] | ParamStrategy>;
   staticBody?: Record<string, unknown>;
   multipart?: MultipartSpec;
+  /**
+   * 声明「输入图片以 base64 内联进 JSON body」的落点（Gemini generateContent 的图生图）。
+   * 与 `multipart` 互斥：multipart 走表单上传，`inlineImageEmbed` 走 JSON `inlineData`。
+   * `partsPath` 指向 body 里承载 parts 的数组（如 `contents[0].parts`）——文本 prompt 由 core
+   * 绑定写在该数组的 [0]，图片 part 在 execute 阶段异步抓取后追加其后。
+   */
+  inlineImageEmbed?: { partsPath: string };
   response: ResponseSpec;
   errorMapping: Record<string, ErrorClassification>; // '400' | '*'
 }
@@ -148,6 +155,12 @@ export class ImageUpstreamError extends Error {
   readonly httpStatus?: number;
   readonly retryable: boolean;
   readonly upstreamBody?: string;
+  /** 实际打到的上游端点（含 host + path）——链路排障时定位「打的是哪个域名/路径」。 */
+  readonly endpoint?: string;
+  /** 上游回传的请求追踪 id（`x-request-id`），便于和上游侧日志对账。 */
+  readonly requestId?: string;
+  /** 上游回传的 `retry-after`（秒/日期原文），503/429 时判断退避窗口。 */
+  readonly retryAfter?: string;
 
   constructor(init: {
     message: string;
@@ -155,6 +168,9 @@ export class ImageUpstreamError extends Error {
     httpStatus?: number;
     retryable: boolean;
     upstreamBody?: string;
+    endpoint?: string;
+    requestId?: string;
+    retryAfter?: string;
   }) {
     super(init.message);
     this.name = 'ImageUpstreamError';
@@ -162,5 +178,8 @@ export class ImageUpstreamError extends Error {
     this.httpStatus = init.httpStatus;
     this.retryable = init.retryable;
     this.upstreamBody = init.upstreamBody;
+    this.endpoint = init.endpoint;
+    this.requestId = init.requestId;
+    this.retryAfter = init.retryAfter;
   }
 }

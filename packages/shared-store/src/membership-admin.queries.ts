@@ -451,6 +451,18 @@ export function useUpdateAdminPointsPackageMutation(callbacks?: MutationCallback
   });
 }
 
+export function useDeleteAdminPointsPackageMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: membershipAdminActions.deletePackage,
+    onSuccess: async () => {
+      await invalidatePackages(queryClient);
+      await callOnSuccess(callbacks);
+    },
+    onError: (error) => callOnError(error, callbacks),
+  });
+}
+
 export function useAdminMembershipOrdersQuery(params: AdminMembershipOrderParams) {
   return useQuery({
     queryKey: membershipAdminQueryKeys.orders(params),

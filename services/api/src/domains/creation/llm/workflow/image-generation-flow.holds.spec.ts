@@ -3,8 +3,29 @@ import {
   assertPromptOptimizeInputWithinLimit,
   buildImageGenerationEstimateInput,
   buildPromptOptimizeEstimateInput,
+  IMAGE_GENERATION_TASK_TYPE,
   PROMPT_OPTIMIZE_MAX_INPUT_TOKENS,
+  resolveImagePricingTaskType,
 } from './image-generation-flow.holds';
+import type { ResolvedImageRequest } from './image-generation-call-params';
+
+describe('image concurrency gate / hold taskType invariant', () => {
+  // The concurrency gate (image-generation-flow.service) counts in-flight holds by
+  // the literal IMAGE_GENERATION_TASK_TYPE, but the hold that actually gets created
+  // is stamped with resolveImagePricingTaskType(request). These MUST stay equal — if
+  // pricing ever specializes the task type per request, the gate would count a type
+  // the created hold no longer uses and silently stop enforcing the limit.
+  it('resolveImagePricingTaskType always equals IMAGE_GENERATION_TASK_TYPE', () => {
+    const requests = [
+      { mode: 'generate' } as unknown as ResolvedImageRequest,
+      { mode: 'edit', sourceImages: [{ url: 'x', index: 0 }] } as unknown as ResolvedImageRequest,
+      {} as ResolvedImageRequest,
+    ];
+    for (const request of requests) {
+      expect(resolveImagePricingTaskType(request)).toBe(IMAGE_GENERATION_TASK_TYPE);
+    }
+  });
+});
 
 describe('assertPromptOptimizeInputWithinLimit (FIX-18)', () => {
   it('allows input at or below the cap', () => {

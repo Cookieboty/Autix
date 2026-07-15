@@ -188,6 +188,16 @@ export class PointsRepository {
     });
   }
 
+  async countActiveHoldsByType(userId: string, taskType: string): Promise<number> {
+    return this.prisma.point_holds.count({
+      where: {
+        userId,
+        taskType,
+        status: { in: [PointHoldStatus.PENDING, PointHoldStatus.PROCESSING] },
+      },
+    });
+  }
+
   // FIX-9b: 事务内查找同任务的活跃 hold（PENDING/PROCESSING），用于创建前去重，
   // 避免重试/并发重复冻结；非事务版 findPendingHoldByTask 复用此实现。
   async findPendingHoldByTaskWithinTx(

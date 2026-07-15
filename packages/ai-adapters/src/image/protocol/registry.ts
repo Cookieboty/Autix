@@ -1,6 +1,7 @@
 import {
   doubaoImagesV1,
   geminiImagesV1,
+  geminiGenerateContentV1,
   minimaxImagesV1,
   openaiImagesV1,
 } from './presets/vendors';
@@ -17,6 +18,7 @@ export const PROTOCOL_PRESETS: Record<string, ProtocolPreset> = {
   [openaiImagesV1.key]: openaiImagesV1,
   [doubaoImagesV1.key]: doubaoImagesV1,
   [geminiImagesV1.key]: geminiImagesV1,
+  [geminiGenerateContentV1.key]: geminiGenerateContentV1,
   [minimaxImagesV1.key]: minimaxImagesV1,
 };
 

@@ -75,6 +75,8 @@ export function useAdminSystemModelsQuery(enabled = true) {
     queryKey: adminSystemQueryKeys.models(),
     queryFn: adminSystemActions.listModels,
     enabled,
+    staleTime: 5 * 60_000,
+    placeholderData: (prev) => prev,
   });
 }
 

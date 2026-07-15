@@ -128,7 +128,7 @@ export function PublicImageHistoryPanel({
   items,
   loading,
   density,
-  pending,
+  pendingGenerations = [],
   onRecreate,
   onUseAsReference,
   onSelectionActiveChange,
@@ -137,7 +137,7 @@ export function PublicImageHistoryPanel({
   items: PublicImageHistoryItem[];
   loading: boolean;
   density: TemplateDensity;
-  pending?: PendingImageGenerationCard | null;
+  pendingGenerations?: PendingImageGenerationCard[];
   /** 点击某张图的 Recreate：把该次生成的 prompt 应用到输入框 */
   onRecreate?: (item: PublicImageHistoryItem) => void;
   /** 详情弹窗里的 Reference：把该图塞回输入框当参考图 */
@@ -200,11 +200,11 @@ export function PublicImageHistoryPanel({
 
   // 加载中：骨架屏（形状照着 justified 行来），不是一行「加载中」文字。
   // 注意顺序——先判加载态，确认没数据了才允许渲染空状态，否则刷新时会先闪一下「暂无记录」。
-  if (loading && items.length === 0 && !pending) {
+  if (loading && items.length === 0 && pendingGenerations.length === 0) {
     return <HistorySkeleton targetHeight={HISTORY_ROW_HEIGHT[density]} />;
   }
 
-  if (items.length === 0 && !pending) {
+  if (items.length === 0 && pendingGenerations.length === 0) {
     return (
       <div className="grid min-h-[60vh] place-items-center px-6 text-center">
         <div>
@@ -221,7 +221,6 @@ export function PublicImageHistoryPanel({
   }
 
   const targetHeight = HISTORY_ROW_HEIGHT[density];
-  const pendingRatio = resolveSettingsAspectRatio(pending?.settings);
 
   type HistoryCell =
     | { kind: 'pending'; ratio: number; showLabel: boolean; key: string }
@@ -235,14 +234,15 @@ export function PublicImageHistoryPanel({
 
   // 生成中占位块 push 到最上方（count 个），随后展开所有历史图片；每格带真实比例
   const cells: HistoryCell[] = [
-    ...(pending
-      ? Array.from({ length: Math.max(1, pending.count) }).map((_, index) => ({
-          kind: 'pending' as const,
-          ratio: pendingRatio,
-          showLabel: index === 0,
-          key: `pending-${index}`,
-        }))
-      : []),
+    ...pendingGenerations.flatMap((card) => {
+      const ratio = resolveSettingsAspectRatio(card.settings);
+      return Array.from({ length: Math.max(1, card.count) }).map((_, index) => ({
+        kind: 'pending' as const,
+        ratio,
+        showLabel: index === 0,
+        key: `pending-${card.id}-${index}`,
+      }));
+    }),
     ...items.flatMap((item) =>
       item.images.map((image) => {
         const key = imageKey(item.id, image);

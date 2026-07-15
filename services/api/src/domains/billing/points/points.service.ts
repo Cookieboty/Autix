@@ -81,6 +81,10 @@ export class PointsService {
     return this.holdService.createHold(userId, input);
   }
 
+  async countActiveHoldsByType(userId: string, taskType: string): Promise<number> {
+    return this.holdService.countActiveHoldsByType(userId, taskType);
+  }
+
   async findPendingHoldByTask(input: { taskType?: string; taskId: string }) {
     return this.holdService.findPendingHoldByTask(input);
   }

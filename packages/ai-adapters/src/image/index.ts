@@ -5,6 +5,7 @@ export { validateModelProtocolConfig, type ConfigViolation } from './protocol/va
 export {
   doubaoImagesV1,
   geminiImagesV1,
+  geminiGenerateContentV1,
   minimaxImagesV1,
   openaiImagesV1,
 } from './protocol/presets/vendors';
