@@ -45,50 +45,6 @@ describe('VideoProjectService workbench persistence', () => {
     else process.env.JWT_SECRET = originalJwtSecret;
   });
 
-  it('opens the latest storyboard-only workbench project without creating a conversation', async () => {
-    const { service, prisma } = createService();
-    prisma.video_projects.findFirst.mockResolvedValue({
-      id: 'project-1',
-      userId: 'user-1',
-      title: '专业视频工作台',
-      conversationId: null,
-    });
-
-    await service.getOrCreateWorkbenchProject('user-1');
-
-    expect(prisma.conversations.create).not.toHaveBeenCalled();
-    expect(prisma.video_projects.update).not.toHaveBeenCalled();
-    expect(prisma.video_projects.findFirst).toHaveBeenCalledWith({
-      where: {
-        userId: 'user-1',
-        clips: {
-          some: {},
-        },
-        NOT: {
-          clips: {
-            some: {
-              generations: {
-                some: {},
-              },
-            },
-          },
-        },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
-  });
-
-  it('does not create a server draft when no storyboard-only project exists', async () => {
-    const { service, prisma } = createService();
-    prisma.video_projects.findFirst.mockResolvedValue(null);
-
-    const result = await service.getOrCreateWorkbenchProject('user-1');
-
-    expect(result).toBeNull();
-    expect(prisma.conversations.create).not.toHaveBeenCalled();
-    expect(prisma.video_projects.create).not.toHaveBeenCalled();
-  });
-
   it('lists history only for projects that have video generations', async () => {
     const { service, prisma } = createService();
 

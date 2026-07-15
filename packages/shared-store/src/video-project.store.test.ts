@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const videoProjectApiMock = vi.hoisted(() => ({
-  getWorkbenchDefault: vi.fn(),
   getById: vi.fn(),
   list: vi.fn(),
   create: vi.fn(),
@@ -38,69 +37,9 @@ describe('useVideoProjectStore local drafts', () => {
     });
   });
 
-  it('keeps the current local draft without asking the server', async () => {
-    const { useVideoProjectStore } = await import('./video-project.store');
-    const localDraft = await useVideoProjectStore.getState().loadOrCreateStandaloneProject();
-    vi.clearAllMocks();
-
-    const project = await useVideoProjectStore.getState().loadOrCreateStandaloneProject();
-
-    expect(project.id).toBe(localDraft.id);
-    expect(apiCallCount()).toBe(0);
-  });
-
-  it('opens the latest storyboard-only project when there is no local draft', async () => {
-    const { useVideoProjectStore } = await import('./video-project.store');
-    videoProjectApiMock.getWorkbenchDefault.mockResolvedValue({
-      data: {
-        id: 'server-storyboard-project-1',
-        userId: 'user-1',
-        title: '最近分镜项目',
-        conversationId: null,
-        status: 'draft',
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-        clips: [
-          {
-            id: 'server-clip-1',
-            projectId: 'server-storyboard-project-1',
-            order: 1,
-            title: '开场',
-            prompt: '产品在晨光中缓慢转场',
-            params: { duration: 5, ratio: '16:9' },
-            chainFromPrev: false,
-            status: 'pending',
-            materials: [],
-            generations: [],
-          },
-        ],
-      },
-    });
-
-    const project = await useVideoProjectStore.getState().loadOrCreateStandaloneProject();
-
-    expect(project.id).toBe('server-storyboard-project-1');
-    expect(useVideoProjectStore.getState().selectedClipId).toBe('server-clip-1');
-    expect(videoProjectApiMock.getWorkbenchDefault).toHaveBeenCalledTimes(1);
-    expect(videoProjectApiMock.create).not.toHaveBeenCalled();
-  });
-
-  it('starts an empty local draft when there is no local draft or storyboard-only project', async () => {
-    const { useVideoProjectStore } = await import('./video-project.store');
-    videoProjectApiMock.getWorkbenchDefault.mockResolvedValue({ data: null });
-
-    const project = await useVideoProjectStore.getState().loadOrCreateStandaloneProject();
-
-    expect(project.id).toMatch(/^local-video-project-/);
-    expect(project.clips).toHaveLength(0);
-    expect(videoProjectApiMock.getWorkbenchDefault).toHaveBeenCalledTimes(1);
-    expect(videoProjectApiMock.create).not.toHaveBeenCalled();
-  });
-
   it('edits storyboard content locally without touching the video project API', async () => {
-    const { useVideoProjectStore } = await import('./video-project.store');
-    videoProjectApiMock.getWorkbenchDefault.mockResolvedValue({ data: null });
-    await useVideoProjectStore.getState().loadOrCreateStandaloneProject();
+    const { useVideoProjectStore, createLocalVideoProject } = await import('./video-project.store');
+    useVideoProjectStore.getState().replaceDraftProject(createLocalVideoProject(''));
     vi.clearAllMocks();
 
     await useVideoProjectStore.getState().addClip({
@@ -135,9 +74,8 @@ describe('useVideoProjectStore local drafts', () => {
   });
 
   it('persists the local draft only when generation is requested', async () => {
-    const { useVideoProjectStore } = await import('./video-project.store');
-    videoProjectApiMock.getWorkbenchDefault.mockResolvedValue({ data: null });
-    await useVideoProjectStore.getState().loadOrCreateStandaloneProject();
+    const { useVideoProjectStore, createLocalVideoProject } = await import('./video-project.store');
+    useVideoProjectStore.getState().replaceDraftProject(createLocalVideoProject(''));
     vi.clearAllMocks();
     await useVideoProjectStore.getState().addClip({
       title: '开场',
@@ -149,7 +87,7 @@ describe('useVideoProjectStore local drafts', () => {
       data: {
         id: 'server-project-1',
         userId: 'user-1',
-        title: '专业视频工作台',
+        title: '',
         conversationId: null,
         status: 'draft',
         createdAt: '2026-01-01T00:00:00.000Z',
@@ -175,7 +113,7 @@ describe('useVideoProjectStore local drafts', () => {
       data: {
         id: 'server-project-1',
         userId: 'user-1',
-        title: '专业视频工作台',
+        title: '',
         conversationId: null,
         status: 'draft',
         createdAt: '2026-01-01T00:00:00.000Z',
@@ -216,7 +154,7 @@ describe('useVideoProjectStore local drafts', () => {
     vi.useRealTimers();
 
     expect(videoProjectApiMock.create).toHaveBeenCalledWith({
-      title: '专业视频工作台',
+      title: '',
       coverImage: undefined,
       standalone: true,
     });

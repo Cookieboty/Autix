@@ -1183,8 +1183,6 @@ export const videoProjectApi = {
     chatApi.get('/api/video-projects', { params }),
   getById: (id: string) =>
     chatApi.get(`/api/video-projects/${id}`),
-  getWorkbenchDefault: () =>
-    chatApi.get('/api/video-projects/workbench/default'),
   createShare: (id: string) =>
     chatApi.post<VideoProjectShareLinkResult>(`/api/video-projects/${id}/share`, {}),
   getShared: (code: string) =>

@@ -91,8 +91,6 @@ export class VideoProjectService {
     private readonly modelConfigService: ModelConfigService,
   ) { }
 
-  private readonly workbenchProjectTitle = '专业视频工作台';
-  private readonly workbenchConversationTitle = '专业视频工作台';
 
   private async ensureProjectShareCode(projectId: string, userId: string) {
     const existingShare = await this.repository.findProjectShare(projectId, userId);
@@ -162,14 +160,6 @@ export class VideoProjectService {
     };
   }
 
-  async getOrCreateWorkbenchProject(userId: string) {
-    const latestStoryboardOnlyProject =
-      await this.repository.findLatestStoryboardOnlyProject(userId);
-
-    if (latestStoryboardOnlyProject) return this.getProject(latestStoryboardOnlyProject.id, userId);
-    return null;
-  }
-
   async ensureProjectConversation(projectId: string, userId: string): Promise<string> {
     const project = await this.repository.findProjectConversationInfo(projectId);
     if (!project || project.userId !== userId) throw new ForbiddenException('无权访问');
@@ -177,7 +167,7 @@ export class VideoProjectService {
 
     const conversation = await this.repository.createVideoConversation({
       userId,
-      title: project.title || this.workbenchConversationTitle,
+      title: project.title,
     });
     await this.repository.assignConversation(projectId, conversation.id);
     return conversation.id;
@@ -190,7 +180,7 @@ export class VideoProjectService {
     if (dto.standalone) {
       const project = await this.repository.createProject({
         userId,
-        title: dto.title || this.workbenchProjectTitle,
+        title: dto.title,
         coverImage: dto.coverImage,
         status: VideoProjectStatus.draft,
       });

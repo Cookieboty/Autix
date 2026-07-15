@@ -23,27 +23,6 @@ export type { VideoTemplateClipCreateInput } from './video-project.helpers';
 export class VideoProjectRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findLatestStoryboardOnlyProject(userId: string) {
-    return this.prisma.video_projects.findFirst({
-      where: {
-        userId,
-        clips: {
-          some: {},
-        },
-        NOT: {
-          clips: {
-            some: {
-              generations: {
-                some: {},
-              },
-            },
-          },
-        },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
-  }
-
   findProjectConversationInfo(projectId: string) {
     return this.prisma.video_projects.findUnique({
       where: { id: projectId },

@@ -59,12 +59,6 @@ export class VideoProjectController {
     );
   }
 
-  @Get('workbench/default')
-  getWorkbenchDefault(@CurrentUser() user: AuthUser) {
-    const userId = getCurrentUserId(user);
-    return this.projectService.getOrCreateWorkbenchProject(userId);
-  }
-
   @Post('optimize-prompt')
   async optimizePrompt(
     @CurrentUser() user: AuthUser,

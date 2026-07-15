@@ -10,7 +10,7 @@ function createService() {
   const repository = {
     findConversationMessages: vi.fn().mockResolvedValue([]),
     findVideoDirectorProject: vi.fn().mockResolvedValue({
-      title: '专业视频工作台',
+      title: 'Demo video project',
       clips: [],
     }),
     findClipAtOrder: vi.fn().mockResolvedValue(null),

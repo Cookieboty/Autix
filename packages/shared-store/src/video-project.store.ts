@@ -72,7 +72,6 @@ interface VideoProjectState {
   loadProject: (id: string) => Promise<void>;
   loadProjects: () => Promise<void>;
   loadWorkflowTemplates: (params?: { category?: string; page?: number; pageSize?: number }) => Promise<void>;
-  loadOrCreateStandaloneProject: () => Promise<VideoProject>;
   replaceDraftProject: (project: VideoProject) => void;
   persistDraftProject: (options?: { withConversation?: boolean }) => Promise<{ project: VideoProject; clipIdMap: Record<string, string> }>;
   createProject: (title: string, conversationId?: string) => Promise<VideoProject>;
@@ -122,7 +121,7 @@ function nowIso() {
 }
 
 export function createLocalVideoProject(
-  title = 'Professional video workspace',
+  title: string,
   clips: Array<{
     title?: string;
     prompt?: string;
@@ -348,38 +347,6 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
     } catch {
       set({ workflowTemplates: [], workflowTemplatesLoading: false });
     }
-  },
-
-  loadOrCreateStandaloneProject: async () => {
-    const existing = get().project;
-    if (existing && isLocalProject(existing)) return existing;
-
-    try {
-      const res = await videoProjectApi.getWorkbenchDefault();
-      const serverProject = res.data as VideoProject | null;
-      if (serverProject?.id) {
-        set({
-          project: serverProject,
-          selectedClipId: serverProject.clips?.[0]?.id ?? null,
-          loading: false,
-          lastError: null,
-          lastErrorCode: null,
-        });
-        return serverProject;
-      }
-    } catch {
-      // Server unavailable or no existing project — fall through to local draft
-    }
-
-    const project = createLocalVideoProject();
-    set({
-      project,
-      selectedClipId: null,
-      loading: false,
-      lastError: null,
-      lastErrorCode: null,
-    });
-    return project;
   },
 
   replaceDraftProject: (project) => {
