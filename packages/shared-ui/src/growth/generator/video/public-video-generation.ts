@@ -27,7 +27,8 @@ export interface PublicVideoGenerationPayload {
 
 export function buildPublicVideoGenerationPayload(input: {
   prompt: string;
-  model: string;
+  // 无兜底：DB 没配模型时 model 可为空，最终 params.model 为 undefined，由后端拒绝生成。
+  model?: string | null;
   selectedModelId?: string | null;
   modelName?: string | null;
   duration: number;

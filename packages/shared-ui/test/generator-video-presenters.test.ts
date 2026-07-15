@@ -7,13 +7,15 @@ import {
 import type { ModelConfigItem } from '@autix/shared-store';
 
 describe('resolveVideoCapabilityFromModelParam', () => {
-  test('defaults to a seedance capability with resolutions', () => {
+  test('无模型时归到通用 compatible 能力，不做任何硬编码兜底', () => {
+    // 删掉 DEFAULT_PUBLIC_VIDEO_MODEL 后：DB 没配模型 → 不再默认 seedance-2.0，
+    // 而是走 detectVideoModelKind 的通用 'compatible' 分支。
     const cap = resolveVideoCapabilityFromModelParam(null);
-    expect(cap.kind).toBe('seedance-2.0');
-    expect(cap.displayName).toBe('Seedance 2.0');
+    expect(cap.kind).toBe('compatible');
+    expect(cap.displayName).toBe('Compatible video model');
     expect(cap.resolutions.length).toBeGreaterThan(0);
     expect(cap.resolutions).toContain(cap.defaultResolution);
-    expect(cap.resolutions).toContain('4k');
+    expect(cap.resolutions).not.toContain('4k');
   });
 
   test('a fast variant exposes the narrower resolution set', () => {

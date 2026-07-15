@@ -5,12 +5,12 @@ import {
 } from '@autix/domain/video';
 import type { TaskEstimateInput, ModelConfigItem } from '@autix/shared-store';
 
-export const DEFAULT_PUBLIC_VIDEO_MODEL = 'seedance-2.0';
-
 export function resolveVideoCapabilityFromModelParam(
   model?: string | null,
 ): VideoModelCapability {
-  return resolveVideoModelCapability({ model: model || DEFAULT_PUBLIC_VIDEO_MODEL });
+  // 无模型（DB 未配置）→ resolveVideoModelCapability 归到 'compatible' 通用能力，
+  // 不做任何硬编码兜底。
+  return resolveVideoModelCapability({ model: model || undefined });
 }
 
 export function resolveVideoCapabilityFromModelConfig(
@@ -18,7 +18,7 @@ export function resolveVideoCapabilityFromModelConfig(
   fallbackModel?: string | null,
 ): VideoModelCapability {
   return resolveVideoModelCapability(
-    modelConfig ?? { model: fallbackModel || DEFAULT_PUBLIC_VIDEO_MODEL },
+    modelConfig ?? { model: fallbackModel || undefined },
   );
 }
 
@@ -75,14 +75,13 @@ export function buildPublicVideoEstimateInput({
   generateAudio: boolean;
   referenceImages?: number;
 }): TaskEstimateInput {
-  const fallbackModel = model || DEFAULT_PUBLIC_VIDEO_MODEL;
   return {
     taskType: 'video_generation',
     modelConfigId: modelConfig?.id,
     params: {
       resolution: normalizeVideoResolutionForModel(
         resolution,
-        modelConfig ?? { model: fallbackModel },
+        modelConfig ?? { model: model || undefined },
       ),
       seconds: Math.max(1, Math.ceil(Number(duration) || 1)),
       referenceImages: Math.max(0, Math.floor(Number(referenceImages) || 0)),

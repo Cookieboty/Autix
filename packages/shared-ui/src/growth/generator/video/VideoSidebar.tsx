@@ -27,7 +27,6 @@ import {
 } from '@autix/shared-store';
 import { MagneticButton } from '../../GrowthInteractions';
 import {
-  DEFAULT_PUBLIC_VIDEO_MODEL,
   buildPublicVideoEstimateInput,
   getVideoReferenceUploadLimit,
   resolveVideoCapabilityFromModelConfig,
@@ -141,7 +140,7 @@ export function VideoSidebar({
   const optimizeModelLabel = textModelsLoading
     ? t('modelLoading')
     : selectedTextModel?.name ?? t('optimizeModel');
-  const model = selectedModelValue ?? initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL;
+  const model = selectedModelValue ?? initialModel ?? undefined;
   const modelLabel = selectedModel?.name ?? videoCapability.displayName;
   const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
   const hasVideoRefs = selectedVideoRefs.length > 0;
