@@ -18,6 +18,11 @@ export interface AssembledRequest {
   applied: { params: Record<string, unknown>; coercions: string[] };
   promptOverride?: string;
   fanOut?: { count: number; maxConcurrency: number };
+  /**
+   * 待内联进 JSON body 的输入图片（仍是 URL）。真正的 URL→base64 抓取推迟到 execute
+   * （与 multipart 的 buildFormData 一致：assemble 保持同步）。
+   */
+  inlineImages?: { partsPath: string; images: Array<{ url: string }> };
 }
 
 function isStrategy(b: unknown): b is ParamStrategy {
@@ -46,7 +51,9 @@ export function assembleImageRequest(req: ImageCallRequest): AssembledRequest {
     throw new Error(`Preset "${preset.key}" has no coreBindings for operation "${operation}"`);
   }
 
-  const body: Record<string, unknown> = { ...(preset.staticBody ?? {}) };
+  // 深拷贝：staticBody 是模块级常量，若嵌套子树（如 gemini 的 generationConfig）被后续
+  // setPath 写入，浅拷贝会改到常量本身，造成跨请求污染。structuredClone 隔离每次请求。
+  const body: Record<string, unknown> = structuredClone(preset.staticBody ?? {});
   const applied: Record<string, unknown> = {};
   const coercions: string[] = [];
 
@@ -174,10 +181,19 @@ export function assembleImageRequest(req: ImageCallRequest): AssembledRequest {
   }
 
   headers['Content-Type'] = 'application/json';
+  // JSON 内联图片（Gemini generateContent 的图生图）：把 source/reference 图片记为待抓取，
+  // execute 阶段再 URL→base64 追加进 partsPath 指向的数组。此刻只记 URL，assemble 保持同步。
+  const inlineInputs = [...(req.sourceImages ?? []), ...(req.referenceImages ?? [])];
+  const inlineImages =
+    preset.inlineImageEmbed && inlineInputs.length > 0
+      ? { partsPath: preset.inlineImageEmbed.partsPath, images: inlineInputs.map((i) => ({ url: i.url })) }
+      : undefined;
+
   return {
     url, method: 'POST', headers, body,
     applied: { params: applied, coercions },
     promptOverride: prompt === req.prompt ? undefined : prompt,
     fanOut,
+    inlineImages,
   };
 }

@@ -105,4 +105,89 @@ describe('executeImageCall', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(Object.assign(new Error('aborted'), { name: 'TimeoutError' })));
     await expect(executeImageCall(REQ)).rejects.toMatchObject({ classification: 'timeout', retryable: true });
   });
+
+  const NATIVE: ProtocolPreset = {
+    key: 'gemini-generate-content@v1', transport: 'sync-json', timeoutMs: 600_000,
+    auth: { in: 'header', name: 'x-goog-api-key', template: '{apiKey}' },
+    endpoints: {
+      generate: { method: 'POST', path: '/v1beta/models/{model}:generateContent' },
+      edit: { method: 'POST', path: '/v1beta/models/{model}:generateContent' },
+    },
+    coreBindings: {
+      generate: {
+        model: { path: '$url.model' }, prompt: { path: 'contents[0].parts[0].text' },
+        count: { strategy: 'fan-out', maxConcurrency: 4 },
+      },
+      edit: {
+        model: { path: '$url.model' }, prompt: { path: 'contents[0].parts[0].text' },
+        count: { strategy: 'fan-out', maxConcurrency: 4 }, inputImages: { path: 'contents[0].parts' },
+      },
+    },
+    paramBindings: {},
+    staticBody: { generationConfig: { responseModalities: ['IMAGE'] } },
+    inlineImageEmbed: { partsPath: 'contents[0].parts' },
+    response: {
+      itemsPath: 'candidates[*].content.parts[*]',
+      b64Field: 'inlineData.data', mimeField: 'inlineData.mimeType', defaultMime: 'image/png',
+    },
+    errorMapping: { '400': 'params', '401': 'auth', '*': 'upstream' },
+  };
+
+  // data: 图片直通 safeFetch；stub 按 url 分流：data: 返回图片字节，其余返回 generateContent JSON。
+  function mockNativeFetch(imageBytes: Uint8Array, candidates: unknown) {
+    return vi.fn().mockImplementation(async (url: string) => {
+      if (typeof url === 'string' && url.startsWith('data:')) {
+        return new Response(imageBytes, { status: 200, headers: { 'content-type': 'image/png' } });
+      }
+      return new Response(JSON.stringify(candidates), { status: 200 });
+    });
+  }
+
+  it('embeds input images as inlineData parts after the text part (gemini image-to-image)', async () => {
+    const fetchSpy = mockNativeFetch(
+      new Uint8Array([1, 2, 3, 4]),
+      { candidates: [{ content: { parts: [{ inlineData: { data: 'OUT', mimeType: 'image/png' } }] } }] },
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const result = await executeImageCall({
+      ...REQ, preset: NATIVE, operation: 'edit', params: {},
+      sourceImages: [{ url: 'data:image/png;base64,AQIDBA==' }],
+    });
+
+    const apiCall = fetchSpy.mock.calls.find(([u]) => typeof u === 'string' && u.includes('generateContent'))!;
+    expect(apiCall[0]).toBe('https://gw.example.com/v1beta/models/nano-banana:generateContent');
+    expect((apiCall[1] as RequestInit).headers).toMatchObject({ 'x-goog-api-key': 'sk' });
+    const body = JSON.parse((apiCall[1] as RequestInit).body as string);
+    expect(body.contents[0].parts).toEqual([
+      { text: 'a cat' },
+      { inlineData: { mimeType: 'image/png', data: 'AQIDBA==' } },   // base64([1,2,3,4]) === 'AQIDBA=='
+    ]);
+    expect(body).not.toHaveProperty('model');
+    expect(result.artifacts).toHaveLength(1);
+    expect(result.artifacts[0].source).toEqual({ type: 'base64', data: 'OUT', mimeType: 'image/png' });
+  });
+
+  it('embeds input images once, not once-per-round, under fan-out', async () => {
+    const fetchSpy = mockNativeFetch(
+      new Uint8Array([1, 2, 3, 4]),
+      { candidates: [{ content: { parts: [{ inlineData: { data: 'OUT', mimeType: 'image/png' } }] } }] },
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await executeImageCall({
+      ...REQ, preset: NATIVE, operation: 'edit', params: {}, count: 3,
+      sourceImages: [{ url: 'data:image/png;base64,AQIDBA==' }],
+    });
+
+    // 3 轮 fan-out 共享同一份已内联的 body：图片只抓 1 次，每轮 body 恰好 1 张输入图（不叠加）。
+    const imageFetches = fetchSpy.mock.calls.filter(([u]) => typeof u === 'string' && u.startsWith('data:'));
+    expect(imageFetches).toHaveLength(1);
+    const apiCalls = fetchSpy.mock.calls.filter(([u]) => typeof u === 'string' && u.includes('generateContent'));
+    expect(apiCalls).toHaveLength(3);
+    for (const [, init] of apiCalls) {
+      const body = JSON.parse((init as RequestInit).body as string);
+      expect(body.contents[0].parts).toHaveLength(2);   // text + 1 image, never 2/3 images
+    }
+  });
 });

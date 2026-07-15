@@ -1,5 +1,6 @@
-import { fetchUrlAsBlob } from '../../core/http';
+import { fetchUrlAsBlob, fetchUrlAsBase64 } from '../../core/http';
 import { assembleImageRequest, type AssembledRequest } from './assemble';
+import { setPath } from './bind';
 import { extractArtifacts } from './response';
 import { ImageUpstreamError } from './types';
 import type { ErrorClassification, ImageArtifact, ImageCallRequest, ImageCallResult, ProtocolPreset } from './types';
@@ -51,6 +52,7 @@ async function sendOnce(
       message: `image call failed: ${error instanceof Error ? error.message : String(error)}`,
       classification: timedOut ? 'timeout' : 'upstream',
       retryable: true,
+      endpoint: assembled.url,
     });
   }
 
@@ -63,6 +65,9 @@ async function sendOnce(
       httpStatus: response.status,
       retryable: RETRYABLE.has(classification),
       upstreamBody: body.slice(0, 500),
+      endpoint: assembled.url,
+      requestId: response.headers.get('x-request-id') ?? undefined,
+      retryAfter: response.headers.get('retry-after') ?? undefined,
     });
   }
 
@@ -74,10 +79,26 @@ async function sendOnce(
   };
 }
 
+/**
+ * 把输入图片抓成 base64 追加进 JSON body 的 parts 数组（Gemini 图生图）。**在 fan-out 之前
+ * 只做一次**：若放到并发的 sendOnce 里，多轮会往同一份 assembled.body 竞争追加，导致图片重复。
+ * 文本 prompt 已由 core 绑定占据 parts[0]，图片以 `${partsPath}[]` 追加其后。
+ */
+async function embedInlineImages(assembled: AssembledRequest): Promise<void> {
+  const { partsPath, images } = assembled.inlineImages!;
+  const body = (assembled.body ??= {});
+  for (const image of images) {
+    const { base64, mimeType } = await fetchUrlAsBase64(image.url);
+    setPath(body, `${partsPath}[]`, { inlineData: { mimeType, data: base64 } });
+  }
+}
+
 export async function executeImageCall(req: ImageCallRequest): Promise<ImageCallResult> {
   const started = performance.now();
   const assembled = assembleImageRequest(req);
   const { preset } = req;
+
+  if (assembled.inlineImages) await embedInlineImages(assembled);
 
   const rounds = assembled.fanOut ? assembled.fanOut.count : 1;
   const responses = assembled.fanOut

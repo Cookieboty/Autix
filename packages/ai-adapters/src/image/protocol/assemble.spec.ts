@@ -162,6 +162,75 @@ describe('assembleImageRequest — sync-json', () => {
   it('throws when the operation has no endpoint in this preset', () => {
     expect(() => assembleImageRequest({ ...BASE, operation: 'edit' })).toThrow(/edit/);
   });
+
+  it('deep-clones staticBody so a nested subtree written by a binding never leaks across calls', () => {
+    // staticBody 里嵌了 generationConfig，绑定又往同一棵子树写 imageConfig。浅拷贝会改到
+    // 模块级常量 staticBody.generationConfig 本身，导致第一次请求的 imageConfig 污染后续所有请求。
+    const preset: ProtocolPreset = {
+      ...PRESET,
+      staticBody: { generationConfig: { responseModalities: ['IMAGE'] } },
+      paramBindings: { aspectRatio: { path: 'generationConfig.imageConfig.aspectRatio' } },
+    };
+    const first = assembleImageRequest({ ...BASE, preset, params: { aspectRatio: '16:9' } });
+    expect(first.body?.generationConfig).toEqual({
+      responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '16:9' },
+    });
+
+    const second = assembleImageRequest({ ...BASE, preset, params: {} });
+    expect(second.body?.generationConfig).toEqual({ responseModalities: ['IMAGE'] });
+  });
+});
+
+describe('assembleImageRequest — json inline images (gemini generateContent)', () => {
+  const NATIVE: ProtocolPreset = {
+    ...PRESET,
+    key: 'gemini-generate-content@v1',
+    endpoints: {
+      generate: { method: 'POST', path: '/v1beta/models/{model}:generateContent' },
+      edit: { method: 'POST', path: '/v1beta/models/{model}:generateContent' },
+    },
+    coreBindings: {
+      generate: {
+        model: { path: '$url.model' }, prompt: { path: 'contents[0].parts[0].text' },
+        count: { strategy: 'fan-out', maxConcurrency: 4 },
+      },
+      edit: {
+        model: { path: '$url.model' }, prompt: { path: 'contents[0].parts[0].text' },
+        count: { strategy: 'fan-out', maxConcurrency: 4 }, inputImages: { path: 'contents[0].parts' },
+      },
+    },
+    paramBindings: { aspectRatio: { path: 'generationConfig.imageConfig.aspectRatio' } },
+    staticBody: { generationConfig: { responseModalities: ['IMAGE'] } },
+    inlineImageEmbed: { partsPath: 'contents[0].parts' },
+    response: {
+      itemsPath: 'candidates[*].content.parts[*]',
+      b64Field: 'inlineData.data', mimeField: 'inlineData.mimeType', defaultMime: 'image/png',
+    },
+  };
+
+  it('puts model in the URL (not the body), prompt at parts[0].text, and records input images as urls', () => {
+    const out = assembleImageRequest({
+      ...BASE, preset: NATIVE, operation: 'edit', params: { aspectRatio: '1:1' },
+      sourceImages: [{ url: 'data:image/png;base64,AQ==' }],
+      referenceImages: [{ url: 'data:image/png;base64,Ag==' }],
+    });
+    expect(out.url).toBe('https://gw.example.com/v1beta/models/nano-banana:generateContent');
+    expect(out.body).not.toHaveProperty('model');
+    // prompt 在 parts[0]；图片此刻还没抓取（execute 再嵌），parts 只有文本一项
+    expect(out.body?.contents).toEqual([{ parts: [{ text: 'a cat' }] }]);
+    expect(out.body?.generationConfig).toEqual({
+      responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '1:1' },
+    });
+    expect(out.inlineImages).toEqual({
+      partsPath: 'contents[0].parts',
+      images: [{ url: 'data:image/png;base64,AQ==' }, { url: 'data:image/png;base64,Ag==' }],
+    });
+  });
+
+  it('does not set inlineImages when the request carries no input images', () => {
+    const out = assembleImageRequest({ ...BASE, preset: NATIVE });
+    expect(out.inlineImages).toBeUndefined();
+  });
 });
 
 describe('assembleImageRequest — multipart', () => {

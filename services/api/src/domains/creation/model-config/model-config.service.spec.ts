@@ -175,6 +175,31 @@ describe('ModelConfigService public model boundaries', () => {
     expect(prisma.model_configs.delete).not.toHaveBeenCalled();
   });
 
+  it('looks up by id WITHOUT a visibility filter so private models are manageable (not 404)', async () => {
+    // admin 列表（findSystemModels）故意展示全部模型含 private；delete/update 必须用同样口径
+    // 按 id 查，否则 private 模型「看得见却删不掉/存不了」，真实报错 404 模型配置不存在。
+    const { service, prisma } = createService();
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'private-model',
+      type: ModelType.general,
+      visibility: ModelVisibility.private,
+    } as never);
+
+    await service.deleteSystemModel('private-model');
+    await service.updateSystemModel('private-model', { name: 'Renamed' });
+
+    const lookupCalls = prisma.model_configs.findFirst.mock.calls as unknown as Array<
+      [{ where: Record<string, unknown> }]
+    >;
+    for (const [arg] of lookupCalls) {
+      expect(arg.where).toEqual({ id: 'private-model' });
+    }
+    expect(prisma.model_configs.delete).toHaveBeenCalledWith({ where: { id: 'private-model' } });
+    expect(prisma.model_configs.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'private-model' } }),
+    );
+  });
+
   it('ignores blank credential fields and rejects invalid base URLs on system updates', async () => {
     const { service, prisma } = createService();
     prisma.model_configs.findFirst.mockResolvedValue({
@@ -685,7 +710,7 @@ describe('ModelConfigService ajv compile smoke on save', () => {
 
   it('rejects it at update time too — admin 改 schema 走的恰恰是 update', async () => {
     const { service, prisma } = createService();
-    // updateSystemModel → repository.findPublicModel → prisma.model_configs.findFirst
+    // updateSystemModel → repository.findManageableSystemModel → prisma.model_configs.findFirst
     prisma.model_configs.findFirst.mockResolvedValue({
       id: 'model-1',
       visibility: 'public',
