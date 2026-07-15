@@ -155,6 +155,8 @@ describe('GalleryService.listFeed', () => {
         seenTake = take;
         return { items: [], nextCursor: null };
       },
+      findModelDisplayNames: async (models: string[]) =>
+        new Map(models.filter(Boolean).map((m) => [m, `alias-${m}`])),
     };
     const metrics = { getMetricsMap: async () => new Map() };
     const svc = new GalleryService(repo as never, metrics as never, {} as never);
@@ -168,6 +170,8 @@ describe('GalleryService.listFeed', () => {
     let seenType: ResourceType | null = null;
     const repo = {
       findPublishedFeed: async () => ({ items: [buildPost('c', GalleryKind.IMAGE)], nextCursor: null }),
+      findModelDisplayNames: async (models: string[]) =>
+        new Map(models.filter(Boolean).map((m) => [m, `alias-${m}`])),
     };
     const metrics = {
       getMetricsMap: async (type: ResourceType) => {

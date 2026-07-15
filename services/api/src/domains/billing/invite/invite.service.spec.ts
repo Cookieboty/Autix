@@ -46,6 +46,8 @@ function makeService(overrides?: {
   const prisma = {
     invite_codes: {
       findUnique: vi.fn(async () => overrides?.inviteCode ?? null),
+      // findCodeByCode 用 findFirst 按 code 查（带 user.status 过滤），返回同一枚 code。
+      findFirst: vi.fn(async () => overrides?.inviteCode ?? null),
     },
     invite_records: {
       findUnique: vi.fn(async () => overrides?.existingRecord ?? overrides?.record ?? null),

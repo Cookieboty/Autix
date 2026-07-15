@@ -45,6 +45,9 @@ function makeDetailService(overrides: {
   const repo = {
     findByIdWithAuthor: async (id: string) =>
       overrides.post === undefined ? publishedPost() : overrides.post,
+    // 厂商串 → 展示别名（getDetail 与 feed 同一口径，见 gallery.service.ts）。
+    findModelDisplayNames: async (models: string[]) =>
+      new Map(models.filter(Boolean).map((m) => [m, `alias-${m}`])),
   };
   const metrics = {
     getMetrics: async () => ({

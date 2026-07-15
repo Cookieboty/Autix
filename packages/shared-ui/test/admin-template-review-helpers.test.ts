@@ -26,8 +26,6 @@ describe('admin template review helpers', () => {
       resourceSwitcher: false,
       batchActions: false,
       hot: false,
-      importExport: false,
-      sourceInfo: false,
     });
   });
 

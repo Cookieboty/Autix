@@ -206,7 +206,7 @@ describe('drawBoardActions video composition', () => {
 
     expect(result.generationId).toBe('story-generation-1');
     expect(sdkMocks.videoProjectApi.addClip).toHaveBeenNthCalledWith(1, 'project-1', {
-      title: '镜头 1',
+      title: 'Shot 1',
       prompt: '奔跑',
       params: expect.objectContaining({
         modelConfigId: 'model-video',
@@ -217,7 +217,7 @@ describe('drawBoardActions video composition', () => {
       chainFromPrev: false,
     });
     expect(sdkMocks.videoProjectApi.addClip).toHaveBeenNthCalledWith(2, 'project-1', {
-      title: '镜头 2',
+      title: 'Shot 2',
       prompt: '跳跃',
       params: expect.objectContaining({
         modelConfigId: 'model-video',
