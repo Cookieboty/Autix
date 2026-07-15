@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import { buildGeneratorNavItems } from '../src/growth/generator-nav-items';
 
 describe('buildGeneratorNavItems', () => {

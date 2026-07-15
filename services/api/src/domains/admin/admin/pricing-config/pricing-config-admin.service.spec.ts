@@ -18,21 +18,21 @@ const VALID_PARAMS_SCHEMA = {
 
 function buildRepo() {
   return {
-    findModelConfig: jest.fn(),
-    updateModelSchemas: jest.fn(),
-    updateModelDescription: jest.fn(),
-    listTaskDefinitions: jest.fn(),
-    createTaskDefinition: jest.fn(),
-    updateTaskDefinition: jest.fn(),
-    deactivateTaskDefinition: jest.fn(),
-    listTaskModelBindings: jest.fn(),
-    createTaskModelBinding: jest.fn(),
-    updateTaskModelBinding: jest.fn(),
-    deleteTaskModelBinding: jest.fn(),
-    listDiscounts: jest.fn(),
-    createDiscount: jest.fn(),
-    updateDiscount: jest.fn(),
-    deleteDiscount: jest.fn(),
+    findModelConfig: vi.fn(),
+    updateModelSchemas: vi.fn(),
+    updateModelDescription: vi.fn(),
+    listTaskDefinitions: vi.fn(),
+    createTaskDefinition: vi.fn(),
+    updateTaskDefinition: vi.fn(),
+    deactivateTaskDefinition: vi.fn(),
+    listTaskModelBindings: vi.fn(),
+    createTaskModelBinding: vi.fn(),
+    updateTaskModelBinding: vi.fn(),
+    deleteTaskModelBinding: vi.fn(),
+    listDiscounts: vi.fn(),
+    createDiscount: vi.fn(),
+    updateDiscount: vi.fn(),
+    deleteDiscount: vi.fn(),
   };
 }
 

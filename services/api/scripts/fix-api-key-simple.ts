@@ -1,7 +1,7 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * 一键修复 API Key
- * 用法: API_KEY="your-key-here" bun run scripts/fix-api-key-simple.ts
+ * 用法: API_KEY="your-key-here" pnpm --filter @autix/api fix:api-key
  */
 
 import { createPrismaClient } from './db';
@@ -9,13 +9,13 @@ import { createPrismaClient } from './db';
 const prisma = createPrismaClient();
 
 async function main() {
-  const newApiKey = process.env.API_KEY || Bun.argv[2];
+  const newApiKey = process.env.API_KEY || process.argv[2];
 
   if (!newApiKey) {
     console.log('❌ 请提供 API Key\n');
-    console.log('方法 1: API_KEY="sk-xxx" bun run scripts/fix-api-key-simple.ts');
-    console.log('方法 2: bun run scripts/fix-api-key-simple.ts "sk-xxx"\n');
-    console.log('或使用交互式工具: bun run scripts/update-model-key.ts\n');
+    console.log('方法 1: API_KEY="sk-xxx" pnpm --filter @autix/api fix:api-key');
+    console.log('方法 2: pnpm --filter @autix/api fix:api-key "sk-xxx"\n');
+    console.log('或使用交互式工具: pnpm --filter @autix/api update:model-key\n');
     process.exit(1);
   }
 
@@ -28,7 +28,7 @@ async function main() {
 
   if (!model) {
     console.log('❌ 未找到默认模型配置');
-    console.log('   请先运行: bun run scripts/setup-model.ts\n');
+    console.log('   请先运行: pnpm exec tsx scripts/setup-model.ts\n');
     process.exit(1);
   }
 
@@ -72,7 +72,7 @@ async function main() {
 
   console.log('✅ API Key 已更新到数据库\n');
   console.log('📝 下一步:');
-  console.log('   1. 重启后端: cd services/api && bun run dev');
+  console.log('   1. 重启后端: pnpm run dev:api');
   console.log('   2. 测试聊天: http://localhost:3000\n');
 
   await prisma.$disconnect();

@@ -3,6 +3,13 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
+    "builder": {
+      "type": "swc",
+      "options": {
+        "stripLeadingPaths": true
+      }
+    },
+    "typeCheck": false,
     "tsConfigPath": "tsconfig.build.json",
     "assets": [
       { "include": "domains/platform/i18n/locales/*.yaml", "watchAssets": true }

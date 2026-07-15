@@ -3,11 +3,11 @@ import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispat
 
 function makeService(options: { nextClip?: Record<string, unknown> | null }) {
   const repository = {
-    findClipOrder: jest.fn(async () => ({ order: 1 })),
-    findNextChainedPendingClip: jest.fn(async () => options.nextClip ?? null),
+    findClipOrder: vi.fn(async () => ({ order: 1 })),
+    findNextChainedPendingClip: vi.fn(async () => options.nextClip ?? null),
   };
   const service = new VideoChainTriggerDispatcherService(repository as never);
-  const generateClip = jest.fn(async () => ({ generationId: 'gen-2' }));
+  const generateClip = vi.fn(async () => ({ generationId: 'gen-2' }));
 
   return { service, repository, generateClip };
 }

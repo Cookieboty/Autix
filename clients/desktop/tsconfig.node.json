@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022"],
-    "types": ["node", "electron", "jest"],
+    "types": ["node", "electron", "vitest/globals"],
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,

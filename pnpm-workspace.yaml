@@ -1,0 +1,24 @@
+packages:
+  - 'clients/*'
+  - 'services/*'
+  - 'packages/*'
+
+# A flat node_modules. pnpm 11 reads this here, NOT from .npmrc — putting it in
+# .npmrc is silently ignored and you get the default isolated (symlinked) layout.
+#
+# Two reasons it belongs here: electron-builder (clients/desktop) does not
+# support the isolated layout, and the symlink-heavy virtual store makes the
+# Next/Turbopack dev watchers walk a far larger graph.
+nodeLinker: hoisted
+
+# Postinstall scripts pnpm is allowed to run. Everything here either downloads a
+# native binary or generates an engine; without it the package is inert.
+allowBuilds:
+  '@parcel/watcher': true # native fsevents watcher (nest --watch, turbo)
+  '@prisma/engines': true # query/migration engine binaries
+  '@swc/core': true # native transpiler binary (nest build)
+  electron: true # downloads the Electron runtime (clients/desktop)
+  esbuild: true # native bundler binary (vite, tsx, electron-vite)
+  prisma: true # CLI engine binaries
+  sharp: true # native libvips bindings
+  protobufjs: false # postinstall is a no-op cli shim; not needed

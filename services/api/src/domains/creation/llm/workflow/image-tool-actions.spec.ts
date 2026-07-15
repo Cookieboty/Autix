@@ -41,9 +41,9 @@ describe('image tool actions', () => {
         },
       ],
     });
-    const boundInvoke = jest.fn().mockResolvedValue(toolMessage);
-    const bindTools = jest.fn().mockReturnValue({ invoke: boundInvoke });
-    const fallbackInvoke = jest.fn();
+    const boundInvoke = vi.fn().mockResolvedValue(toolMessage);
+    const bindTools = vi.fn().mockReturnValue({ invoke: boundInvoke });
+    const fallbackInvoke = vi.fn();
 
     const result = await invokeModelWithImageActionTools(
       { bindTools, invoke: fallbackInvoke } as never,
@@ -64,12 +64,12 @@ describe('image tool actions', () => {
 
   it('degrades to a plain no-tools invoke when the tools request fails with an opaque error', async () => {
     // 模拟不支持 function calling 的网关：绑定 tools 后 invoke 抛出 LangChain 的隐晦 TypeError。
-    const boundInvoke = jest
+    const boundInvoke = vi
       .fn()
       .mockRejectedValue(new TypeError("Cannot read properties of undefined (reading 'message')"));
-    const bindTools = jest.fn().mockReturnValue({ invoke: boundInvoke });
+    const bindTools = vi.fn().mockReturnValue({ invoke: boundInvoke });
     const plainMessage = new AIMessage({ content: '这是一段普通回复' });
-    const fallbackInvoke = jest.fn().mockResolvedValue(plainMessage);
+    const fallbackInvoke = vi.fn().mockResolvedValue(plainMessage);
 
     const result = await invokeModelWithImageActionTools(
       { bindTools, invoke: fallbackInvoke } as never,
@@ -82,10 +82,10 @@ describe('image tool actions', () => {
   });
 
   it('propagates the underlying error when the no-tools fallback also fails', async () => {
-    const bindTools = jest.fn().mockReturnValue({
-      invoke: jest.fn().mockRejectedValue(new TypeError('opaque tools error')),
+    const bindTools = vi.fn().mockReturnValue({
+      invoke: vi.fn().mockRejectedValue(new TypeError('opaque tools error')),
     });
-    const fallbackInvoke = jest.fn().mockRejectedValue(new Error('401 unauthorized'));
+    const fallbackInvoke = vi.fn().mockRejectedValue(new Error('401 unauthorized'));
 
     await expect(
       invokeModelWithImageActionTools({ bindTools, invoke: fallbackInvoke } as never, 'hi'),

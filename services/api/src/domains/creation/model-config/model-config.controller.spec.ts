@@ -39,9 +39,9 @@ const RAW_RECORD = {
 
 function createController(overrides: Partial<ModelConfigService> = {}) {
   const service = {
-    findAvailableGeneralModels: jest.fn(async () => [{ ...RAW_RECORD }]),
-    findAvailablePublicModels: jest.fn(async () => [{ ...RAW_RECORD }]),
-    findDefaultByTypeForUser: jest.fn(async () => ({ ...RAW_RECORD })),
+    findAvailableGeneralModels: vi.fn(async () => [{ ...RAW_RECORD }]),
+    findAvailablePublicModels: vi.fn(async () => [{ ...RAW_RECORD }]),
+    findDefaultByTypeForUser: vi.fn(async () => ({ ...RAW_RECORD })),
     ...overrides,
   } as unknown as ModelConfigService;
   return new ModelConfigController(service);
@@ -79,7 +79,7 @@ describe('ModelConfigController credential boundary', () => {
 
   it('GET /models/default/:type tolerates no default model', async () => {
     const controller = createController({
-      findDefaultByTypeForUser: jest.fn(async () => null),
+      findDefaultByTypeForUser: vi.fn(async () => null),
     } as never);
     expect(await controller.findDefault(USER, ModelType.general)).toBeNull();
   });

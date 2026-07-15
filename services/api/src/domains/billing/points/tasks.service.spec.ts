@@ -2,8 +2,8 @@ import { TasksService } from './tasks.service';
 
 function buildService(overrides: Record<string, unknown> = {}) {
   const repo = {
-    findActiveTaskDefinitions: jest.fn().mockResolvedValue([{ taskType: 'image_generation', name: '图片生成' }]),
-    findBindingsForTask: jest.fn().mockResolvedValue([
+    findActiveTaskDefinitions: vi.fn().mockResolvedValue([{ taskType: 'image_generation', name: '图片生成' }]),
+    findBindingsForTask: vi.fn().mockResolvedValue([
       {
         modelConfigId: 'model-1',
         isDefault: true,
@@ -20,12 +20,12 @@ function buildService(overrides: Record<string, unknown> = {}) {
         },
       },
     ]),
-    findActiveDiscounts: jest.fn().mockResolvedValue([]),
+    findActiveDiscounts: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
   const membershipService = {
-    resolveActiveMembershipLevelId: jest.fn().mockResolvedValue(null),
-    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(0),
+    resolveActiveMembershipLevelId: vi.fn().mockResolvedValue(null),
+    resolveActiveMembershipLevel: vi.fn().mockResolvedValue(0),
     ...(overrides.membershipService as Record<string, unknown> | undefined),
   };
   return { service: new TasksService(repo as never, membershipService as never), repo, membershipService };
@@ -72,7 +72,7 @@ describe('TasksService.listModelsForTask', () => {
 
   it('filters out models the user cannot see', async () => {
     const { service } = buildService({
-      findBindingsForTask: jest.fn().mockResolvedValue([
+      findBindingsForTask: vi.fn().mockResolvedValue([
         {
           modelConfigId: 'model-1',
           isDefault: true,
@@ -98,7 +98,7 @@ describe('TasksService.listModelsForTask', () => {
 
   it('excludes a model whose pricingSchema is NULL, even when it would otherwise be visible', async () => {
     const { service } = buildService({
-      findBindingsForTask: jest.fn().mockResolvedValue([
+      findBindingsForTask: vi.fn().mockResolvedValue([
         {
           modelConfigId: 'model-unpriced',
           isDefault: false,
@@ -126,7 +126,7 @@ describe('TasksService.listModelsForTask', () => {
 
   it('falls back to en text, then the model name, when the requested locale is missing from the description map', async () => {
     const { service } = buildService({
-      findBindingsForTask: jest.fn().mockResolvedValue([
+      findBindingsForTask: vi.fn().mockResolvedValue([
         {
           modelConfigId: 'model-1',
           isDefault: true,
@@ -152,7 +152,7 @@ describe('TasksService.listModelsForTask', () => {
 
   it('falls back to the model name when the description map has neither the requested locale nor en', async () => {
     const { service } = buildService({
-      findBindingsForTask: jest.fn().mockResolvedValue([
+      findBindingsForTask: vi.fn().mockResolvedValue([
         {
           modelConfigId: 'model-1',
           isDefault: true,
@@ -189,14 +189,14 @@ describe('TasksService.listModelsForTask', () => {
       isActive: true,
     };
 
-    const nonMember = buildService({ findActiveDiscounts: jest.fn().mockResolvedValue([discountRow]) });
+    const nonMember = buildService({ findActiveDiscounts: vi.fn().mockResolvedValue([discountRow]) });
     const nonMemberResult = await nonMember.service.listModelsForTask('image_generation', {
       userId: undefined,
       locale: 'en',
     });
     expect(nonMemberResult[0].discountFactor).toBe(1);
 
-    const member = buildService({ findActiveDiscounts: jest.fn().mockResolvedValue([discountRow]) });
+    const member = buildService({ findActiveDiscounts: vi.fn().mockResolvedValue([discountRow]) });
     member.membershipService.resolveActiveMembershipLevel.mockResolvedValue(2);
     const memberResult = await member.service.listModelsForTask('image_generation', {
       userId: 'user-1',

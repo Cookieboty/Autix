@@ -1,19 +1,20 @@
+import type { Mock } from 'vitest';
 import { createTrackedModel, type TrackerContext } from './llm-call-tracker';
 
-function createModel(overrides: Partial<{ generate: jest.Mock }> = {}) {
+function createModel(overrides: Partial<{ generate: Mock }> = {}) {
   const generate =
     overrides.generate ??
-    jest.fn().mockResolvedValue({
+    vi.fn().mockResolvedValue({
       generations: [[{ message: { response_metadata: { tokenUsage: { input_tokens: 12, output_tokens: 34 } } } }]],
     });
   return { _generate: generate } as unknown as import('@langchain/core/language_models/chat_models').BaseChatModel;
 }
 
-function createBilling(overrides: Partial<{ hold: jest.Mock; confirm: jest.Mock; refund: jest.Mock }> = {}) {
+function createBilling(overrides: Partial<{ hold: Mock; confirm: Mock; refund: Mock }> = {}) {
   return {
-    hold: overrides.hold ?? jest.fn().mockResolvedValue({ holdId: 'hold-1', balance: 10 }),
-    confirm: overrides.confirm ?? jest.fn().mockResolvedValue(undefined),
-    refund: overrides.refund ?? jest.fn().mockResolvedValue(undefined),
+    hold: overrides.hold ?? vi.fn().mockResolvedValue({ holdId: 'hold-1', balance: 10 }),
+    confirm: overrides.confirm ?? vi.fn().mockResolvedValue(undefined),
+    refund: overrides.refund ?? vi.fn().mockResolvedValue(undefined),
   } as unknown as import('./call-billing.service').CallBillingService;
 }
 
@@ -63,7 +64,7 @@ describe('createTrackedModel — no pointCostWeight fallback', () => {
   it('refunds the hold and rethrows when the underlying model call fails', async () => {
     const failure = new Error('model exploded');
     const billing = createBilling();
-    const model = createModel({ generate: jest.fn().mockRejectedValue(failure) });
+    const model = createModel({ generate: vi.fn().mockRejectedValue(failure) });
     const tracked = createTrackedModel(model, billing, baseCtx);
 
     await expect(

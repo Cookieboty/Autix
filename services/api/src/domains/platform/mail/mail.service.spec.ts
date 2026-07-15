@@ -1,16 +1,17 @@
+import type { Mock } from 'vitest';
 import type { SendMailOptions } from 'nodemailer';
 import type { SystemSettingsService } from '../system-settings/system-settings.service';
 import { MailService } from './mail.service';
 
 function createService() {
   const settings = {
-    getString: jest.fn().mockResolvedValue(''),
-    getBoolean: jest.fn().mockResolvedValue(true),
+    getString: vi.fn().mockResolvedValue(''),
+    getBoolean: vi.fn().mockResolvedValue(true),
   };
   return new MailService(settings as unknown as SystemSettingsService);
 }
 
-function runtimeConfig(sendMail: jest.Mock) {
+function runtimeConfig(sendMail: Mock) {
   return {
     transporter: { sendMail },
     from: 'security@example.com',
@@ -23,9 +24,9 @@ function runtimeConfig(sendMail: jest.Mock) {
 describe('MailService.sendStepUpOtp', () => {
   it('renders the six-digit code and operation details directly in the email', async () => {
     const service = createService();
-    const sendMail = jest.fn().mockResolvedValue({});
+    const sendMail = vi.fn().mockResolvedValue({});
     Object.defineProperty(service, 'getRuntimeConfig', {
-      value: jest.fn().mockResolvedValue(runtimeConfig(sendMail)),
+      value: vi.fn().mockResolvedValue(runtimeConfig(sendMail)),
     });
 
     await service.sendStepUpOtp('user@example.com', '042817', 'delete-account', 5);
@@ -47,12 +48,12 @@ describe('MailService.sendStepUpOtp', () => {
   it('propagates SMTP failures so the caller can invalidate the challenge', async () => {
     const service = createService();
     const smtpError = new Error('SMTP unavailable');
-    const sendMail = jest.fn().mockRejectedValue(smtpError);
+    const sendMail = vi.fn().mockRejectedValue(smtpError);
     Object.defineProperty(service, 'getRuntimeConfig', {
-      value: jest.fn().mockResolvedValue(runtimeConfig(sendMail)),
+      value: vi.fn().mockResolvedValue(runtimeConfig(sendMail)),
     });
     Object.defineProperty(service, 'logger', {
-      value: { error: jest.fn() },
+      value: { error: vi.fn() },
     });
 
     await expect(
@@ -63,8 +64,8 @@ describe('MailService.sendStepUpOtp', () => {
   it('rejects when SMTP is not configured instead of reporting a phantom delivery', async () => {
     const service = createService();
     Object.defineProperty(service, 'getRuntimeConfig', {
-      value: jest.fn().mockResolvedValue({
-        ...runtimeConfig(jest.fn()),
+      value: vi.fn().mockResolvedValue({
+        ...runtimeConfig(vi.fn()),
         transporter: null,
       }),
     });

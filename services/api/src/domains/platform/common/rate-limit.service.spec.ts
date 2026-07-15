@@ -2,8 +2,8 @@ import { RateLimitedException, RateLimitService } from './rate-limit.service';
 
 function createRepository() {
   return {
-    consume: jest.fn().mockResolvedValue({}),
-    peek: jest.fn().mockResolvedValue({ blocked: false, retryAfterMs: 0 }),
+    consume: vi.fn().mockResolvedValue({}),
+    peek: vi.fn().mockResolvedValue({ blocked: false, retryAfterMs: 0 }),
   };
 }
 

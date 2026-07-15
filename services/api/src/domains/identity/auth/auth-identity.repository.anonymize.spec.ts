@@ -3,12 +3,12 @@ import { AuthIdentityRepository } from './auth-identity.repository';
 
 function model(overrides: Record<string, unknown> = {}) {
   return {
-    findMany: jest.fn().mockResolvedValue([]),
-    count: jest.fn().mockResolvedValue(0),
-    createMany: jest.fn().mockResolvedValue({ count: 0 }),
-    update: jest.fn().mockResolvedValue({}),
-    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-    deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
+    createMany: vi.fn().mockResolvedValue({ count: 0 }),
+    update: vi.fn().mockResolvedValue({}),
+    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
     ...overrides,
   };
 }
@@ -16,29 +16,29 @@ function model(overrides: Record<string, unknown> = {}) {
 function createRepository(proofCount = 1) {
   let queryIndex = 0;
   const tx: any = {
-    $queryRaw: jest.fn().mockImplementation(async () => {
+    $queryRaw: vi.fn().mockImplementation(async () => {
       queryIndex += 1;
       return queryIndex === 1
         ? [{ id: 'u1', status: 'ACTIVE', isSuperAdmin: false, avatarStorageKey: 'avatars/u1/current.png', username: 'alice' }]
         : [];
     }),
-    $executeRaw: jest.fn().mockResolvedValue(0),
+    $executeRaw: vi.fn().mockResolvedValue(0),
     step_up_proofs: model({
-      updateMany: jest.fn().mockResolvedValue({ count: proofCount }),
+      updateMany: vi.fn().mockResolvedValue({ count: proofCount }),
     }),
     pending_uploads: model({
-      findMany: jest.fn().mockResolvedValue([
+      findMany: vi.fn().mockResolvedValue([
         { storageKey: 'avatars/u1/pending.png', storageBucket: null },
       ]),
     }),
     storage_cleanup_tasks: model(),
     resource_likes: model({
-      findMany: jest.fn().mockResolvedValue([{ resourceType: 'SKILL', resourceId: 'r1' }]),
-      count: jest.fn().mockResolvedValue(2),
+      findMany: vi.fn().mockResolvedValue([{ resourceType: 'SKILL', resourceId: 'r1' }]),
+      count: vi.fn().mockResolvedValue(2),
     }),
     resource_favorites: model({
-      findMany: jest.fn().mockResolvedValue([{ resourceType: 'AGENT', resourceId: 'r2' }]),
-      count: jest.fn().mockResolvedValue(3),
+      findMany: vi.fn().mockResolvedValue([{ resourceType: 'AGENT', resourceId: 'r2' }]),
+      count: vi.fn().mockResolvedValue(3),
     }),
     userRole: model(),
     userSession: model(),
@@ -57,7 +57,7 @@ function createRepository(proofCount = 1) {
     user: model(),
   };
   const prisma = {
-    $transaction: jest.fn(async (callback: (client: any) => unknown) => callback(tx)),
+    $transaction: vi.fn(async (callback: (client: any) => unknown) => callback(tx)),
   };
   return { repository: new AuthIdentityRepository(prisma as any), tx };
 }

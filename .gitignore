@@ -30,7 +30,6 @@ uploads/
 .cursor.agents/
 .cursor
 .superpowers
-.tmp-bun
 
 # Editor
 .vscode/

@@ -1,0 +1,37 @@
+{
+  // Used only by `tsx` when running the root scripts. check-i18n-consistency.ts
+  // reaches into clients/web, whose sources use the `@/*` alias — tsx resolves
+  // paths from the tsconfig at the cwd (not the nearest one), so the mapping has
+  // to live here rather than polluting tsconfig.base.json.
+  //
+  // `paths` replaces (not merges with) the inherited map, so tsconfig.base.json's
+  // @autix/* entries are repeated here — clients/web pulls them in transitively.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["./clients/web/*"],
+      "@autix/database": ["./packages/database/src/index.ts"],
+      "@autix/database/*": ["./packages/database/src/*"],
+      "@autix/i18n": ["./packages/i18n/src/index.ts"],
+      "@autix/i18n/*": ["./packages/i18n/src/*"],
+      "@autix/domain": ["./packages/domain/src/index.ts"],
+      "@autix/domain/*": ["./packages/domain/src/*"],
+      "@autix/platform": ["./packages/platform/src/index.ts"],
+      "@autix/platform/*": ["./packages/platform/src/*"],
+      "@autix/sdk": ["./packages/sdk/src/index.ts"],
+      "@autix/sdk/*": ["./packages/sdk/src/*"],
+      "@autix/shared-store": ["./packages/shared-store/src/index.ts"],
+      "@autix/shared-store/*": ["./packages/shared-store/src/*"],
+      "@autix/shared-ui": ["./packages/shared-ui/src/index.ts"],
+      "@autix/shared-ui/*": ["./packages/shared-ui/src/*"],
+      "@autix/ai-adapters": ["./packages/ai-adapters/src/index.ts"],
+      "@autix/ai-adapters/*": ["./packages/ai-adapters/src/*"]
+    },
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["."]
+}

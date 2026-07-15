@@ -2,7 +2,7 @@ import { PricingConfigAdminController } from './pricing-config-admin.controller'
 
 describe('PricingConfigAdminController', () => {
   it('getModel delegates to the service by id', async () => {
-    const service = { getModel: jest.fn().mockResolvedValue({ id: 'm1' }) };
+    const service = { getModel: vi.fn().mockResolvedValue({ id: 'm1' }) };
     const controller = new PricingConfigAdminController(service as never);
 
     await expect(controller.getModel('m1')).resolves.toEqual({ id: 'm1' });
@@ -10,7 +10,7 @@ describe('PricingConfigAdminController', () => {
   });
 
   it('updateSchemas forwards id and body to the service', async () => {
-    const service = { updateModelSchemas: jest.fn().mockResolvedValue({ id: 'm1', schemaVersion: 2 }) };
+    const service = { updateModelSchemas: vi.fn().mockResolvedValue({ id: 'm1', schemaVersion: 2 }) };
     const controller = new PricingConfigAdminController(service as never);
     const body = { paramsSchema: { type: 'object', properties: {} }, pricingSchema: { terms: [] } };
 
@@ -20,7 +20,7 @@ describe('PricingConfigAdminController', () => {
   });
 
   it('updateDescription forwards id and the description map to the service', async () => {
-    const service = { updateModelDescription: jest.fn().mockResolvedValue({ id: 'm1' }) };
+    const service = { updateModelDescription: vi.fn().mockResolvedValue({ id: 'm1' }) };
     const controller = new PricingConfigAdminController(service as never);
 
     await controller.updateDescription('m1', { description: { 'zh-CN': 'x' } } as never);
@@ -29,7 +29,7 @@ describe('PricingConfigAdminController', () => {
   });
 
   it('dryRun forwards the body to the service and never touches persistence itself', async () => {
-    const service = { dryRun: jest.fn().mockReturnValue({ total: 10, breakdown: [] }) };
+    const service = { dryRun: vi.fn().mockReturnValue({ total: 10, breakdown: [] }) };
     const controller = new PricingConfigAdminController(service as never);
     const body = {
       paramsSchema: { type: 'object', properties: {} },
@@ -46,7 +46,7 @@ describe('PricingConfigAdminController', () => {
 
 describe('PricingConfigAdminController task_definitions routes', () => {
   it('listTaskDefinitions delegates to the service', async () => {
-    const service = { listTaskDefinitions: jest.fn().mockResolvedValue([{ taskType: 't' }]) };
+    const service = { listTaskDefinitions: vi.fn().mockResolvedValue([{ taskType: 't' }]) };
     const controller = new PricingConfigAdminController(service as never);
 
     await expect(controller.listTaskDefinitions()).resolves.toEqual([{ taskType: 't' }]);
@@ -54,7 +54,7 @@ describe('PricingConfigAdminController task_definitions routes', () => {
   });
 
   it('createTaskDefinition forwards the body to the service', async () => {
-    const service = { createTaskDefinition: jest.fn().mockResolvedValue({ taskType: 't' }) };
+    const service = { createTaskDefinition: vi.fn().mockResolvedValue({ taskType: 't' }) };
     const controller = new PricingConfigAdminController(service as never);
     const body = { taskType: 't', name: 'T', category: 'chat', fixedCostSchema: null };
 
@@ -64,7 +64,7 @@ describe('PricingConfigAdminController task_definitions routes', () => {
   });
 
   it('updateTaskDefinition forwards taskType and body to the service', async () => {
-    const service = { updateTaskDefinition: jest.fn().mockResolvedValue({ taskType: 't' }) };
+    const service = { updateTaskDefinition: vi.fn().mockResolvedValue({ taskType: 't' }) };
     const controller = new PricingConfigAdminController(service as never);
     const body = { isActive: false };
 
@@ -74,7 +74,7 @@ describe('PricingConfigAdminController task_definitions routes', () => {
   });
 
   it('deleteTaskDefinition forwards taskType to the service', async () => {
-    const service = { deleteTaskDefinition: jest.fn().mockResolvedValue({ taskType: 't', isActive: false }) };
+    const service = { deleteTaskDefinition: vi.fn().mockResolvedValue({ taskType: 't', isActive: false }) };
     const controller = new PricingConfigAdminController(service as never);
 
     await controller.deleteTaskDefinition('t');
@@ -85,7 +85,7 @@ describe('PricingConfigAdminController task_definitions routes', () => {
 
 describe('PricingConfigAdminController task_model_bindings routes', () => {
   it('listTaskModelBindings forwards the optional taskType query param', async () => {
-    const service = { listTaskModelBindings: jest.fn().mockResolvedValue([]) };
+    const service = { listTaskModelBindings: vi.fn().mockResolvedValue([]) };
     const controller = new PricingConfigAdminController(service as never);
 
     await controller.listTaskModelBindings('image_generation');
@@ -94,7 +94,7 @@ describe('PricingConfigAdminController task_model_bindings routes', () => {
   });
 
   it('createTaskModelBinding forwards the body to the service', async () => {
-    const service = { createTaskModelBinding: jest.fn().mockResolvedValue({}) };
+    const service = { createTaskModelBinding: vi.fn().mockResolvedValue({}) };
     const controller = new PricingConfigAdminController(service as never);
     const body = { taskType: 't', modelConfigId: 'm1', multiplier: 1, isDefault: true };
 
@@ -104,7 +104,7 @@ describe('PricingConfigAdminController task_model_bindings routes', () => {
   });
 
   it('updateTaskModelBinding forwards taskType, modelConfigId, and body to the service', async () => {
-    const service = { updateTaskModelBinding: jest.fn().mockResolvedValue({}) };
+    const service = { updateTaskModelBinding: vi.fn().mockResolvedValue({}) };
     const controller = new PricingConfigAdminController(service as never);
     const body = { multiplier: 2 };
 
@@ -114,7 +114,7 @@ describe('PricingConfigAdminController task_model_bindings routes', () => {
   });
 
   it('deleteTaskModelBinding forwards taskType and modelConfigId to the service', async () => {
-    const service = { deleteTaskModelBinding: jest.fn().mockResolvedValue({}) };
+    const service = { deleteTaskModelBinding: vi.fn().mockResolvedValue({}) };
     const controller = new PricingConfigAdminController(service as never);
 
     await controller.deleteTaskModelBinding('t', 'm1');
@@ -125,7 +125,7 @@ describe('PricingConfigAdminController task_model_bindings routes', () => {
 
 describe('PricingConfigAdminController discounts routes', () => {
   it('listDiscounts delegates to the service', async () => {
-    const service = { listDiscounts: jest.fn().mockResolvedValue([]) };
+    const service = { listDiscounts: vi.fn().mockResolvedValue([]) };
     const controller = new PricingConfigAdminController(service as never);
 
     await controller.listDiscounts();
@@ -134,7 +134,7 @@ describe('PricingConfigAdminController discounts routes', () => {
   });
 
   it('createDiscount forwards the body to the service', async () => {
-    const service = { createDiscount: jest.fn().mockResolvedValue({ id: 'd1' }) };
+    const service = { createDiscount: vi.fn().mockResolvedValue({ id: 'd1' }) };
     const controller = new PricingConfigAdminController(service as never);
     const body = { code: 'SUMMER', name: 'x', factor: 0.8, scope: {} };
 
@@ -144,7 +144,7 @@ describe('PricingConfigAdminController discounts routes', () => {
   });
 
   it('updateDiscount forwards id and body to the service', async () => {
-    const service = { updateDiscount: jest.fn().mockResolvedValue({ id: 'd1' }) };
+    const service = { updateDiscount: vi.fn().mockResolvedValue({ id: 'd1' }) };
     const controller = new PricingConfigAdminController(service as never);
     const body = { isActive: false };
 
@@ -154,7 +154,7 @@ describe('PricingConfigAdminController discounts routes', () => {
   });
 
   it('deleteDiscount forwards id to the service', async () => {
-    const service = { deleteDiscount: jest.fn().mockResolvedValue({}) };
+    const service = { deleteDiscount: vi.fn().mockResolvedValue({}) };
     const controller = new PricingConfigAdminController(service as never);
 
     await controller.deleteDiscount('d1');

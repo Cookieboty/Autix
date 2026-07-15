@@ -217,7 +217,7 @@ describe('GalleryTemplateConversionService.convertToTemplate', () => {
     });
     const repo = new GalleryRepository(prisma as never);
     const conv = new GalleryTemplateConversionService(prisma as never, repo);
-    const auditSpy = jest.spyOn(prisma.admin_audit_logs, 'create');
+    const auditSpy = vi.spyOn(prisma.admin_audit_logs, 'create');
     await conv.convertToTemplate(adminId, publishedImageGallery.id);
     expect(auditSpy).toHaveBeenCalledTimes(1);
   });

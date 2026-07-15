@@ -17,7 +17,7 @@ function makeEntitlement(over: Partial<VideoEntitlement> = {}): VideoEntitlement
 
 function makeRepository(activeCount: number) {
   return {
-    countActiveVideoGenerations: jest.fn(async () => activeCount),
+    countActiveVideoGenerations: vi.fn(async () => activeCount),
   } as any;
 }
 

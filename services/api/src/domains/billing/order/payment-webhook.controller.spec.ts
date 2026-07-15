@@ -9,20 +9,20 @@ function make(opts: { secret?: string; allowed?: string; values?: Record<string,
     PAYMENT_WEBHOOK_ALLOWED_PROVIDERS: allowed,
     ...(opts.values ?? {}),
   };
-  const getMock = jest.fn((key: string) => values[key]);
+  const getMock = vi.fn((key: string) => values[key]);
   const config = {
     get<T = unknown>(key: string): T | undefined {
       return getMock(key) as T | undefined;
     },
   };
   const orderService = {
-    handlePaymentWebhook: jest.fn().mockImplementation(async (input: unknown) => ({
+    handlePaymentWebhook: vi.fn().mockImplementation(async (input: unknown) => ({
       ok: true,
       input,
     })),
   };
   const stripePaymentService = {
-    handleWebhook: jest.fn().mockResolvedValue({ received: true }),
+    handleWebhook: vi.fn().mockResolvedValue({ received: true }),
   };
   return { config, orderService, stripePaymentService };
 }

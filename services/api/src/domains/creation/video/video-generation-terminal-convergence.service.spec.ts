@@ -17,7 +17,7 @@ describe('VideoGenerationTerminalConvergenceService', () => {
 
   it('reconciles holds only for terminal generations', async () => {
     const holdReconciliation = {
-      reconcileTerminalHold: jest.fn(async () => undefined),
+      reconcileTerminalHold: vi.fn(async () => undefined),
     };
     const service = new VideoGenerationTerminalConvergenceService(
       holdReconciliation as never,

@@ -4,25 +4,25 @@ import { CallBillingService, InsufficientPointsError } from './call-billing.serv
 
 function createRepository() {
   return {
-    findUserPoints: jest.fn(),
-    findPendingAgentCallPointRecords: jest.fn(),
-    findPointHold: jest.fn().mockResolvedValue(null),
+    findUserPoints: vi.fn(),
+    findPendingAgentCallPointRecords: vi.fn(),
+    findPointHold: vi.fn().mockResolvedValue(null),
   };
 }
 
 function createPointsService() {
   return {
-    estimateCost: jest.fn(),
-    createHold: jest.fn(),
-    confirmHold: jest.fn(),
-    refundHold: jest.fn(),
-    quoteHoldFromSnapshot: jest.fn(),
+    estimateCost: vi.fn(),
+    createHold: vi.fn(),
+    confirmHold: vi.fn(),
+    refundHold: vi.fn(),
+    quoteHoldFromSnapshot: vi.fn(),
   };
 }
 
 function createMembershipService() {
   return {
-    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
+    resolveActiveMembershipLevel: vi.fn().mockResolvedValue(2),
   };
 }
 
@@ -244,7 +244,7 @@ describe('CallBillingService', () => {
       const failure = new BadRequestException('未配置计费规则');
       points.estimateCost.mockRejectedValue(failure);
       const service = new CallBillingService(repository as never, points as never, membership as never);
-      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
       let rejected = false;
       const pending = service

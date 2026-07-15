@@ -23,14 +23,18 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "image": ["./dist/image/index.d.ts"],
-      "core": ["./dist/core/index.d.ts"]
+      "image": [
+        "./dist/image/index.d.ts"
+      ],
+      "core": [
+        "./dist/core/index.d.ts"
+      ]
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "bun --bun vitest run"
+    "test": "vitest run"
   },
   "dependencies": {
     "@autix/domain": "workspace:*"

@@ -1,31 +1,32 @@
+import type { Mock } from 'vitest';
 import { CanvasActionService } from './canvas-action.service';
 import type { EstimateActionDto } from './dto/run-canvas-action.dto';
 
 interface BuildOverrides {
-  pointsService?: Partial<{ estimateCost: jest.Mock }>;
-  boardService?: Partial<{ getBoard: jest.Mock }>;
+  pointsService?: Partial<{ estimateCost: Mock }>;
+  boardService?: Partial<{ getBoard: Mock }>;
 }
 
 function buildCanvasActionService(overrides: BuildOverrides = {}) {
   const boardService = {
-    getBoard: jest.fn().mockResolvedValue({ entitlement: { canGenerate: true } }),
-    loadStateById: jest.fn(),
-    applyAuthoritativeMerge: jest.fn(),
+    getBoard: vi.fn().mockResolvedValue({ entitlement: { canGenerate: true } }),
+    loadStateById: vi.fn(),
+    applyAuthoritativeMerge: vi.fn(),
     ...overrides.boardService,
   };
   const repository = {
-    listActions: jest.fn(),
-    findActionByIdempotencyKey: jest.fn(),
-    createAction: jest.fn(),
-    updateAction: jest.fn(),
+    listActions: vi.fn(),
+    findActionByIdempotencyKey: vi.fn(),
+    createAction: vi.fn(),
+    updateAction: vi.fn(),
   };
   const pointsService = {
-    estimateCost: jest.fn(),
+    estimateCost: vi.fn(),
     ...overrides.pointsService,
   };
-  const r2Service = { getPublicUrl: jest.fn() };
-  const imageWorkbench = { ensureWorkbenchTemplate: jest.fn() };
-  const imageFlow = { resolveImageRequest: jest.fn(), generateAndPersistImage: jest.fn() };
+  const r2Service = { getPublicUrl: vi.fn() };
+  const imageWorkbench = { ensureWorkbenchTemplate: vi.fn() };
+  const imageFlow = { resolveImageRequest: vi.fn(), generateAndPersistImage: vi.fn() };
 
   const service = new CanvasActionService(
     boardService as never,
@@ -48,7 +49,7 @@ const baseDto = (over: Partial<EstimateActionDto> = {}): EstimateActionDto =>
 
 describe('CanvasActionService.estimate', () => {
   it('returns a metered estimate for agent-chat without calling the estimator', async () => {
-    const estimateCost = jest.fn();
+    const estimateCost = vi.fn();
     const { service } = buildCanvasActionService({ pointsService: { estimateCost } });
 
     const result = await service.estimate('user-1', 'board-1', baseDto({ actionType: 'agent-chat' }));
@@ -58,7 +59,7 @@ describe('CanvasActionService.estimate', () => {
   });
 
   it('returns a free exact estimate for export without calling the estimator', async () => {
-    const estimateCost = jest.fn();
+    const estimateCost = vi.fn();
     const { service } = buildCanvasActionService({ pointsService: { estimateCost } });
 
     const result = await service.estimate('user-1', 'board-1', baseDto({ actionType: 'export' }));
@@ -68,7 +69,7 @@ describe('CanvasActionService.estimate', () => {
   });
 
   it('returns an exact cost from the estimator on success', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({ estimatedCost: 90 });
+    const estimateCost = vi.fn().mockResolvedValue({ estimatedCost: 90 });
     const { service } = buildCanvasActionService({ pointsService: { estimateCost } });
 
     const result = await service.estimate('user-1', 'board-1', baseDto({ count: 2 }));
@@ -77,12 +78,12 @@ describe('CanvasActionService.estimate', () => {
   });
 
   it('logs an error (not a warning) and returns a distinguishable metered fallback when the estimator throws', async () => {
-    const estimateCost = jest.fn().mockRejectedValue(new Error('missing default binding'));
+    const estimateCost = vi.fn().mockRejectedValue(new Error('missing default binding'));
     const { service } = buildCanvasActionService({ pointsService: { estimateCost } });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const logger = (service as any).logger;
-    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
-    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
 
     const result = await service.estimate('user-1', 'board-1', baseDto());
 
@@ -97,7 +98,7 @@ describe('CanvasActionService.estimate', () => {
   });
 
   it('passes modelConfigId through when provided, and params instead of quantity', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({ estimatedCost: 90 });
+    const estimateCost = vi.fn().mockResolvedValue({ estimatedCost: 90 });
     const { service } = buildCanvasActionService({ pointsService: { estimateCost } });
 
     await service.estimate('user-1', 'board-1', baseDto({ modelConfigId: 'model-1', count: 2 }));
@@ -110,7 +111,7 @@ describe('CanvasActionService.estimate', () => {
   });
 
   it('omits modelConfigId when the dto does not carry one', async () => {
-    const estimateCost = jest.fn().mockResolvedValue({ estimatedCost: 90 });
+    const estimateCost = vi.fn().mockResolvedValue({ estimatedCost: 90 });
     const { service } = buildCanvasActionService({ pointsService: { estimateCost } });
 
     await service.estimate('user-1', 'board-1', baseDto());

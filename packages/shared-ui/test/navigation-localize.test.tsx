@@ -1,4 +1,3 @@
-import { test, expect } from 'bun:test';
 import { renderToString } from 'react-dom/server';
 import { Link, LocaleRoutingProvider } from '../src/navigation';
 

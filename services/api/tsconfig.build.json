@@ -1,10 +1,19 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"],
-      "@autix/domain": ["../../packages/domain/dist/index.d.ts"],
-      "@autix/domain/*": ["../../packages/domain/dist/*"]
-    }
-  }
+    // 清空 paths（不是覆盖成别的映射）。nest 会把这里的 paths 原样灌进 SWC 的 jsc.paths，
+    // 而 SWC 是**真的在转译时重写模块路径**的——不像 tsc 只拿它做类型解析、运行时照旧
+    // 发出 `require('@autix/domain')` 交给 Node 走 node_modules。
+    //
+    // tsconfig.json 里那条 `@autix/domain -> ../../packages/domain/dist/index.d.ts` 是
+    // tsc 专用的取类型技巧，指向一个 .d.ts；SWC 照着它重写就会 require 一个运行时并不
+    // 存在的 `index.d`，应用启动即崩。
+    //
+    // 这里不需要任何 paths：本文件只供 `nest build`（typeCheck: false）使用，类型检查
+    // 走的是 tsconfig.json。
+    "paths": {}
+  },
+  // spec 不进构建：它们是 src 下 607 个文件里的 164 个，既拖慢每次热重载，也会被打进
+  // 生产 dist。类型覆盖没丢——typecheck 用 tsconfig.json，仍然覆盖 spec。
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }

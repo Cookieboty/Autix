@@ -37,7 +37,7 @@
       "outputLogs": "new-only"
     },
     "test": {
-      "dependsOn": ["db:generate"],
+      "dependsOn": ["^build", "db:generate"],
       "cache": false
     },
     "lint": {

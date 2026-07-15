@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * backfill-resource-metrics.ts
  *
@@ -13,7 +13,7 @@
  * viewCount/hotScore/boostScore are left untouched (0 on create, unchanged on update).
  *
  * Usage:
- *   DATABASE_URL=postgresql://autix:pass@localhost:5432/autix bun run scripts/backfill-resource-metrics.ts
+ *   DATABASE_URL=postgresql://autix:pass@localhost:5432/autix pnpm exec tsx scripts/backfill-resource-metrics.ts
  */
 
 import { getDatabaseUrl, PrismaClient, ResourceType } from '@autix/database';

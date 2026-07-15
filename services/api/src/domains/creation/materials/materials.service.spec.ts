@@ -15,17 +15,17 @@ function buildService(
   } = {},
 ) {
   const repo = {
-    findMany: jest.fn().mockResolvedValue([[], 0]),
-    create: jest.fn().mockImplementation((d: any) => ({ id: 'm1', ...d })),
-    update: jest.fn().mockImplementation((id: string, d: any) => ({ id, ...d })),
-    findOwned: jest.fn().mockResolvedValue({ id: 'm1', userId: 'u1' }),
-    moveMany: jest.fn().mockResolvedValue({ count: 2 }),
-    softDelete: jest.fn(),
-    softDeleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    findMany: vi.fn().mockResolvedValue([[], 0]),
+    create: vi.fn().mockImplementation((d: any) => ({ id: 'm1', ...d })),
+    update: vi.fn().mockImplementation((id: string, d: any) => ({ id, ...d })),
+    findOwned: vi.fn().mockResolvedValue({ id: 'm1', userId: 'u1' }),
+    moveMany: vi.fn().mockResolvedValue({ count: 2 }),
+    softDelete: vi.fn(),
+    softDeleteMany: vi.fn().mockResolvedValue({ count: 0 }),
     ...(overrides.repo ?? {}),
   };
   const membership = overrides.membership ?? {
-    getUserMembership: jest.fn().mockResolvedValue({
+    getUserMembership: vi.fn().mockResolvedValue({
       membership: {
         status: 'ACTIVE',
         expiresAt: new Date(Date.now() + 86_400_000),
@@ -34,25 +34,25 @@ function buildService(
     }),
   };
   const r2 = {
-    createPresignedUpload: jest.fn(),
-    getPublicBaseUrl: jest.fn().mockResolvedValue(R2_PUBLIC_BASE),
+    createPresignedUpload: vi.fn(),
+    getPublicBaseUrl: vi.fn().mockResolvedValue(R2_PUBLIC_BASE),
     ...(overrides.r2 ?? {}),
   };
   const foldersService = {
-    assertFolderExists: jest.fn().mockResolvedValue(undefined),
+    assertFolderExists: vi.fn().mockResolvedValue(undefined),
     ...(overrides.folders ?? {}),
   };
   const favoriteLibrary = {
-    deleteMaterial: jest.fn().mockResolvedValue(undefined),
-    deleteMaterials: jest.fn().mockResolvedValue({ count: 0 }),
-    assertUsable: jest.fn().mockResolvedValue(undefined),
-    deriveSourceState: jest.fn().mockResolvedValue(new Map()),
-    saveHistoryMaterial: jest.fn().mockResolvedValue({ id: 'hist-1', librarySource: 'HISTORY' }),
+    deleteMaterial: vi.fn().mockResolvedValue(undefined),
+    deleteMaterials: vi.fn().mockResolvedValue({ count: 0 }),
+    assertUsable: vi.fn().mockResolvedValue(undefined),
+    deriveSourceState: vi.fn().mockResolvedValue(new Map()),
+    saveHistoryMaterial: vi.fn().mockResolvedValue({ id: 'hist-1', librarySource: 'HISTORY' }),
     ...(overrides.favoriteLibrary ?? {}),
   };
   const activityRepository = {
-    hasViewed: jest.fn().mockResolvedValue(true),
-    listHistory: jest.fn().mockResolvedValue({ items: [], nextCursor: null }),
+    hasViewed: vi.fn().mockResolvedValue(true),
+    listHistory: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
     ...(overrides.activityRepository ?? {}),
   };
   const service = new MaterialsService(
@@ -146,7 +146,7 @@ describe('MaterialsService folder support', () => {
 describe('MaterialsService entitlement', () => {
   it('allows expired members to list assets but blocks add and use', async () => {
     const expiredMembershipMock = {
-      getUserMembership: jest.fn().mockResolvedValue({
+      getUserMembership: vi.fn().mockResolvedValue({
         membership: {
           status: 'ACTIVE',
           expiresAt: new Date(Date.now() - 86_400_000),
@@ -186,8 +186,8 @@ describe('MaterialsService entitlement', () => {
     };
     const { service, repo, favoriteLibrary } = buildService({
       repo: {
-        create: jest.fn().mockResolvedValue(asset),
-        findOwned: jest.fn().mockResolvedValue(asset),
+        create: vi.fn().mockResolvedValue(asset),
+        findOwned: vi.fn().mockResolvedValue(asset),
       },
     });
 
@@ -230,9 +230,9 @@ describe('MaterialsService — Plan C Task 10：download / useAsset 的 sourceSt
 
   it('download：来源 blocked/missing → ForbiddenException（assertUsable 抛出）', async () => {
     const { service } = buildService({
-      repo: { findOwned: jest.fn().mockResolvedValue(usableAsset) },
+      repo: { findOwned: vi.fn().mockResolvedValue(usableAsset) },
       favoriteLibrary: {
-        assertUsable: jest.fn().mockRejectedValue(new ForbiddenException('该素材的来源资源已不可用')),
+        assertUsable: vi.fn().mockRejectedValue(new ForbiddenException('该素材的来源资源已不可用')),
       },
     });
     await expect(service.download('user-1', 'asset-1')).rejects.toBeInstanceOf(ForbiddenException);
@@ -240,7 +240,7 @@ describe('MaterialsService — Plan C Task 10：download / useAsset 的 sourceSt
 
   it('download：available/unpublished 放行，返回 downloadUrl', async () => {
     const { service, favoriteLibrary } = buildService({
-      repo: { findOwned: jest.fn().mockResolvedValue(usableAsset) },
+      repo: { findOwned: vi.fn().mockResolvedValue(usableAsset) },
     });
     await expect(service.download('user-1', 'asset-1')).resolves.toEqual({
       downloadUrl: usableAsset.url,
@@ -250,9 +250,9 @@ describe('MaterialsService — Plan C Task 10：download / useAsset 的 sourceSt
 
   it('useAsset：sourceState blocked/missing → ForbiddenException（会员校验通过后仍拦截）', async () => {
     const { service } = buildService({
-      repo: { findOwned: jest.fn().mockResolvedValue(usableAsset) },
+      repo: { findOwned: vi.fn().mockResolvedValue(usableAsset) },
       favoriteLibrary: {
-        assertUsable: jest.fn().mockRejectedValue(new ForbiddenException('该素材的来源资源已不可用')),
+        assertUsable: vi.fn().mockRejectedValue(new ForbiddenException('该素材的来源资源已不可用')),
       },
     });
     await expect(service.useAsset('user-1', 'asset-1')).rejects.toBeInstanceOf(ForbiddenException);
@@ -261,7 +261,7 @@ describe('MaterialsService — Plan C Task 10：download / useAsset 的 sourceSt
 
 describe('MaterialsService — Plan C Task 10：move 会员规则（过期只能 其他→默认）', () => {
   const expiredMembership = {
-    getUserMembership: jest.fn().mockResolvedValue({
+    getUserMembership: vi.fn().mockResolvedValue({
       membership: {
         status: 'ACTIVE',
         expiresAt: new Date(Date.now() - 86_400_000),
@@ -432,8 +432,8 @@ describe('MaterialsService.list — Plan C Task 11：librarySource 筛选 + sour
       ['m2', 'available'],
     ]);
     const { service, favoriteLibrary } = buildService({
-      repo: { findMany: jest.fn().mockResolvedValue([items, items.length]) },
-      favoriteLibrary: { deriveSourceState: jest.fn().mockResolvedValue(stateMap) },
+      repo: { findMany: vi.fn().mockResolvedValue([items, items.length]) },
+      favoriteLibrary: { deriveSourceState: vi.fn().mockResolvedValue(stateMap) },
     });
 
     const result = await service.list('u1', {});
@@ -465,7 +465,7 @@ describe('MaterialsService.saveFromHistory — Plan C Task 11：反伪造 + 类�
 
   it('用户未浏览过该资源（hasViewed=false）→ BadRequestException，不落素材（反伪造历史保存）', async () => {
     const { service, favoriteLibrary, activityRepository } = buildService({
-      activityRepository: { hasViewed: jest.fn().mockResolvedValue(false) },
+      activityRepository: { hasViewed: vi.fn().mockResolvedValue(false) },
     });
     await expect(service.saveFromHistory('u1', 'GALLERY_POST', 'g1')).rejects.toBeInstanceOf(
       BadRequestException,
@@ -506,8 +506,8 @@ describe('MaterialsService.listHistory — Plan C Task 11：GET /materials/histo
   it('nextCursor 编码为不透明串；把它回传能解码回同一个三元组（游标往返闭环）', async () => {
     const { service, activityRepository } = buildService({
       activityRepository: {
-        hasViewed: jest.fn(),
-        listHistory: jest.fn().mockResolvedValue({ items: [], nextCursor }),
+        hasViewed: vi.fn(),
+        listHistory: vi.fn().mockResolvedValue({ items: [], nextCursor }),
       },
     });
 

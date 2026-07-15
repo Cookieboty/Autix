@@ -49,27 +49,27 @@ function make(overrides: Record<string, string | undefined> = {}) {
     ...overrides,
   };
   const config = {
-    get: jest.fn((key: string) => configValues[key]),
+    get: vi.fn((key: string) => configValues[key]),
   };
   const order = pendingOrder();
   const orderService = {
-    createMembershipOrder: jest.fn().mockResolvedValue(order),
-    createPointsPackageOrder: jest.fn(),
-    getOrderById: jest.fn().mockResolvedValue(order),
-    assertOrderCanCheckout: jest.fn().mockResolvedValue(undefined),
-    getMembershipPlanForOrder: jest.fn().mockResolvedValue({ billingCycle: BillingCycle.MONTHLY }),
-    attachStripeCheckoutSession: jest.fn().mockImplementation(async (_id: string, input: any) => ({
+    createMembershipOrder: vi.fn().mockResolvedValue(order),
+    createPointsPackageOrder: vi.fn(),
+    getOrderById: vi.fn().mockResolvedValue(order),
+    assertOrderCanCheckout: vi.fn().mockResolvedValue(undefined),
+    getMembershipPlanForOrder: vi.fn().mockResolvedValue({ billingCycle: BillingCycle.MONTHLY }),
+    attachStripeCheckoutSession: vi.fn().mockImplementation(async (_id: string, input: any) => ({
       ...order,
       paymentProvider: 'stripe',
       externalPaymentId: input.sessionId,
       currency: input.currency,
     })),
-    confirmManualPayment: jest.fn(),
-    handlePaymentWebhook: jest.fn().mockResolvedValue({ received: true }),
-    syncStripeSubscription: jest.fn().mockResolvedValue({ id: 'membership-1' }),
+    confirmManualPayment: vi.fn(),
+    handlePaymentWebhook: vi.fn().mockResolvedValue({ received: true }),
+    syncStripeSubscription: vi.fn().mockResolvedValue({ id: 'membership-1' }),
   };
   const systemSettingsService = {
-    getString: jest.fn((key: string) => {
+    getString: vi.fn((key: string) => {
       const keyMap: Record<string, string> = {
         'payments.stripeSecretKey': 'STRIPE_SECRET_KEY',
         'payments.stripeWebhookSecret': 'STRIPE_WEBHOOK_SECRET',
@@ -82,7 +82,7 @@ function make(overrides: Record<string, string | undefined> = {}) {
       };
       return Promise.resolve(configValues[keyMap[key]] ?? '');
     }),
-    getBoolean: jest.fn((key: string) => {
+    getBoolean: vi.fn((key: string) => {
       if (key === 'payments.stripeTestModeEnabled') {
         return Promise.resolve(configValues.STRIPE_TEST_MODE === 'true');
       }
@@ -99,13 +99,13 @@ function make(overrides: Record<string, string | undefined> = {}) {
 
 describe('StripePaymentService', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     (globalThis as any).fetch = originalFetch;
   });
 
   it('creates a Stripe Checkout session for a membership order', async () => {
     const { service, orderService } = make();
-    const fetchMock = jest.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         id: 'cs_test_123',
@@ -163,7 +163,7 @@ describe('StripePaymentService', () => {
       },
     });
     orderService.createMembershipOrder.mockResolvedValueOnce(reusableOrder);
-    const fetchMock = jest.fn();
+    const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
 
     const result = await service.createCheckout('user-1', {
@@ -182,7 +182,7 @@ describe('StripePaymentService', () => {
 
   it('allows Stripe test keys when test mode is enabled', async () => {
     const { service } = make({ STRIPE_TEST_MODE: 'true' });
-    const fetchMock = jest.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         id: 'cs_test_123',
@@ -209,7 +209,7 @@ describe('StripePaymentService', () => {
       STRIPE_SECRET_KEY: 'sk_live_123',
       STRIPE_TEST_MODE: 'true',
     });
-    const fetchMock = jest.fn();
+    const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
 
     await expect(
@@ -225,7 +225,7 @@ describe('StripePaymentService', () => {
   it('rejects checkout for an existing order whose currency differs from Stripe config', async () => {
     const { service, orderService } = make();
     orderService.getOrderById.mockResolvedValueOnce(pendingOrder({ currency: 'CNY' }));
-    const fetchMock = jest.fn();
+    const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
 
     await expect(
@@ -240,7 +240,7 @@ describe('StripePaymentService', () => {
     orderService.createMembershipOrder.mockResolvedValueOnce(
       pendingOrder({ amount: '0.00', currency: 'USD' }),
     );
-    const fetchMock = jest.fn();
+    const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
 
     await expect(
@@ -268,7 +268,7 @@ describe('StripePaymentService', () => {
       event: { id: 'event-1' },
       fulfillment: null,
     });
-    const fetchMock = jest.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         id: 'cs_test_123',
@@ -318,7 +318,7 @@ describe('StripePaymentService', () => {
         currency: 'USD',
       }),
     );
-    const fetchMock = jest.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         id: 'cs_test_123',
@@ -439,7 +439,7 @@ describe('StripePaymentService', () => {
 
   it('creates a Stripe refund from the stored payment intent', async () => {
     const { service } = make();
-    const fetchMock = jest.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         id: 're_test_123',
@@ -484,7 +484,7 @@ describe('StripePaymentService', () => {
 
   it('cancels a Stripe subscription immediately', async () => {
     const { service } = make();
-    const fetchMock = jest.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ id: 'sub_test_123', object: 'subscription', status: 'canceled' }),
     });
@@ -501,7 +501,7 @@ describe('StripePaymentService', () => {
 
   it('rejects invalid subscription ids on immediate cancel without calling Stripe', async () => {
     const { service } = make();
-    const fetchMock = jest.fn();
+    const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
 
     await expect(service.cancelSubscriptionImmediately('not-a-sub')).rejects.toBeInstanceOf(

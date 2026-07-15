@@ -2,12 +2,12 @@ import { AccountDeletionService } from './account-deletion.service';
 
 function makeService() {
   const identity = {
-    anonymizeUserImmediately: jest.fn().mockResolvedValue({ deletedAt: new Date('2026-07-12T00:00:00Z') }),
+    anonymizeUserImmediately: vi.fn().mockResolvedValue({ deletedAt: new Date('2026-07-12T00:00:00Z') }),
   };
   const stepUp = {
-    verifyProof: jest.fn().mockReturnValue({ jti: 'proof-jti' }),
+    verifyProof: vi.fn().mockReturnValue({ jti: 'proof-jti' }),
   };
-  const rateLimit = { consume: jest.fn().mockResolvedValue(undefined) };
+  const rateLimit = { consume: vi.fn().mockResolvedValue(undefined) };
   return {
     service: new AccountDeletionService(identity as any, stepUp as any, rateLimit as any),
     identity,

@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import { translateSchemaKey } from '../src/pricing/translate-schema-key';
 
 /** Minimal next-intl-shaped translator stub: callable + `.has`, matching `createTranslator`'s

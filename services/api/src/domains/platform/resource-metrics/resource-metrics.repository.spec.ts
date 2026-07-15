@@ -17,14 +17,14 @@ function createPrismaMock() {
 
   const tx = {
     resource_download_events: {
-      create: jest.fn().mockResolvedValue({ id: 'dl-1' }),
+      create: vi.fn().mockResolvedValue({ id: 'dl-1' }),
     },
     resource_metrics: {
-      upsert: jest.fn().mockImplementation(() => {
+      upsert: vi.fn().mockImplementation(() => {
         metricsRow.downloadCount += 1;
         return Promise.resolve({ ...metricsRow });
       }),
-      findUnique: jest.fn().mockImplementation(() => Promise.resolve({ ...metricsRow })),
+      findUnique: vi.fn().mockImplementation(() => Promise.resolve({ ...metricsRow })),
     },
   };
 
@@ -32,7 +32,7 @@ function createPrismaMock() {
     tx,
     metricsRow,
     prisma: {
-      $transaction: jest.fn((fn: (transaction: typeof tx) => unknown) => fn(tx)),
+      $transaction: vi.fn((fn: (transaction: typeof tx) => unknown) => fn(tx)),
     },
   };
 }
@@ -118,7 +118,7 @@ describe('ResourceMetricsRepository.recordDownload', () => {
  */
 describe('ResourceMetricsRepository.setHotScore — cron 聚合不参与 downloadCount', () => {
   it('update 数据白名单仅 hotScore/hotScoreVersion，不包含 downloadCount', async () => {
-    const update = jest.fn().mockResolvedValue({});
+    const update = vi.fn().mockResolvedValue({});
     const prisma = { resource_metrics: { update } };
     const repo = new ResourceMetricsRepository(prisma as never);
 

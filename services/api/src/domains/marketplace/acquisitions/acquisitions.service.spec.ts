@@ -6,8 +6,8 @@ function createMocks() {
     marker: 'tx',
   };
   const acquisitions = {
-    findAcquisition: jest.fn().mockResolvedValue(null),
-    createAcquisitionInTransaction: jest.fn(
+    findAcquisition: vi.fn().mockResolvedValue(null),
+    createAcquisitionInTransaction: vi.fn(
       async (
         data: unknown,
         beforeCreate?: (transaction: unknown) => Promise<void>,
@@ -16,19 +16,19 @@ function createMocks() {
         return { id: 'acq-1', ...(data as object) };
       },
     ),
-    findBalance: jest.fn().mockResolvedValue({ balance: 20 }),
-    listAcquisitions: jest.fn(),
+    findBalance: vi.fn().mockResolvedValue({ balance: 20 }),
+    listAcquisitions: vi.fn(),
   };
   const resources = {
-    findOne: jest.fn().mockResolvedValue({
+    findOne: vi.fn().mockResolvedValue({
       id: 'a1',
       title: 'Agent X',
       pointsCost: 480,
     }),
-    incrementUseCount: jest.fn().mockResolvedValue({}),
-    attachResources: jest.fn(),
+    incrementUseCount: vi.fn().mockResolvedValue({}),
+    attachResources: vi.fn(),
   };
-  const points = { deductWithinTx: jest.fn().mockResolvedValue(20) };
+  const points = { deductWithinTx: vi.fn().mockResolvedValue(20) };
   return { acquisitions, points, resources, tx };
 }
 

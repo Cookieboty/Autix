@@ -4,43 +4,43 @@ import { TemplateGenerationRepository } from './template-generation.repository';
 function createPrisma() {
   const tx = {
     image_generations: {
-      create: jest.fn(async (args: any) => ({ id: args.data.id, ...args.data })),
+      create: vi.fn(async (args: any) => ({ id: args.data.id, ...args.data })),
     },
     image_templates: {
-      update: jest.fn(async () => ({})),
+      update: vi.fn(async () => ({})),
     },
     video_generations: {
-      create: jest.fn(async (args: any) => ({ id: args.data.id, ...args.data })),
+      create: vi.fn(async (args: any) => ({ id: args.data.id, ...args.data })),
     },
     video_templates: {
-      update: jest.fn(async () => ({})),
+      update: vi.fn(async () => ({})),
     },
   };
 
   const prisma = {
     image_generations: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     video_generations: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      findUnique: jest.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+      findUnique: vi.fn(),
     },
     generation_turns: {
-      findMany: jest.fn(),
-      create: jest.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
     },
-    $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
+    $transaction: vi.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
   };
 
   return { prisma, tx };
 }
 
 function createResourceMetrics() {
-  return { recordReference: jest.fn(async () => ({})) };
+  return { recordReference: vi.fn(async () => ({})) };
 }
 
 describe('TemplateGenerationRepository', () => {

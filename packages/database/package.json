@@ -6,25 +6,25 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "dotenv -e ../../.env -- bunx prisma generate --schema prisma/schema.prisma && tsc",
-    "test": "bun run build && bun test test",
+    "build": "dotenv -e ../../.env -- prisma generate --schema prisma/schema.prisma && tsc",
+    "test": "pnpm run build && vitest run",
     "typecheck": "tsc --noEmit",
-    "db:format": "dotenv -e ../../.env -- bunx prisma format --schema prisma/schema.prisma",
-    "db:validate": "dotenv -e ../../.env -- bunx prisma validate --schema prisma/schema.prisma",
-    "db:generate": "dotenv -e ../../.env -- bunx prisma generate --schema prisma/schema.prisma",
-    "db:migrate": "dotenv -e ../../.env -- bunx prisma migrate dev --schema prisma/schema.prisma",
-    "db:deploy": "dotenv -e ../../.env -- bunx prisma migrate deploy --schema prisma/schema.prisma",
-    "db:push": "dotenv -e ../../.env -- bunx prisma db push --schema prisma/schema.prisma",
-    "db:baseline:check": "dotenv -e ../../.env -- bun run scripts/check-migration-readiness.ts",
-    "db:flat-migrate": "bun run scripts/flat-migrate.ts",
-    "db:init-membership": "bun run scripts/init-membership-data.ts",
-    "db:migrate-legacy": "bun run scripts/migrate-legacy-data.ts",
-    "db:backfill-metrics": "dotenv -e ../../.env -- bun run scripts/backfill-resource-metrics.ts",
-    "db:reconcile": "dotenv -e ../../.env -- bunx prisma db push --schema prisma/schema.prisma",
-    "db:prepare-cutover": "bun run db:flat-migrate && bun run db:deploy && bun run db:reconcile && bun run db:seed:prod && bun run db:init-membership && bun run db:seed:pricing",
-    "db:seed:pricing": "bun run --cwd ../../services/api seed:pricing",
-    "db:seed": "bun run build && dotenv -e ../../.env -- bun run prisma/seed.ts",
-    "db:seed:prod": "bun run prisma/seed-prod.ts"
+    "db:format": "dotenv -e ../../.env -- prisma format --schema prisma/schema.prisma",
+    "db:validate": "dotenv -e ../../.env -- prisma validate --schema prisma/schema.prisma",
+    "db:generate": "dotenv -e ../../.env -- prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev --schema prisma/schema.prisma",
+    "db:deploy": "dotenv -e ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
+    "db:push": "dotenv -e ../../.env -- prisma db push --schema prisma/schema.prisma",
+    "db:baseline:check": "dotenv -e ../../.env -- tsx scripts/check-migration-readiness.ts",
+    "db:flat-migrate": "tsx scripts/flat-migrate.ts",
+    "db:init-membership": "tsx scripts/init-membership-data.ts",
+    "db:migrate-legacy": "tsx scripts/migrate-legacy-data.ts",
+    "db:backfill-metrics": "dotenv -e ../../.env -- tsx scripts/backfill-resource-metrics.ts",
+    "db:reconcile": "dotenv -e ../../.env -- prisma db push --schema prisma/schema.prisma",
+    "db:prepare-cutover": "pnpm run db:flat-migrate && pnpm run db:deploy && pnpm run db:reconcile && pnpm run db:seed:prod && pnpm run db:init-membership && pnpm run db:seed:pricing",
+    "db:seed:pricing": "pnpm --filter @autix/api run seed:pricing",
+    "db:seed": "pnpm run build && dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "db:seed:prod": "tsx prisma/seed-prod.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
@@ -36,6 +36,8 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22",
     "prisma": "^7.7.0",
-    "typescript": "^5.7.0"
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.7"
   }
 }

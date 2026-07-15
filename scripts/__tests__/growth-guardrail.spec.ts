@@ -1,4 +1,3 @@
-import { test, expect } from 'bun:test';
 import { countGrowthViolations, evaluateRatchet } from '../check-architecture-boundaries';
 
 test('catches named, opacity, and arbitrary-value colors', () => {

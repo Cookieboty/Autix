@@ -11,15 +11,15 @@ function makeUser(over: Partial<any> = {}): any {
 
 function makeService() {
   const identity = {
-    findActiveSystems: jest.fn(),
+    findActiveSystems: vi.fn(),
   };
   const session = {
-    create: jest.fn().mockResolvedValue({ id: 'sess1', refreshToken: 'rt1' }),
+    create: vi.fn().mockResolvedValue({ id: 'sess1', refreshToken: 'rt1' }),
   };
   const tokenFactory = {
-    createRefreshToken: jest.fn().mockReturnValue('rt1'),
-    createRefreshExpiresAt: jest.fn().mockReturnValue(new Date('2099-01-01')),
-    createTokenPair: jest.fn().mockReturnValue({ accessToken: 'at1', refreshToken: 'rt1', expiresIn: 3600 }),
+    createRefreshToken: vi.fn().mockReturnValue('rt1'),
+    createRefreshExpiresAt: vi.fn().mockReturnValue(new Date('2099-01-01')),
+    createTokenPair: vi.fn().mockReturnValue({ accessToken: 'at1', refreshToken: 'rt1', expiresIn: 3600 }),
   };
   const svc = new AuthService(
     {} as any, {} as any, {} as any, {} as any,
@@ -60,9 +60,9 @@ describe('AuthService.issueSessionForUser', () => {
 
 describe('AuthService.buildLoginResultFromSession 守卫', () => {
   function svcWith(session: any, user: any) {
-    const identity = { findLoginUserById: jest.fn().mockResolvedValue(user), findActiveSystems: jest.fn() };
-    const sessionRepo = { findById: jest.fn().mockResolvedValue(session) };
-    const tokenFactory = { createTokenPair: jest.fn().mockReturnValue({ accessToken: 'at', refreshToken: 'rt', expiresIn: 1 }) };
+    const identity = { findLoginUserById: vi.fn().mockResolvedValue(user), findActiveSystems: vi.fn() };
+    const sessionRepo = { findById: vi.fn().mockResolvedValue(session) };
+    const tokenFactory = { createTokenPair: vi.fn().mockReturnValue({ accessToken: 'at', refreshToken: 'rt', expiresIn: 1 }) };
     return new AuthService(
       {} as any,
       {} as any,

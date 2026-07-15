@@ -6,15 +6,15 @@ import { VideoProjectStatusConvergenceService } from './video-project-status-con
 
 function makeService(options: { clips?: Array<Record<string, unknown>> } = {}) {
   const repository = {
-    findProjectClipStatuses: jest.fn(async () => options.clips ?? []),
-    updateProjectStatus: jest.fn(),
-    findClipCascadeAnchor: jest.fn(async () => ({
+    findProjectClipStatuses: vi.fn(async () => options.clips ?? []),
+    updateProjectStatus: vi.fn(),
+    findClipCascadeAnchor: vi.fn(async () => ({
       id: 'clip-1',
       projectId: 'project-1',
       order: 1,
     })),
-    findPendingTailClips: jest.fn(async () => options.clips ?? []),
-    markClipsFailed: jest.fn(),
+    findPendingTailClips: vi.fn(async () => options.clips ?? []),
+    markClipsFailed: vi.fn(),
   };
   const service = new VideoProjectStatusConvergenceService(repository as never);
 

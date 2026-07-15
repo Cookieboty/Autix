@@ -1,73 +1,78 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-const navigate = mock(() => {});
-const reserve = mock(async () => ({
-  flowId: 'desktop-flow',
-  redirectUri: 'http://127.0.0.1:51789/callback?state=desktop-flow',
-}));
-const cancel = mock(async () => {});
-const complete = mock(async () => ({ proof: 'desktop-proof' }));
-const startStepUpForOAuth = mock(async () => ({
-  kind: 'redirect' as const,
-  authorizeUrl: 'https://accounts.example.test/authorize',
-}));
-
-let capturedProfileProps: Record<string, unknown> | undefined;
-
-mock.module('react-router-dom', () => ({
-  useNavigate: () => navigate,
-  useSearchParams: () => [new URLSearchParams(), mock(() => {})],
-}));
-
-mock.module('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ invalidateQueries: mock(async () => {}) }),
+// vi.mock is hoisted above this module's bindings, so its factories cannot close
+// over plain consts — vi.hoisted lifts the spies (and the props capture slot) up
+// with them. `captured` stays a mutable holder so the factory can write to it.
+const h = vi.hoisted(() => ({
+  navigate: vi.fn(() => {}),
+  reserve: vi.fn(async () => ({
+    flowId: 'desktop-flow',
+    redirectUri: 'http://127.0.0.1:51789/callback?state=desktop-flow',
+  })),
+  cancel: vi.fn(async () => {}),
+  complete: vi.fn(async () => ({ proof: 'desktop-proof' })),
+  startStepUpForOAuth: vi.fn(async () => ({
+    kind: 'redirect' as const,
+    authorizeUrl: 'https://accounts.example.test/authorize',
+  })),
+  captured: { profileProps: undefined as Record<string, unknown> | undefined },
 }));
 
-mock.module('@autix/shared-ui/profile', () => ({
+const { navigate, reserve, cancel, complete, startStepUpForOAuth, captured } = h;
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => h.navigate,
+  useSearchParams: () => [new URLSearchParams(), vi.fn(() => {})],
+}));
+
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn(async () => {}) }),
+}));
+
+vi.mock('@autix/shared-ui/profile', () => ({
   DEFAULT_PROFILE_TABS: [{ key: 'acquired', label: 'Acquired' }],
   ProfileBasicsForm: () => createElement('div'),
   ProfileView: (props: Record<string, unknown>) => {
-    capturedProfileProps = props;
+    h.captured.profileProps = props;
     return createElement('div');
   },
   isProfileResourceTab: () => true,
 }));
 
-mock.module('@autix/shared-ui/resources', () => ({
+vi.mock('@autix/shared-ui/resources', () => ({
   useProfileResourceRows: () => [],
 }));
 
-mock.module('@autix/shared-ui/marketplace', () => ({
+vi.mock('@autix/shared-ui/marketplace', () => ({
   RESOURCE_TYPE_TO_SLUG: {},
 }));
 
-mock.module('@autix/shared-ui/hooks', () => ({
+vi.mock('@autix/shared-ui/hooks', () => ({
   useSystemFeatureFlag: () => ({ enabled: false, loading: false }),
 }));
 
-mock.module('@autix/shared-ui/auth', () => ({
+vi.mock('@autix/shared-ui/auth', () => ({
   mapOAuthErrorKey: (code: string) => code,
 }));
 
-mock.module('next-intl', () => ({
+vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-mock.module('@autix/shared-store', () => ({
+vi.mock('@autix/shared-store', () => ({
   membershipUserActions: {
-    getMe: mock(async () => null),
-    getInviteCode: mock(async () => null),
+    getMe: vi.fn(async () => null),
+    getInviteCode: vi.fn(async () => null),
   },
   authActions: {
-    fetchOAuthProviders: mock(async () => ({ providers: [] })),
+    fetchOAuthProviders: vi.fn(async () => ({ providers: [] })),
   },
   oauthLinkingKeys: {
     linked: () => ['oauth', 'linked'],
   },
   securityActions: {
-    startStepUpForOAuth,
+    startStepUpForOAuth: h.startStepUpForOAuth,
   },
   useAuthStore: (selector: (state: Record<string, unknown>) => unknown) => selector({
     user: {
@@ -82,15 +87,15 @@ mock.module('@autix/shared-store', () => ({
   useUnlinkAccountMutation: () => ({
     isPending: false,
     variables: undefined,
-    mutate: mock(() => {}),
+    mutate: vi.fn(() => {}),
   }),
   useProfilePlatformStatsController: () => ({ stats: {} }),
   useProfileResourcesController: () => ({ items: [], loading: false }),
 }));
 
-mock.module('@autix/platform', () => ({
+vi.mock('@autix/platform', () => ({
   getOAuthLink: () => undefined,
-  getOAuthStepUp: () => ({ reserve, cancel, complete }),
+  getOAuthStepUp: () => ({ reserve: h.reserve, cancel: h.cancel, complete: h.complete }),
 }));
 
 let ProfilePage: () => ReactNode;
@@ -100,7 +105,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  capturedProfileProps = undefined;
+  captured.profileProps = undefined;
   navigate.mockClear();
   reserve.mockClear();
   cancel.mockClear();
@@ -112,7 +117,7 @@ describe('desktop profile account self-service wiring', () => {
   it('passes the current account contract and replaces history after deletion', () => {
     renderToStaticMarkup(createElement(ProfilePage));
 
-    const accountSelfService = capturedProfileProps?.accountSelfService as {
+    const accountSelfService = captured.profileProps?.accountSelfService as {
       currentEmail: string;
       pendingEmail: string;
       hasPassword: boolean;
@@ -134,7 +139,7 @@ describe('desktop profile account self-service wiring', () => {
   it('runs OAuth step-up through the desktop loopback adapter', async () => {
     renderToStaticMarkup(createElement(ProfilePage));
 
-    const accountSelfService = capturedProfileProps?.accountSelfService as {
+    const accountSelfService = captured.profileProps?.accountSelfService as {
       startOAuthStepUp: (purpose: 'delete-account') => Promise<unknown>;
     };
     await expect(accountSelfService.startOAuthStepUp('delete-account')).resolves.toEqual({

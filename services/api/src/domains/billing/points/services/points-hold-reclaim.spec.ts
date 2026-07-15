@@ -1,7 +1,7 @@
 import { PointsHoldService } from './points-hold.service';
 
 function buildService(stale: any[]) {
-  const findStaleHolds = jest.fn(async () => stale);
+  const findStaleHolds = vi.fn(async () => stale);
   const pointsRepo: any = { findStaleHolds };
   const ledgerService: any = {};
   const service = new PointsHoldService(pointsRepo, ledgerService);
@@ -11,15 +11,15 @@ function buildService(stale: any[]) {
 describe('PointsHoldService.createHold dedup (FIX-9b)', () => {
   it('returns the existing pending hold for the same task instead of creating a duplicate', async () => {
     const tx = {};
-    const createHoldWithinTx = jest.fn();
+    const createHoldWithinTx = vi.fn();
     const pointsRepo: any = {
       runInTransaction: async (cb: any) => cb(tx),
-      findPendingHoldByTaskWithinTx: jest.fn(async () => ({ id: 'hold-existing' })),
-      findBalanceWithinTx: jest.fn(async () => ({ balance: 500 })),
+      findPendingHoldByTaskWithinTx: vi.fn(async () => ({ id: 'hold-existing' })),
+      findBalanceWithinTx: vi.fn(async () => ({ balance: 500 })),
       createHoldWithinTx,
-      findAvailableGrantsWithinTx: jest.fn(async () => []),
+      findAvailableGrantsWithinTx: vi.fn(async () => []),
     };
-    const ledgerService: any = { assertPositiveAmount: jest.fn() };
+    const ledgerService: any = { assertPositiveAmount: vi.fn() };
     const service = new PointsHoldService(pointsRepo, ledgerService);
 
     const result = await service.createHold('user-1', {
@@ -37,7 +37,7 @@ describe('PointsHoldService.createHold dedup (FIX-9b)', () => {
 describe('PointsHoldService.reclaimOrphanedHolds (FIX-10)', () => {
   it('refunds every stale orphaned hold and reports counts', async () => {
     const { service, findStaleHolds } = buildService([{ id: 'h1' }, { id: 'h2' }]);
-    const refundHold = jest.spyOn(service, 'refundHold').mockResolvedValue({} as never);
+    const refundHold = vi.spyOn(service, 'refundHold').mockResolvedValue({} as never);
 
     const result = await service.reclaimOrphanedHolds({ olderThanMs: 3_600_000, now: new Date('2026-06-25T01:00:00Z') });
 
@@ -49,7 +49,7 @@ describe('PointsHoldService.reclaimOrphanedHolds (FIX-10)', () => {
 
   it('continues past a failing refund and counts only successes', async () => {
     const { service } = buildService([{ id: 'h1' }, { id: 'h2' }]);
-    const refundHold = jest.spyOn(service, 'refundHold');
+    const refundHold = vi.spyOn(service, 'refundHold');
     refundHold.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce({} as never);
 
     const result = await service.reclaimOrphanedHolds({ now: new Date() });

@@ -31,19 +31,19 @@ function expiredMembership() {
 
 function build(membership: unknown = activeMembership()) {
   const repo = {
-    findBoard: jest.fn(),
-    listBoards: jest.fn(),
-    createBoard: jest.fn(),
-    updateBoard: jest.fn(),
-    softDeleteBoard: jest.fn(),
-    latestSnapshot: jest.fn().mockResolvedValue(null),
-    listSnapshots: jest.fn(),
-    snapshotByVersion: jest.fn(),
-    saveStateAtomic: jest.fn(),
-    listActions: jest.fn(),
+    findBoard: vi.fn(),
+    listBoards: vi.fn(),
+    createBoard: vi.fn(),
+    updateBoard: vi.fn(),
+    softDeleteBoard: vi.fn(),
+    latestSnapshot: vi.fn().mockResolvedValue(null),
+    listSnapshots: vi.fn(),
+    snapshotByVersion: vi.fn(),
+    saveStateAtomic: vi.fn(),
+    listActions: vi.fn(),
   };
-  const membershipService = { getUserMembership: jest.fn().mockResolvedValue(membership) };
-  const r2 = { getPublicUrl: jest.fn().mockResolvedValue('https://cdn/x.png') };
+  const membershipService = { getUserMembership: vi.fn().mockResolvedValue(membership) };
+  const r2 = { getPublicUrl: vi.fn().mockResolvedValue('https://cdn/x.png') };
   const service = new CanvasBoardService(repo as never, membershipService as never, r2 as never);
   return { service, repo, membershipService, r2 };
 }

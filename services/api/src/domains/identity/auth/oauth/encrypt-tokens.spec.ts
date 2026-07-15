@@ -30,7 +30,7 @@ describe('encryptProviderTokens', () => {
   });
 
   it('encrypts accessToken, refreshToken, and idToken', () => {
-    const encryptSpy = jest.spyOn(cipher, 'encrypt');
+    const encryptSpy = vi.spyOn(cipher, 'encrypt');
     const profile = makeProfile();
     const result = encryptProviderTokens(cipher, profile);
 

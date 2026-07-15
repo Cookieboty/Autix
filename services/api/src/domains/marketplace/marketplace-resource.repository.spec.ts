@@ -4,29 +4,29 @@ import { MarketplaceResourceRepository } from './marketplace-resource.repository
 function createPrismaMock() {
   return {
     skills: {
-      findMany: jest.fn().mockResolvedValue([{ id: 's1', title: 'Skill' }]),
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      findMany: vi.fn().mockResolvedValue([{ id: 's1', title: 'Skill' }]),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     mcp_servers: {
-      findMany: jest.fn().mockResolvedValue([{ id: 'm1', title: 'MCP' }]),
-      findUnique: jest.fn(),
-      update: jest.fn().mockResolvedValue({ id: 'm1' }),
+      findMany: vi.fn().mockResolvedValue([{ id: 'm1', title: 'MCP' }]),
+      findUnique: vi.fn(),
+      update: vi.fn().mockResolvedValue({ id: 'm1' }),
     },
     agents: {
-      findMany: jest.fn().mockResolvedValue([{ id: 'a1', title: 'Agent' }]),
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      findMany: vi.fn().mockResolvedValue([{ id: 'a1', title: 'Agent' }]),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     image_templates: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
     video_templates: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
   };
 }

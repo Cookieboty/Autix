@@ -1,10 +1,15 @@
+import type { Mock } from 'vitest';
 import { ModelType, PointHoldStatus } from '../../../platform/prisma/generated';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
 
-const mockChatInvoke = jest.fn(async () => ({ content: 'refined prompt from llm' }));
+// vi.mock is hoisted above this module's bindings, so its factory cannot close
+// over a plain const — vi.hoisted lifts the spy up with it.
+const { mockChatInvoke } = vi.hoisted(() => ({
+  mockChatInvoke: vi.fn(async () => ({ content: 'refined prompt from llm' })),
+}));
 
-jest.mock('../model.factory', () => ({
-  createChatModelFromDbConfig: jest.fn(() => ({
+vi.mock('../model.factory', () => ({
+  createChatModelFromDbConfig: vi.fn(() => ({
     invoke: mockChatInvoke,
   })),
 }));
@@ -77,7 +82,7 @@ function imageRequest(overrides: Record<string, unknown> = {}) {
 }
 
 /** 读出打桩 fetch 收到的 JSON 请求体。 */
-function sentBody(fetchMock: jest.Mock, call = 0): Record<string, unknown> {
+function sentBody(fetchMock: Mock, call = 0): Record<string, unknown> {
   const init = fetchMock.mock.calls[call][1] as { body: string };
   return JSON.parse(init.body) as Record<string, unknown>;
 }
@@ -102,27 +107,27 @@ function upstreamError(status: number, body: string) {
 
 function createService() {
   const prisma = {
-    $transaction: jest.fn(async (callback: any) => callback(prisma)),
+    $transaction: vi.fn(async (callback: any) => callback(prisma)),
     messages: {
-      findMany: jest.fn(),
-      create: jest.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
     },
     image_generations: {
-      create: jest.fn(async (args: any) => ({ id: 'gen-1', ...args.data })),
-      update: jest.fn(),
+      create: vi.fn(async (args: any) => ({ id: 'gen-1', ...args.data })),
+      update: vi.fn(),
     },
     image_templates: {
-      update: jest.fn(),
+      update: vi.fn(),
     },
   };
   const repository = {
-    findAllConversationMessages: jest.fn((conversationId: string) =>
+    findAllConversationMessages: vi.fn((conversationId: string) =>
       prisma.messages.findMany({
         where: { conversationId },
         orderBy: { createdAt: 'asc' },
       }),
     ),
-    createCompletedImageGenerationResult: jest.fn(
+    createCompletedImageGenerationResult: vi.fn(
       async (input: any, beforeCreate?: (tx: any) => Promise<void>) =>
         prisma.$transaction(async (tx: typeof prisma) => {
           await beforeCreate?.(tx);
@@ -159,44 +164,44 @@ function createService() {
     ),
   };
   const modelConfigService = {
-    findDefaultByType: jest.fn(),
-    getConfigForOrchestrator: jest.fn(),
+    findDefaultByType: vi.fn(),
+    getConfigForOrchestrator: vi.fn(),
   };
   const imageTemplatesService = {
-    findById: jest.fn(),
-    uploadBase64Image: jest.fn(),
+    findById: vi.fn(),
+    uploadBase64Image: vi.fn(),
   };
   const pointsService = {
-    estimateCost: jest.fn().mockResolvedValue({
+    estimateCost: vi.fn().mockResolvedValue({
       estimatedCost: 90,
       taskType: 'image_generation',
       pricingSnapshot: { ruleId: 'rule-1' },
     }),
-    createHold: jest.fn().mockResolvedValue({
+    createHold: vi.fn().mockResolvedValue({
       hold: { id: 'hold-1' },
       balance: 910,
     }),
-    confirmHold: jest.fn(),
-    quoteHoldFromSnapshot: jest.fn().mockResolvedValue(90),
-    confirmHoldWithinTx: jest.fn(async () => ({
+    confirmHold: vi.fn(),
+    quoteHoldFromSnapshot: vi.fn().mockResolvedValue(90),
+    confirmHoldWithinTx: vi.fn(async () => ({
       confirmed: true,
       hold: { id: 'hold-1', userId: 'user-1', status: PointHoldStatus.CONFIRMED },
       balance: 820,
     })),
-    refundHold: jest.fn(),
+    refundHold: vi.fn(),
   };
   const campaignRewardService = {
-    recordSuccessGeneration: jest.fn(async () => ({ streak: null, rewards: [] })),
+    recordSuccessGeneration: vi.fn(async () => ({ streak: null, rewards: [] })),
   };
   const systemPromptService = {
-    render: jest.fn().mockResolvedValue({
+    render: vi.fn().mockResolvedValue({
       content:
         'You are an expert image prompt editor for a professional image workstation.',
     }),
   };
   const membershipService = {
-    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
-    resolveImageEntitlements: jest.fn().mockResolvedValue({
+    resolveActiveMembershipLevel: vi.fn().mockResolvedValue(2),
+    resolveImageEntitlements: vi.fn().mockResolvedValue({
       enabled: true,
       maxPixels: 4096 * 4096,
       allowedQualities: [],
@@ -205,7 +210,7 @@ function createService() {
       level: 2,
       source: 'membership',
     }),
-    assertImageEntitlement: jest.fn(),
+    assertImageEntitlement: vi.fn(),
   };
   return {
     service: new ImageGenerationFlowService(
@@ -618,7 +623,7 @@ describe('ImageGenerationFlowService', () => {
       apiKey: 'key',
       metadata: { imageToImageEndpoint: '/v1/images/edits' },
     });
-    service.summarizePrompt = jest.fn().mockResolvedValue('preserve product, change background');
+    service.summarizePrompt = vi.fn().mockResolvedValue('preserve product, change background');
 
     const request = await service.resolveImageRequest({
       userId: 'user-1',
@@ -655,7 +660,7 @@ describe('ImageGenerationFlowService', () => {
       apiKey: 'key',
       metadata: {},
     });
-    service.summarizePrompt = jest.fn().mockResolvedValue('use reference style to create a new image');
+    service.summarizePrompt = vi.fn().mockResolvedValue('use reference style to create a new image');
 
     const request = await service.resolveImageRequest({
       userId: 'user-1',
@@ -695,7 +700,7 @@ describe('ImageGenerationFlowService', () => {
   it('sends the wire params in the request body and reports what was actually sent', async () => {
     const { service } = createService();
     const originalFetch = global.fetch;
-    const fetchMock = jest.fn().mockResolvedValue(
+    const fetchMock = vi.fn().mockResolvedValue(
       okJson({ data: [{ url: 'https://img.test/1.png' }] }),
     );
     global.fetch = fetchMock as never;
@@ -733,7 +738,7 @@ describe('ImageGenerationFlowService', () => {
   it('composes the upstream pixel size from (aspectRatio × resolution) — the vendor field never reaches the frontend', async () => {
     const { service } = createService();
     const originalFetch = global.fetch;
-    const fetchMock = jest.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'AAA' }] }));
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'AAA' }] }));
     global.fetch = fetchMock as never;
 
     const result = await service.callImageApi(
@@ -755,7 +760,7 @@ describe('ImageGenerationFlowService', () => {
   it('never sends derived / pricing-only / undeclared params upstream', async () => {
     const { service } = createService();
     const originalFetch = global.fetch;
-    const fetchMock = jest.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'AAA' }] }));
+    const fetchMock = vi.fn().mockResolvedValue(okJson({ data: [{ b64_json: 'AAA' }] }));
     global.fetch = fetchMock as never;
 
     const result = await service.callImageApi(
@@ -790,7 +795,7 @@ describe('ImageGenerationFlowService', () => {
     const originalFetch = global.fetch;
     // 行为变更：4xx → safe-defaults 重试整条删除。重试用的 safe defaults 仍是同一组参数，
     // 它从来没修好过任何东西，只是把上游多打了一次。
-    const fetchMock = jest
+    const fetchMock = vi
       .fn()
       .mockResolvedValue(upstreamError(400, '{"error":{"message":"invalid size"}}'));
     global.fetch = fetchMock as never;
@@ -825,7 +830,7 @@ describe('ImageGenerationFlowService', () => {
   it('propagates a 5xx as-is instead of blaming the user params', async () => {
     const { service } = createService();
     const originalFetch = global.fetch;
-    const fetchMock = jest.fn().mockResolvedValue(upstreamError(500, 'gateway exploded'));
+    const fetchMock = vi.fn().mockResolvedValue(upstreamError(500, 'gateway exploded'));
     global.fetch = fetchMock as never;
 
     // 变异测试：若 callImageApi 把任何上游错误都映射成 ERR_IMAGE_PARAMS_NOT_SUPPORTED
@@ -859,7 +864,7 @@ describe('ImageGenerationFlowService', () => {
     // an actionable, operator-facing error code — never a silent fallback preset.
     const { service } = createService();
     const originalFetch = global.fetch;
-    global.fetch = jest.fn() as never;
+    global.fetch = vi.fn() as never;
 
     let captured: { status?: number; response?: unknown } | undefined;
     try {
@@ -900,7 +905,7 @@ describe('ImageGenerationFlowService', () => {
     // on the error being a 5xx.
     const { service, pointsService } = createService();
     const originalFetch = global.fetch;
-    global.fetch = jest.fn() as never;
+    global.fetch = vi.fn() as never;
 
     await expect(
       service.generateAndPersistImage(
@@ -952,7 +957,7 @@ describe('ImageGenerationFlowService', () => {
       order.push('image_record');
       return { id: 'gen-1', ...args.data };
     });
-    jest.spyOn(service, 'callImageApi').mockImplementation(async () => {
+    vi.spyOn(service, 'callImageApi').mockImplementation(async () => {
       order.push('provider');
       return {
         images: ['data:image/png;base64,AAA'],
@@ -965,12 +970,12 @@ describe('ImageGenerationFlowService', () => {
         },
       };
     });
-    jest.spyOn(service, 'uploadGeneratedImages').mockImplementation(async () => {
+    vi.spyOn(service, 'uploadGeneratedImages').mockImplementation(async () => {
       order.push('upload');
       return ['https://cdn.test/1.png'];
     });
     const originalPersist = service.persistImageResult.bind(service);
-    jest.spyOn(service, 'persistImageResult').mockImplementation(async (...args) => {
+    vi.spyOn(service, 'persistImageResult').mockImplementation(async (...args) => {
       order.push('persist');
       return originalPersist(...args);
     });
@@ -1046,11 +1051,11 @@ describe('ImageGenerationFlowService', () => {
     pointsService.quoteHoldFromSnapshot.mockResolvedValue(40);
     pointsService.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 1000 });
     prisma.image_generations.create.mockImplementation(async (args: any) => ({ id: 'gen-1', ...args.data }));
-    jest.spyOn(service, 'callImageApi').mockResolvedValue({
+    vi.spyOn(service, 'callImageApi').mockResolvedValue({
       images: ['data:image/png;base64,A', 'data:image/png;base64,B', 'data:image/png;base64,C'],
       appliedSettings: { size: '1024x1024', quality: 'standard', count: 3, coerced: false, notes: [] },
     });
-    jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue([
+    vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue([
       'https://cdn.test/a.png',
       'https://cdn.test/b.png',
       'https://cdn.test/c.png',
@@ -1093,11 +1098,11 @@ describe('ImageGenerationFlowService', () => {
     async function dispatchWithCount(metadata: Record<string, unknown>, count: number) {
       const { service, prisma, pointsService } = createService();
       prisma.image_generations.create.mockImplementation(async (args: any) => ({ id: 'gen-1', ...args.data }));
-      const callImageApi = jest.spyOn(service, 'callImageApi').mockResolvedValue({
+      const callImageApi = vi.spyOn(service, 'callImageApi').mockResolvedValue({
         images: ['data:image/png;base64,A'],
         appliedSettings: { size: '1024x1024', count: 1, coerced: false, notes: [] },
       });
-      jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://cdn.test/a.png']);
+      vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://cdn.test/a.png']);
 
       const request = {
         mode: 'generate',
@@ -1215,8 +1220,8 @@ describe('ImageGenerationFlowService', () => {
 
   it('refunds image hold when provider call fails', async () => {
     const { service, pointsService } = createService();
-    jest.spyOn(service, 'callImageApi').mockRejectedValue(new Error('provider down'));
-    const persistSpy = jest.spyOn(service, 'persistImageResult');
+    vi.spyOn(service, 'callImageApi').mockRejectedValue(new Error('provider down'));
+    const persistSpy = vi.spyOn(service, 'persistImageResult');
 
     await expect(
       service.generateAndPersistImage(
@@ -1281,7 +1286,7 @@ describe('ImageGenerationFlowService', () => {
 
   it('propagates when settlement quoteHoldFromSnapshot throws for image generation (no live re-estimate fallback)', async () => {
     const { service, prisma, pointsService } = createService();
-    jest.spyOn(service, 'callImageApi').mockResolvedValue({
+    vi.spyOn(service, 'callImageApi').mockResolvedValue({
       images: ['https://img.test/1.png'],
       appliedSettings: {
         size: '1024x1024',
@@ -1291,7 +1296,7 @@ describe('ImageGenerationFlowService', () => {
         notes: [],
       },
     });
-    jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+    vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
     pointsService.quoteHoldFromSnapshot.mockRejectedValueOnce(new Error('积分冻结不存在'));
 
     await expect(
@@ -1326,7 +1331,7 @@ describe('ImageGenerationFlowService', () => {
 
   it('does not persist completed images when point confirmation fails', async () => {
     const { service, prisma, pointsService } = createService();
-    jest.spyOn(service, 'callImageApi').mockResolvedValue({
+    vi.spyOn(service, 'callImageApi').mockResolvedValue({
       images: ['https://img.test/1.png'],
       appliedSettings: {
         size: '1024x1024',
@@ -1336,7 +1341,7 @@ describe('ImageGenerationFlowService', () => {
         notes: [],
       },
     });
-    jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+    vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
     pointsService.confirmHoldWithinTx.mockRejectedValue(new Error('ledger confirm failed'));
 
     await expect(
@@ -1369,7 +1374,7 @@ describe('ImageGenerationFlowService', () => {
 
   it('charges platform points even for user-created image models', async () => {
     const { service, pointsService } = createService();
-    jest.spyOn(service, 'callImageApi').mockResolvedValue({
+    vi.spyOn(service, 'callImageApi').mockResolvedValue({
       images: ['https://img.test/1.png'],
       appliedSettings: {
         size: '1024x1024',
@@ -1379,8 +1384,8 @@ describe('ImageGenerationFlowService', () => {
         notes: [],
       },
     });
-    jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
-    jest.spyOn(service, 'persistImageResult').mockResolvedValue({
+    vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+    vi.spyOn(service, 'persistImageResult').mockResolvedValue({
       generation: { id: 'gen-1' },
       images: [
         {

@@ -2,15 +2,15 @@ import { EmailChangeService } from './email-change.service';
 
 function deps(over: any = {}) {
   const identity = {
-    findUserByEmail: jest.fn().mockResolvedValue(null),
-    findUserById: jest.fn().mockResolvedValue({ id: 'u1', pendingEmail: 'a@x.com' }),
-    setPendingEmail: jest.fn().mockResolvedValue(undefined),
-    setPendingEmailWithProof: jest.fn().mockResolvedValue(undefined),
-    applyVerifiedEmail: jest.fn().mockResolvedValue(undefined),
+    findUserByEmail: vi.fn().mockResolvedValue(null),
+    findUserById: vi.fn().mockResolvedValue({ id: 'u1', pendingEmail: 'a@x.com' }),
+    setPendingEmail: vi.fn().mockResolvedValue(undefined),
+    setPendingEmailWithProof: vi.fn().mockResolvedValue(undefined),
+    applyVerifiedEmail: vi.fn().mockResolvedValue(undefined),
     ...over.identity,
   };
-  const mail = { sendEmailVerification: jest.fn().mockResolvedValue(undefined) };
-  const jwt = { sign: jest.fn().mockReturnValue('TKN'), verify: jest.fn().mockReturnValue({ sub: 'u1', email: 'a@x.com', purpose: 'email-verify' }) };
+  const mail = { sendEmailVerification: vi.fn().mockResolvedValue(undefined) };
+  const jwt = { sign: vi.fn().mockReturnValue('TKN'), verify: vi.fn().mockReturnValue({ sub: 'u1', email: 'a@x.com', purpose: 'email-verify' }) };
   const svc = new EmailChangeService(identity as any, mail as any, jwt as any);
   return { svc, identity, mail, jwt };
 }
@@ -23,7 +23,7 @@ describe('EmailChangeService', () => {
     expect(mail.sendEmailVerification).toHaveBeenCalledWith('a@x.com', 'TKN');
   });
   it('request 邮箱被他人占用 → 冲突', async () => {
-    const { svc } = deps({ identity: { findUserByEmail: jest.fn().mockResolvedValue({ id: 'other' }) } });
+    const { svc } = deps({ identity: { findUserByEmail: vi.fn().mockResolvedValue({ id: 'other' }) } });
     await expect(svc.request('u1', 'a@x.com')).rejects.toThrow('该邮箱已被使用');
   });
   it('confirm 有效 token → 落地邮箱', async () => {
@@ -39,7 +39,7 @@ describe('EmailChangeService', () => {
   it('confirm token 邮箱与 pendingEmail 不符 → 抛错（replay/superseded）', async () => {
     const { svc } = deps({
       identity: {
-        findUserById: jest.fn().mockResolvedValue({ id: 'u1', pendingEmail: 'new@x.com' }),
+        findUserById: vi.fn().mockResolvedValue({ id: 'u1', pendingEmail: 'new@x.com' }),
       },
     });
     // token claims 'a@x.com' but pendingEmail is now 'new@x.com'
@@ -48,7 +48,7 @@ describe('EmailChangeService', () => {
   it('confirm 用户不存在 → 抛错', async () => {
     const { svc } = deps({
       identity: {
-        findUserById: jest.fn().mockResolvedValue(null),
+        findUserById: vi.fn().mockResolvedValue(null),
       },
     });
     await expect(svc.confirm('TKN')).rejects.toThrow('验证链接已过期或无效');
@@ -59,7 +59,7 @@ describe('EmailChangeService', () => {
     it('user.email 为空 → 存 pending + 发信', async () => {
       const { svc, identity, mail } = deps({
         identity: {
-          findUserById: jest.fn().mockResolvedValue({ id: 'u1', email: null, pendingEmail: null }),
+          findUserById: vi.fn().mockResolvedValue({ id: 'u1', email: null, pendingEmail: null }),
         },
       });
       await svc.requestSupplement('u1', 'new@x.com');
@@ -70,7 +70,7 @@ describe('EmailChangeService', () => {
     it('user.email 已存在 → 拒绝，引导走 change', async () => {
       const { svc } = deps({
         identity: {
-          findUserById: jest.fn().mockResolvedValue({ id: 'u1', email: 'old@x.com', pendingEmail: null }),
+          findUserById: vi.fn().mockResolvedValue({ id: 'u1', email: 'old@x.com', pendingEmail: null }),
         },
       });
       await expect(svc.requestSupplement('u1', 'new@x.com')).rejects.toThrow('账户已绑定邮箱');
@@ -79,7 +79,7 @@ describe('EmailChangeService', () => {
     it('账户 DELETED → 拒绝', async () => {
       const { svc } = deps({
         identity: {
-          findUserById: jest.fn().mockResolvedValue({ id: 'u1', status: 'DELETED', email: null }),
+          findUserById: vi.fn().mockResolvedValue({ id: 'u1', status: 'DELETED', email: null }),
         },
       });
       await expect(svc.requestSupplement('u1', 'new@x.com')).rejects.toThrow('账户不可用');
@@ -88,7 +88,7 @@ describe('EmailChangeService', () => {
     it('通过 request(userId, email) 无 proof → 路由到 supplement', async () => {
       const { svc, identity } = deps({
         identity: {
-          findUserById: jest.fn().mockResolvedValue({ id: 'u1', email: null }),
+          findUserById: vi.fn().mockResolvedValue({ id: 'u1', email: null }),
         },
       });
       await svc.request('u1', 'new@x.com');
@@ -103,16 +103,16 @@ describe('EmailChangeService', () => {
     });
 
     it('携带 proof 且 verifyProof 通过 → 存 pending + 发信', async () => {
-      const stepUp = { verifyProof: jest.fn().mockReturnValue({ jti: 'proof-jti' }) } as any;
+      const stepUp = { verifyProof: vi.fn().mockReturnValue({ jti: 'proof-jti' }) } as any;
       const identity = {
-        findUserByEmail: jest.fn().mockResolvedValue(null),
-        findUserById: jest.fn().mockResolvedValue({ id: 'u1', email: 'old@x.com' }),
-        setPendingEmail: jest.fn().mockResolvedValue(undefined),
-        setPendingEmailWithProof: jest.fn().mockResolvedValue(undefined),
-        applyVerifiedEmail: jest.fn(),
+        findUserByEmail: vi.fn().mockResolvedValue(null),
+        findUserById: vi.fn().mockResolvedValue({ id: 'u1', email: 'old@x.com' }),
+        setPendingEmail: vi.fn().mockResolvedValue(undefined),
+        setPendingEmailWithProof: vi.fn().mockResolvedValue(undefined),
+        applyVerifiedEmail: vi.fn(),
       } as any;
-      const mail = { sendEmailVerification: jest.fn() } as any;
-      const jwt = { sign: jest.fn().mockReturnValue('TKN2'), verify: jest.fn() } as any;
+      const mail = { sendEmailVerification: vi.fn() } as any;
+      const jwt = { sign: vi.fn().mockReturnValue('TKN2'), verify: vi.fn() } as any;
       const svc = new EmailChangeService(identity, mail, jwt, stepUp);
       await svc.requestChange('u1', 'new@x.com', 'PROOF', 'session-1');
       expect(stepUp.verifyProof).toHaveBeenCalledWith('PROOF', 'u1', 'change-email', 'session-1');
@@ -126,32 +126,32 @@ describe('EmailChangeService', () => {
     });
 
     it('verifyProof 抛错 → 冒泡', async () => {
-      const stepUp = { verifyProof: jest.fn(() => { throw new Error('STEP_UP_INVALID_OR_EXPIRED'); }) } as any;
+      const stepUp = { verifyProof: vi.fn(() => { throw new Error('STEP_UP_INVALID_OR_EXPIRED'); }) } as any;
       const identity = {
-        findUserByEmail: jest.fn(),
-        findUserById: jest.fn(),
-        setPendingEmail: jest.fn(),
-        setPendingEmailWithProof: jest.fn(),
-        applyVerifiedEmail: jest.fn(),
+        findUserByEmail: vi.fn(),
+        findUserById: vi.fn(),
+        setPendingEmail: vi.fn(),
+        setPendingEmailWithProof: vi.fn(),
+        applyVerifiedEmail: vi.fn(),
       } as any;
-      const mail = { sendEmailVerification: jest.fn() } as any;
-      const jwt = { sign: jest.fn(), verify: jest.fn() } as any;
+      const mail = { sendEmailVerification: vi.fn() } as any;
+      const jwt = { sign: vi.fn(), verify: vi.fn() } as any;
       const svc = new EmailChangeService(identity, mail, jwt, stepUp);
       await expect(svc.requestChange('u1', 'new@x.com', 'BAD', 'session-1')).rejects.toThrow('STEP_UP_INVALID_OR_EXPIRED');
       expect(identity.setPendingEmailWithProof).not.toHaveBeenCalled();
     });
 
     it('通过 request(userId, email, proof) 带 proof → 路由到 change', async () => {
-      const stepUp = { verifyProof: jest.fn().mockReturnValue({ jti: 'proof-jti' }) } as any;
+      const stepUp = { verifyProof: vi.fn().mockReturnValue({ jti: 'proof-jti' }) } as any;
       const identity = {
-        findUserByEmail: jest.fn().mockResolvedValue(null),
-        findUserById: jest.fn().mockResolvedValue({ id: 'u1', email: 'old@x.com' }),
-        setPendingEmail: jest.fn(),
-        setPendingEmailWithProof: jest.fn(),
-        applyVerifiedEmail: jest.fn(),
+        findUserByEmail: vi.fn().mockResolvedValue(null),
+        findUserById: vi.fn().mockResolvedValue({ id: 'u1', email: 'old@x.com' }),
+        setPendingEmail: vi.fn(),
+        setPendingEmailWithProof: vi.fn(),
+        applyVerifiedEmail: vi.fn(),
       } as any;
-      const mail = { sendEmailVerification: jest.fn() } as any;
-      const jwt = { sign: jest.fn().mockReturnValue('TKN3'), verify: jest.fn() } as any;
+      const mail = { sendEmailVerification: vi.fn() } as any;
+      const jwt = { sign: vi.fn().mockReturnValue('TKN3'), verify: vi.fn() } as any;
       const svc = new EmailChangeService(identity, mail, jwt, stepUp);
       await svc.request('u1', 'new@x.com', 'PROOF', 'session-1');
       expect(stepUp.verifyProof).toHaveBeenCalledWith('PROOF', 'u1', 'change-email', 'session-1');

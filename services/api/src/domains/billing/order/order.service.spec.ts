@@ -17,44 +17,44 @@ import { OrderRefundService } from './services/order-refund.service';
 
 function createTx() {
   return {
-    $queryRaw: jest.fn(),
+    $queryRaw: vi.fn(),
     orders: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      update: jest.fn(),
-      create: jest.fn(),
-      findMany: jest.fn(),
-      count: jest.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
     },
     payment_events: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      upsert: jest.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      upsert: vi.fn(),
     },
     point_grants: {
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      update: vi.fn(),
     },
     membership_plans: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
     user_memberships: {
-      upsert: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
+      upsert: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
     },
     points_packages: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
     user_points: {
-      update: jest.fn(),
+      update: vi.fn(),
       // FIX-19: reclaim clamps to live balance; provide generous balances so existing
       // full-reclaim expectations hold.
-      findUnique: jest.fn(async () => ({
+      findUnique: vi.fn(async () => ({
         balance: 1_000_000_000,
         availableBalance: 1_000_000_000,
         totalBalance: 1_000_000_000,
@@ -65,20 +65,20 @@ function createTx() {
       })),
     },
     points_records: {
-      create: jest.fn(),
+      create: vi.fn(),
     },
   };
 }
 
 function createService(tx: ReturnType<typeof createTx>) {
   const prisma = {
-    $transaction: jest.fn((fn: (t: unknown) => unknown) => fn(tx)),
+    $transaction: vi.fn((fn: (t: unknown) => unknown) => fn(tx)),
     payment_events: {
-      update: jest.fn(async () => undefined),
+      update: vi.fn(async () => undefined),
     },
   };
   const points = {
-    grantPointsWithinTx: jest.fn(async (_tx: unknown, _userId: string, input: any) => ({
+    grantPointsWithinTx: vi.fn(async (_tx: unknown, _userId: string, input: any) => ({
       grant: { id: 'grant-1', ...input },
       balance: input.amount,
     })),
@@ -998,17 +998,17 @@ describe('OrderService.markPaidAndFulfill', () => {
 describe('OrderService.createMembershipOrder', () => {
   function createOrderingService() {
     const prisma = {
-      membership_plans: { findUnique: jest.fn() },
+      membership_plans: { findUnique: vi.fn() },
       orders: {
-        findFirst: jest.fn(),
-        findMany: jest.fn().mockResolvedValue([]),
-        create: jest.fn(),
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
-      points_packages: { findUnique: jest.fn() },
-      user_memberships: { findUnique: jest.fn() },
+      points_packages: { findUnique: vi.fn() },
+      user_memberships: { findUnique: vi.fn() },
     };
-    const points = { grantPointsWithinTx: jest.fn() };
+    const points = { grantPointsWithinTx: vi.fn() };
     const orderRepo = new OrderRepository(prisma as never);
     const paymentEventRepo = new PaymentEventRepository(prisma as never);
     const pointReclaimService = new OrderPointReclaimService(orderRepo);

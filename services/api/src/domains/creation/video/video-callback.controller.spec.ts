@@ -2,12 +2,12 @@ import { UnauthorizedException } from '@nestjs/common';
 import { handleVideoCallbackRequest } from './video-callback.handler';
 
 function make(secret?: string) {
-  const flow = { handleCallback: jest.fn().mockResolvedValue(undefined) };
-  const config = { get: jest.fn().mockReturnValue(secret) };
+  const flow = { handleCallback: vi.fn().mockResolvedValue(undefined) };
+  const config = { get: vi.fn().mockReturnValue(secret) };
   const logger = {
-    log: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
+    log: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   };
   return { config, flow, logger };
 }

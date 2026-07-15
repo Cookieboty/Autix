@@ -1,15 +1,15 @@
 import { AuthService } from './auth.service';
 
 function buildAuthService(autoApprove: boolean) {
-  const createRegistration = jest.fn(async () => ({ id: 'user-1', email: 'a@b.c', username: 'u' }));
-  const jwtService: any = { sign: jest.fn(() => 'tok') };
-  const mailService: any = { sendActivationEmail: jest.fn(() => ({ catch: () => {} })) };
-  const inviteService: any = { recordInvitation: jest.fn(async () => null) };
-  const campaignRewardService: any = { grantRegistrationBonus: jest.fn(async () => null) };
+  const createRegistration = vi.fn(async () => ({ id: 'user-1', email: 'a@b.c', username: 'u' }));
+  const jwtService: any = { sign: vi.fn(() => 'tok') };
+  const mailService: any = { sendActivationEmail: vi.fn(() => ({ catch: () => {} })) };
+  const inviteService: any = { recordInvitation: vi.fn(async () => null) };
+  const campaignRewardService: any = { grantRegistrationBonus: vi.fn(async () => null) };
   const identityRepository: any = {
-    findUserByUsername: jest.fn(async () => null),
-    findUserByEmail: jest.fn(async () => null),
-    findSystemByCode: jest.fn(async () => ({ id: 'sys-1', autoApprove })),
+    findUserByUsername: vi.fn(async () => null),
+    findUserByEmail: vi.fn(async () => null),
+    findSystemByCode: vi.fn(async () => ({ id: 'sys-1', autoApprove })),
     createRegistration,
   };
   const service = new AuthService(

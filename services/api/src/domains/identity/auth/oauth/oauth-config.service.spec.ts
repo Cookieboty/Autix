@@ -1,7 +1,7 @@
 import { OAuthConfigService } from './oauth-config.service';
 
 function settingsMock(map: Record<string,string>) {
-  return { getString: jest.fn(async (k: string) => map[k] ?? '') };
+  return { getString: vi.fn(async (k: string) => map[k] ?? '') };
 }
 
 describe('OAuthConfigService', () => {
@@ -30,7 +30,7 @@ describe('OAuthConfigService', () => {
   // env 回退由 SystemSettingsService.getString 负责(DB 无行→返回 registry defaultValue=启动时 env 值);
   // 这里验证 OAuthConfigService 如实透传该回退值(模拟 DB-miss 时 getString 返回 env 默认)。
   it('DB 无值时透传 env 默认(getString 返回 registry defaultValue)', async () => {
-    const s = { getString: jest.fn(async (k: string) => (k === 'oauth.googleClientId' ? 'env-default-cid' : '')) };
+    const s = { getString: vi.fn(async (k: string) => (k === 'oauth.googleClientId' ? 'env-default-cid' : '')) };
     const svc = new OAuthConfigService(s as any);
     expect((await svc.getGoogleConfig()).clientId).toBe('env-default-cid');
   });

@@ -13,12 +13,12 @@ const AUTH_USER = { id: 'user-1' } as never;
 
 function buildController() {
   const service = {
-    like: jest.fn().mockResolvedValue({ likeCount: 1 }),
-    unlike: jest.fn().mockResolvedValue({ likeCount: 0 }),
-    favorite: jest.fn().mockResolvedValue({ favoriteCount: 1 }),
-    unfavorite: jest.fn().mockResolvedValue({ favoriteCount: 0 }),
-    share: jest.fn().mockResolvedValue({ shareCount: 1 }),
-    getMetrics: jest.fn().mockResolvedValue({ favoriteCount: 0, likeCount: 0 }),
+    like: vi.fn().mockResolvedValue({ likeCount: 1 }),
+    unlike: vi.fn().mockResolvedValue({ likeCount: 0 }),
+    favorite: vi.fn().mockResolvedValue({ favoriteCount: 1 }),
+    unfavorite: vi.fn().mockResolvedValue({ favoriteCount: 0 }),
+    share: vi.fn().mockResolvedValue({ shareCount: 1 }),
+    getMetrics: vi.fn().mockResolvedValue({ favoriteCount: 0, likeCount: 0 }),
   };
   const controller = new ResourceMetricsController(service as never);
   return { controller, service };

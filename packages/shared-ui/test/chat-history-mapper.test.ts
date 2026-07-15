@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import { mapSessionMessagesToAIUIMessages } from '../src/chat/chat-history-mapper';
 
 describe('chat history mapper', () => {

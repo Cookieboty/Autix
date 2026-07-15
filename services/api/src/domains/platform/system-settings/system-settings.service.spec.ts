@@ -13,8 +13,8 @@ function createService(initialRows: StoredRow[] = []) {
     initialRows.map((row) => [row.key, row]),
   );
   const prisma = {
-    $queryRaw: jest.fn(async () => Array.from(rows.values())),
-    $executeRaw: jest.fn(async (strings: TemplateStringsArray, ...values: unknown[]) => {
+    $queryRaw: vi.fn(async () => Array.from(rows.values())),
+    $executeRaw: vi.fn(async (strings: TemplateStringsArray, ...values: unknown[]) => {
       if (values.length === 0) return;
       const [, key, value] = values as [string, string, string];
       rows.set(key, { key, value, updatedAt: new Date('2026-06-16T00:00:00.000Z') });

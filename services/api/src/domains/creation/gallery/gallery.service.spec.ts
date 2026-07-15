@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { GalleryStatus, ResourceType } from '../../platform/prisma/generated';
 import { GalleryRepository } from './gallery.repository';
@@ -642,7 +643,7 @@ function makeDownloadService(overrides: {
   const repo = {
     findById: async (id: string) => overrides.posts?.[id] ?? null,
   };
-  const recordDownload = jest.fn(
+  const recordDownload = vi.fn(
     overrides.recordDownloadImpl ?? (async () => ({ downloadCount: 1 })),
   );
   const metrics = { recordDownload };
@@ -726,14 +727,14 @@ describe('GalleryService.download — 仅 PUBLISHED + 非幂等计数', () => {
 
 function makeFavoriteService(overrides: {
   posts?: Record<string, Record<string, unknown>>;
-  favoriteLibrary?: { favorite?: jest.Mock; unfavorite?: jest.Mock };
+  favoriteLibrary?: { favorite?: Mock; unfavorite?: Mock };
 }) {
   const repo = {
     findById: async (id: string) => overrides.posts?.[id] ?? null,
   };
   const favoriteLibrary = {
-    favorite: jest.fn().mockResolvedValue({ favorited: true }),
-    unfavorite: jest.fn().mockResolvedValue({ favorited: false }),
+    favorite: vi.fn().mockResolvedValue({ favorited: true }),
+    unfavorite: vi.fn().mockResolvedValue({ favorited: false }),
     ...(overrides.favoriteLibrary ?? {}),
   };
   const service = new GalleryService(
@@ -799,7 +800,7 @@ function makeRecreateService(overrides: {
   const repo = {
     findById: async (id: string) => overrides.posts?.[id] ?? null,
   };
-  const recordReference = jest.fn(
+  const recordReference = vi.fn(
     overrides.recordReferenceImpl ?? (async () => ({ referenceCount: 1 })),
   );
   const metrics = { recordReference };

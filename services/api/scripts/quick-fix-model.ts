@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * 快速修复：创建默认模型配置
  * 这个脚本会读取 .env 中的配置并创建一个数据库记录
@@ -22,7 +22,7 @@ async function main() {
     console.log(`   名称: ${existing.name}`);
     console.log(`   模型: ${existing.model}`);
     console.log(`   Base URL: ${existing.baseUrl}`);
-    console.log('\n如需重新配置，请先删除现有配置或运行: bun run scripts/setup-model.ts\n');
+    console.log('\n如需重新配置，请先删除现有配置或运行: pnpm exec tsx scripts/setup-model.ts\n');
     return;
   }
 
@@ -35,8 +35,8 @@ async function main() {
     console.log('\n请按以下步骤操作:');
     console.log('1. 获取一个有效的 API key（推荐提供商：DeepSeek, Groq, SiliconFlow）');
     console.log('2. 编辑 services/api/.env 文件，更新 OPENAI_API_KEY');
-    console.log('3. 重新运行此脚本: bun run scripts/quick-fix-model.ts\n');
-    console.log('或者使用交互式配置: bun run scripts/setup-model.ts\n');
+    console.log('3. 重新运行此脚本: pnpm --filter @autix/api fix:model\n');
+    console.log('或者使用交互式配置: pnpm exec tsx scripts/setup-model.ts\n');
     process.exit(1);
   }
 
@@ -92,7 +92,7 @@ async function main() {
       console.log('\n请按以下步骤修复:');
       console.log('1. 检查 .env 中的 OPENAI_API_KEY 是否有效');
       console.log('2. 检查 OPENAI_BASE_URL 是否正确');
-      console.log('3. 或使用其他 API 提供商: bun run scripts/setup-model.ts\n');
+      console.log('3. 或使用其他 API 提供商: pnpm exec tsx scripts/setup-model.ts\n');
     }
   } catch (error: any) {
     console.log(`❌ 无法连接到 API: ${error.message}`);
@@ -101,7 +101,7 @@ async function main() {
 
   console.log('\n📝 后续步骤:');
   console.log('1. 如果 API 测试失败，请更新 .env 中的 OPENAI_API_KEY');
-  console.log('2. 重启后端服务: cd services/api && bun run dev');
+  console.log('2. 重启后端服务: pnpm run dev:api');
   console.log('3. 访问前端测试: http://localhost:3000\n');
 
   await prisma.$disconnect();

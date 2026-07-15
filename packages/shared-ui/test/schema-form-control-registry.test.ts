@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import type { XUiControl } from '@autix/domain/pricing';
 import { CONTROL_REGISTRY } from '../src/pricing/SchemaForm/controlRegistry';
 
@@ -9,8 +8,8 @@ import { CONTROL_REGISTRY } from '../src/pricing/SchemaForm/controlRegistry';
  * set to the domain type instead: adding, removing, or renaming a member of
  * `XUiControl` (other than `hidden`) makes this literal fail `tsc` (missing or
  * excess property) until it's updated, so the expected set can't silently
- * drift from the domain type on `bun run --cwd packages/shared-ui typecheck`.
- * (`bun test` itself only strips types — it never runs tsc — so this
+ * drift from the domain type on `pnpm --filter @autix/shared-ui typecheck`.
+ * (`pnpm test` itself only strips types — it never runs tsc — so this
  * assertion doesn't fail this file directly, but the mismatch is exactly what
  * the typecheck step in Definition of Done exists to catch, and this file is
  * the single hardcoded key list in the whole check — `CONTROL_REGISTRY`

@@ -1,4 +1,3 @@
-import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -8,7 +7,7 @@ import {
 import * as dist from '../dist';
 import * as sourceEnums from '../src/generated/client/enums';
 
-const schema = readFileSync(resolve(import.meta.dir, '../prisma/schema.prisma'), 'utf8');
+const schema = readFileSync(resolve(import.meta.dirname, '../prisma/schema.prisma'), 'utf8');
 const supportedLocales = ['en', 'fr', 'ja', 'ru', 'vi', 'zh-CN', 'zh-TW'] as const;
 
 function readSchemaBlock(kind: 'enum' | 'model', name: string): string[] {
@@ -101,11 +100,11 @@ describe('database generated artifact freshness', () => {
   for (const locale of supportedLocales) {
     test(`i18n ${locale} source and dist messages match`, () => {
       const source = JSON.parse(readFileSync(
-        resolve(import.meta.dir, `../../i18n/src/messages/${locale}.json`),
+        resolve(import.meta.dirname, `../../i18n/src/messages/${locale}.json`),
         'utf8',
       ));
       const built = JSON.parse(readFileSync(
-        resolve(import.meta.dir, `../../i18n/dist/messages/${locale}.json`),
+        resolve(import.meta.dirname, `../../i18n/dist/messages/${locale}.json`),
         'utf8',
       ));
 

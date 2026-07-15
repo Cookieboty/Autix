@@ -3,33 +3,33 @@ import type { WorkflowStepEvent } from './workflow.types';
 
 function createService() {
   const modelConfigService = {
-    getConfigForOrchestrator: jest.fn().mockResolvedValue({ id: 'model-1' }),
-    findDefaultByTypeForUser: jest.fn().mockResolvedValue({ id: 'chat-model' }),
+    getConfigForOrchestrator: vi.fn().mockResolvedValue({ id: 'model-1' }),
+    findDefaultByTypeForUser: vi.fn().mockResolvedValue({ id: 'chat-model' }),
   };
   const repository = {
-    findConversationMessages: jest.fn().mockResolvedValue([]),
+    findConversationMessages: vi.fn().mockResolvedValue([]),
   };
   const systemPromptService = {
-    render: jest.fn().mockResolvedValue({ content: 'image template chat prompt' }),
+    render: vi.fn().mockResolvedValue({ content: 'image template chat prompt' }),
   };
   const imageGenerationFlowService = {
-    resolveImageRequest: jest.fn().mockImplementation(async (input) => ({
+    resolveImageRequest: vi.fn().mockImplementation(async (input) => ({
       mode: input.sourceImages?.length ? 'edit' : 'generate',
       prompt: input.promptOverride,
       modelConfig: { model: 'gpt-image-2' },
       sourceImages: input.sourceImages,
       referenceImages: input.referenceImages,
     })),
-    generateAndPersistImage: jest.fn().mockResolvedValue({
+    generateAndPersistImage: vi.fn().mockResolvedValue({
       images: [{ url: 'https://cdn/img-1.png', generationId: 'gen-1', index: 0, prompt: 'A futuristic product photo' }],
       prompt: 'A futuristic product photo',
       model: 'gpt-image-2',
     }),
   };
   const billing = {
-    hold: jest.fn().mockResolvedValue({ holdId: 'hold-1', balance: 100 }),
-    confirm: jest.fn().mockResolvedValue(undefined),
-    refund: jest.fn().mockResolvedValue(undefined),
+    hold: vi.fn().mockResolvedValue({ holdId: 'hold-1', balance: 100 }),
+    confirm: vi.fn().mockResolvedValue(undefined),
+    refund: vi.fn().mockResolvedValue(undefined),
   };
   const service = new ImageChatService(
     modelConfigService as never,
@@ -44,7 +44,7 @@ function createService() {
 describe('ImageChatService', () => {
   it('executes a generate_image tool action from the main image chat model', async () => {
     const { service, imageGenerationFlowService } = createService();
-    service.invokeAssistant = jest.fn().mockResolvedValue({
+    service.invokeAssistant = vi.fn().mockResolvedValue({
       content: '',
       action: {
         type: 'generate_image',
@@ -89,7 +89,7 @@ describe('ImageChatService', () => {
 
   it('treats legacy prompt_suggestion output as a generate_image action', async () => {
     const { service, imageGenerationFlowService } = createService();
-    service.invokeAssistant = jest.fn().mockResolvedValue({
+    service.invokeAssistant = vi.fn().mockResolvedValue({
       content: JSON.stringify({
         type: 'prompt_suggestion',
         prompt: 'A clean product poster',
@@ -121,7 +121,7 @@ describe('ImageChatService', () => {
 
   it('executes an edit_image tool action with selected source images', async () => {
     const { service, imageGenerationFlowService } = createService();
-    service.invokeAssistant = jest.fn().mockResolvedValue({
+    service.invokeAssistant = vi.fn().mockResolvedValue({
       content: '',
       action: {
         type: 'edit_image',
@@ -162,7 +162,7 @@ describe('ImageChatService', () => {
 
   it('falls back to markdown when model output is not structured JSON', async () => {
     const { service } = createService();
-    service.invokeAssistant = jest.fn().mockResolvedValue({
+    service.invokeAssistant = vi.fn().mockResolvedValue({
       content: '可以，我建议先明确产品主体。',
       action: null,
     });

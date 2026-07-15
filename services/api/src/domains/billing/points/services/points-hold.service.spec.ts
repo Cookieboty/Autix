@@ -41,9 +41,9 @@ function buildHold(input: { estimatedAmount?: number; pricingSnapshot?: unknown 
 describe('PointsHoldService.quoteHoldFromSnapshot', () => {
   it('caps the quoted total at the frozen estimatedAmount and warns with raw, frozen, and usage', async () => {
     const hold = buildHold({ estimatedAmount: 100, pricingSnapshot: buildSnapshot(constSchema(150)) });
-    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
+    const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(hold) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
-    const warnSpy = jest.spyOn((service as unknown as { logger: { warn: (m: string) => void } }).logger, 'warn');
+    const warnSpy = vi.spyOn((service as unknown as { logger: { warn: (m: string) => void } }).logger, 'warn');
 
     const result = await service.quoteHoldFromSnapshot('hold-1', { outputTokens: 500 });
 
@@ -59,9 +59,9 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
 
   it('returns the quoted total unchanged when under the frozen amount (no flooring to the frozen amount)', async () => {
     const hold = buildHold({ estimatedAmount: 100, pricingSnapshot: buildSnapshot(constSchema(60)) });
-    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
+    const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(hold) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
-    const warnSpy = jest.spyOn((service as unknown as { logger: { warn: (m: string) => void } }).logger, 'warn');
+    const warnSpy = vi.spyOn((service as unknown as { logger: { warn: (m: string) => void } }).logger, 'warn');
 
     const result = await service.quoteHoldFromSnapshot('hold-1', {});
 
@@ -71,9 +71,9 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
 
   it('returns the total unchanged and does not warn when the quote exactly equals the frozen amount', async () => {
     const hold = buildHold({ estimatedAmount: 100, pricingSnapshot: buildSnapshot(constSchema(100)) });
-    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
+    const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(hold) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
-    const warnSpy = jest.spyOn((service as unknown as { logger: { warn: (m: string) => void } }).logger, 'warn');
+    const warnSpy = vi.spyOn((service as unknown as { logger: { warn: (m: string) => void } }).logger, 'warn');
 
     const result = await service.quoteHoldFromSnapshot('hold-1', {});
 
@@ -82,7 +82,7 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
   });
 
   it('throws BadRequestException when the hold does not exist', async () => {
-    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(null) };
+    const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(null) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
 
     await expect(service.quoteHoldFromSnapshot('missing', {})).rejects.toThrow(BadRequestException);
@@ -90,7 +90,7 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
 
   it('propagates parsePricingSnapshot rejection for an old-engine-shaped snapshot instead of falling back to re-estimation', async () => {
     const hold = buildHold({ pricingSnapshot: { ruleId: 'rule-1', taskType: 'image_generation' } });
-    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
+    const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(hold) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
 
     await expect(service.quoteHoldFromSnapshot('hold-1', {})).rejects.toThrow(BadRequestException);
@@ -98,8 +98,8 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
 
   it('reads through the provided transaction client when given, not through findHoldById', async () => {
     const hold = buildHold({});
-    const findHoldByIdWithinTx = jest.fn().mockResolvedValue(hold);
-    const findHoldById = jest.fn();
+    const findHoldByIdWithinTx = vi.fn().mockResolvedValue(hold);
+    const findHoldById = vi.fn();
     const pointsRepo = { findHoldByIdWithinTx, findHoldById };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
     const tx = {} as never;
@@ -113,7 +113,7 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
 
   it('the returned value is always an integer', async () => {
     const hold = buildHold({ estimatedAmount: 100, pricingSnapshot: buildSnapshot(constSchema(150)) });
-    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
+    const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(hold) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
 
     const result = await service.quoteHoldFromSnapshot('hold-1', {});
@@ -143,7 +143,7 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
       params: { quality: 'medium' },
     };
     const hold = buildHold({ estimatedAmount: 500, pricingSnapshot: snapshot });
-    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
+    const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(hold) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
 
     await expect(service.quoteHoldFromSnapshot('hold-1', { quality: 'high' })).rejects.toThrow();
@@ -168,7 +168,7 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
       params: { quality: 'medium' },
     };
     const hold = buildHold({ estimatedAmount: 500, pricingSnapshot: snapshot });
-    const pointsRepo = { findHoldById: jest.fn().mockResolvedValue(hold) };
+    const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(hold) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
 
     const result = await service.quoteHoldFromSnapshot('hold-1', { outputTokens: 999 });

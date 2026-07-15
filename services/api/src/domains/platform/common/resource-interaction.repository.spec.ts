@@ -9,10 +9,10 @@ import { ResourceInteractionRepository } from './resource-interaction.repository
 function createPrisma(likedRows: string[], favoritedRows: string[]) {
   return {
     resource_likes: {
-      findMany: jest.fn().mockResolvedValue(likedRows.map((resourceId) => ({ resourceId }))),
+      findMany: vi.fn().mockResolvedValue(likedRows.map((resourceId) => ({ resourceId }))),
     },
     resource_favorites: {
-      findMany: jest.fn().mockResolvedValue(favoritedRows.map((resourceId) => ({ resourceId }))),
+      findMany: vi.fn().mockResolvedValue(favoritedRows.map((resourceId) => ({ resourceId }))),
     },
   };
 }

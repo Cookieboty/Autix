@@ -3,28 +3,28 @@ import { StepUpHttpException, StepUpService } from './step-up.service';
 
 function createDeps() {
   const repository = {
-    findUser: jest.fn().mockResolvedValue({
+    findUser: vi.fn().mockResolvedValue({
       id: 'u1',
       password: null,
       email: 'user@example.com',
       emailVerified: true,
       status: 'ACTIVE',
     }),
-    createProof: jest.fn().mockResolvedValue(true),
-    createOtp: jest.fn().mockResolvedValue({
+    createProof: vi.fn().mockResolvedValue(true),
+    createOtp: vi.fn().mockResolvedValue({
       id: 'otp-1',
       expiresAt: new Date(Date.now() + 300_000),
     }),
-    invalidateOtp: jest.fn().mockResolvedValue(undefined),
-    verifyAndConsumeOtp: jest.fn().mockResolvedValue({ status: 'ok' }),
+    invalidateOtp: vi.fn().mockResolvedValue(undefined),
+    verifyAndConsumeOtp: vi.fn().mockResolvedValue({ status: 'ok' }),
   };
   const jwt = {
-    sign: jest.fn().mockReturnValue('SIGNED-PROOF'),
-    verify: jest.fn(),
+    sign: vi.fn().mockReturnValue('SIGNED-PROOF'),
+    verify: vi.fn(),
   };
-  const mail = { sendStepUpOtp: jest.fn().mockResolvedValue(undefined) };
-  const rateLimit = { consume: jest.fn().mockResolvedValue(undefined) };
-  const emailHash = { hash: jest.fn().mockReturnValue('EMAIL-HASH') };
+  const mail = { sendStepUpOtp: vi.fn().mockResolvedValue(undefined) };
+  const rateLimit = { consume: vi.fn().mockResolvedValue(undefined) };
+  const emailHash = { hash: vi.fn().mockReturnValue('EMAIL-HASH') };
   const service = new StepUpService(
     repository as any,
     jwt as any,

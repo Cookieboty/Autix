@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env tsx
 /**
  * 更新现有模型配置的 API Key
  */
@@ -19,7 +19,7 @@ async function main() {
 
   if (models.length === 0) {
     console.log('❌ 没有找到活跃的模型配置');
-    console.log('   请先运行: bun run scripts/setup-model.ts\n');
+    console.log('   请先运行: pnpm exec tsx scripts/setup-model.ts\n');
     return;
   }
 

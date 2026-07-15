@@ -9,7 +9,7 @@ import type {
 /**
  * Default empty schema shapes for a brand-new model, kept here (not imported from
  * `pricing/model-schema-editor.tsx`) so this plain helper module — pulled in by
- * `admin-system-models-helpers.test.ts` under `bun test` — never has to load the schema
+ * `admin-system-models-helpers.test.ts` under `pnpm test` — never has to load the schema
  * editor's React/Monaco module graph just to read two JSON literals.
  */
 export const DEFAULT_PARAMS_SCHEMA: ParamsSchema = { type: 'object', properties: {} };

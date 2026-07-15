@@ -47,21 +47,21 @@ function makeService(overrides: {
 } = {}) {
   const campaign = overrides.campaign === undefined ? makeCampaign() : overrides.campaign;
   const generationOwned = overrides.generationOwned ?? true;
-  const queryRaw = jest.fn(async () => []);
+  const queryRaw = vi.fn(async () => []);
   const tx: any = {
     $queryRaw: queryRaw,
     campaigns: {
-      findUnique: jest.fn(async () => campaign),
-      updateMany: jest.fn(async () => ({ count: overrides.budgetUpdateCount ?? 1 })),
+      findUnique: vi.fn(async () => campaign),
+      updateMany: vi.fn(async () => ({ count: overrides.budgetUpdateCount ?? 1 })),
     },
     campaign_rewards: {
-      findUnique: jest.fn(async () => overrides.existingReward ?? null),
-      create: jest.fn(async (args: any) => ({
+      findUnique: vi.fn(async () => overrides.existingReward ?? null),
+      create: vi.fn(async (args: any) => ({
         id: 'reward-1',
         ...args.data,
         grantedAt: new Date(),
       })),
-      update: jest.fn(async (args: any) => ({
+      update: vi.fn(async (args: any) => ({
         id: args.where.id,
         campaignId: 'campaign-1',
         userId: 'user-1',
@@ -70,27 +70,27 @@ function makeService(overrides: {
         pointGrantId: args.data.pointGrantId,
         grantedAt: new Date(),
       })),
-      aggregate: jest.fn(async () => ({ _sum: { pointsGranted: 0 } })),
+      aggregate: vi.fn(async () => ({ _sum: { pointsGranted: 0 } })),
     },
   };
-  const ownedCount = jest.fn(async () => (generationOwned ? 1 : 0));
+  const ownedCount = vi.fn(async () => (generationOwned ? 1 : 0));
   const prisma = {
-    $transaction: jest.fn(async (cb: any) => cb(tx)),
+    $transaction: vi.fn(async (cb: any) => cb(tx)),
     campaigns: {
-      findMany: jest.fn(async () => (campaign ? [campaign] : [])),
-      findUnique: jest.fn(async () => campaign),
-      upsert: jest.fn(async (args: any) => ({ id: args.create.code, ...args.create })),
+      findMany: vi.fn(async () => (campaign ? [campaign] : [])),
+      findUnique: vi.fn(async () => campaign),
+      upsert: vi.fn(async (args: any) => ({ id: args.create.code, ...args.create })),
     },
     campaign_rewards: {
-      findFirst: jest.fn(async () => overrides.existingReward ?? null),
-      findMany: jest.fn(async () => overrides.claimedRewards ?? []),
+      findFirst: vi.fn(async () => overrides.existingReward ?? null),
+      findMany: vi.fn(async () => overrides.claimedRewards ?? []),
     },
     image_generations: { count: ownedCount },
     video_generations: { count: ownedCount },
     video_clip_generations: { count: ownedCount },
   };
   const pointsService = {
-    grantPointsWithinTx: jest.fn(async () => ({ grant: { id: 'grant-1' } })),
+    grantPointsWithinTx: vi.fn(async () => ({ grant: { id: 'grant-1' } })),
   };
   const service = new CampaignRewardService(
     new CampaignRepository(prisma as never),

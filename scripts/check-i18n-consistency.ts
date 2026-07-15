@@ -10,7 +10,7 @@ const APP_LOCALE_DIR = 'clients/web/app/[locale]';
 /**
  * `packages/i18n`'s `main` points at `dist/index.js`, and the app loads
  * `dist/messages/*.json` at runtime — never `src/messages/*.json` directly.
- * `dist/` is produced by `bun run --cwd packages/i18n build`, whose `tsc`
+ * `dist/` is produced by `pnpm --filter @autix/i18n build`, whose `tsc`
  * step does NOT copy the message JSON files; only the script's trailing
  * `cp src/messages/*.json dist/messages/` does. A dev who edits
  * `src/messages/*.json` and forgets to rebuild ships a stale `dist/` with
@@ -52,7 +52,7 @@ export function assertDistMatchesSrc(
     for (const k of srcKeys) {
       if (!distKeys.has(k)) {
         issues.push(
-          `[dist:${l}] stale dist/messages — missing key (run \`bun run --cwd packages/i18n build\`): ${k}`,
+          `[dist:${l}] stale dist/messages — missing key (run \`pnpm --filter @autix/i18n build\`): ${k}`,
         );
       }
     }
@@ -99,7 +99,7 @@ function main() {
   const issues = assertAligned(byLang);
 
   // `packages/i18n/dist/` is gitignored: on a fresh clone before the first
-  // `bun run --cwd packages/i18n build`, it simply doesn't exist yet. That's
+  // `pnpm --filter @autix/i18n build`, it simply doesn't exist yet. That's
   // not a consistency bug — there's nothing built to compare against — so we
   // skip (with a loud warning) rather than hard-failing, which would break
   // `i18n:check` on every clean checkout / first-run CI job before `build`
@@ -122,7 +122,7 @@ function main() {
     issues.push(...assertDistMatchesSrc(byLang, distByLang));
   } else {
     console.warn(
-      `⚠ ${DIST_DIR} not found — skipping src/dist sync check (run \`bun run --cwd packages/i18n build\` first). Expected on a fresh clone; not expected otherwise.`,
+      `⚠ ${DIST_DIR} not found — skipping src/dist sync check (run \`pnpm --filter @autix/i18n build\` first). Expected on a fresh clone; not expected otherwise.`,
     );
   }
 

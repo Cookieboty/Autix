@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { AuthIdentityRepository } from './auth-identity.repository';
 import { AuthSessionRepository } from './auth-session.repository';
@@ -7,91 +8,91 @@ import { AuthTokenFactory } from './auth-token.factory';
 function createMockPrisma(overrides: Record<string, any> = {}) {
   const prisma: any = {
     user: {
-      findUnique: jest.fn().mockResolvedValue(null),
-      update: jest.fn().mockResolvedValue({}),
-      create: jest.fn().mockResolvedValue({
+      findUnique: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue({}),
+      create: vi.fn().mockResolvedValue({
         id: 'user-new',
         username: 'newuser',
         email: 'new@example.com',
       }),
     },
     userSession: {
-      create: jest.fn().mockResolvedValue({
+      create: vi.fn().mockResolvedValue({
         id: 'session-1',
         refreshToken: 'rt-mock',
         userId: 'user-1',
       }),
-      findUnique: jest.fn().mockResolvedValue(null),
-      update: jest.fn().mockResolvedValue({}),
-      delete: jest.fn().mockResolvedValue({}),
-      deleteMany: jest.fn().mockResolvedValue({}),
+      findUnique: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue({}),
+      delete: vi.fn().mockResolvedValue({}),
+      deleteMany: vi.fn().mockResolvedValue({}),
     },
     system: {
-      findMany: jest.fn().mockResolvedValue([]),
-      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
+      findUnique: vi.fn().mockResolvedValue(null),
     },
     systemRegistration: {
-      create: jest.fn().mockResolvedValue({}),
-      findFirst: jest.fn().mockResolvedValue(null),
-      findUnique: jest.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue({}),
+      findFirst: vi.fn().mockResolvedValue(null),
+      findUnique: vi.fn().mockResolvedValue(null),
     },
-    role: { findFirst: jest.fn().mockResolvedValue(null) },
-    userRole: { findFirst: jest.fn().mockResolvedValue(null) },
+    role: { findFirst: vi.fn().mockResolvedValue(null) },
+    userRole: { findFirst: vi.fn().mockResolvedValue(null) },
     pending_uploads: {
-      findFirst: jest.fn().mockResolvedValue({ id: 'pending-1' }),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findFirst: vi.fn().mockResolvedValue({ id: 'pending-1' }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     storage_cleanup_tasks: {
-      create: jest.fn().mockResolvedValue({}),
-      createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      create: vi.fn().mockResolvedValue({}),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
-    $queryRaw: jest.fn().mockResolvedValue([{
+    $queryRaw: vi.fn().mockResolvedValue([{
       status: 'ACTIVE',
       password: 'somehash-lasthash',
       avatarStorageKey: null,
     }]),
     ...overrides,
   };
-  prisma.$transaction = jest.fn((fn: any) => fn(prisma));
+  prisma.$transaction = vi.fn((fn: any) => fn(prisma));
   return prisma;
 }
 
 function createMockJwtService() {
   return {
-    sign: jest.fn().mockReturnValue('access-token-mock'),
-    verify: jest.fn(),
+    sign: vi.fn().mockReturnValue('access-token-mock'),
+    verify: vi.fn(),
   } as any;
 }
 
 function createMockMailService() {
   return {
-    sendActivationEmail: jest.fn().mockResolvedValue(undefined),
-    sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+    sendActivationEmail: vi.fn().mockResolvedValue(undefined),
+    sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
   } as any;
 }
 
 function createMockInviteService() {
   return {
-    recordInvitation: jest.fn().mockResolvedValue(undefined),
+    recordInvitation: vi.fn().mockResolvedValue(undefined),
   } as any;
 }
 
 function createMockCampaignRewardService() {
   return {
-    grantRegistrationBonus: jest.fn().mockResolvedValue(null),
+    grantRegistrationBonus: vi.fn().mockResolvedValue(null),
   } as any;
 }
 
 // T16: 头像上传 reservation-then-consume 相关 mock
 function createMockR2Service() {
   return {
-    getPublicUrl: jest.fn().mockImplementation((key: string) => `https://cdn.example.com/${key}`),
-    getObjectMetadata: jest.fn().mockResolvedValue({
+    getPublicUrl: vi.fn().mockImplementation((key: string) => `https://cdn.example.com/${key}`),
+    getObjectMetadata: vi.fn().mockResolvedValue({
       exists: true,
       contentLength: 1024,
       contentType: 'image/png',
     }),
-    createPresignedUpload: jest.fn().mockResolvedValue({
+    createPresignedUpload: vi.fn().mockResolvedValue({
       uploadUrl: 'https://r2.example.com/upload',
       publicUrl: 'https://cdn.example.com/x',
       key: 'avatars/user-1/x',
@@ -101,7 +102,7 @@ function createMockR2Service() {
 
 function createMockStorageCleanupService() {
   return {
-    enqueue: jest.fn().mockResolvedValue(undefined),
+    enqueue: vi.fn().mockResolvedValue(undefined),
   } as any;
 }
 
@@ -110,7 +111,7 @@ function createMockStorageCleanupService() {
 // 单独测试 T18 processed 路径的 case 应在自己的 case 里覆盖 mock 返回值。
 function createMockAvatarImageProcessor() {
   return {
-    processAndUpload: jest.fn(async (userId: string, originalKey: string) => ({
+    processAndUpload: vi.fn(async (userId: string, originalKey: string) => ({
       storageKey: originalKey,
       publicUrl: `https://cdn.mock/${originalKey}`,
       processed: false,
@@ -515,11 +516,11 @@ describe('AuthService', () => {
     function setupSvc(dbUser: any = { id: 'user-1', status: 'ACTIVE', password: 'p', language: 'zh-CN', nickname: 'old' }) {
       const { service, identityRepository, sessionRepository, r2, storageCleanup, avatarImageProcessor } = buildService();
       // 让 updateOwnProfile 前置读到 ACTIVE
-      jest.spyOn(identityRepository, 'findUserById').mockResolvedValue(dbUser as any);
+      vi.spyOn(identityRepository, 'findUserById').mockResolvedValue(dbUser as any);
       // 阻止真的写库
-      jest.spyOn(identityRepository, 'updateOwnProfile').mockResolvedValue(undefined as any);
+      vi.spyOn(identityRepository, 'updateOwnProfile').mockResolvedValue(undefined as any);
       // buildAuthProfile 依赖：findProfileUser + sessionRepository.findById + 各种系统查
-      jest.spyOn(identityRepository, 'findProfileUser').mockResolvedValue({
+      vi.spyOn(identityRepository, 'findProfileUser').mockResolvedValue({
         ...dbUser,
         nickname: 'new-nick',
         avatar: 'new-avatar',
@@ -528,14 +529,14 @@ describe('AuthService', () => {
         pendingEmail: null,
         roles: [],
       } as any);
-      jest.spyOn(identityRepository, 'findActiveSystems').mockResolvedValue([] as any);
-      jest.spyOn(sessionRepository, 'findById').mockResolvedValue({ id: 'sess-1', currentSystemId: 's' } as any);
+      vi.spyOn(identityRepository, 'findActiveSystems').mockResolvedValue([] as any);
+      vi.spyOn(sessionRepository, 'findById').mockResolvedValue({ id: 'sess-1', currentSystemId: 's' } as any);
       return { service, identityRepository, r2, storageCleanup, avatarImageProcessor };
     }
 
     it('白名单三字段被转发给 repo（越权字段的最终拦截由 repo helper 保证）', async () => {
       const { service, identityRepository } = setupSvc();
-      const spy = identityRepository.updateOwnProfile as jest.Mock;
+      const spy = identityRepository.updateOwnProfile as Mock;
       await service.updateOwnProfile(AUTH_USER, {
         nickname: 'new-nick',
         description: 'new-desc',
@@ -573,7 +574,7 @@ describe('AuthService', () => {
 
     it('账户不存在返回 UnauthorizedException', async () => {
       const { service, identityRepository } = setupSvc();
-      (identityRepository.findUserById as jest.Mock).mockResolvedValue(null);
+      (identityRepository.findUserById as Mock).mockResolvedValue(null);
       await expect(
         service.updateOwnProfile(AUTH_USER, { nickname: 'x' }),
       ).rejects.toThrow(UnauthorizedException);
@@ -589,7 +590,7 @@ describe('AuthService', () => {
 
     it('DB 中已清空的 nullable profile 字段不会被旧请求快照回填', async () => {
       const { service, identityRepository } = setupSvc();
-      (identityRepository.findProfileUser as jest.Mock).mockResolvedValue({
+      (identityRepository.findProfileUser as Mock).mockResolvedValue({
         id: 'user-1',
         username: 'u',
         email: 'e@x.com',
@@ -631,7 +632,7 @@ describe('AuthService', () => {
         avatarStorageKey: 'evil-key',
       } as any);
       expect(prisma.user.update).toHaveBeenCalledTimes(1);
-      const call = (prisma.user.update as jest.Mock).mock.calls[0][0];
+      const call = (prisma.user.update as Mock).mock.calls[0][0];
       expect(call.where).toEqual({ id: 'user-1' });
       // T16: avatar 写入时同步清空 avatarStorageKey，防止残留旧的内部 key
       expect(call.data).toEqual({ nickname: 'nn', description: 'dd', avatar: 'aa', avatarStorageKey: null });
@@ -646,14 +647,14 @@ describe('AuthService', () => {
     it('repo 层白名单：不提供 avatar 时 avatarStorageKey 不进入 Prisma data (T16)', async () => {
       const { identityRepository, prisma } = buildService();
       await identityRepository.updateOwnProfile('user-1', { nickname: 'nn' });
-      const call = (prisma.user.update as jest.Mock).mock.calls[0][0];
+      const call = (prisma.user.update as Mock).mock.calls[0][0];
       expect(call.data).toEqual({ nickname: 'nn' });
       expect('avatarStorageKey' in call.data).toBe(false);
     });
 
     it('repo 层外链头像更新与旧对象清理 outbox 同事务', async () => {
       const { identityRepository, prisma } = buildService();
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce([{
+      (prisma.$queryRaw as Mock).mockResolvedValueOnce([{
         status: 'ACTIVE',
         avatarStorageKey: 'avatars/user-1/old.png',
       }]);
@@ -673,7 +674,7 @@ describe('AuthService', () => {
 
     it('repo 层锁定后发现 DELETED → BadRequestException', async () => {
       const { identityRepository, prisma } = buildService();
-      (prisma.$queryRaw as jest.Mock).mockResolvedValueOnce([{ status: 'DELETED', avatarStorageKey: null }]);
+      (prisma.$queryRaw as Mock).mockResolvedValueOnce([{ status: 'DELETED', avatarStorageKey: null }]);
       await expect(
         identityRepository.updateOwnProfile('user-1', { nickname: 'x' }),
       ).rejects.toThrow(BadRequestException);
@@ -692,8 +693,8 @@ describe('AuthService', () => {
      */
     it('T16/T18: avatarStorageKey 路径 —— processor 处理 + 事务消费 reservation + enqueue AVATAR_REPLACED（processor 降级路径）', async () => {
       const { service, identityRepository, r2, avatarImageProcessor, storageCleanup } = setupSvc();
-      jest.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
-      const consumeSpy = jest
+      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      const consumeSpy = vi
         .spyOn(identityRepository, 'consumeAvatarReservation')
         .mockResolvedValue({ oldStorageKey: 'avatars/user-1/old.png' });
 
@@ -711,22 +712,22 @@ describe('AuthService', () => {
 
     it('拒绝不存在或元数据不匹配的 R2 对象，且不消费 reservation', async () => {
       const { service, identityRepository, r2, avatarImageProcessor } = setupSvc();
-      jest.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({
+      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({
         sizeBytes: 1024,
         contentType: 'image/png',
       });
-      (r2.getObjectMetadata as jest.Mock).mockResolvedValueOnce({
+      (r2.getObjectMetadata as Mock).mockResolvedValueOnce({
         exists: false,
         contentLength: null,
         contentType: null,
       });
-      const consumeSpy = jest.spyOn(identityRepository, 'consumeAvatarReservation');
+      const consumeSpy = vi.spyOn(identityRepository, 'consumeAvatarReservation');
 
       await expect(
         service.updateOwnProfile(AUTH_USER, { avatarStorageKey: 'avatars/user-1/missing.png' }),
       ).rejects.toThrow('头像对象不存在或与上传凭据不匹配');
 
-      (r2.getObjectMetadata as jest.Mock).mockResolvedValueOnce({
+      (r2.getObjectMetadata as Mock).mockResolvedValueOnce({
         exists: true,
         contentLength: 1000,
         contentType: 'image/jpeg',
@@ -745,13 +746,13 @@ describe('AuthService', () => {
      */
     it('T18: processor processed=true 路径 —— consume 用 processedKey + enqueue AVATAR_ORIGINAL_REPLACED', async () => {
       const { service, identityRepository, avatarImageProcessor, storageCleanup } = setupSvc();
-      jest.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
-      (avatarImageProcessor.processAndUpload as jest.Mock).mockResolvedValue({
+      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      (avatarImageProcessor.processAndUpload as Mock).mockResolvedValue({
         storageKey: 'avatars/user-1/processed.webp',
         publicUrl: 'https://cdn.mock/avatars/user-1/processed.webp',
         processed: true,
       });
-      const consumeSpy = jest
+      const consumeSpy = vi
         .spyOn(identityRepository, 'consumeAvatarReservation')
         .mockResolvedValue({ oldStorageKey: null });
 
@@ -769,13 +770,13 @@ describe('AuthService', () => {
 
     it('T18: reservation 并发失效时清理未引用的预处理派生对象', async () => {
       const { service, identityRepository, avatarImageProcessor, storageCleanup } = setupSvc();
-      jest.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
-      (avatarImageProcessor.processAndUpload as jest.Mock).mockResolvedValue({
+      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      (avatarImageProcessor.processAndUpload as Mock).mockResolvedValue({
         storageKey: 'avatars/user-1/processed.webp',
         publicUrl: 'https://cdn.mock/avatars/user-1/processed.webp',
         processed: true,
       });
-      jest.spyOn(identityRepository, 'consumeAvatarReservation')
+      vi.spyOn(identityRepository, 'consumeAvatarReservation')
         .mockRejectedValue(new BadRequestException('头像上传凭据无效或已过期'));
 
       await expect(
@@ -794,8 +795,8 @@ describe('AuthService', () => {
      */
     it('T16: 幂等 —— oldStorageKey 与新 key 相同 / 为 null 时不 enqueue AVATAR_REPLACED', async () => {
       const { service, identityRepository, storageCleanup } = setupSvc();
-      jest.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
-      jest
+      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      vi
         .spyOn(identityRepository, 'consumeAvatarReservation')
         .mockResolvedValueOnce({ oldStorageKey: 'avatars/user-1/same.png' })
         .mockResolvedValueOnce({ oldStorageKey: null });
@@ -803,7 +804,7 @@ describe('AuthService', () => {
       await service.updateOwnProfile(AUTH_USER, { avatarStorageKey: 'avatars/user-1/same.png' });
       expect(storageCleanup.enqueue).not.toHaveBeenCalled();
 
-      (storageCleanup.enqueue as jest.Mock).mockClear();
+      (storageCleanup.enqueue as Mock).mockClear();
       await service.updateOwnProfile(AUTH_USER, { avatarStorageKey: 'avatars/user-1/first.png' });
       expect(storageCleanup.enqueue).not.toHaveBeenCalled();
     });
@@ -815,8 +816,8 @@ describe('AuthService', () => {
      */
     it('T16: 越权 —— 使用他人 reservation 时 BadRequestException 冒泡，不触发 cleanup', async () => {
       const { service, identityRepository, storageCleanup } = setupSvc();
-      jest.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
-      jest
+      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      vi
         .spyOn(identityRepository, 'consumeAvatarReservation')
         .mockRejectedValue(new BadRequestException('头像上传凭据无效或已过期'));
 

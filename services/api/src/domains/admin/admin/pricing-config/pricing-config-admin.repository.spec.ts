@@ -3,7 +3,7 @@ import { Prisma } from '../../../platform/prisma/generated';
 
 describe('PricingConfigAdminRepository task_definitions CRUD', () => {
   it('listTaskDefinitions orders by sort ascending', async () => {
-    const findMany = jest.fn().mockResolvedValue([]);
+    const findMany = vi.fn().mockResolvedValue([]);
     const repo = new PricingConfigAdminRepository({ task_definitions: { findMany } } as never);
 
     await repo.listTaskDefinitions();
@@ -12,7 +12,7 @@ describe('PricingConfigAdminRepository task_definitions CRUD', () => {
   });
 
   it('createTaskDefinition writes the given fields', async () => {
-    const create = jest.fn().mockResolvedValue({ taskType: 'new_task' });
+    const create = vi.fn().mockResolvedValue({ taskType: 'new_task' });
     const repo = new PricingConfigAdminRepository({ task_definitions: { create } } as never);
 
     await repo.createTaskDefinition({
@@ -28,7 +28,7 @@ describe('PricingConfigAdminRepository task_definitions CRUD', () => {
   });
 
   it('updateTaskDefinition patches only the given fields', async () => {
-    const update = jest.fn().mockResolvedValue({ taskType: 'new_task', isActive: false });
+    const update = vi.fn().mockResolvedValue({ taskType: 'new_task', isActive: false });
     const repo = new PricingConfigAdminRepository({ task_definitions: { update } } as never);
 
     await repo.updateTaskDefinition('new_task', { isActive: false });
@@ -37,7 +37,7 @@ describe('PricingConfigAdminRepository task_definitions CRUD', () => {
   });
 
   it('updateTaskDefinition converts a null fixedCostSchema in the patch to Prisma.JsonNull', async () => {
-    const update = jest.fn().mockResolvedValue({ taskType: 'new_task', fixedCostSchema: null });
+    const update = vi.fn().mockResolvedValue({ taskType: 'new_task', fixedCostSchema: null });
     const repo = new PricingConfigAdminRepository({ task_definitions: { update } } as never);
 
     await repo.updateTaskDefinition('new_task', { fixedCostSchema: null });
@@ -49,8 +49,8 @@ describe('PricingConfigAdminRepository task_definitions CRUD', () => {
   });
 
   it('deactivateTaskDefinition soft-deletes by flipping isActive to false, never a hard delete', async () => {
-    const update = jest.fn().mockResolvedValue({ taskType: 'new_task', isActive: false });
-    const deleteFn = jest.fn();
+    const update = vi.fn().mockResolvedValue({ taskType: 'new_task', isActive: false });
+    const deleteFn = vi.fn();
     const repo = new PricingConfigAdminRepository({ task_definitions: { update, delete: deleteFn } } as never);
 
     await repo.deactivateTaskDefinition('new_task');
@@ -62,8 +62,8 @@ describe('PricingConfigAdminRepository task_definitions CRUD', () => {
 
 describe('PricingConfigAdminRepository.createTaskModelBinding', () => {
   it('creates a non-default binding directly, without a transaction', async () => {
-    const create = jest.fn().mockResolvedValue({ taskType: 't', modelConfigId: 'm1' });
-    const $transaction = jest.fn();
+    const create = vi.fn().mockResolvedValue({ taskType: 't', modelConfigId: 'm1' });
+    const $transaction = vi.fn();
     const repo = new PricingConfigAdminRepository({
       task_model_bindings: { create },
       $transaction,
@@ -83,10 +83,10 @@ describe('PricingConfigAdminRepository.createTaskModelBinding', () => {
   });
 
   it('clears the previous default binding for the task inside a transaction when creating a new default', async () => {
-    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
-    const create = jest.fn().mockResolvedValue({ taskType: 't', modelConfigId: 'm2', isDefault: true });
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const create = vi.fn().mockResolvedValue({ taskType: 't', modelConfigId: 'm2', isDefault: true });
     const tx = { task_model_bindings: { updateMany, create } };
-    const $transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(tx));
+    const $transaction = vi.fn((cb: (tx: unknown) => unknown) => cb(tx));
     const repo = new PricingConfigAdminRepository({
       task_model_bindings: {},
       $transaction,
@@ -111,7 +111,7 @@ describe('PricingConfigAdminRepository.createTaskModelBinding', () => {
 
   it('rethrows Prisma P2002 as-is for the service layer to translate', async () => {
     const prismaError = Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
-    const create = jest.fn().mockRejectedValue(prismaError);
+    const create = vi.fn().mockRejectedValue(prismaError);
     const repo = new PricingConfigAdminRepository({ task_model_bindings: { create } } as never);
 
     await expect(
@@ -127,8 +127,8 @@ describe('PricingConfigAdminRepository.createTaskModelBinding', () => {
 
 describe('PricingConfigAdminRepository.updateTaskModelBinding', () => {
   it('updates a binding directly when isDefault is not being set to true', async () => {
-    const update = jest.fn().mockResolvedValue({ taskType: 't', modelConfigId: 'm1', multiplier: 2 });
-    const $transaction = jest.fn();
+    const update = vi.fn().mockResolvedValue({ taskType: 't', modelConfigId: 'm1', multiplier: 2 });
+    const $transaction = vi.fn();
     const repo = new PricingConfigAdminRepository({
       task_model_bindings: { update },
       $transaction,
@@ -144,10 +144,10 @@ describe('PricingConfigAdminRepository.updateTaskModelBinding', () => {
   });
 
   it('clears the previous default binding in a transaction when setting isDefault: true', async () => {
-    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
-    const update = jest.fn().mockResolvedValue({ taskType: 't', modelConfigId: 'm2', isDefault: true });
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const update = vi.fn().mockResolvedValue({ taskType: 't', modelConfigId: 'm2', isDefault: true });
     const tx = { task_model_bindings: { updateMany, update } };
-    const $transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(tx));
+    const $transaction = vi.fn((cb: (tx: unknown) => unknown) => cb(tx));
     const repo = new PricingConfigAdminRepository({
       task_model_bindings: {},
       $transaction,
@@ -169,7 +169,7 @@ describe('PricingConfigAdminRepository.updateTaskModelBinding', () => {
 
 describe('PricingConfigAdminRepository.deleteTaskModelBinding', () => {
   it('deletes by composite key', async () => {
-    const deleteFn = jest.fn();
+    const deleteFn = vi.fn();
     const repo = new PricingConfigAdminRepository({ task_model_bindings: { delete: deleteFn } } as never);
 
     await repo.deleteTaskModelBinding('t', 'm1');
@@ -180,7 +180,7 @@ describe('PricingConfigAdminRepository.deleteTaskModelBinding', () => {
 
 describe('PricingConfigAdminRepository discounts CRUD', () => {
   it('listDiscounts orders by priority descending', async () => {
-    const findMany = jest.fn().mockResolvedValue([]);
+    const findMany = vi.fn().mockResolvedValue([]);
     const repo = new PricingConfigAdminRepository({ pricing_discounts: { findMany } } as never);
 
     await repo.listDiscounts();
@@ -189,7 +189,7 @@ describe('PricingConfigAdminRepository discounts CRUD', () => {
   });
 
   it('createDiscount writes factor and scope as given', async () => {
-    const create = jest.fn().mockResolvedValue({ id: 'd1' });
+    const create = vi.fn().mockResolvedValue({ id: 'd1' });
     const repo = new PricingConfigAdminRepository({ pricing_discounts: { create } } as never);
 
     await repo.createDiscount({
@@ -214,7 +214,7 @@ describe('PricingConfigAdminRepository discounts CRUD', () => {
   });
 
   it('updateDiscount patches only the given fields', async () => {
-    const update = jest.fn().mockResolvedValue({ id: 'd1', isActive: false });
+    const update = vi.fn().mockResolvedValue({ id: 'd1', isActive: false });
     const repo = new PricingConfigAdminRepository({ pricing_discounts: { update } } as never);
 
     await repo.updateDiscount('d1', { isActive: false });
@@ -223,7 +223,7 @@ describe('PricingConfigAdminRepository discounts CRUD', () => {
   });
 
   it('deleteDiscount removes by id', async () => {
-    const deleteFn = jest.fn();
+    const deleteFn = vi.fn();
     const repo = new PricingConfigAdminRepository({ pricing_discounts: { delete: deleteFn } } as never);
 
     await repo.deleteDiscount('d1');

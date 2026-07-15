@@ -76,7 +76,7 @@ function createStubPrisma(users: UserRow[]) {
   };
 
   const pendingUploads = {
-    create: jest.fn(async ({ data }: { data: any }) => {
+    create: vi.fn(async ({ data }: { data: any }) => {
       const row: PendingUploadRow = {
         id: nextId(),
         ownerUserId: data.ownerUserId,
@@ -93,7 +93,7 @@ function createStubPrisma(users: UserRow[]) {
       pending.push(row);
       return row;
     }),
-    findMany: jest.fn(async ({ where, take, select }: any = {}) => {
+    findMany: vi.fn(async ({ where, take, select }: any = {}) => {
       const matched = pending.filter((r) => matchPendingWhere(r, where ?? {}));
       const sliced = typeof take === 'number' ? matched.slice(0, take) : matched;
       if (!select) return sliced;
@@ -103,7 +103,7 @@ function createStubPrisma(users: UserRow[]) {
         return projected;
       });
     }),
-    updateMany: jest.fn(async ({ where, data }: any) => {
+    updateMany: vi.fn(async ({ where, data }: any) => {
       let count = 0;
       for (const row of pending) {
         if (!matchPendingWhere(row, where ?? {})) continue;
@@ -112,16 +112,16 @@ function createStubPrisma(users: UserRow[]) {
       }
       return { count };
     }),
-    findFirst: jest.fn(async ({ where }: any = {}) => {
+    findFirst: vi.fn(async ({ where }: any = {}) => {
       return pending.find((r) => matchPendingWhere(r, where ?? {})) ?? null;
     }),
   };
 
   const userTable = {
-    findUnique: jest.fn(async ({ where }: any) => {
+    findUnique: vi.fn(async ({ where }: any) => {
       return users.find((u) => u.id === where.id) ?? null;
     }),
-    update: jest.fn(async ({ where, data }: any) => {
+    update: vi.fn(async ({ where, data }: any) => {
       const target = users.find((u) => u.id === where.id);
       if (!target) throw new Error('user not found');
       Object.assign(target, data);
@@ -130,7 +130,7 @@ function createStubPrisma(users: UserRow[]) {
   };
 
   const storageCleanupTasks = {
-    create: jest.fn(async ({ data }: { data: any }) => {
+    create: vi.fn(async ({ data }: { data: any }) => {
       const row: CleanupTaskRow = {
         id: nextId(),
         storageKey: data.storageKey,
@@ -143,7 +143,7 @@ function createStubPrisma(users: UserRow[]) {
       cleanup.push(row);
       return row;
     }),
-    createMany: jest.fn(async ({ data }: { data: any[] }) => {
+    createMany: vi.fn(async ({ data }: { data: any[] }) => {
       for (const item of data) await storageCleanupTasks.create({ data: item });
       return { count: data.length };
     }),
@@ -153,14 +153,14 @@ function createStubPrisma(users: UserRow[]) {
     pending_uploads: pendingUploads,
     user: userTable,
     storage_cleanup_tasks: storageCleanupTasks,
-    $queryRaw: jest.fn(async (_query: TemplateStringsArray, userId: string) => {
+    $queryRaw: vi.fn(async (_query: TemplateStringsArray, userId: string) => {
       const user = users.find((item) => item.id === userId);
       return user ? [{ status: user.status, avatarStorageKey: user.avatarStorageKey }] : [];
     }),
     // consumeAvatarReservation 走 $transaction(async (tx) => ...)
     // in-memory stub 用同一份 prisma 当 tx，事务边界靠上层 throw 触发 rollback。
     // 我们的三条 case 不需要真的验证 rollback（unit spec 已覆盖），只要 tx 能透传即可。
-    $transaction: jest.fn(async (fn: any) => fn(prisma)),
+    $transaction: vi.fn(async (fn: any) => fn(prisma)),
   };
 
   return { prisma, pending, cleanup, users };
@@ -168,7 +168,7 @@ function createStubPrisma(users: UserRow[]) {
 
 function createStubR2() {
   return {
-    createPresignedUpload: jest.fn(async ({ folder, fileName, contentType }: any) => {
+    createPresignedUpload: vi.fn(async ({ folder, fileName, contentType }: any) => {
       // 模拟 R2 生成的 key 与 URL；key 前缀强制含 userId，让 keyBelongsToOwner 校验通过
       const key = `${folder}/${Date.now()}-${fileName}`;
       return {
@@ -177,7 +177,7 @@ function createStubR2() {
         key,
       };
     }),
-    getPublicUrl: jest.fn(async (key: string) => `https://cdn.mock.local/${key}`),
+    getPublicUrl: vi.fn(async (key: string) => `https://cdn.mock.local/${key}`),
   } as any;
 }
 

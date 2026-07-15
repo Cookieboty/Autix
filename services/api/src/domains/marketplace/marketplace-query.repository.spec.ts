@@ -3,8 +3,8 @@ import { MarketplaceQueryRepository } from './marketplace-query.repository';
 
 function modelMock() {
   return {
-    findMany: jest.fn().mockResolvedValue([]),
-    count: jest.fn().mockResolvedValue(0),
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
   };
 }
 
@@ -15,9 +15,9 @@ function createPrismaMock() {
     agents: modelMock(),
     image_templates: modelMock(),
     video_templates: modelMock(),
-    user_resource_acquisitions: { count: jest.fn().mockResolvedValue(0) },
-    image_generations: { findMany: jest.fn().mockResolvedValue([]) },
-    video_generations: { findMany: jest.fn().mockResolvedValue([]) },
+    user_resource_acquisitions: { count: vi.fn().mockResolvedValue(0) },
+    image_generations: { findMany: vi.fn().mockResolvedValue([]) },
+    video_generations: { findMany: vi.fn().mockResolvedValue([]) },
   };
 }
 

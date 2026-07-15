@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'bun:test';
 import type { DrawElement } from '../src/draw/draw-scene-mapper';
 import { VIDEO_LINK_KIND, VIDEO_NODE_KIND, readVideoComposition } from '../src/draw/draw-video-graph';
 

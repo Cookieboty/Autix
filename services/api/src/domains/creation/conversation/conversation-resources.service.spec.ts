@@ -8,29 +8,29 @@ import { ConversationResourcesService } from './conversation-resources.service';
 
 function createRepositoryMock() {
   return {
-    countMessages: jest.fn().mockResolvedValue(0),
-    createConversationResource: jest.fn().mockResolvedValue({ id: 'link-1' }),
-    deleteConversationResource: jest.fn().mockResolvedValue({ id: 'deleted-link' }),
-    findAgentKind: jest.fn().mockResolvedValue(null),
-    findAgentKindAndSystem: jest.fn().mockResolvedValue(null),
-    findAgentSystemFlag: jest.fn().mockResolvedValue(null),
-    findConversationOwner: jest.fn().mockResolvedValue({ userId: 'user-1' }),
-    findConversationResource: jest.fn().mockResolvedValue(null),
-    findConversationResources: jest.fn().mockResolvedValue([]),
-    findFirstConversationResource: jest.fn().mockResolvedValue(null),
-    findFirstConversationResourceId: jest.fn().mockResolvedValue(null),
-    findFirstSystemSingleAgent: jest.fn().mockResolvedValue(null),
-    findOldestSystemSingleAgent: jest.fn().mockResolvedValue(null),
-    findPromptResources: jest.fn().mockResolvedValue({
+    countMessages: vi.fn().mockResolvedValue(0),
+    createConversationResource: vi.fn().mockResolvedValue({ id: 'link-1' }),
+    deleteConversationResource: vi.fn().mockResolvedValue({ id: 'deleted-link' }),
+    findAgentKind: vi.fn().mockResolvedValue(null),
+    findAgentKindAndSystem: vi.fn().mockResolvedValue(null),
+    findAgentSystemFlag: vi.fn().mockResolvedValue(null),
+    findConversationOwner: vi.fn().mockResolvedValue({ userId: 'user-1' }),
+    findConversationResource: vi.fn().mockResolvedValue(null),
+    findConversationResources: vi.fn().mockResolvedValue([]),
+    findFirstConversationResource: vi.fn().mockResolvedValue(null),
+    findFirstConversationResourceId: vi.fn().mockResolvedValue(null),
+    findFirstSystemSingleAgent: vi.fn().mockResolvedValue(null),
+    findOldestSystemSingleAgent: vi.fn().mockResolvedValue(null),
+    findPromptResources: vi.fn().mockResolvedValue({
       skills: [],
       agents: [],
       mcps: [],
       imageTemplates: [],
       videoTemplates: [],
     }),
-    findResourceDetailsByType: jest.fn().mockResolvedValue([]),
-    findUserResourceAcquisition: jest.fn(),
-    updateConversationKind: jest.fn().mockResolvedValue({ id: 'conv-1' }),
+    findResourceDetailsByType: vi.fn().mockResolvedValue([]),
+    findUserResourceAcquisition: vi.fn(),
+    updateConversationKind: vi.fn().mockResolvedValue({ id: 'conv-1' }),
   };
 }
 

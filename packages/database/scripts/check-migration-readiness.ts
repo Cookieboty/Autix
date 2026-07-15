@@ -1,10 +1,11 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pg from 'pg';
 
 const { Client } = pg;
-const PACKAGE_ROOT = resolve(import.meta.dir, '..');
+const PACKAGE_ROOT = resolve(import.meta.dirname, '..');
 const MIGRATIONS_DIR = resolve(PACKAGE_ROOT, 'prisma/migrations');
 
 export interface MigrationRecord {
@@ -90,7 +91,7 @@ export function classifyMigrationReadiness(input: {
 
 export function buildBaselineResolveCommands(localMigrations: string[]): string[] {
   return localMigrations.map(
-    (name) => `bun --cwd packages/database --bun prisma migrate resolve --applied ${name} --schema prisma/schema.prisma`,
+    (name) => `pnpm --filter @autix/database exec prisma migrate resolve --applied ${name} --schema prisma/schema.prisma`,
   );
 }
 
@@ -194,11 +195,10 @@ async function verifyDataMigrationPostconditions(
 }
 
 function verifyDatabaseMatchesSchema(): boolean {
-  const result = Bun.spawnSync({
-    cmd: [
-      process.execPath,
-      '--bun',
-      'prisma',
+  // `prisma` resolves from node_modules/.bin, which pnpm puts on PATH for scripts.
+  const result = spawnSync(
+    'prisma',
+    [
       'migrate',
       'diff',
       '--from-config-datasource',
@@ -206,15 +206,17 @@ function verifyDatabaseMatchesSchema(): boolean {
       'prisma/schema.prisma',
       '--exit-code',
     ],
-    cwd: PACKAGE_ROOT,
-    env: process.env,
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
+    {
+      cwd: PACKAGE_ROOT,
+      env: process.env,
+      stdio: 'inherit',
+    },
+  );
 
-  if (result.exitCode === 0) return true;
-  if (result.exitCode === 2) return false;
-  throw new Error(`prisma migrate diff failed with exit code ${result.exitCode}`);
+  if (result.error) throw result.error;
+  if (result.status === 0) return true;
+  if (result.status === 2) return false;
+  throw new Error(`prisma migrate diff failed with exit code ${result.status}`);
 }
 
 async function main(): Promise<void> {
@@ -240,7 +242,7 @@ async function main(): Promise<void> {
 
     if (readiness.kind === 'fresh') {
       console.log('Migration readiness: fresh database.');
-      console.log('Run `bun --cwd packages/database --bun prisma migrate deploy --schema prisma/schema.prisma`.');
+      console.log('Run `pnpm --filter @autix/database db:deploy`.');
       return;
     }
 
@@ -250,7 +252,7 @@ async function main(): Promise<void> {
       } else {
         console.log(`Migration readiness: ${readiness.pending.length} pending migration(s).`);
         for (const migration of readiness.pending) console.log(`  - ${migration}`);
-        console.log('Run `bun --cwd packages/database --bun prisma migrate deploy --schema prisma/schema.prisma`.');
+        console.log('Run `pnpm --filter @autix/database db:deploy`.');
       }
       return;
     }
@@ -283,7 +285,7 @@ async function main(): Promise<void> {
     for (const command of buildBaselineResolveCommands(localMigrations.map((migration) => migration.name))) {
       console.log(command);
     }
-    console.log('Then run `bun --cwd packages/database --bun prisma migrate deploy --schema prisma/schema.prisma` and rerun this check.');
+    console.log('Then run `pnpm --filter @autix/database db:deploy` and rerun this check.');
     process.exitCode = 2;
   } finally {
     await client.end();

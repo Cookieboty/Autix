@@ -1,3 +1,4 @@
+import type { Mocked } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import { MODEL_PRESETS, quoteTaskFromSnapshot } from '@autix/domain/pricing';
 import { stripNonPricingParams, TaskPricingEstimatorService } from './task-pricing-estimator.service';
@@ -125,29 +126,29 @@ const SIZE_PRICING_SCHEMA_NO_REFERENCE_IMAGES = {
 const PRICE_AT_2K = 180;
 const PRICE_AT_1K = 90;
 
-function buildRepo(overrides: Partial<jest.Mocked<TaskPricingRepository>> = {}) {
+function buildRepo(overrides: Partial<Mocked<TaskPricingRepository>> = {}) {
   return {
-    findTaskDefinition: jest.fn().mockResolvedValue({
+    findTaskDefinition: vi.fn().mockResolvedValue({
       taskType: 'image_generation',
       isActive: true,
       fixedCostSchema: null,
     }),
-    findBinding: jest.fn().mockResolvedValue({
+    findBinding: vi.fn().mockResolvedValue({
       taskType: 'image_generation',
       modelConfigId: 'model-1',
       multiplier: { toString: () => '1.000' },
       isActive: true,
       isDefault: false,
     }),
-    findDefaultBinding: jest.fn().mockResolvedValue(null),
-    findModelPricingConfig: jest.fn().mockResolvedValue({
+    findDefaultBinding: vi.fn().mockResolvedValue(null),
+    findModelPricingConfig: vi.fn().mockResolvedValue({
       id: 'model-1',
       name: 'GPT Image',
       paramsSchema: PARAMS_SCHEMA,
       pricingSchema: PRICING_SCHEMA,
       schemaVersion: 1,
     }),
-    findActiveDiscounts: jest.fn().mockResolvedValue([]),
+    findActiveDiscounts: vi.fn().mockResolvedValue([]),
     ...overrides,
   } as unknown as TaskPricingRepository;
 }
@@ -172,14 +173,14 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('resolves the default binding when modelConfigId is absent', async () => {
     const repo = buildRepo({
-      findDefaultBinding: jest.fn().mockResolvedValue({
+      findDefaultBinding: vi.fn().mockResolvedValue({
         taskType: 'image_generation',
         modelConfigId: 'model-default',
         multiplier: { toString: () => '1.000' },
         isActive: true,
         isDefault: true,
       }),
-      findModelPricingConfig: jest.fn().mockResolvedValue({
+      findModelPricingConfig: vi.fn().mockResolvedValue({
         id: 'model-default',
         name: 'Default',
         paramsSchema: PARAMS_SCHEMA,
@@ -199,7 +200,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
   });
 
   it('throws 400 when the task definition is missing', async () => {
-    const repo = buildRepo({ findTaskDefinition: jest.fn().mockResolvedValue(null) });
+    const repo = buildRepo({ findTaskDefinition: vi.fn().mockResolvedValue(null) });
     const service = new TaskPricingEstimatorService(repo);
 
     await expect(
@@ -209,7 +210,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('throws 400 when the task definition is inactive, with a message distinguishable from "missing"', async () => {
     const repo = buildRepo({
-      findTaskDefinition: jest.fn().mockResolvedValue({
+      findTaskDefinition: vi.fn().mockResolvedValue({
         taskType: 'image_generation',
         isActive: false,
         fixedCostSchema: null,
@@ -223,7 +224,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
   });
 
   it('throws 400 when no binding exists for the resolved model', async () => {
-    const repo = buildRepo({ findBinding: jest.fn().mockResolvedValue(null) });
+    const repo = buildRepo({ findBinding: vi.fn().mockResolvedValue(null) });
     const service = new TaskPricingEstimatorService(repo);
 
     await expect(
@@ -232,9 +233,9 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
   });
 
   it('throws 400 when the explicit binding is deactivated, with a message distinguishable from "no binding"', async () => {
-    const repoNoBinding = buildRepo({ findBinding: jest.fn().mockResolvedValue(null) });
+    const repoNoBinding = buildRepo({ findBinding: vi.fn().mockResolvedValue(null) });
     const repoDeactivated = buildRepo({
-      findBinding: jest.fn().mockResolvedValue({
+      findBinding: vi.fn().mockResolvedValue({
         taskType: 'image_generation',
         modelConfigId: 'model-1',
         multiplier: { toString: () => '1.000' },
@@ -275,7 +276,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
   it('distinguishes "no default configured" from "default exists but deactivated"', async () => {
     const repoNoDefault = buildRepo(); // findDefaultBinding resolves null
     const repoDeactivatedDefault = buildRepo({
-      findDefaultBinding: jest.fn().mockResolvedValue({
+      findDefaultBinding: vi.fn().mockResolvedValue({
         taskType: 'image_generation',
         modelConfigId: 'model-default',
         multiplier: { toString: () => '1.000' },
@@ -306,7 +307,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('throws 400 when pricingSchema is NULL rather than computing 0', async () => {
     const repo = buildRepo({
-      findModelPricingConfig: jest.fn().mockResolvedValue({
+      findModelPricingConfig: vi.fn().mockResolvedValue({
         id: 'model-1',
         name: 'Unconfigured',
         paramsSchema: null,
@@ -323,7 +324,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('throws 400 when paramsSchema is NULL', async () => {
     const repo = buildRepo({
-      findModelPricingConfig: jest.fn().mockResolvedValue({
+      findModelPricingConfig: vi.fn().mockResolvedValue({
         id: 'model-1',
         name: 'Half-configured',
         paramsSchema: null,
@@ -359,7 +360,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('rejects a structurally invalid stored pricingSchema instead of pricing with it (first term not add)', async () => {
     const repo = buildRepo({
-      findModelPricingConfig: jest.fn().mockResolvedValue({
+      findModelPricingConfig: vi.fn().mockResolvedValue({
         id: 'model-1',
         name: 'Broken',
         paramsSchema: PARAMS_SCHEMA,
@@ -380,7 +381,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('rejects when pricingSchema references a param missing from paramsSchema', async () => {
     const repo = buildRepo({
-      findModelPricingConfig: jest.fn().mockResolvedValue({
+      findModelPricingConfig: vi.fn().mockResolvedValue({
         id: 'model-1',
         name: 'Mismatched',
         paramsSchema: PARAMS_SCHEMA,
@@ -406,7 +407,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('applies the resolved discount factor and records it in the snapshot', async () => {
     const repo = buildRepo({
-      findActiveDiscounts: jest.fn().mockResolvedValue([
+      findActiveDiscounts: vi.fn().mockResolvedValue([
         {
           id: 'd1',
           code: 'HALF',
@@ -435,7 +436,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('defaults membershipLevel to 0 (non-member) for discount matching', async () => {
     const repo = buildRepo({
-      findActiveDiscounts: jest.fn().mockResolvedValue([
+      findActiveDiscounts: vi.fn().mockResolvedValue([
         {
           id: 'd1',
           code: 'MEMBERS_ONLY',
@@ -462,7 +463,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('applies a non-1 Decimal-like multiplier without producing NaN', async () => {
     const repo = buildRepo({
-      findBinding: jest.fn().mockResolvedValue({
+      findBinding: vi.fn().mockResolvedValue({
         taskType: 'image_generation',
         modelConfigId: 'model-1',
         multiplier: { toString: () => '2.000' },
@@ -486,7 +487,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('rejects a non-numeric Decimal-like multiplier instead of returning NaN', async () => {
     const repo = buildRepo({
-      findBinding: jest.fn().mockResolvedValue({
+      findBinding: vi.fn().mockResolvedValue({
         taskType: 'image_generation',
         modelConfigId: 'model-1',
         multiplier: { toString: () => 'not-a-number' },
@@ -507,19 +508,19 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
   it('proves the fixed task cost escapes the discount multiplication: ceil(7 * 1 * 0.5) + 3 = 7', async () => {
     const repo = buildRepo({
-      findTaskDefinition: jest.fn().mockResolvedValue({
+      findTaskDefinition: vi.fn().mockResolvedValue({
         taskType: 'image_generation',
         isActive: true,
         fixedCostSchema: { terms: [{ id: 'fixed', op: 'add', const: 3 }] },
       }),
-      findModelPricingConfig: jest.fn().mockResolvedValue({
+      findModelPricingConfig: vi.fn().mockResolvedValue({
         id: 'model-1',
         name: 'Flat',
         paramsSchema: PARAMS_SCHEMA,
         pricingSchema: { terms: [{ id: 'base', op: 'add', const: 7 }] },
         schemaVersion: 1,
       }),
-      findActiveDiscounts: jest.fn().mockResolvedValue([
+      findActiveDiscounts: vi.fn().mockResolvedValue([
         {
           id: 'd1',
           code: 'HALF',
@@ -555,7 +556,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
     };
     const sourceParams: Record<string, unknown> = { quality: 'medium' };
     const repo = buildRepo({
-      findModelPricingConfig: jest.fn().mockResolvedValue({
+      findModelPricingConfig: vi.fn().mockResolvedValue({
         id: 'model-1',
         name: 'GPT Image',
         paramsSchema: PARAMS_SCHEMA,
@@ -591,7 +592,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
     // caller never caught it because they never touch a real paramsSchema.
     it('fills required quality/resolution from the schema defaults, prices correctly, and stores the filled params in the snapshot', async () => {
       const repo = buildRepo({
-        findModelPricingConfig: jest.fn().mockResolvedValue({
+        findModelPricingConfig: vi.fn().mockResolvedValue({
           id: 'model-1',
           name: 'Real Image Model',
           paramsSchema: MODEL_PRESETS.image.paramsSchema,
@@ -628,7 +629,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
     it('fills required quality/resolution for a template-shaped call (only referenceImages known)', async () => {
       const repo = buildRepo({
-        findModelPricingConfig: jest.fn().mockResolvedValue({
+        findModelPricingConfig: vi.fn().mockResolvedValue({
           id: 'model-1',
           name: 'Real Image Model',
           paramsSchema: MODEL_PRESETS.image.paramsSchema,
@@ -658,12 +659,12 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
     describe('text tasks — usage-source params (tokens) must not enter the frozen snapshot (spec §3.1.1.65)', () => {
       it('does not fill inputTokens/outputTokens defaults and excludes them from the snapshot', async () => {
         const repo = buildRepo({
-          findTaskDefinition: jest.fn().mockResolvedValue({
+          findTaskDefinition: vi.fn().mockResolvedValue({
             taskType: 'chat_message_standard',
             isActive: true,
             fixedCostSchema: { terms: [{ id: 'taskBase', op: 'add', const: 3 }] },
           }),
-          findModelPricingConfig: jest.fn().mockResolvedValue({
+          findModelPricingConfig: vi.fn().mockResolvedValue({
             id: 'model-1',
             name: 'Real Text Model',
             paramsSchema: MODEL_PRESETS.text.paramsSchema,
@@ -688,12 +689,12 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
       it('strips a caller-supplied token estimate from the snapshot even though it was used to compute the estimate', async () => {
         const repo = buildRepo({
-          findTaskDefinition: jest.fn().mockResolvedValue({
+          findTaskDefinition: vi.fn().mockResolvedValue({
             taskType: 'chat_message_standard',
             isActive: true,
             fixedCostSchema: { terms: [{ id: 'taskBase', op: 'add', const: 3 }] },
           }),
-          findModelPricingConfig: jest.fn().mockResolvedValue({
+          findModelPricingConfig: vi.fn().mockResolvedValue({
             id: 'model-1',
             name: 'Real Text Model',
             paramsSchema: MODEL_PRESETS.text.paramsSchema,
@@ -719,12 +720,12 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
       it('end-to-end: settlement with real usage prices correctly from the frozen snapshot, not the (absent) estimate-time tokens', async () => {
         const repo = buildRepo({
-          findTaskDefinition: jest.fn().mockResolvedValue({
+          findTaskDefinition: vi.fn().mockResolvedValue({
             taskType: 'chat_message_standard',
             isActive: true,
             fixedCostSchema: { terms: [{ id: 'taskBase', op: 'add', const: 3 }] },
           }),
-          findModelPricingConfig: jest.fn().mockResolvedValue({
+          findModelPricingConfig: vi.fn().mockResolvedValue({
             id: 'model-1',
             name: 'Real Text Model',
             paramsSchema: MODEL_PRESETS.text.paramsSchema,
@@ -748,7 +749,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
     it('does not overwrite a caller-supplied value with the schema default, even when the caller passes the whole set explicitly', async () => {
       const repo = buildRepo({
-        findModelPricingConfig: jest.fn().mockResolvedValue({
+        findModelPricingConfig: vi.fn().mockResolvedValue({
           id: 'model-1',
           name: 'Real Image Model',
           paramsSchema: MODEL_PRESETS.image.paramsSchema,
@@ -777,7 +778,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
   describe('deriveParams — 权威扣费路径的派生（spec §6.2/§6.3）', () => {
     function buildSizeRepo() {
       return buildRepo({
-        findModelPricingConfig: jest.fn().mockResolvedValue({
+        findModelPricingConfig: vi.fn().mockResolvedValue({
           id: 'model-1',
           name: 'Flipped Image Model',
           paramsSchema: SIZE_PARAMS_SCHEMA,
@@ -867,7 +868,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
       // (applyParamDefaults → deriveParams → validateParams) can satisfy
       // `required: [..., 'resolution']` here.
       const repo = buildRepo({
-        findModelPricingConfig: jest.fn().mockResolvedValue({
+        findModelPricingConfig: vi.fn().mockResolvedValue({
           id: 'model-1',
           name: 'No-default-resolution image model',
           paramsSchema: SIZE_PARAMS_SCHEMA_NO_RESOLUTION_DEFAULT,
