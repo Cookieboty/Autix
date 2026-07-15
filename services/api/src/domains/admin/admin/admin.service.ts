@@ -150,6 +150,11 @@ export class AdminService {
     );
   }
 
+  deletePointsPackage(user: AuthUser, id: string) {
+    this.audit(user, 'points_packages.delete', idAuditPayload(id));
+    return this.adminRepository.deletePointsPackage(id);
+  }
+
   async getOrders(input: {
     page?: string;
     pageSize?: string;

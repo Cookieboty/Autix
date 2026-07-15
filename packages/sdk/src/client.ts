@@ -1964,6 +1964,8 @@ export const membershipAdminApi = {
     chatApi.post('/api/admin/points/packages', data),
   updatePackage: (id: string, data: Record<string, unknown>) =>
     chatApi.put(`/api/admin/points/packages/${id}`, data),
+  deletePackage: (id: string) =>
+    chatApi.delete(`/api/admin/points/packages/${id}`),
 
   getOrders: (params?: {
     page?: number;
