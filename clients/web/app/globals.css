@@ -814,7 +814,7 @@ body {
   box-shadow: 0 28px 90px rgb(40 120 255 / 0.16);
 }
 
-/* Lime/accent glow (small) — use-prompt button in ImageTemplateDialog + VideoSidebar generate */
+/* Lime/accent glow (small) — use-prompt button in GalleryDetailDialog + VideoSidebar generate */
 .growth-accent-glow-sm {
   box-shadow: 0 0 28px color-mix(in srgb, var(--growth-accent) 20%, transparent);
 }
@@ -891,7 +891,7 @@ body {
   box-shadow: 0 24px 80px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.045);
 }
 
-/* ImageTemplateDialog aside shadow */
+/* Detail dialog aside shadow */
 .growth-dialog-shadow {
   box-shadow: 0 20px 70px rgb(0 0 0 / 0.45);
 }
@@ -1470,4 +1470,41 @@ body {
 .growth-plan-cta:disabled {
   background-color: color-mix(in srgb, var(--color-foreground) 42%, transparent);
   color: color-mix(in srgb, var(--color-background) 62%, transparent);
+}
+
+/* 骨架卡的呼吸。
+   不做流光/扫描线——那种"有东西在跑过去"的动效在整面墙上必然抢眼。改成整块底色在
+   两个很接近的明度之间缓慢往返：深色底上只是轻微一明一暗，余光能察觉在加载，正眼看
+   也不吵。明暗两端都由 --secondary 派生（掺一点 --foreground），所以浅色主题下自动
+   变成"稍暗一点"的方向，不会像写死白色那样失效。 */
+@keyframes growth-skeleton-breathe {
+  0%,
+  100% {
+    background-color: var(--secondary);
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--secondary) 93%, var(--foreground));
+  }
+}
+
+.growth-skeleton {
+  background-color: var(--secondary);
+  animation: growth-skeleton-breathe 2.6s ease-in-out infinite;
+}
+
+/* 各列错峰，避免整面墙同时明灭（像整块屏幕在闪） */
+.growth-skeleton-delay-1 {
+  animation-delay: 0.3s;
+}
+.growth-skeleton-delay-2 {
+  animation-delay: 0.6s;
+}
+.growth-skeleton-delay-3 {
+  animation-delay: 0.9s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .growth-skeleton {
+    animation: none;
+  }
 }

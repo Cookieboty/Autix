@@ -5,7 +5,7 @@ const FEATURE_TAGS: FeatureTag[] = [
   { label: 'Image', href: '/ai/image' },
   { label: 'Video', href: '/ai/video' },
   { label: 'Canvas', href: '/draw' },
-  { label: 'Templates', href: '/ai/image?mode=templates' },
+  { label: 'Templates', href: '/ai/image?mode=gallery' },
   { label: 'Presets', href: '/presets' },
   { label: 'Viral Presets', href: '/viral-presets' },
   { label: 'Marketing Studio', href: '/marketing-studio' },

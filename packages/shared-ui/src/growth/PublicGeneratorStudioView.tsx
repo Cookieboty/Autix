@@ -235,6 +235,8 @@ export function PublicGeneratorStudioView({
           onModelChange={setSelectedImageModelId}
           initialMode={initialMode}
           initialPrompt={initialPrompt}
+          /* Web 端才写地址栏（桌面端是 HashRouter，地址栏对用户不可见） */
+          syncUrl
         />
       )}
       </div>

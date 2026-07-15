@@ -37,7 +37,7 @@ const FOOTER_GROUPS: Array<{ titleKey: string; links: FooterLink[] }> = [
     titleKey: 'image',
     links: [
       { labelKey: 'aiImage', href: '/ai/image' },
-      { labelKey: 'templates', href: '/ai/image?mode=templates' },
+      { labelKey: 'templates', href: '/ai/image?mode=gallery' },
       { labelKey: 'editImage', href: '/ai/image' },
       { labelKey: 'imageUpscale', href: '/ai/image' },
       { label: 'Nano Banana Pro', href: '/ai/image?model=Nano%20Banana%20Pro' },

@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Check, ChevronDown, Search, Sparkles } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-store';
 import { ModelVendorIcon } from '../../../brand';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../ui/popover';
+import { resolveModelDescription } from '../model-description';
 
 export function ImageParamButton({
   icon,
@@ -57,6 +58,7 @@ export function ImageModelParamMenu({
   onChange: (modelId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -64,9 +66,12 @@ export function ImageModelParamMenu({
   if (models.length === 0) return null;
   const selectedModel = models.find((model) => model.id === selectedModelId) ?? null;
   const keyword = query.trim().toLowerCase();
+  // 搜索仍然吃模型 id 与厂商（用户可能记得 `seedream`），只是不再把 id 显示出来
   const filtered = keyword
     ? models.filter((model) =>
-        `${model.name} ${model.model} ${model.provider}`.toLowerCase().includes(keyword),
+        `${model.name} ${model.model} ${model.provider} ${resolveModelDescription(model, locale) ?? ''}`
+          .toLowerCase()
+          .includes(keyword),
       )
     : models;
 
@@ -136,7 +141,12 @@ export function ImageModelParamMenu({
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-foreground/45">{model.model}</span>
+                  {/* 第二行是模型简介，不是模型 id —— id 对用户没有意义 */}
+                  {resolveModelDescription(model, locale) ? (
+                    <span className="mt-0.5 block truncate text-xs text-foreground/45">
+                      {resolveModelDescription(model, locale)}
+                    </span>
+                  ) : null}
                 </span>
                 {active ? <Check className="size-4 shrink-0 text-growth-accent" /> : null}
               </button>

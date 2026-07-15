@@ -10,7 +10,6 @@ import {
   Max,
   MaxLength,
   Min,
-  MinLength,
 } from 'class-validator';
 import { GalleryKind, GallerySource } from '../../../platform/prisma/generated';
 
@@ -32,10 +31,14 @@ export class CreateGalleryPostDto {
   @IsString()
   description?: string;
 
+  /**
+   * 可选：投稿时不再要求作者选分类（/ai/image 的一键发布不带这个字段），
+   * 空缺时落 ''，由审核员在管理端补。分类只用于管理端筛选，公开 feed 不按它过滤。
+   */
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(50)
-  category!: string;
+  category?: string;
 
   @IsOptional()
   @IsArray()

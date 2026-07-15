@@ -111,6 +111,20 @@ export class GalleryRepository {
       orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
       take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      // 作者身份：与 findByIdWithAuthor 同一份 select（只取 presenter 需要的字段，
+      // 不外泄 email/phone 等 PII）。service 会经 presentAuthor 脱敏后再对外暴露。
+      include: {
+        author: {
+          select: {
+            id: true,
+            status: true,
+            nickname: true,
+            realName: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
     });
     const hasMore = rows.length > take;
     const items = hasMore ? rows.slice(0, take) : rows;
@@ -128,10 +142,46 @@ export class GalleryRepository {
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
+        // 审核列表要显示作者（与 feed / 详情同一份 select，同样经 presentAuthor 脱敏）
+        include: {
+          author: {
+            select: {
+              id: true,
+              status: true,
+              nickname: true,
+              realName: true,
+              username: true,
+              avatar: true,
+            },
+          },
+        },
       }),
       this.prisma.gallery_posts.count({ where }),
     ]);
     return { items, total };
+  }
+
+  /**
+   * 厂商模型串 → 展示别名（model_configs.model → model_configs.name）。
+   *
+   * gallery_posts.model 存的是厂商串（`doubao-seedream-4-5`），展示要的是运营配的别名
+   * （`Seedream 4.5`）。同一个厂商串可能对应多条配置（库里 `gpt-image-2` 就有两条），
+   * 所以按「启用优先、最近更新优先」取一条，保证同一串每次解析出同一个名字，
+   * 而不是随 Prisma 返回顺序漂。
+   *
+   * 整页一次批量查（不逐条），与 feed 的 metrics/liked 批量查同源。
+   */
+  async findModelDisplayNames(models: string[]): Promise<Map<string, string>> {
+    const unique = [...new Set(models.filter((m): m is string => !!m))];
+    if (unique.length === 0) return new Map();
+    const rows = await this.prisma.model_configs.findMany({
+      where: { model: { in: unique } },
+      select: { model: true, name: true },
+      orderBy: [{ isActive: 'desc' }, { updatedAt: 'desc' }],
+    });
+    const map = new Map<string, string>();
+    for (const row of rows) if (!map.has(row.model)) map.set(row.model, row.name);
+    return map;
   }
 
   /** 管理端分类下拉：现存作品去重后的 category 列表（排除空串与已删除）。 */

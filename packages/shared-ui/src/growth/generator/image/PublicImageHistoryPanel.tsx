@@ -1,20 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import {
-  Check,
-  Copy,
-  Download,
-  ImageIcon,
-  Info,
-  RefreshCw,
-  Share2,
-  Sparkles,
-  Trash2,
-  WandSparkles,
-  X,
-} from 'lucide-react';
+import { Check, Download, Ellipsis, Eye, ImageIcon, RefreshCw, Share2, Trash2, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { galleryActions, galleryErrorMessage, publicGeneratorActions } from '@autix/shared-store';
@@ -23,18 +10,28 @@ import type {
   PublicImageHistoryItem,
 } from './public-image-generation';
 import type { TemplateDensity } from '../generator-studio-helpers';
-import { PublishToGalleryDialog } from './PublishToGalleryDialog';
+import { publishSelectionsToGallery, type PublishSelection } from './publish-to-gallery';
+import { naturalAspectRatio, resolveSettingsAspectRatio } from './image-aspect';
+import { downloadImageFile } from './image-history-media';
 import { dedupeGenerationIds, galleryPostActions, summarizeSettled } from './gallery-interaction-model';
 import { DeleteGenerationsDialog } from './DeleteGenerationsDialog';
-import { Button } from '../../../ui/button';
+import { PublicImageDetailDialog } from './PublicImageDetailDialog';
+import { ImageActionMenu } from './ImageActionMenu';
+import { buildImageActionMenuItems } from './image-action-items';
+import { resolveGalleryShareUrl } from './gallery-share-link';
+import { useLocalizePath } from '../../../navigation';
 
 export type PendingImageGenerationCard = {
   id: string;
   prompt: string;
   model: string;
   count: number;
-  /** 生成时选择的尺寸/比例（如 "1024x1536" / "3:4"），占位块据此按比例渲染 */
-  size?: string;
+  /**
+   * 本次生成提交的 schema 参数包。占位块据此解析比例渲染 —— 传整个 bag 而不是
+   * 单个 size 串，因为比例参数的键名逐模型不同（aspectRatio / size），
+   * 见 resolveSettingsAspectRatio。
+   */
+  settings?: Record<string, unknown>;
 };
 
 // 历史 Tab：横向 justified 行布局；行高由密度档位决定（档位越密行越矮），滑块调整行高
@@ -45,18 +42,6 @@ const HISTORY_ROW_HEIGHT: Record<TemplateDensity, number> = {
   dense: 340,
   xdense: 260,
 };
-
-/** 从尺寸串解析宽高比（w/h）：支持 "1024x1024" / "3:4" / "1024×1024@1K"，无法解析回退 1 */
-function parseAspectRatio(size?: string): number {
-  if (!size) return 1;
-  const match = size.match(/(\d+)\s*[x:×]\s*(\d+)/i);
-  if (match) {
-    const w = Number(match[1]);
-    const h = Number(match[2]);
-    if (w > 0 && h > 0) return w / h;
-  }
-  return 1;
-}
 
 const HISTORY_GAP = 3;
 
@@ -109,33 +94,34 @@ function imageKey(itemId: string, image: PublicImageHistoryImage): string {
   return `${itemId}::${image.generationId ?? ''}::${image.index}`;
 }
 
-/** 客户端下载图片：优先 fetch→blob（可跨域时回退新窗口打开） */
-async function downloadImageFile(url: string, filename: string) {
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = objectUrl;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
-  } catch {
-    if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener');
-  }
-}
+/**
+ * 历史骨架屏：形状照着 justified 行布局来（几行、每行几块、宽度按常见比例参差），
+ * 这样数据到位时是「骨架就地变成图」，不是整块重排。
+ *
+ * 比例不用随机数——SSR 与客户端要算出同一套宽度，否则水合不一致。
+ */
+const HISTORY_SKELETON_ROWS = [
+  [0.75, 1.5, 0.66],
+  [1.33, 0.66, 1],
+  [1, 0.75, 1.77],
+];
 
-function formatTime(value: string, locale: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(locale, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+function HistorySkeleton({ targetHeight }: { targetHeight: number }) {
+  return (
+    <div className="flex flex-col gap-[3px]" aria-busy="true">
+      {HISTORY_SKELETON_ROWS.map((row, rowIndex) => (
+        <div key={rowIndex} className="flex gap-[3px]">
+          {row.map((ratio, cellIndex) => (
+            <div
+              key={cellIndex}
+              className={`growth-skeleton growth-skeleton-delay-${(rowIndex + cellIndex) % 4} min-w-0`}
+              style={{ flexGrow: ratio, flexBasis: 0, height: targetHeight }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function PublicImageHistoryPanel({
@@ -144,6 +130,7 @@ export function PublicImageHistoryPanel({
   density,
   pending,
   onRecreate,
+  onUseAsReference,
   onSelectionActiveChange,
   onHistoryChanged,
 }: {
@@ -153,6 +140,8 @@ export function PublicImageHistoryPanel({
   pending?: PendingImageGenerationCard | null;
   /** 点击某张图的 Recreate：把该次生成的 prompt 应用到输入框 */
   onRecreate?: (item: PublicImageHistoryItem) => void;
+  /** 详情弹窗里的 Reference：把该图塞回输入框当参考图 */
+  onUseAsReference?: (image: PublicImageHistoryImage) => void;
   /** 是否处于多选态：父级据此切换「输入框 ↔ 操作栏」 */
   onSelectionActiveChange?: (active: boolean) => void;
   /** 发布/删除成功后请求父级重拉 history（徽章状态来自服务端，不靠本地内存猜）。 */
@@ -160,12 +149,40 @@ export function PublicImageHistoryPanel({
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const locale = useLocale();
+  const localize = useLocalizePath();
   const [selectedItem, setSelectedItem] = useState<PublicImageHistoryItem | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
-  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  /** 投稿请求进行中：期间不接受重复的发布点击（发布已无确认弹窗兜着，点两下就是两条帖）。 */
+  const [publishing, setPublishing] = useState(false);
+  /** 悬浮菜单里「删除图片」选中的那一条（与多选删除共用确认框，只是 count 恒为 1）。 */
+  const [singleDeleteItem, setSingleDeleteItem] = useState<PublicImageHistoryItem | null>(null);
+  /**
+   * 最后看过的那张图（imageKey）。关掉详情后该格盖一层「Last viewed」遮罩 —— 历史很长时
+   * 用户回到列表能一眼找回刚才看的位置。详情里切换多图候选也会更新它。
+   */
+  const [lastViewedKey, setLastViewedKey] = useState<string | null>(null);
+
+  const openDetail = (item: PublicImageHistoryItem, key: string) => {
+    setSelectedItem(item);
+    setLastViewedKey(key);
+  };
+  /** 正在跑帖级动作的那条生成 —— 菜单项据此禁用，避免连点。 */
+  const [postingItemId, setPostingItemId] = useState<string | null>(null);
   const { ref: containerRef, width: containerWidth } = useElementWidth<HTMLDivElement>();
+  /**
+   * 图片加载完成后按 naturalWidth/naturalHeight 校正出的真实比例（key 同 imageKey）。
+   * 加载前用 settings 的比例占位，加载后以图片自身为准 —— 厂商实际返回的尺寸未必
+   * 等于请求值。
+   */
+  const [naturalRatios, setNaturalRatios] = useState<Record<string, number>>({});
+
+  const rememberNaturalRatio = (key: string, element: HTMLImageElement) => {
+    const ratio = naturalAspectRatio(element);
+    if (ratio === undefined) return;
+    setNaturalRatios((prev) => (prev[key] === ratio ? prev : { ...prev, [key]: ratio }));
+  };
 
   const selectionActive = selectedKeys.size > 0;
   useEffect(() => {
@@ -181,24 +198,21 @@ export function PublicImageHistoryPanel({
       return next;
     });
 
+  // 加载中：骨架屏（形状照着 justified 行来），不是一行「加载中」文字。
+  // 注意顺序——先判加载态，确认没数据了才允许渲染空状态，否则刷新时会先闪一下「暂无记录」。
   if (loading && items.length === 0 && !pending) {
-    return (
-      <div className="grid min-h-[240px] place-items-center rounded-[18px] border border-border bg-card/76 text-sm font-semibold text-foreground/45">
-        {t('loadingHistory')}
-      </div>
-    );
+    return <HistorySkeleton targetHeight={HISTORY_ROW_HEIGHT[density]} />;
   }
 
   if (items.length === 0 && !pending) {
     return (
-      <div className="growth-flow-border relative grid min-h-[240px] place-items-center overflow-hidden rounded-[18px] border border-border bg-card/76 p-6 text-center">
-        <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-28 opacity-20" />
-        <div className="relative grid size-14 place-items-center rounded-full border border-growth-accent/35 bg-growth-accent/10 text-growth-accent">
-          <ImageIcon className="size-6" />
-        </div>
-        <div className="relative mt-4">
-          <h2 className="text-xl font-black uppercase">{t('emptyHistory')}</h2>
-          <p className="mt-2 text-sm font-semibold text-foreground/45">
+      <div className="grid min-h-[60vh] place-items-center px-6 text-center">
+        <div>
+          <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-border bg-secondary/60 text-foreground/40">
+            <ImageIcon className="size-7" />
+          </div>
+          <h2 className="mt-5 text-lg font-black">{t('emptyHistory')}</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-6 text-foreground/45">
             {t('imageBlankDescription')}
           </p>
         </div>
@@ -207,7 +221,7 @@ export function PublicImageHistoryPanel({
   }
 
   const targetHeight = HISTORY_ROW_HEIGHT[density];
-  const pendingRatio = parseAspectRatio(pending?.size);
+  const pendingRatio = resolveSettingsAspectRatio(pending?.settings);
 
   type HistoryCell =
     | { kind: 'pending'; ratio: number; showLabel: boolean; key: string }
@@ -230,13 +244,17 @@ export function PublicImageHistoryPanel({
         }))
       : []),
     ...items.flatMap((item) =>
-      item.images.map((image) => ({
-        kind: 'image' as const,
-        ratio: parseAspectRatio(typeof item.settings.size === 'string' ? item.settings.size : undefined),
-        item,
-        image,
-        key: imageKey(item.id, image),
-      })),
+      item.images.map((image) => {
+        const key = imageKey(item.id, image);
+        return {
+          kind: 'image' as const,
+          // 加载完成的图以真实比例为准，未加载的先按本次生成选择的比例占位
+          ratio: naturalRatios[key] ?? resolveSettingsAspectRatio(item.settings),
+          item,
+          image,
+          key,
+        };
+      }),
     ),
   ];
 
@@ -252,9 +270,27 @@ export function PublicImageHistoryPanel({
       void downloadImageFile(image.url, `image-${index + 1}.png`),
     );
   const clearSelection = () => setSelectedKeys(new Set());
-  const publishSelected = () => {
-    if (selectedImageList.length === 0) return;
-    setPublishDialogOpen(true);
+
+  /**
+   * 一键发布（多选工具条 / 单图悬浮菜单共用）：不再弹分类+参考图选择框，直接投稿。
+   * 参考图随帖公开，分类留空由审核员补——见 publish-to-gallery。
+   */
+  const publishNow = async (selections: PublishSelection[]) => {
+    if (selections.length === 0 || publishing) return;
+    setPublishing(true);
+    try {
+      const { succeeded, failed, firstError } = await publishSelectionsToGallery(selections);
+      if (succeeded === 0) {
+        toast.error(galleryErrorMessage(firstError));
+        return;
+      }
+      if (failed === 0) toast.success(t('publishSubmittedToast', { count: succeeded }));
+      else toast.warning(t('publishPartialFailedToast', { succeeded, failed }));
+      clearSelection();
+      onHistoryChanged?.();
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const selectedGenerationIds = dedupeGenerationIds(selectedImageList);
@@ -293,6 +329,46 @@ export function PublicImageHistoryPanel({
     onHistoryChanged?.();
   };
 
+  /**
+   * 悬浮菜单里的帖级动作。出边由 galleryPostActions 按后端状态机给（见详情弹窗同名
+   * 函数的注释），这里只负责发请求 + 重拉历史。
+   */
+  const runPostAction = async (
+    item: PublicImageHistoryItem,
+    action: 'withdraw' | 'unpublish' | 'republish' | 'removePost',
+  ) => {
+    const post = item.galleryPost;
+    if (!post || postingItemId) return;
+    setPostingItemId(item.id);
+    try {
+      if (action === 'withdraw' || action === 'removePost') await galleryActions.remove(post.id);
+      else if (action === 'unpublish') await galleryActions.unpublish(post.id);
+      else await galleryActions.republish(post.id);
+      toast.success(t('postActionDoneToast'));
+      onHistoryChanged?.();
+    } catch (err) {
+      toast.error(galleryErrorMessage(err));
+    } finally {
+      setPostingItemId(null);
+    }
+  };
+
+  /** 悬浮菜单里的「删除图片」：删的是该图所属的整条生成记录（与多选删除同一语义）。 */
+  const confirmSingleDelete = async () => {
+    if (!singleDeleteItem) return;
+    setDeleting(true);
+    try {
+      await publicGeneratorActions.deleteImageHistory(singleDeleteItem.id);
+      toast.success(t('deletedToast', { count: 1 }));
+      onHistoryChanged?.();
+    } catch {
+      toast.error(t('deleteBlockedToast'));
+    } finally {
+      setDeleting(false);
+      setSingleDeleteItem(null);
+    }
+  };
+
   return (
     <>
       <div ref={containerRef} className="flex flex-col gap-[3px]">
@@ -323,13 +399,28 @@ export function PublicImageHistoryPanel({
                     alt={image.prompt ?? item.prompt}
                     loading="lazy"
                     className="h-full w-full object-cover"
+                    // 命中缓存的图不会触发 onLoad（挂载时已 complete），两条路都要读
+                    ref={(element) => {
+                      if (element?.complete) rememberNaturalRatio(key, element);
+                    }}
+                    onLoad={(event) => rememberNaturalRatio(key, event.currentTarget)}
                   />
+                  {/* 最后查看过的那张：暗色遮罩 + 标记。z-20 低于悬浮操作按钮(z-30)，
+                      pointer-events-none 让点击/悬浮照常穿透到下面的按钮上 */}
+                  {lastViewedKey === key ? (
+                    <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-black/55">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/90">
+                        <Eye className="size-4" />
+                        {t('lastViewed')}
+                      </span>
+                    </div>
+                  ) : null}
                   {/* 点击：多选态下切换选中，否则打开详情 */}
                   <button
                     type="button"
                     aria-label={image.prompt ?? item.prompt}
                     className="absolute inset-0 z-10 cursor-pointer"
-                    onClick={() => (selectionActive ? toggleKey(setSelectedKeys, key) : setSelectedItem(item))}
+                    onClick={() => (selectionActive ? toggleKey(setSelectedKeys, key) : openDetail(item, key))}
                   />
                   {/* 悬浮效果：仅非多选态展示大内阴影 + 右侧功能图标 */}
                   {!selectionActive ? (
@@ -358,6 +449,35 @@ export function PublicImageHistoryPanel({
                         >
                           <RefreshCw className="size-4" />
                         </button>
+                        {/* 更多：与详情弹窗共用同一套菜单项构造。悬浮态是唯一入口，所以全量展开 */}
+                        <ImageActionMenu
+                          align="end"
+                          items={buildImageActionMenuItems({
+                            t,
+                            image,
+                            actions: galleryPostActions(item.galleryPost?.status),
+                            posting: postingItemId === item.id,
+                            deletable: galleryPostActions(item.galleryPost?.status).canDeleteGeneration,
+                            runPostAction: (action) => void runPostAction(item, action),
+                            onDelete: () => setSingleDeleteItem(item),
+                            onOpen: () => openDetail(item, key),
+                            onRecreate: () => onRecreate?.(item),
+                            onUseAsReference,
+                            onPublish: () => void publishNow([{ item, image }]),
+                            // 站内作品分享链接：只有已发布的作品才有（未发布的别人打不开）
+                            shareUrl: resolveGalleryShareUrl(item.galleryPost, localize),
+                          })}
+                          trigger={
+                            <button
+                              type="button"
+                              aria-label={t('more')}
+                              onClick={(event) => event.stopPropagation()}
+                              className="grid size-8 cursor-pointer place-items-center rounded-full bg-background/55 text-foreground backdrop-blur-md transition hover:bg-background/85"
+                            >
+                              <Ellipsis className="size-4" />
+                            </button>
+                          }
+                        />
                       </div>
                     </>
                   ) : null}
@@ -437,8 +557,9 @@ export function PublicImageHistoryPanel({
           </button>
           <button
             type="button"
-            onClick={publishSelected}
-            className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-foreground/85 transition hover:bg-white/5"
+            onClick={() => void publishNow(selectedImageList)}
+            disabled={publishing}
+            className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-foreground/85 transition hover:bg-white/5 disabled:cursor-wait disabled:opacity-60"
           >
             <Share2 className="size-4" /> {t('publishAll')}
           </button>
@@ -460,22 +581,15 @@ export function PublicImageHistoryPanel({
           </button>
         </div>
       </div>
-      <PublicImageHistoryDialog
+      <PublicImageDetailDialog
         item={selectedItem}
         locale={locale}
         onClose={() => setSelectedItem(null)}
+        onRecreate={onRecreate}
+        onUseAsReference={onUseAsReference}
+        // 详情里切到别的候选图 → 「最后查看」标记跟着走
+        onActiveImageChange={(item, image) => setLastViewedKey(imageKey(item.id, image))}
         onHistoryChanged={onHistoryChanged}
-      />
-      <PublishToGalleryDialog
-        open={publishDialogOpen}
-        selections={selectedImageList}
-        onClose={() => setPublishDialogOpen(false)}
-        onPublished={({ succeeded, failed }) => {
-          if (failed === 0) toast.success(t('publishSubmittedToast', { count: succeeded }));
-          else toast.warning(t('publishPartialFailedToast', { succeeded, failed }));
-          clearSelection();
-          onHistoryChanged?.();
-        }}
       />
       <DeleteGenerationsDialog
         open={deleteDialogOpen}
@@ -484,6 +598,15 @@ export function PublicImageHistoryPanel({
         deleting={deleting}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={() => void confirmDelete()}
+      />
+      {/* 悬浮菜单的单图删除：同一个确认框，count 恒为 1 */}
+      <DeleteGenerationsDialog
+        open={singleDeleteItem !== null}
+        generationCount={1}
+        imageCount={singleDeleteItem?.images.length ?? 0}
+        deleting={deleting}
+        onClose={() => setSingleDeleteItem(null)}
+        onConfirm={() => void confirmSingleDelete()}
       />
     </>
   );
@@ -515,224 +638,6 @@ function GeneratingCell({
           {t('generating')}
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function PublicImageHistoryDialog({
-  item,
-  locale,
-  onClose,
-  onHistoryChanged,
-}: {
-  item: PublicImageHistoryItem | null;
-  locale: string;
-  onClose: () => void;
-  onHistoryChanged?: () => void;
-}) {
-  const t = useTranslations('publicGrowth.generator.studio');
-  const [copied, setCopied] = useState(false);
-  const [activeImage, setActiveImage] = useState<PublicImageHistoryImage | null>(null);
-  const [posting, setPosting] = useState(false);
-  const images = item?.images ?? [];
-  const image = activeImage ?? images[0] ?? null;
-  const prompt = image?.prompt ?? item?.prompt ?? '';
-  const post = item?.galleryPost;
-  const actions = galleryPostActions(post?.status);
-
-  /**
-   * 帖级动作。四条出边对应后端状态机（gallery.helpers.ts TRANSITIONS）：
-   * PENDING→REMOVED（撤回）、PUBLISHED→UNPUBLISHED（下架）、
-   * REJECTED|UNPUBLISHED→PENDING（重新提交）、REJECTED|UNPUBLISHED|HIDDEN→REMOVED（删帖）。
-   * HIDDEN 是管理员处罚，republish 会 400 —— galleryPostActions 不会给出 canRepublish，
-   * 所以这里也不会渲染那个按钮。
-   */
-  const runPostAction = async (action: 'withdraw' | 'unpublish' | 'republish' | 'removePost') => {
-    if (!post || posting) return;
-    setPosting(true);
-    try {
-      if (action === 'withdraw' || action === 'removePost') await galleryActions.remove(post.id);
-      else if (action === 'unpublish') await galleryActions.unpublish(post.id);
-      else await galleryActions.republish(post.id);
-      toast.success(t('postActionDoneToast'));
-      onHistoryChanged?.();
-      onClose();
-    } catch (err) {
-      toast.error(galleryErrorMessage(err));
-    } finally {
-      setPosting(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!item) return;
-    setCopied(false);
-    setActiveImage(item.images[0] ?? null);
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [item, onClose]);
-
-  if (!item) return null;
-
-  const copyPrompt = () => {
-    if (!prompt || typeof navigator === 'undefined' || !navigator.clipboard) return;
-    void navigator.clipboard.writeText(prompt).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    });
-  };
-
-  if (typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[120] flex bg-background/82 text-foreground backdrop-blur-xl"
-      role="dialog"
-      aria-modal="true"
-      aria-label={prompt || t('history')}
-    >
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default"
-        aria-label={t('close')}
-        onClick={onClose}
-      />
-      <div className="relative z-10 grid min-h-0 w-full grid-cols-1 gap-4 p-4 md:grid-cols-[minmax(0,1fr)_390px] md:p-6">
-        <div className="relative flex min-h-[52svh] items-center justify-center overflow-hidden rounded-md bg-secondary">
-          {image ? (
-            <img
-              src={image.url}
-              alt={prompt || t('prompt')}
-              className="max-h-[calc(100svh-3rem)] max-w-full rounded-md object-contain"
-            />
-          ) : (
-            <div className="grid size-40 place-items-center rounded-md bg-secondary text-foreground/36">
-              <ImageIcon className="size-12" />
-            </div>
-          )}
-        </div>
-
-        <aside className="growth-dialog-shadow flex min-h-0 flex-col rounded-md border border-border bg-card/96 p-4">
-          <div className="mb-6 flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-growth-accent text-background">
-                <WandSparkles className="size-5" />
-              </span>
-              <div className="min-w-0">
-                <h2 className="truncate text-base font-black">{t('historyDetail')}</h2>
-                <p className="truncate text-sm font-semibold text-foreground/45">
-                  {formatTime(item.createdAt, locale)}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-md text-foreground/50 hover:bg-secondary hover:text-foreground"
-              aria-label={t('close')}
-              onClick={onClose}
-            >
-              <X className="size-5" />
-            </button>
-          </div>
-
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-            <section className="rounded-md bg-secondary p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="inline-flex items-center gap-2 text-xs font-black uppercase text-foreground/50">
-                  <Sparkles className="size-4" />
-                  {t('prompt')}
-                </h3>
-                <button
-                  type="button"
-                  className="inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-3 text-xs font-bold text-foreground/72 hover:bg-secondary hover:text-foreground"
-                  onClick={copyPrompt}
-                >
-                  <Copy className="size-3.5" />
-                  {copied ? t('copied') : t('copyPrompt')}
-                </button>
-              </div>
-              <p className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-background/18 p-3 text-sm font-medium leading-6 text-foreground/62">
-                {prompt || t('noPrompt')}
-              </p>
-            </section>
-
-            {images.length > 1 ? (
-              <section className="grid grid-cols-4 gap-2">
-                {images.map((candidate) => (
-                  <button
-                    key={`${candidate.generationId ?? item.id}-${candidate.index}`}
-                    type="button"
-                    onClick={() => setActiveImage(candidate)}
-                    className={`relative aspect-square overflow-hidden rounded-md border bg-background ${candidate.url === image?.url ? 'border-growth-accent ring-2 ring-growth-accent/25' : 'border-border hover:border-input'}`}
-                  >
-                    <img
-                      src={candidate.url}
-                      alt={candidate.prompt ?? item.prompt}
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
-                ))}
-              </section>
-            ) : null}
-
-            <section className="rounded-md bg-secondary p-4">
-              <h3 className="mb-3 inline-flex items-center gap-2 text-xs font-black uppercase text-foreground/50">
-                <Info className="size-4" />
-                {t('information')}
-              </h3>
-              <div className="divide-y divide-border text-sm">
-                <HistoryInfoRow label={t('model')} value={item.model || t('auto')} />
-                <HistoryInfoRow label={t('createdAt')} value={formatTime(item.createdAt, locale)} />
-                <HistoryInfoRow label={t('imageCount')} value={String(images.length)} />
-                <HistoryInfoRow label={t('imageSize')} value={String(item.settings.size || '-')} />
-              </div>
-            </section>
-          </div>
-
-          {post ? (
-            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-              {post.status === 'REJECTED' && post.rejectReason ? (
-                <p className="w-full text-sm text-destructive">
-                  {t('rejectReasonLabel')}：{post.rejectReason}
-                </p>
-              ) : null}
-              {actions.canWithdraw ? (
-                <Button type="button" variant="outline" disabled={posting} onClick={() => void runPostAction('withdraw')}>
-                  {t('withdrawSubmission')}
-                </Button>
-              ) : null}
-              {actions.canUnpublish ? (
-                <Button type="button" variant="outline" disabled={posting} onClick={() => void runPostAction('unpublish')}>
-                  {t('unpublishPost')}
-                </Button>
-              ) : null}
-              {actions.canRepublish ? (
-                <Button type="button" variant="outline" disabled={posting} onClick={() => void runPostAction('republish')}>
-                  {t('republishPost')}
-                </Button>
-              ) : null}
-              {actions.canRemovePost ? (
-                <Button type="button" variant="destructive" disabled={posting} onClick={() => void runPostAction('removePost')}>
-                  {t('removePost')}
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </aside>
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
-function HistoryInfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex min-h-11 items-center justify-between gap-4 py-2">
-      <span className="text-foreground/42">{label}</span>
-      <span className="min-w-0 truncate text-right font-bold text-foreground/78">{value}</span>
     </div>
   );
 }

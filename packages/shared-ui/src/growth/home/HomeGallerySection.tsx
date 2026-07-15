@@ -2,10 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowUpRight, Heart, ImageIcon, Play, UserRound } from 'lucide-react';
-import { publicGalleryActions, type GalleryFeedItem } from '@autix/shared-store';
+import { ArrowUpRight, Eye, Heart, ImageIcon, Play } from 'lucide-react';
+import {
+  galleryActions,
+  publicGalleryActions,
+  useAuthStore,
+  useUiStore,
+  type GalleryFeedItem,
+} from '@autix/shared-store';
 import { HomeGallerySkeleton } from './HomeGallerySkeleton';
-import { PublicGalleryDetailDialog } from './PublicGalleryDetailDialog';
+import { useRouter } from '../../navigation';
+import { GalleryDetailDialog, type GalleryInteraction } from '../detail/GalleryDetailDialog';
+import { useGalleryPostModal } from '../detail/useGalleryPostModal';
+import { AuthorAvatar } from '../AuthorAvatar';
+import { buildGeneratorWorkbenchHref } from '../generator-workbench-href';
 
 export type HomeGallerySource = 'image' | 'video';
 
@@ -29,7 +39,81 @@ export function HomeGallerySection({
   const tGen = useTranslations('publicGrowth.generator.studio');
   const [items, setItems] = useState<GalleryFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<GalleryFeedItem | null>(null);
+  const router = useRouter();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const openAuthModal = useUiStore((state) => state.openAuthModal);
+  /** 详情：本地弹窗（数据来自 feed，瞬开），只把地址栏改成 /gallery/<id>；刷新才走真实路由。 */
+  const galleryModal = useGalleryPostModal();
+  /**
+   * 互动态按 postId 存一张表 —— 卡片上的点赞和弹窗里的点赞是同一份状态，
+   * 在哪点都会同步到另一处（只存单条的话，关掉弹窗回到卡片会看到旧数字）。
+   */
+  const [interactions, setInteractions] = useState<Record<string, GalleryInteraction>>({});
+
+  const interactionOf = (item: GalleryFeedItem): GalleryInteraction =>
+    interactions[item.post.id] ?? {
+      liked: item.liked ?? false,
+      favorited: item.favorited ?? false,
+      likeCount: item.metrics.likeCount,
+    };
+
+  /** 点赞/收藏：后端 like/unlike、favorite/unfavorite 是幂等的两个接口，按当前态定方向。 */
+  const toggleLike = (postId: string) => {
+    if (!isAuthenticated) {
+      openAuthModal({ mode: 'entry', returnTo: viewAllHref });
+      return;
+    }
+    const item = items.find((entry) => entry.post.id === postId);
+    if (!item) return;
+    const current = interactionOf(item);
+    const liking = !current.liked;
+    setInteractions((prev) => ({
+      ...prev,
+      [postId]: {
+        ...current,
+        liked: liking,
+        likeCount: Math.max(0, current.likeCount + (liking ? 1 : -1)),
+      },
+    }));
+    const request = liking ? galleryActions.like(postId) : galleryActions.unlike(postId);
+    void request
+      .then((metrics) =>
+        setInteractions((prev) => ({
+          ...prev,
+          [postId]: { ...prev[postId]!, likeCount: metrics.likeCount },
+        })),
+      )
+      .catch(() => setInteractions((prev) => ({ ...prev, [postId]: current })));
+  };
+
+  const toggleFavorite = (postId: string) => {
+    if (!isAuthenticated) {
+      openAuthModal({ mode: 'entry', returnTo: viewAllHref });
+      return;
+    }
+    const item = items.find((entry) => entry.post.id === postId);
+    if (!item) return;
+    const current = interactionOf(item);
+    const favoriting = !current.favorited;
+    setInteractions((prev) => ({ ...prev, [postId]: { ...current, favorited: favoriting } }));
+    const request = favoriting
+      ? galleryActions.favorite(postId)
+      : galleryActions.unfavorite(postId);
+    void request.catch(() => setInteractions((prev) => ({ ...prev, [postId]: current })));
+  };
+
+  /** 首页没有输入框，Recreate 跳到生成器预填（/ai/image?prompt=...）。 */
+  const recreate = (item: GalleryFeedItem) => {
+    const prompt = item.post.prompt ?? item.post.description ?? '';
+    if (!prompt) return;
+    router.push(
+      buildGeneratorWorkbenchHref({
+        kind: item.post.kind === 'VIDEO' ? 'video' : 'image',
+        prompt,
+        model: item.post.model,
+      }),
+    );
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +121,7 @@ export function HomeGallerySection({
     publicGalleryActions
       .listFeed({ kind, limit: 24 })
       .then((feed) => {
-        if (!cancelled) setItems(feed);
+        if (!cancelled) setItems(feed.items);
       })
       .catch(() => {
         if (!cancelled) setItems([]);
@@ -80,7 +164,9 @@ export function HomeGallerySection({
               <HomeGalleryGrid
                 items={items}
                 unknownAuthor={tGen('unknownAuthor')}
-                onSelect={setSelected}
+                onSelect={galleryModal.open}
+                interactionOf={interactionOf}
+                onToggleLike={toggleLike}
               />
             </div>
 
@@ -98,7 +184,16 @@ export function HomeGallerySection({
         )}
       </div>
 
-      <PublicGalleryDetailDialog item={selected} onClose={() => setSelected(null)} />
+
+      {/* 广场作品详情：与生成器共用同一个弹窗组件 */}
+      <GalleryDetailDialog
+        item={galleryModal.item}
+        onClose={galleryModal.close}
+        interaction={galleryModal.item ? interactionOf(galleryModal.item) : undefined}
+        onToggleLike={toggleLike}
+        onToggleFavorite={toggleFavorite}
+        onRecreate={recreate}
+      />
     </section>
   );
 }
@@ -109,23 +204,34 @@ function formatMetric(value: number): string {
   return String(value);
 }
 
-/** 广场作品瀑布流卡片（展示态）：封面 + 作者 + 点赞；视频作品带播放角标。 */
+/**
+ * 广场作品瀑布流卡片。悬浮态与生成器广场墙（ImageTemplateWall）**保持一致**：
+ * 底部一行 = 作者胶囊（左） + 访问量/点赞合并胶囊（右）。
+ *
+ * 唯一的差别是没有右上角那两个按钮（Recreate / 参考图）—— 首页没有生成器输入框，
+ * 那两个动作在这里无处可去。
+ */
 function HomeGalleryGrid({
   items,
   unknownAuthor,
   onSelect,
+  interactionOf,
+  onToggleLike,
 }: {
   items: GalleryFeedItem[];
   unknownAuthor: string;
   onSelect: (item: GalleryFeedItem) => void;
+  interactionOf: (item: GalleryFeedItem) => GalleryInteraction;
+  onToggleLike: (postId: string) => void;
 }) {
   return (
     <div className="columns-1 gap-3 opacity-95 sm:columns-2 lg:columns-3 2xl:columns-4">
       {items.map((item, index) => {
         const { post, metrics } = item;
         const cover = post.coverImage ?? post.mediaUrls[0] ?? null;
-        const author = post.authorSnapshot?.displayName || unknownAuthor;
+        const author = item.author?.nickname || unknownAuthor;
         const isVideo = post.kind === 'VIDEO';
+        const interaction = interactionOf(item);
         return (
           <article
             key={post.id}
@@ -159,14 +265,33 @@ function HomeGalleryGrid({
             ) : null}
 
             <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100" />
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex translate-y-[-6px] items-start justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-              <span className="growth-inset-ring inline-flex min-w-0 items-center gap-2 rounded-full bg-background/36 px-2.5 py-1.5 text-xs font-bold text-foreground backdrop-blur-md">
-                <UserRound className="size-3.5 shrink-0" />
+            {/* 底部：作者（左） + 访问量/点赞（右）。与广场墙同一套胶囊：h-7 / bg-black/25 /
+                text-xs；点赞是嵌在里面的深色小药丸，只有它可点 */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+              <span className="growth-inset-ring inline-flex h-7 min-w-0 items-center gap-2 rounded-full bg-black/25 pl-1 pr-2.5 text-xs font-bold text-foreground backdrop-blur-md">
+                <AuthorAvatar name={author} avatarUrl={item.author?.avatar} />
                 <span className="truncate">{author}</span>
               </span>
-              <span className="growth-inset-ring-bright inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1.5 text-sm font-black text-foreground backdrop-blur-md">
-                <Heart className="size-4" />
-                {formatMetric(metrics.likeCount)}
+              <span className="growth-inset-ring inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-black/25 pl-2.5 pr-1 text-xs font-bold text-foreground backdrop-blur-md">
+                <span className="inline-flex items-center gap-1">
+                  <Eye className="size-3.5" />
+                  {formatMetric(metrics.viewCount)}
+                </span>
+                <button
+                  type="button"
+                  aria-label={post.title ?? ''}
+                  aria-pressed={interaction.liked}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleLike(post.id);
+                  }}
+                  className="pointer-events-auto inline-flex h-[22px] cursor-pointer items-center gap-1 rounded-full bg-black/45 px-2 transition hover:bg-black/60"
+                >
+                  <Heart
+                    className={`size-3.5 ${interaction.liked ? 'fill-red-500 text-red-500' : ''}`}
+                  />
+                  {formatMetric(interaction.likeCount)}
+                </button>
               </span>
             </div>
           </article>

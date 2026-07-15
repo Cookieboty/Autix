@@ -12,3 +12,5 @@ export * from './PublicGeneratorStudioView';
 export * from './PublicPricingView';
 export * from './generator-image-presenters';
 export * from './generator-video-presenters';
+export { GalleryPostView } from './detail/GalleryPostView';
+export { GalleryDetailSkeleton } from './detail/GalleryDetailSkeleton';

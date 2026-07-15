@@ -12,6 +12,18 @@ function buildPost(id: string, kind: GalleryKind) {
     status: GalleryStatus.PUBLISHED,
     category: 'art',
     publishedAt: new Date(),
+    model: `vendor-model-${id}`,
+    authorId: `user-${id}`,
+    // repo 的 include：service 会经 presentAuthor 脱敏后暴露成 item.author，
+    // 并把这份原始关系行剥掉（隐私铁律，见 listFeed 注释）。
+    author: {
+      id: `user-${id}`,
+      status: 'ACTIVE',
+      nickname: `nick-${id}`,
+      realName: `real-${id}`,
+      username: `uname-${id}`,
+      avatar: `https://cdn/avatar-${id}.png`,
+    },
   };
 }
 
@@ -32,6 +44,9 @@ function makeService(overrides: {
       overrides.captureKind?.(kind);
       return { items: overrides.feedItems, nextCursor: overrides.nextCursor ?? null };
     },
+    // 厂商串 → 展示别名。默认给一条映射，验证 post.modelName 被填上。
+    findModelDisplayNames: async (models: string[]) =>
+      new Map(models.filter(Boolean).map((m) => [m, `alias-${m}`])),
   };
   const metrics = {
     getMetricsMap: async () => overrides.metricsMap ?? new Map(),
@@ -81,6 +96,42 @@ describe('GalleryService.listFeed', () => {
       favoriteCount: 3,
       viewCount: 42,
       referenceCount: 1,
+    });
+  });
+
+  it('附上作者展示身份：昵称优先于 realName/username', async () => {
+    const svc = makeService({ feedItems: [buildPost('a', GalleryKind.IMAGE)] });
+    const res = await svc.listFeed('IMAGE', undefined, 24);
+    expect(res.items[0]!.author).toEqual({
+      userId: 'user-a',
+      nickname: 'nick-a',
+      avatar: 'https://cdn/avatar-a.png',
+    });
+  });
+
+  it('附上模型展示别名，厂商串原样保留（前端展示 modelName，不展示 model）', async () => {
+    const svc = makeService({ feedItems: [buildPost('a', GalleryKind.IMAGE)] });
+    const res = await svc.listFeed('IMAGE', undefined, 24);
+    expect(res.items[0]!.post.model).toBe('vendor-model-a');
+    expect(res.items[0]!.post.modelName).toBe('alias-vendor-model-a');
+  });
+
+  it('隐私铁律：原始 author 关系行不得随 post 回传（含 username / realName / 原头像）', async () => {
+    const svc = makeService({ feedItems: [buildPost('a', GalleryKind.IMAGE)] });
+    const res = await svc.listFeed('IMAGE', undefined, 24);
+    expect((res.items[0]!.post as Record<string, unknown>).author).toBeUndefined();
+  });
+
+  it('已注销作者脱敏：不回传 username / 头像', async () => {
+    const post = buildPost('a', GalleryKind.IMAGE);
+    post.author.status = 'DELETED';
+    post.author.username = 'deleted_user-a';
+    const svc = makeService({ feedItems: [post] });
+    const res = await svc.listFeed('IMAGE', undefined, 24);
+    expect(res.items[0]!.author).toEqual({
+      userId: 'user-a',
+      nickname: '已注销用户',
+      avatar: null,
     });
   });
 

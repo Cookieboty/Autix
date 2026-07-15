@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { usePathname } from '@/i18n/navigation';
 import { PublicGeneratorAppNav, PublicTopPromo } from '@autix/shared-ui/growth';
 
@@ -15,7 +16,20 @@ import { PublicGeneratorAppNav, PublicTopPromo } from '@autix/shared-ui/growth';
  * - 其它公开页：正常文档(body)滚动（内层 display:contents 让 children 直接参与外层）。
  */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+
+  /**
+   * 广场作品详情（/gallery/<id>）在这个 layout 底下**只可能是「弹窗浮在当前页之上」**
+   * —— 真正的详情页在 (public) 之外，压根不套这个 layout。
+   *
+   * 但弹窗是用 history.pushState 改地址栏的，usePathname 会跟着变成 /gallery/<id>，
+   * 于是 isFunctionPage 从 true 翻成 false，导航条在开/关弹窗时高矮各跳一次。
+   * 这里把它钉住：地址在 /gallery/* 时沿用打开弹窗前的路径，导航一动不动。
+   */
+  const lastRealPathname = useRef(rawPathname);
+  if (!rawPathname.startsWith('/gallery')) lastRealPathname.current = rawPathname;
+  const pathname = lastRealPathname.current;
+
   const isImage = pathname.startsWith('/ai/image');
   const isVideo = pathname.startsWith('/ai/video');
   const isFunctionPage = isImage || isVideo;
