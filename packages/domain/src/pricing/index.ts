@@ -1,4 +1,5 @@
 export * from './apply-param-defaults';
+export * from './compute-estimate';
 export * from './constraints';
 export * from './derive';
 export * from './evaluate';

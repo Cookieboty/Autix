@@ -1,9 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
-  applyParamDefaults,
-  deriveParams,
-  quoteTask,
-  validateParams,
+  computeTaskEstimate,
   validatePricingSchema,
   validateParamsSchema,
   type Breakdown,
@@ -143,14 +140,6 @@ export class TaskPricingEstimatorService {
     // 派生晚于校验就会在派生前 400。它也必须在 quoteTask 之前：派生值会覆盖调用方传来的
     // 值（传 size=2K + resolution=1K 就按 1K 收费的洞，spec §6.3）。
     // 前端 quote 预览与这里的顺序必须一致，否则前后端价格分裂。
-    const withDefaults = applyParamDefaults(paramsSchema, input.params);
-    const params = deriveParams(paramsSchema, withDefaults);
-
-    const violations = validateParams(paramsSchema, params);
-    if (violations.length > 0) {
-      throw new BadRequestException({ message: '参数不合法', violations });
-    }
-
     const membershipLevel = input.membershipLevel ?? 0;
     const now = new Date();
     const discountRows = (await this.repo.findActiveDiscounts(now)).map(toDiscountRow);
@@ -162,14 +151,22 @@ export class TaskPricingEstimatorService {
 
     const multiplier = this.toMultiplier(binding);
 
-    const result = quoteTask({
-      modelSchema: pricingSchema,
+    // 「展示 == 扣费」的承重点：前端本地估算与这里调**同一个** computeTaskEstimate。
+    const result = computeTaskEstimate({
+      pricingSchema,
+      paramsSchema,
       multiplier,
       discountFactor,
       taskFixedSchema,
-      params,
+      params: input.params,
       usage: input.usage,
     });
+    if (result.violations.length > 0) {
+      throw new BadRequestException({ message: '参数不合法', violations: result.violations });
+    }
+    // computeTaskEstimate 已跑 applyParamDefaults → deriveParams，返回派生后的参数，
+    // 用它冻快照（结算按同一份参数复价）。
+    const params = result.params;
 
     // Value copy: point_holds.pricingSnapshot is read back at settlement time, so an
     // admin editing model_configs.pricingSchema after a hold is created must never

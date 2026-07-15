@@ -190,3 +190,14 @@ describe('presets — full chain: model tokens + task fixed fee', () => {
     expect(result.total).toBe(7);
   });
 });
+
+describe('前端本地计价的前置不变量', () => {
+  // ImageComposer 本地估算硬编码 taskFixedSchema: null（前端拿不到任务级固定费结构，
+  // 那是故意不下发的）。这只在 image_generation 无固定费时成立。若将来给图片加了固定费，
+  // 这个断言会红，强制回来处理 taskFixedSchema 的下发，而不是静默把固定费漏算。
+  it('image_generation 无任务级固定费（前端 taskFixedSchema=null 的依据）', () => {
+    const image = TASK_PRESETS.find((t) => t.taskType === 'image_generation');
+    expect(image).toBeDefined();
+    expect(image?.fixedCostSchema).toBeNull();
+  });
+});
