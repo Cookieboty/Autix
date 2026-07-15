@@ -1,7 +1,9 @@
 import { ForbiddenException } from '@nestjs/common';
 import {
+  assertImageConcurrency,
   assertImageEntitlement,
   IMAGE_PIXELS_HARD_CEILING,
+  ImageConcurrencyLimitException,
   parseImageSizePixels,
   resolveImageEntitlement,
   type ImageEntitlement,
@@ -104,5 +106,37 @@ describe('assertImageEntitlement', () => {
     expect(() =>
       assertImageEntitlement({ ...base, allowedQualities: [] }, { size: '1024x1024', quality: 'hd' }),
     ).not.toThrow();
+  });
+});
+
+const ENT = {
+  enabled: true,
+  maxPixels: 4096 * 4096,
+  allowedQualities: [],
+  concurrency: 2,
+  levelName: 'Creator',
+  level: 2,
+  source: 'membership' as const,
+};
+
+describe('assertImageConcurrency', () => {
+  it('passes when active < concurrency', () => {
+    expect(() => assertImageConcurrency(1, ENT)).not.toThrow();
+  });
+
+  it('throws IMAGE_CONCURRENCY_LIMIT_EXCEEDED (429) when active == concurrency', () => {
+    try {
+      assertImageConcurrency(2, ENT);
+      throw new Error('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ImageConcurrencyLimitException);
+      const e = err as ImageConcurrencyLimitException;
+      expect(e.getStatus()).toBe(429);
+      expect((e.getResponse() as { code: string }).code).toBe('IMAGE_CONCURRENCY_LIMIT_EXCEEDED');
+    }
+  });
+
+  it('throws when active > concurrency', () => {
+    expect(() => assertImageConcurrency(3, ENT)).toThrow(ImageConcurrencyLimitException);
   });
 });

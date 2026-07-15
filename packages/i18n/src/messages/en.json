@@ -1352,6 +1352,8 @@
     "benefitVideoResolution": "Max resolution",
     "benefitVideoDuration": "Max duration (seconds)",
     "benefitVideoConcurrency": "Concurrency",
+    "benefitImageGeneration": "Image generation",
+    "benefitImageConcurrency": "Image concurrency",
     "benefitHistoryRetentionDays": "History retention days",
     "benefitQueuePriority": "Queue priority",
     "benefitQueuePriorityPlaceholder": "normal / high / highest",

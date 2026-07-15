@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
 
 /**
  * FIX-4: 图片生成分级权益（复用视频侧 features 机制）。
@@ -98,6 +98,32 @@ export function assertImageEntitlement(
       code: 'IMAGE_MEMBERSHIP_LIMIT_EXCEEDED',
       message: `当前会员等级（${entitlement.levelName}）不支持画质 ${requested.quality}，请调整画质或升级套餐`,
     });
+  }
+}
+
+export class ImageConcurrencyLimitException extends HttpException {
+  constructor(levelName: string, concurrency: number) {
+    super(
+      {
+        code: 'IMAGE_CONCURRENCY_LIMIT_EXCEEDED',
+        message: `当前会员等级（${levelName}）最多同时生成 ${concurrency} 张图片，请等进行中的任务完成后再试`,
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
+  }
+}
+
+/**
+ * FIX: 图片生成并发闸门。activeCount 为该用户在途（PENDING/PROCESSING）的
+ * image_generation hold 数；达到或超过等级 concurrency 即拒绝。
+ * 必须在创建本次 hold「之前」调用，否则会把自己算进去。
+ */
+export function assertImageConcurrency(
+  activeCount: number,
+  entitlement: ImageEntitlement,
+): void {
+  if (activeCount >= entitlement.concurrency) {
+    throw new ImageConcurrencyLimitException(entitlement.levelName, entitlement.concurrency);
   }
 }
 

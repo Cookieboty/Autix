@@ -54,6 +54,7 @@ import {
 } from './image-generation-flow.helpers';
 // isUserOwnedImageModel 已移除：自有模型不再免费，图片生成始终计费。
 import { assertImageHardLimits, resolveImageCountCeiling } from './image-generation-flow.risk';
+import { IMAGE_GENERATION_TASK_TYPE } from './image-generation-flow.holds';
 
 export type {
   AppliedImageSettings,
@@ -586,6 +587,14 @@ export class ImageGenerationFlowService {
       quality: request.settings?.quality,
     });
     assertImageHardLimits({ size: request.settings?.size, count: normalizedCount });
+
+    // FIX: 并发闸门 —— 统计在途 image_generation hold（PENDING/PROCESSING），
+    // 达到等级 concurrency 即拒绝。必须在 createHold 之前，避免把自己算进去。
+    const activeImageHolds = await this.pointsService.countActiveHoldsByType(
+      input.userId,
+      IMAGE_GENERATION_TASK_TYPE,
+    );
+    this.membershipService.assertImageConcurrency(activeImageHolds, imageEntitlement);
 
     const estimate = await this.pointsService.estimateCost(
       buildImageGenerationEstimateInput(request, membershipLevel),

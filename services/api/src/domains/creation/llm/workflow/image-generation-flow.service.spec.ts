@@ -1,6 +1,7 @@
 import type { Mock } from 'vitest';
 import { ModelType, PointHoldStatus } from '../../../platform/prisma/generated';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
+import { ImageConcurrencyLimitException } from '../../../billing/membership/image-entitlement.helpers';
 
 // vi.mock is hoisted above this module's bindings, so its factory cannot close
 // over a plain const — vi.hoisted lifts the spy up with it.
@@ -189,6 +190,7 @@ function createService() {
       balance: 820,
     })),
     refundHold: vi.fn(),
+    countActiveHoldsByType: vi.fn().mockResolvedValue(0),
   };
   const campaignRewardService = {
     recordSuccessGeneration: vi.fn(async () => ({ streak: null, rewards: [] })),
@@ -211,6 +213,7 @@ function createService() {
       source: 'membership',
     }),
     assertImageEntitlement: vi.fn(),
+    assertImageConcurrency: vi.fn(),
   };
   return {
     service: new ImageGenerationFlowService(
@@ -927,6 +930,31 @@ describe('ImageGenerationFlowService', () => {
     expect(global.fetch).not.toHaveBeenCalled();
 
     global.fetch = originalFetch;
+  });
+
+  it('rejects with IMAGE_CONCURRENCY_LIMIT_EXCEEDED before creating a hold when at concurrency limit', async () => {
+    const { service, pointsService, membershipService } = createService();
+    // 已在途 1 张，等级 concurrency=1（mock 默认 Creator concurrency:1）→ 超限
+    pointsService.countActiveHoldsByType.mockResolvedValueOnce(1);
+    membershipService.assertImageConcurrency.mockImplementationOnce(() => {
+      throw new ImageConcurrencyLimitException('Creator', 1);
+    });
+
+    await expect(
+      service.generateAndPersistImage(
+        { userId: 'user-1', templateId: 'tpl-1', modelConfigId: 'image-model-1' },
+        imageRequest({
+          settings: { size: '1024x1024@1K', quality: 'medium' },
+        }),
+        1,
+      ),
+    ).rejects.toMatchObject({ getStatus: expect.any(Function) });
+
+    expect(pointsService.countActiveHoldsByType).toHaveBeenCalledWith(
+      'user-1',
+      'image_generation',
+    );
+    expect(pointsService.createHold).not.toHaveBeenCalled();
   });
 
   it('freezes configurable image points before provider call and settles from the frozen snapshot after persistence', async () => {
