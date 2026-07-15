@@ -59,6 +59,54 @@ export class UpdateOwnProfileDto implements UpdateOwnProfileInput {
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsString({ message: 'headline 必须为字符串或 null' })
+  @MaxLength(OWN_PROFILE_LIMITS.headlineMaxLength, {
+    message: `headline 长度不能超过 ${OWN_PROFILE_LIMITS.headlineMaxLength}`,
+  })
+  headline?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString({ message: 'location 必须为字符串或 null' })
+  @MaxLength(OWN_PROFILE_LIMITS.locationMaxLength, {
+    message: `location 长度不能超过 ${OWN_PROFILE_LIMITS.locationMaxLength}`,
+  })
+  location?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString({ message: 'socialX 必须为字符串或 null' })
+  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength, {
+    message: `socialX 长度不能超过 ${OWN_PROFILE_LIMITS.socialMaxLength}`,
+  })
+  socialX?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString({ message: 'socialInstagram 必须为字符串或 null' })
+  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength, {
+    message: `socialInstagram 长度不能超过 ${OWN_PROFILE_LIMITS.socialMaxLength}`,
+  })
+  socialInstagram?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString({ message: 'socialYoutube 必须为字符串或 null' })
+  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength, {
+    message: `socialYoutube 长度不能超过 ${OWN_PROFILE_LIMITS.socialMaxLength}`,
+  })
+  socialYoutube?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString({ message: 'socialTiktok 必须为字符串或 null' })
+  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength, {
+    message: `socialTiktok 长度不能超过 ${OWN_PROFILE_LIMITS.socialMaxLength}`,
+  })
+  socialTiktok?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsString({ message: 'avatar 必须为字符串或 null' })
   @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { message: 'avatar 必须是有效的 HTTP(S) URL' })
   @MaxLength(OWN_PROFILE_LIMITS.avatarUrlMaxLength, {

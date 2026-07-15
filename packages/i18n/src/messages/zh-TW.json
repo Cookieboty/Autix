@@ -3867,6 +3867,86 @@
     },
     "common": {
       "discountBadge": "立減{percent}%"
+    },
+    "accountSettings": {
+      "workspace": "{name} 的工作區",
+      "nav": {
+        "profile": "個人資料",
+        "gifts": "禮包",
+        "subscription": "訂閱",
+        "usage": "用量",
+        "promo": "兌換碼"
+      },
+      "discord": {
+        "title": "加入我們的 Discord",
+        "body": "取得協助、提出問題、與社群交流",
+        "cta": "立即加入"
+      },
+      "signOut": "登出",
+      "profile": {
+        "edit": "編輯",
+        "credits": "額度",
+        "creditsLeft": "剩餘 {count} 額度",
+        "creditsPool": "佔最大額度池的 {percent}%",
+        "topUp": "儲值",
+        "usageHistory": "用量紀錄",
+        "seeAll": "查看全部",
+        "autoPublishTitle": "自動發佈新作品",
+        "autoPublishBody": "開啟後，新生成的作品會自動在廣場可見。關閉則預設保持私密。",
+        "deletionTitle": "帳戶刪除管理",
+        "deletionSubtitle": "帳戶刪除設定",
+        "deletionWarning": "刪除帳戶將永久移除：",
+        "deletionItems": {
+          "generations": "你的全部生成作品",
+          "library": "全部素材庫與社群內容",
+          "subscription": "目前折扣與訂閱",
+          "settings": "全部已儲存的設定與預設",
+          "credits": "餘額中的剩餘額度"
+        },
+        "deleteAccount": "刪除帳戶",
+        "comingSoon": "即將支援",
+        "usageTooltip": "{date} 消耗 {amount} 額度"
+      },
+      "usage": {
+        "title": "用量",
+        "subtitle": "查看你的額度消耗趨勢。",
+        "comingSoon": "用量統計即將上線。",
+        "chartTitle": "額度消耗（近 30 天）"
+      },
+      "promo": {
+        "title": "兌換碼",
+        "subtitle": "兌換代碼以取得額度或解鎖權益。",
+        "placeholder": "輸入你的兌換碼",
+        "redeem": "兌換"
+      },
+      "gifts": {
+        "title": "禮包",
+        "subtitle": "你收到的獎勵與禮包。",
+        "comingSoon": "暫無禮包。"
+      },
+      "subscription": {
+        "title": "訂閱",
+        "subtitle": "管理你的方案與帳單。",
+        "comingSoon": "訂閱管理即將上線。"
+      },
+      "editProfile": {
+        "title": "編輯資料",
+        "upload": "上傳",
+        "username": "使用者名稱",
+        "headline": "標題",
+        "headlinePlaceholder": "輸入標題…",
+        "bio": "簡介",
+        "bioPlaceholder": "輸入簡介…",
+        "location": "所在地",
+        "locationPlaceholder": "你在哪裡？",
+        "socials": "社群帳號",
+        "cancel": "取消",
+        "save": "儲存",
+        "saved": "資料已更新",
+        "errorGeneric": "出錯了，請重試。",
+        "errorAvatarType": "不支援的圖片格式。",
+        "errorAvatarSize": "圖片需小於 {maxMb}MB。"
+      }
     }
   },
   "videoShare": {

@@ -18,6 +18,12 @@ export interface AuthUser {
   realName?: string | null;
   nickname?: string | null;
   description?: string | null;
+  headline?: string | null;
+  location?: string | null;
+  socialX?: string | null;
+  socialInstagram?: string | null;
+  socialYoutube?: string | null;
+  socialTiktok?: string | null;
   avatar?: string | null;
   language?: string | null;
   isSuperAdmin: boolean;
@@ -80,6 +86,15 @@ export interface AuthProfile extends AuthUser {
 export interface UpdateOwnProfileInput {
   nickname?: string | null;
   description?: string | null;
+  /** 一句话标题（展示用，可空清除） */
+  headline?: string | null;
+  /** 所在地（展示用，可空清除） */
+  location?: string | null;
+  /** 社交平台链接 / handle（展示用，可空清除） */
+  socialX?: string | null;
+  socialInstagram?: string | null;
+  socialYoutube?: string | null;
+  socialTiktok?: string | null;
   avatar?: string | null;
   /**
    * T16: 头像 reservation 消费 key。与 `avatar` 互斥；提供该字段时后端会：
@@ -95,6 +110,9 @@ export interface UpdateOwnProfileInput {
 export const OWN_PROFILE_LIMITS = {
   nicknameMaxLength: 32,
   descriptionMaxLength: 500,
+  headlineMaxLength: 80,
+  locationMaxLength: 80,
+  socialMaxLength: 200,
   avatarUrlMaxLength: 2048,
 } as const;
 

@@ -4203,6 +4203,86 @@
     },
     "common": {
       "discountBadge": "{percent}% OFF"
+    },
+    "accountSettings": {
+      "workspace": "{name}'s workspace",
+      "nav": {
+        "profile": "Personal profile",
+        "gifts": "Gifts",
+        "subscription": "Subscription",
+        "usage": "Usage",
+        "promo": "Promocode"
+      },
+      "discord": {
+        "title": "Join our Discord",
+        "body": "Get help, ask questions, connect with community",
+        "cta": "Join now"
+      },
+      "signOut": "Sign out",
+      "profile": {
+        "edit": "Edit",
+        "credits": "Credits",
+        "creditsLeft": "{count} credits left",
+        "creditsPool": "{percent}% of maximum credit pool",
+        "topUp": "Top-up",
+        "usageHistory": "Usage history",
+        "seeAll": "See all",
+        "autoPublishTitle": "Auto-publish new generations",
+        "autoPublishBody": "When enabled, new generations are automatically visible in Explore. Turn it off to keep them private by default.",
+        "deletionTitle": "Manage Account Deletion",
+        "deletionSubtitle": "Account deletion settings",
+        "deletionWarning": "Deleting your account will permanently remove:",
+        "deletionItems": {
+          "generations": "Access to all your generations",
+          "library": "All Library & Community content",
+          "subscription": "Current discounts and subscription",
+          "settings": "All saved settings and presets",
+          "credits": "Remaining credits on your balance"
+        },
+        "deleteAccount": "Delete Account",
+        "comingSoon": "Coming soon",
+        "usageTooltip": "{amount} credits spent ({date})"
+      },
+      "usage": {
+        "title": "Usage",
+        "subtitle": "Track your credit consumption over time.",
+        "comingSoon": "Usage analytics coming soon.",
+        "chartTitle": "Credits spent (last 30 days)"
+      },
+      "promo": {
+        "title": "Promocode",
+        "subtitle": "Redeem a code to add credits or unlock perks.",
+        "placeholder": "Enter your code",
+        "redeem": "Redeem"
+      },
+      "gifts": {
+        "title": "Gifts",
+        "subtitle": "Rewards and gifts you have received.",
+        "comingSoon": "No gifts yet."
+      },
+      "subscription": {
+        "title": "Subscription",
+        "subtitle": "Manage your plan and billing.",
+        "comingSoon": "Subscription management coming soon."
+      },
+      "editProfile": {
+        "title": "Edit profile",
+        "upload": "Upload",
+        "username": "Username",
+        "headline": "Headline",
+        "headlinePlaceholder": "Type headline here...",
+        "bio": "Bio",
+        "bioPlaceholder": "Type bio here...",
+        "location": "Location",
+        "locationPlaceholder": "Where are you based?",
+        "socials": "Socials",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saved": "Profile updated",
+        "errorGeneric": "Something went wrong. Please try again.",
+        "errorAvatarType": "Unsupported image format.",
+        "errorAvatarSize": "Image must be under {maxMb}MB."
+      }
     }
   },
   "videoShare": {

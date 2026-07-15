@@ -3867,6 +3867,86 @@
     },
     "common": {
       "discountBadge": "Giảm {percent}%"
+    },
+    "accountSettings": {
+      "workspace": "Không gian làm việc của {name}",
+      "nav": {
+        "profile": "Hồ sơ cá nhân",
+        "gifts": "Quà tặng",
+        "subscription": "Gói đăng ký",
+        "usage": "Sử dụng",
+        "promo": "Mã khuyến mãi"
+      },
+      "discord": {
+        "title": "Tham gia Discord",
+        "body": "Nhận trợ giúp, đặt câu hỏi, kết nối với cộng đồng",
+        "cta": "Tham gia ngay"
+      },
+      "signOut": "Đăng xuất",
+      "profile": {
+        "edit": "Chỉnh sửa",
+        "credits": "Tín dụng",
+        "creditsLeft": "Còn lại {count} tín dụng",
+        "creditsPool": "{percent}% của tổng quỹ tín dụng tối đa",
+        "topUp": "Nạp thêm",
+        "usageHistory": "Lịch sử sử dụng",
+        "seeAll": "Xem tất cả",
+        "autoPublishTitle": "Tự động đăng các tác phẩm mới",
+        "autoPublishBody": "Khi bật, các tác phẩm mới sẽ tự động hiển thị trong Khám phá. Tắt để giữ chúng ở chế độ riêng tư theo mặc định.",
+        "deletionTitle": "Quản lý xóa tài khoản",
+        "deletionSubtitle": "Cài đặt xóa tài khoản",
+        "deletionWarning": "Xóa tài khoản sẽ xóa vĩnh viễn:",
+        "deletionItems": {
+          "generations": "Quyền truy cập tất cả tác phẩm của bạn",
+          "library": "Toàn bộ nội dung Thư viện & Cộng đồng",
+          "subscription": "Ưu đãi và gói đăng ký hiện tại",
+          "settings": "Tất cả cài đặt và mẫu đã lưu",
+          "credits": "Tín dụng còn lại trong số dư"
+        },
+        "deleteAccount": "Xóa tài khoản",
+        "comingSoon": "Sắp có",
+        "usageTooltip": "Đã dùng {amount} tín dụng ({date})"
+      },
+      "usage": {
+        "title": "Sử dụng",
+        "subtitle": "Theo dõi mức tiêu thụ tín dụng theo thời gian.",
+        "comingSoon": "Phân tích sử dụng sắp ra mắt.",
+        "chartTitle": "Tín dụng đã dùng (30 ngày qua)"
+      },
+      "promo": {
+        "title": "Mã khuyến mãi",
+        "subtitle": "Đổi mã để nhận tín dụng hoặc mở khóa ưu đãi.",
+        "placeholder": "Nhập mã của bạn",
+        "redeem": "Đổi"
+      },
+      "gifts": {
+        "title": "Quà tặng",
+        "subtitle": "Phần thưởng và quà tặng bạn đã nhận.",
+        "comingSoon": "Chưa có quà tặng."
+      },
+      "subscription": {
+        "title": "Gói đăng ký",
+        "subtitle": "Quản lý gói và thanh toán của bạn.",
+        "comingSoon": "Quản lý gói đăng ký sắp ra mắt."
+      },
+      "editProfile": {
+        "title": "Chỉnh sửa hồ sơ",
+        "upload": "Tải lên",
+        "username": "Tên người dùng",
+        "headline": "Tiêu đề",
+        "headlinePlaceholder": "Nhập tiêu đề...",
+        "bio": "Giới thiệu",
+        "bioPlaceholder": "Nhập giới thiệu...",
+        "location": "Vị trí",
+        "locationPlaceholder": "Bạn ở đâu?",
+        "socials": "Mạng xã hội",
+        "cancel": "Hủy",
+        "save": "Lưu",
+        "saved": "Đã cập nhật hồ sơ",
+        "errorGeneric": "Đã xảy ra lỗi. Vui lòng thử lại.",
+        "errorAvatarType": "Định dạng ảnh không được hỗ trợ.",
+        "errorAvatarSize": "Ảnh phải nhỏ hơn {maxMb}MB."
+      }
     }
   },
   "videoShare": {

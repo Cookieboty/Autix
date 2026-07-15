@@ -3867,6 +3867,86 @@
     },
     "common": {
       "discountBadge": "{percent}% オフ"
+    },
+    "accountSettings": {
+      "workspace": "{name} のワークスペース",
+      "nav": {
+        "profile": "プロフィール",
+        "gifts": "ギフト",
+        "subscription": "サブスクリプション",
+        "usage": "使用状況",
+        "promo": "プロモコード"
+      },
+      "discord": {
+        "title": "Discord に参加",
+        "body": "ヘルプや質問、コミュニティとの交流はこちら",
+        "cta": "今すぐ参加"
+      },
+      "signOut": "ログアウト",
+      "profile": {
+        "edit": "編集",
+        "credits": "クレジット",
+        "creditsLeft": "残り {count} クレジット",
+        "creditsPool": "最大クレジットプールの {percent}%",
+        "topUp": "チャージ",
+        "usageHistory": "使用履歴",
+        "seeAll": "すべて表示",
+        "autoPublishTitle": "新しい生成物を自動公開",
+        "autoPublishBody": "有効にすると、新しい生成物は自動的に Explore に表示されます。オフにすると既定で非公開になります。",
+        "deletionTitle": "アカウント削除の管理",
+        "deletionSubtitle": "アカウント削除の設定",
+        "deletionWarning": "アカウントを削除すると、以下が完全に削除されます：",
+        "deletionItems": {
+          "generations": "すべての生成物へのアクセス",
+          "library": "ライブラリとコミュニティのすべてのコンテンツ",
+          "subscription": "現在の割引とサブスクリプション",
+          "settings": "保存済みのすべての設定とプリセット",
+          "credits": "残高に残っているクレジット"
+        },
+        "deleteAccount": "アカウントを削除",
+        "comingSoon": "近日対応",
+        "usageTooltip": "{date} に {amount} クレジット消費"
+      },
+      "usage": {
+        "title": "使用状況",
+        "subtitle": "クレジット消費の推移を確認できます。",
+        "comingSoon": "使用状況の分析は近日公開予定です。",
+        "chartTitle": "クレジット消費（過去 30 日）"
+      },
+      "promo": {
+        "title": "プロモコード",
+        "subtitle": "コードを引き換えてクレジットや特典を獲得しましょう。",
+        "placeholder": "コードを入力",
+        "redeem": "引き換える"
+      },
+      "gifts": {
+        "title": "ギフト",
+        "subtitle": "受け取った報酬やギフト。",
+        "comingSoon": "ギフトはまだありません。"
+      },
+      "subscription": {
+        "title": "サブスクリプション",
+        "subtitle": "プランと請求を管理します。",
+        "comingSoon": "サブスクリプション管理は近日公開予定です。"
+      },
+      "editProfile": {
+        "title": "プロフィールを編集",
+        "upload": "アップロード",
+        "username": "ユーザー名",
+        "headline": "見出し",
+        "headlinePlaceholder": "見出しを入力…",
+        "bio": "自己紹介",
+        "bioPlaceholder": "自己紹介を入力…",
+        "location": "所在地",
+        "locationPlaceholder": "どちらにお住まいですか？",
+        "socials": "ソーシャル",
+        "cancel": "キャンセル",
+        "save": "保存",
+        "saved": "プロフィールを更新しました",
+        "errorGeneric": "エラーが発生しました。もう一度お試しください。",
+        "errorAvatarType": "対応していない画像形式です。",
+        "errorAvatarSize": "画像は {maxMb}MB 未満にしてください。"
+      }
     }
   },
   "videoShare": {

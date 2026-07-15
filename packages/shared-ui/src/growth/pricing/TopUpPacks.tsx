@@ -37,7 +37,7 @@ function TopUpCard({ pkg, index }: { pkg: PointsPackage; index: number }) {
   return (
     <MagneticLink
       href="/membership/packages"
-      className="group rounded-lg border border-foreground/10 bg-foreground/[0.045] p-5 transition duration-300 hover:border-foreground/22 hover:bg-foreground/[0.07]"
+      className="group rounded-2xl border border-foreground/10 bg-foreground/[0.045] p-5 transition duration-300 hover:border-foreground/22 hover:bg-foreground/[0.07]"
     >
       <div className="mb-5 flex items-start justify-between gap-4">
         <div
@@ -83,7 +83,7 @@ export function TopUpSection({ packages }: { packages: PointsPackage[] }) {
             <Package className="size-4" />
             {t('topUpMembershipOnly')}
           </p>
-          <h2 className="text-3xl font-semibold text-foreground md:text-5xl">
+          <h2 className="text-3xl font-black uppercase tracking-tight text-foreground md:text-5xl">
             {t('topUpTitle')}
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-foreground/60">

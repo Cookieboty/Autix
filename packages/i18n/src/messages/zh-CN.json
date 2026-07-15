@@ -4203,6 +4203,86 @@
     },
     "common": {
       "discountBadge": "立减{percent}%"
+    },
+    "accountSettings": {
+      "workspace": "{name} 的工作区",
+      "nav": {
+        "profile": "个人资料",
+        "gifts": "礼包",
+        "subscription": "订阅",
+        "usage": "用量",
+        "promo": "兑换码"
+      },
+      "discord": {
+        "title": "加入我们的 Discord",
+        "body": "获取帮助、提出问题、与社区交流",
+        "cta": "立即加入"
+      },
+      "signOut": "退出登录",
+      "profile": {
+        "edit": "编辑",
+        "credits": "额度",
+        "creditsLeft": "剩余 {count} 额度",
+        "creditsPool": "占最大额度池的 {percent}%",
+        "topUp": "充值",
+        "usageHistory": "用量记录",
+        "seeAll": "查看全部",
+        "autoPublishTitle": "自动发布新作品",
+        "autoPublishBody": "开启后，新生成的作品会自动在广场可见。关闭则默认保持私密。",
+        "deletionTitle": "账户删除管理",
+        "deletionSubtitle": "账户删除设置",
+        "deletionWarning": "删除账户将永久移除：",
+        "deletionItems": {
+          "generations": "你的全部生成作品",
+          "library": "全部素材库与社区内容",
+          "subscription": "当前折扣与订阅",
+          "settings": "全部已保存的设置与预设",
+          "credits": "余额中的剩余额度"
+        },
+        "deleteAccount": "删除账户",
+        "comingSoon": "即将支持",
+        "usageTooltip": "{date} 消耗 {amount} 额度"
+      },
+      "usage": {
+        "title": "用量",
+        "subtitle": "查看你的额度消耗趋势。",
+        "comingSoon": "用量统计即将上线。",
+        "chartTitle": "额度消耗（近 30 天）"
+      },
+      "promo": {
+        "title": "兑换码",
+        "subtitle": "兑换代码以获得额度或解锁权益。",
+        "placeholder": "输入你的兑换码",
+        "redeem": "兑换"
+      },
+      "gifts": {
+        "title": "礼包",
+        "subtitle": "你收到的奖励与礼包。",
+        "comingSoon": "暂无礼包。"
+      },
+      "subscription": {
+        "title": "订阅",
+        "subtitle": "管理你的套餐与账单。",
+        "comingSoon": "订阅管理即将上线。"
+      },
+      "editProfile": {
+        "title": "编辑资料",
+        "upload": "上传",
+        "username": "用户名",
+        "headline": "标题",
+        "headlinePlaceholder": "输入标题…",
+        "bio": "简介",
+        "bioPlaceholder": "输入简介…",
+        "location": "所在地",
+        "locationPlaceholder": "你在哪里？",
+        "socials": "社交账号",
+        "cancel": "取消",
+        "save": "保存",
+        "saved": "资料已更新",
+        "errorGeneric": "出错了，请重试。",
+        "errorAvatarType": "不支持的图片格式。",
+        "errorAvatarSize": "图片需小于 {maxMb}MB。"
+      }
     }
   },
   "videoShare": {

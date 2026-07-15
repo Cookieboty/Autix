@@ -4203,6 +4203,86 @@
     },
     "common": {
       "discountBadge": "-{percent} %"
+    },
+    "accountSettings": {
+      "workspace": "Espace de {name}",
+      "nav": {
+        "profile": "Profil personnel",
+        "gifts": "Cadeaux",
+        "subscription": "Abonnement",
+        "usage": "Utilisation",
+        "promo": "Code promo"
+      },
+      "discord": {
+        "title": "Rejoignez notre Discord",
+        "body": "Obtenez de l'aide, posez des questions, rejoignez la communauté",
+        "cta": "Rejoindre"
+      },
+      "signOut": "Se déconnecter",
+      "profile": {
+        "edit": "Modifier",
+        "credits": "Crédits",
+        "creditsLeft": "{count} crédits restants",
+        "creditsPool": "{percent}% du pool de crédits maximum",
+        "topUp": "Recharger",
+        "usageHistory": "Historique d'utilisation",
+        "seeAll": "Tout voir",
+        "autoPublishTitle": "Publier automatiquement les nouvelles générations",
+        "autoPublishBody": "Une fois activé, les nouvelles générations sont automatiquement visibles dans Explorer. Désactivez-le pour les garder privées par défaut.",
+        "deletionTitle": "Gérer la suppression du compte",
+        "deletionSubtitle": "Paramètres de suppression du compte",
+        "deletionWarning": "La suppression de votre compte supprimera définitivement :",
+        "deletionItems": {
+          "generations": "Accès à toutes vos générations",
+          "library": "Tout le contenu Bibliothèque et Communauté",
+          "subscription": "Remises et abonnement actuels",
+          "settings": "Tous les paramètres et préréglages enregistrés",
+          "credits": "Crédits restants sur votre solde"
+        },
+        "deleteAccount": "Supprimer le compte",
+        "comingSoon": "Bientôt",
+        "usageTooltip": "{amount} crédits utilisés ({date})"
+      },
+      "usage": {
+        "title": "Utilisation",
+        "subtitle": "Suivez votre consommation de crédits dans le temps.",
+        "comingSoon": "Analyses d'utilisation bientôt disponibles.",
+        "chartTitle": "Crédits utilisés (30 derniers jours)"
+      },
+      "promo": {
+        "title": "Code promo",
+        "subtitle": "Utilisez un code pour ajouter des crédits ou débloquer des avantages.",
+        "placeholder": "Saisissez votre code",
+        "redeem": "Utiliser"
+      },
+      "gifts": {
+        "title": "Cadeaux",
+        "subtitle": "Récompenses et cadeaux reçus.",
+        "comingSoon": "Aucun cadeau pour le moment."
+      },
+      "subscription": {
+        "title": "Abonnement",
+        "subtitle": "Gérez votre forfait et votre facturation.",
+        "comingSoon": "Gestion des abonnements bientôt disponible."
+      },
+      "editProfile": {
+        "title": "Modifier le profil",
+        "upload": "Téléverser",
+        "username": "Nom d'utilisateur",
+        "headline": "Titre",
+        "headlinePlaceholder": "Saisissez un titre...",
+        "bio": "Bio",
+        "bioPlaceholder": "Saisissez votre bio...",
+        "location": "Localisation",
+        "locationPlaceholder": "Où êtes-vous ?",
+        "socials": "Réseaux sociaux",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "saved": "Profil mis à jour",
+        "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+        "errorAvatarType": "Format d'image non pris en charge.",
+        "errorAvatarSize": "L'image doit faire moins de {maxMb} Mo."
+      }
     }
   },
   "videoShare": {
