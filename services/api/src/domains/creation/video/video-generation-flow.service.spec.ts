@@ -172,24 +172,11 @@ function makeService(options: {
     queryTask: vi.fn(),
   };
   const modelResolver = {
-    probeDefaultVideoModel: vi.fn(),
     resolveForGeneration: vi.fn(async () => {
-      let modelConfigId = (clip.params as { modelConfigId?: string }).modelConfigId;
+      // 无兜底：clip 必须显式带 modelConfigId，缺失即拒绝（与 resolver 真身一致）。
+      const modelConfigId = (clip.params as { modelConfigId?: string }).modelConfigId;
       if (!modelConfigId) {
-        const def = await modelConfigService.findDefaultByType(ModelType.video);
-        if (!def) {
-          throw new Error('未配置默认视频模型，请先在管理后台配置（type=video, isDefault=true）');
-        }
-        modelConfigId = def.id;
-        await prisma.video_clips.update({
-          where: { id: clip.id },
-          data: {
-            params: {
-              ...(clip.params as Record<string, unknown>),
-              modelConfigId,
-            },
-          },
-        });
+        throw new Error('该分镜未指定视频模型，请先选择模型');
       }
       const modelConfig =
         await modelConfigService.getConfigForOrchestrator(modelConfigId);

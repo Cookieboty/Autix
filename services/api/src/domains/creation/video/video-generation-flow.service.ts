@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
@@ -68,7 +68,7 @@ function toVideoModelHint(modelConfig: {
 }
 
 @Injectable()
-export class VideoGenerationFlowService implements OnModuleInit {
+export class VideoGenerationFlowService {
   private readonly logger = new Logger(VideoGenerationFlowService.name);
 
   constructor(
@@ -84,10 +84,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
     private readonly holdReconciliation: VideoGenerationHoldReconciliationService,
     private readonly terminalConvergence: VideoGenerationTerminalConvergenceService,
   ) { }
-
-  async onModuleInit() {
-    await this.modelResolver.probeDefaultVideoModel();
-  }
 
   @Cron('*/30 * * * * *')
   async pollPendingGenerations() {

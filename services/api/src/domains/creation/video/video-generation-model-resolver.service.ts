@@ -1,8 +1,7 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { ModelType, type Prisma } from '../../platform/prisma/generated';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import type { Prisma } from '../../platform/prisma/generated';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { resolveApiKey, resolveBaseUrl } from '../model-config/model-gateway-credentials';
-import { VideoProjectRepository } from './video-project.repository';
 
 type ClipModelParams = {
   modelConfigId?: string;
@@ -10,59 +9,17 @@ type ClipModelParams = {
 
 @Injectable()
 export class VideoGenerationModelResolverService {
-  private readonly logger = new Logger(VideoGenerationModelResolverService.name);
-
-  constructor(
-    private readonly repository: VideoProjectRepository,
-    private readonly modelConfigService: ModelConfigService,
-  ) {}
-
-  async probeDefaultVideoModel() {
-    // 启动期只读探测默认视频模型，缺失时 WARN（不阻断启动，避免开发态被卡）。
-    try {
-      const def = await this.modelConfigService.findDefaultByType(
-        ModelType.video,
-      );
-      if (!def) {
-        this.logger.warn(
-          '未发现默认视频模型 (type=video, isDefault=true)。',
-        );
-        this.logger.warn(
-          '视频生成路径将依赖 clip.params.modelConfigId 显式指定；若也缺失则 generate 时抛 BadRequestException。',
-        );
-      } else {
-        this.logger.log(
-          `默认视频模型: ${def.name} (id=${def.id}, model=${def.model})`,
-        );
-      }
-    } catch (err) {
-      this.logger.warn(`默认视频模型探测失败: ${(err as Error).message}`);
-    }
-  }
+  constructor(private readonly modelConfigService: ModelConfigService) {}
 
   async resolveForGeneration(clip: {
     id: string;
     params: Prisma.JsonValue | Prisma.InputJsonValue | null;
   }, userId?: string) {
-    let modelConfigId = this.getModelConfigId(clip.params);
+    // 无兜底：clip 必须显式携带 modelConfigId（前端选模型时写入）。缺失即拒绝，
+    // 不再回退到「默认视频模型」——视频模型统一由数据库配置 + 前端显式选择。
+    const modelConfigId = this.getModelConfigId(clip.params);
     if (!modelConfigId) {
-      const def = userId
-        ? await this.modelConfigService.findDefaultByTypeForUser(ModelType.video, userId)
-        : await this.modelConfigService.findDefaultByType(ModelType.video);
-      if (!def) {
-        throw new BadRequestException(
-          '未配置默认视频模型，请先在管理后台配置（type=video, isDefault=true）',
-        );
-      }
-
-      modelConfigId = def.id;
-      await this.repository.updateClipParams(clip.id, {
-        ...this.toParamRecord(clip.params),
-        modelConfigId,
-      } as Prisma.InputJsonValue);
-      this.logger.log(
-        `Clip ${clip.id} fallback to default video model ${modelConfigId}`,
-      );
+      throw new BadRequestException('该分镜未指定视频模型，请先选择模型');
     }
 
     const modelConfig =
@@ -129,12 +86,5 @@ export class VideoGenerationModelResolverService {
 
   private getModelConfigId(params: Prisma.JsonValue | Prisma.InputJsonValue | null) {
     return (params as ClipModelParams | null)?.modelConfigId;
-  }
-
-  private toParamRecord(params: Prisma.JsonValue | Prisma.InputJsonValue | null) {
-    if (!params || typeof params !== 'object' || Array.isArray(params)) {
-      return {};
-    }
-    return params as Record<string, unknown>;
   }
 }
