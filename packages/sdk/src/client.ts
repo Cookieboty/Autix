@@ -2209,6 +2209,10 @@ export const galleryAdminApi = {
     chatApi.post(`/api/admin/gallery/reports/${reportId}/resolve`, { status }),
   batch: (ids: string[], action: GalleryBatchAction, reason?: string) =>
     chatApi.post<GalleryBatchResult>('/api/admin/gallery/batch', { ids, action, reason }),
+  importGallery: (items: Record<string, any>[]) =>
+    chatApi.post<{ jobId: string }>('/api/admin/gallery/import', { items }),
+  getGalleryImportTemplate: () =>
+    chatApi.get<Record<string, any>[]>('/api/admin/gallery/import-template'),
 };
 
 // ── Gallery 公开热度 Feed (首页图片/视频画廊消费) ───────────────────────────
