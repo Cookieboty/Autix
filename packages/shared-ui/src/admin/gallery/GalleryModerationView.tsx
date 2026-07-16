@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle,
   XCircle,
@@ -12,11 +13,14 @@ import {
   ImageOff,
   Flame,
   Search,
+  Upload,
 } from 'lucide-react';
 import {
   useGalleryAdminList,
+  useGalleryBatchJobPoller,
   useGalleryCategories,
   useGalleryModeration,
+  useImportGalleryMutation,
   type GalleryAdminKind,
   type GalleryAdminListParams,
   type GalleryAdminSourceType,
@@ -44,6 +48,7 @@ import {
 } from '../../ui/dialog';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../../ui/empty';
 import { BoostDialog } from '../boosts/BoostDialog';
+import { TemplateImportDialog } from '../TemplateImportDialog';
 
 const SOURCE_LABEL_KEY: Record<GalleryPostAdminItem['sourceType'], string> = {
   USER_UPLOAD: 'gallery.sources.USER_UPLOAD',
@@ -57,6 +62,21 @@ const SOURCE_OPTIONS: { value: GalleryAdminSourceType; labelKey: string }[] = [
   { value: 'FROM_GENERATION', labelKey: 'gallery.sources.FROM_GENERATION' },
   { value: 'FROM_TEMPLATE', labelKey: 'gallery.sources.FROM_TEMPLATE' },
   { value: 'ADMIN_CURATED', labelKey: 'gallery.sources.ADMIN_CURATED' },
+];
+
+/** 广场作品 JSON 导入模板：与后端 GET /api/admin/gallery/import-template 返回结构保持一致。 */
+const GALLERY_IMPORT_TEMPLATE = [
+  {
+    kind: 'IMAGE',
+    title: '',
+    description: '',
+    category: '',
+    tags: [],
+    coverImage: '',
+    mediaUrls: [],
+    aspectRatio: '',
+    durationSec: 0,
+  },
 ];
 
 const PAGE_SIZE = 20;
@@ -86,6 +106,10 @@ const TABS: { value: GalleryAdminTab; labelKey: string }[] = [
 export function GalleryModerationView() {
   const t = useTranslations('adminOperations');
   const [tab, setTab] = useState<GalleryAdminTab>('PENDING');
+  const [importOpen, setImportOpen] = useState(false);
+  const importGalleryMutation = useImportGalleryMutation();
+  const pollJob = useGalleryBatchJobPoller();
+  const queryClient = useQueryClient();
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
@@ -97,6 +121,15 @@ export function GalleryModerationView() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="h-3.5 w-3.5 mr-1" />
+            {t('gallery.import')}
+          </Button>
           <div className="inline-flex items-center gap-1 rounded-md border bg-muted/40 p-1">
             {TABS.map((tabOption) => (
               <button
@@ -118,6 +151,17 @@ export function GalleryModerationView() {
 
       {/* key=tab 让切 tab 时面板重挂载，筛选/页码回到初始，避免串状态 */}
       <GalleryPanel key={tab} status={tab} />
+
+      <TemplateImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => {
+          void queryClient.invalidateQueries({ queryKey: ['galleryAdmin'] });
+        }}
+        importFn={(items) => importGalleryMutation.mutateAsync(items)}
+        pollJob={pollJob}
+        template={GALLERY_IMPORT_TEMPLATE}
+      />
     </div>
   );
 }
