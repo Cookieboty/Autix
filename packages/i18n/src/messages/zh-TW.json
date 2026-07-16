@@ -4014,6 +4014,78 @@
         "nickname": "暱稱",
         "nicknamePlaceholder": "你的顯示名"
       }
+    },
+    "assets": {
+      "searchPlaceholder": "搜尋",
+      "type": "類型",
+      "density": "縮圖大小",
+      "newFolder": "新增資料夾",
+      "loading": "正在載入素材…",
+      "loadingMore": "載入更多…",
+      "unknownDate": "未知日期",
+      "selectedCount": "已選 {count} 項",
+      "clearSelection": "取消選擇",
+      "bucket": {
+        "all": "全部素材",
+        "favorites": "收藏",
+        "image": "圖片",
+        "video": "影片"
+      },
+      "empty": {
+        "title": "你的素材會出現在這裡",
+        "description": "你生成的一切都會進入這個素材庫。"
+      },
+      "detail": {
+        "author": "創作者",
+        "type": "類型",
+        "model": "模型",
+        "size": "尺寸",
+        "createdAt": "建立時間",
+        "download": "下載",
+        "delete": "刪除"
+      },
+      "fit": {
+        "toCover": "鋪滿卡片",
+        "toContain": "完整展示"
+      },
+      "folder": {
+        "rename": "重新命名",
+        "delete": "刪除",
+        "renamePrompt": "資料夾名稱",
+        "deleteConfirm": "刪除資料夾「{name}」？裡面的素材會保留在素材庫中。",
+        "createFailed": "建立資料夾失敗",
+        "renameFailed": "重新命名資料夾失敗",
+        "deleteFailed": "刪除資料夾失敗"
+      },
+      "card": {
+        "open": "開啟",
+        "addToFolder": "加入資料夾",
+        "privateFolders": "私有資料夾",
+        "folderAssets": "{count} 個素材",
+        "createFolder": "新增資料夾",
+        "download": "下載",
+        "delete": "刪除",
+        "moveFailed": "移動素材失敗",
+        "deleteFailed": "刪除素材失敗",
+        "save": "儲存",
+        "more": "更多"
+      },
+      "bulk": {
+        "download": "下載",
+        "publishAll": "全部發布",
+        "addTo": "加入到",
+        "delete": "刪除",
+        "publishOk": "已發布 {count} 個到廣場",
+        "publishFailed": "{count} 個發布失敗",
+        "publishSkipped": "{count} 個無法發布（非生成圖片）"
+      },
+      "icon": {
+        "change": "修改圖示",
+        "search": "搜尋 Emoji",
+        "empty": "沒有符合",
+        "reset": "恢復預設圖示",
+        "failed": "修改圖示失敗"
+      }
     }
   },
   "videoShare": {

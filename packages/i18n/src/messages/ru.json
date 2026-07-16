@@ -4014,6 +4014,78 @@
         "nickname": "Никнейм",
         "nicknamePlaceholder": "Отображаемое имя"
       }
+    },
+    "assets": {
+      "searchPlaceholder": "Search",
+      "type": "Type",
+      "density": "Thumbnail size",
+      "newFolder": "New folder",
+      "loading": "Loading assets…",
+      "loadingMore": "Loading more…",
+      "unknownDate": "Unknown date",
+      "selectedCount": "{count} selected",
+      "clearSelection": "Clear selection",
+      "bucket": {
+        "all": "All Assets",
+        "favorites": "Favorites",
+        "image": "Image",
+        "video": "Video"
+      },
+      "empty": {
+        "title": "Your assets will appear here",
+        "description": "Everything you generate lands in this library."
+      },
+      "detail": {
+        "author": "Creator",
+        "type": "Type",
+        "model": "Model",
+        "size": "Size",
+        "createdAt": "Created",
+        "download": "Download",
+        "delete": "Delete"
+      },
+      "fit": {
+        "toCover": "Fill card",
+        "toContain": "Fit whole asset"
+      },
+      "folder": {
+        "rename": "Rename",
+        "delete": "Delete",
+        "renamePrompt": "Folder name",
+        "deleteConfirm": "Delete folder \"{name}\"? Assets inside stay in your library.",
+        "createFailed": "Could not create folder",
+        "renameFailed": "Could not rename folder",
+        "deleteFailed": "Could not delete folder"
+      },
+      "card": {
+        "open": "Open",
+        "addToFolder": "Add to folder",
+        "privateFolders": "Private folders",
+        "folderAssets": "{count} assets",
+        "createFolder": "Create new folder",
+        "download": "Download",
+        "delete": "Delete",
+        "moveFailed": "Could not move asset",
+        "deleteFailed": "Could not delete asset",
+        "save": "Save",
+        "more": "More"
+      },
+      "bulk": {
+        "download": "Download",
+        "publishAll": "Publish all",
+        "addTo": "Add to",
+        "delete": "Delete",
+        "publishOk": "Published {count} to the gallery",
+        "publishFailed": "Failed to publish {count}",
+        "publishSkipped": "{count} cannot be published (not generated images)"
+      },
+      "icon": {
+        "change": "Change icon",
+        "search": "Search Emoji",
+        "empty": "No match",
+        "reset": "Reset to default",
+        "failed": "Could not update icon"
+      }
     }
   },
   "videoShare": {
