@@ -6,6 +6,8 @@ import {
   type GalleryAdminListResult,
   type GalleryAdminSourceType,
   type GalleryAdminStatus,
+  type GalleryBatchAction,
+  type GalleryBatchResult,
   type GalleryPostAdminItem,
 } from '@autix/sdk';
 // 注：gallery import 已下线（后端 /admin/gallery/import 端点已删除，见 Plan C Task 1）；
@@ -17,6 +19,8 @@ export type {
   GalleryAdminListResult,
   GalleryAdminSourceType,
   GalleryAdminStatus,
+  GalleryBatchAction,
+  GalleryBatchResult,
   GalleryPostAdminItem,
 };
 
@@ -35,6 +39,14 @@ export const galleryAdminActions = {
   remove: (id: string) => galleryAdminApi.remove(id),
   resolveReport: (reportId: string, status: 'RESOLVED' | 'DISMISSED') =>
     galleryAdminApi.resolveReport(reportId, status),
+  batch: async (
+    ids: string[],
+    action: GalleryBatchAction,
+    reason?: string,
+  ): Promise<GalleryBatchResult> => {
+    const { data } = await galleryAdminApi.batch(ids, action, reason);
+    return data;
+  },
   /** 复用与模板导入相同的通用 batch-job 轮询接口，不新建第二套轮询。 */
   getBatchJob: async (jobId: string) => {
     const { data } = await batchJobApi.get(jobId);

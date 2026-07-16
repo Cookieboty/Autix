@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { galleryAdminActions } from './gallery-admin.actions';
 import type { GalleryAdminListParams } from './gallery-admin.actions';
+import type { GalleryBatchAction } from './gallery-admin.actions';
 
 type MutationCallbacks = {
   onSuccess?: () => void | Promise<void>;
@@ -144,7 +145,28 @@ export function useGalleryModeration(callbacks?: MutationCallbacks) {
     onError: (error) => callOnError(error, callbacks),
   });
 
-  return { approve, reject, hide, remove, resolveReport, pendingIds };
+  const batch = useMutation({
+    mutationFn: ({
+      ids,
+      action,
+      reason,
+    }: {
+      ids: string[];
+      action: GalleryBatchAction;
+      reason?: string;
+    }) => galleryAdminActions.batch(ids, action, reason),
+    onMutate: ({ ids }) => {
+      addPending(ids);
+    },
+    onSuccess: () => {
+      invalidateAll();
+      void callOnSuccess(callbacks);
+    },
+    onError: (error) => callOnError(error, callbacks),
+    onSettled: (_data, _error, { ids }) => clearPending(ids),
+  });
+
+  return { approve, reject, hide, remove, resolveReport, batch, pendingIds };
 }
 
 /** 复用通用 batch-job 轮询 action，供 TemplateImportDialog 的 pollJob 直接使用。 */
