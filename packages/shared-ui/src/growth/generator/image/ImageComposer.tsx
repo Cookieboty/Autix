@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { computeTaskEstimate, type ParamsSchema, type PricingSchema } from '@autix/domain/pricing';
-import { type ModelConfigItem } from '@autix/shared-store';
+import { authActions, useAuthStore, type ModelConfigItem } from '@autix/shared-store';
 import { MagneticButton, SpotlightPanel } from '../../GrowthInteractions';
 import { translateSchemaKey, useSchemaForm } from '../../../pricing';
 import {
@@ -32,6 +32,7 @@ import {
   buildPublicImageGenerationSettings,
   type PublicImageGenerationPayload,
 } from './public-image-generation';
+import { visibilityFromAutoPublish } from './visibility-default';
 
 function limitPublicUploadedReferences(
   refs: PublicUploadedReference[],
@@ -97,7 +98,28 @@ export function ImageComposer({
   // 画质档位显示名走 i18n(pricing.options.<value>)。
   const tOptions = useTranslations('pricing.options');
   const [prompt, setPrompt] = useState('');
-  const [visibility, setVisibility] = useState<'private' | 'public'>('private');
+  const autoPublish = useAuthStore((s) => Boolean(s.user?.autoPublish));
+  const authHydrated = useAuthStore((s) => s.hydrated);
+  const [visibility, setVisibility] = useState<'private' | 'public'>(() =>
+    visibilityFromAutoPublish(autoPublish),
+  );
+  // 用户本次是否手动切过；切过后本会话内不再被设置默认值覆盖，且绝不回写设置。
+  const visibilityTouchedRef = useRef(false);
+
+  // 进入页面拉一次 DB 最新 autoPublish(hydrate 只读本地，不打 /auth/profile)。非阻塞。
+  useEffect(() => {
+    const s = useAuthStore.getState();
+    if (s.isAuthenticated && s.hydrated) {
+      authActions.refreshProfile().catch(() => {});
+    }
+  }, [authHydrated]);
+
+  // profile 异步落值后，只要用户未手动切过，默认可见性就跟随 autoPublish。
+  useEffect(() => {
+    if (!visibilityTouchedRef.current) {
+      setVisibility(visibilityFromAutoPublish(autoPublish));
+    }
+  }, [autoPublish]);
   const [uploadedRefs, setUploadedRefs] = useState<PublicUploadedReference[]>([]);
   const [uploading, setUploading] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
@@ -407,10 +429,12 @@ export function ImageComposer({
                       type="button"
                       aria-pressed={visibility === 'public'}
                       aria-label={visibility === 'private' ? t('private') : t('public')}
-                      onClick={() =>
-                        setVisibility((current) => (current === 'private' ? 'public' : 'private'))
-                      }
-                      className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl border border-border bg-background/22 text-foreground/78 transition hover:bg-secondary hover:text-foreground"
+                      disabled={!authHydrated}
+                      onClick={() => {
+                        visibilityTouchedRef.current = true;
+                        setVisibility((current) => (current === 'private' ? 'public' : 'private'));
+                      }}
+                      className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl border border-border bg-background/22 text-foreground/78 transition hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {visibility === 'private' ? (
                         <Lock className="size-4" />
