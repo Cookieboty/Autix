@@ -435,7 +435,18 @@ export class AuthService {
    */
   async updateOwnProfile(
     user: AuthUser,
-    input: { nickname?: string | null; description?: string | null; avatar?: string | null; avatarStorageKey?: string },
+    input: {
+      nickname?: string | null;
+      description?: string | null;
+      headline?: string | null;
+      location?: string | null;
+      socialX?: string | null;
+      socialInstagram?: string | null;
+      socialYoutube?: string | null;
+      socialTiktok?: string | null;
+      avatar?: string | null;
+      avatarStorageKey?: string;
+    },
     lang: string = DEFAULT_LANGUAGE,
   ) {
     const dbUser = await this.identityRepository.findUserById(user.id);
@@ -461,15 +472,25 @@ export class AuthService {
     }
 
     // 先写非头像字段（若存在），保持事务粒度最小
-    if (
-      Object.prototype.hasOwnProperty.call(restNonAvatar, 'nickname') ||
-      Object.prototype.hasOwnProperty.call(restNonAvatar, 'description') ||
-      hasAvatarField
-    ) {
-      // 若同时提供了外链 avatar，与 nickname/description 一起原子写；identityRepository.updateOwnProfile 内部已按白名单
-      const payload: { nickname?: string | null; description?: string | null; avatar?: string | null } = {};
-      if (Object.prototype.hasOwnProperty.call(restNonAvatar, 'nickname')) payload.nickname = restNonAvatar.nickname;
-      if (Object.prototype.hasOwnProperty.call(restNonAvatar, 'description')) payload.description = restNonAvatar.description;
+    const SELF_FIELDS = [
+      'nickname',
+      'description',
+      'headline',
+      'location',
+      'socialX',
+      'socialInstagram',
+      'socialYoutube',
+      'socialTiktok',
+    ] as const;
+    const providedSelfFields = SELF_FIELDS.filter((field) =>
+      Object.prototype.hasOwnProperty.call(restNonAvatar, field),
+    );
+    if (providedSelfFields.length > 0 || hasAvatarField) {
+      // 若同时提供了外链 avatar，与自助字段一起原子写；identityRepository.updateOwnProfile 内部已按白名单
+      const payload: Parameters<typeof this.identityRepository.updateOwnProfile>[1] = {};
+      for (const field of providedSelfFields) {
+        payload[field] = restNonAvatar[field];
+      }
       if (hasAvatarField) payload.avatar = _avatarField ?? null;
       await this.identityRepository.updateOwnProfile(user.id, payload);
     }
@@ -579,6 +600,12 @@ export class AuthService {
       nickname: fresh.nickname,
       avatar: fresh.avatar,
       description: fresh.description,
+      headline: fresh.headline,
+      location: fresh.location,
+      socialX: fresh.socialX,
+      socialInstagram: fresh.socialInstagram,
+      socialYoutube: fresh.socialYoutube,
+      socialTiktok: fresh.socialTiktok,
       realName: fresh.realName,
       language: fresh.language,
       emailVerified: fresh.emailVerified,

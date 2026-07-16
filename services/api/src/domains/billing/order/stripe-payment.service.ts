@@ -276,6 +276,42 @@ export class StripePaymentService {
     return payload as StripeSubscription;
   }
 
+  /**
+   * 创建 Stripe 账单门户会话（自助管理订阅 / 支付方式 / 发票下载）。
+   * 前端拿到 url 后整页跳转；用户在 Stripe 完成后按 return_url 带回。
+   */
+  async createBillingPortalSession(
+    customerId: string,
+    returnPath = '/me/settings/subscription',
+  ): Promise<{ url: string }> {
+    const id = stringValue(customerId);
+    if (!id || !id.startsWith('cus_')) {
+      throw new BadRequestException('Stripe Customer ID 无效');
+    }
+    const params = new URLSearchParams({
+      customer: id,
+      return_url: `${await this.getWebAppUrl()}${returnPath}`,
+    });
+    const response = await fetch(`${await this.getApiBase()}/v1/billing_portal/sessions`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${await this.getSecretKey()}`,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message =
+        stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
+        '创建 Stripe 账单门户会话失败';
+      throw new BadRequestException(message);
+    }
+    const url = stringValue((payload as { url?: unknown } | null)?.url);
+    if (!url) throw new BadRequestException('Stripe 未返回账单门户地址');
+    return { url };
+  }
+
   private async createCheckoutForOrder(
     order: orders,
     configuredCurrency?: string,

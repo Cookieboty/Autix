@@ -1595,6 +1595,7 @@ export const membershipApi = {
     chatApi.get<{ levels: MembershipLevel[]; isFirstTime: boolean }>('/api/membership/levels'),
   getMe: () => chatApi.get<MembershipInfo>('/api/membership/me'),
   cancelAtPeriodEnd: () => chatApi.post<UserMembership>('/api/membership/cancel-at-period-end'),
+  createBillingPortal: () => chatApi.post<{ url: string }>('/api/membership/billing-portal'),
 };
 
 // ── Points ──────────────────────────────────────────────────────────────

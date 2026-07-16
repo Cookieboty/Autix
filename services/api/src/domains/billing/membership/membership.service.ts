@@ -199,6 +199,15 @@ export class MembershipService {
     return this.repository.cancelUserMembershipAtPeriodEnd(userId, new Date());
   }
 
+  /** 创建 Stripe 账单门户会话（管理订阅 / 下载发票 / 支付方式）。 */
+  async createBillingPortal(userId: string) {
+    const membership = await this.repository.findUserMembership(userId);
+    if (!membership?.stripeCustomerId) {
+      throw new BadRequestException('当前账户暂无可管理的支付信息');
+    }
+    return this.stripePaymentService.createBillingPortalSession(membership.stripeCustomerId);
+  }
+
   async createLevel(data: Record<string, unknown>) {
     const writeData = this.buildLevelWriteData(data, [
       'name',

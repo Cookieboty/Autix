@@ -125,6 +125,10 @@ export const membershipUserActions = {
     const { data } = await membershipApi.cancelAtPeriodEnd();
     return data;
   },
+  createBillingPortal: async (): Promise<{ url: string }> => {
+    const { data } = await membershipApi.createBillingPortal();
+    return data;
+  },
   getRewardsProgress: async (): Promise<CampaignProgress> => {
     const { data } = await campaignApi.getMyProgress();
     return data;

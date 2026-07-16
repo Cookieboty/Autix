@@ -83,6 +83,12 @@ model User {
   realName                       String?
   nickname                       String?                      @db.VarChar(60)
   description                    String?                      @db.VarChar(500)
+  headline                       String?                      @db.VarChar(80)
+  location                       String?                      @db.VarChar(80)
+  socialX                        String?                      @db.VarChar(200)
+  socialInstagram                String?                      @db.VarChar(200)
+  socialYoutube                  String?                      @db.VarChar(200)
+  socialTiktok                   String?                      @db.VarChar(200)
   avatar                         String?
   avatarStorageKey               String?
   phone                          String?

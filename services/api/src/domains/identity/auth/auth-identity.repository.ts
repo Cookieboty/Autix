@@ -300,12 +300,33 @@ export class AuthIdentityRepository {
    */
   async updateOwnProfile(
     userId: string,
-    input: { nickname?: string | null; description?: string | null; avatar?: string | null },
+    input: {
+      nickname?: string | null;
+      description?: string | null;
+      headline?: string | null;
+      location?: string | null;
+      socialX?: string | null;
+      socialInstagram?: string | null;
+      socialYoutube?: string | null;
+      socialTiktok?: string | null;
+      avatar?: string | null;
+    },
   ) {
-    // 白名单重构造 —— 只有这三个字段被落库
+    // 白名单重构造 —— 只有这些自助字段被落库
     const data: Record<string, unknown> = {};
-    if (Object.prototype.hasOwnProperty.call(input, 'nickname')) data.nickname = input.nickname;
-    if (Object.prototype.hasOwnProperty.call(input, 'description')) data.description = input.description;
+    const SELF_FIELDS = [
+      'nickname',
+      'description',
+      'headline',
+      'location',
+      'socialX',
+      'socialInstagram',
+      'socialYoutube',
+      'socialTiktok',
+    ] as const;
+    for (const field of SELF_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(input, field)) data[field] = input[field];
+    }
     if (Object.prototype.hasOwnProperty.call(input, 'avatar')) {
       data.avatar = input.avatar;
       // T16: 走外链路径时同步清空 avatarStorageKey（旧的内部 key 已经不再对应当前头像）
@@ -719,6 +740,12 @@ export class AuthIdentityRepository {
           realName: null,
           nickname: null,
           description: null,
+          headline: null,
+          location: null,
+          socialX: null,
+          socialInstagram: null,
+          socialYoutube: null,
+          socialTiktok: null,
           avatar: null,
           avatarStorageKey: null,
           phone: null,

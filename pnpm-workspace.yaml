@@ -22,3 +22,11 @@ allowBuilds:
   prisma: true # CLI engine binaries
   sharp: true # native libvips bindings
   protobufjs: false # postinstall is a no-op cli shim; not needed
+
+# Unify the transitively-pulled esbuild 0.21.x onto a single version. vite@5
+# drags in esbuild 0.21.3 and electron-vite 0.21.5; under the hoisted layout the
+# two near-identical versions collide and esbuild's postinstall self-check fails
+# ("Expected 0.21.3 but got 0.21.5"). Pinning to one 0.21.x makes JS and the
+# native binary match. Does not touch the repo's own esbuild 0.27/0.28 deps.
+overrides:
+  esbuild@^0.21.0: '0.21.5'

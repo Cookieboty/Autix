@@ -10,6 +10,7 @@ export * from './PublicHomeView';
 export * from './PublicGeneratorEntryView';
 export * from './PublicGeneratorStudioView';
 export * from './PublicPricingView';
+export * from './account';
 export * from './generator-image-presenters';
 export * from './generator-video-presenters';
 export { GalleryPostView } from './detail/GalleryPostView';
