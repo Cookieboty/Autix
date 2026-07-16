@@ -1874,6 +1874,7 @@ enum MaterialLibrarySource {
   UPLOAD
   FAVORITE
   HISTORY
+  GENERATION
 }
 
 model material_assets {
@@ -1899,6 +1900,9 @@ model material_assets {
   updatedAt          DateTime              @updatedAt
   deletedAt          DateTime?
 
+  // 注意：librarySource=GENERATION 的行 sourceResourceType 为 NULL，Postgres 视 NULL 互不相等，
+  // 下面这条唯一约束对生成素材不生效；其去重靠手写的 partial unique index
+  // material_assets_generation_source_uniq（见 20260717000100 migration）。
   @@unique([userId, librarySource, sourceResourceType, sourceId])
   @@index([userId, createdAt])
   @@index([userId, type])

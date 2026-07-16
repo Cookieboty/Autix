@@ -32,8 +32,13 @@ const SOURCE_TYPES = new Set<MaterialAssetSourceType>([
   'external',
 ]);
 
-export type MaterialLibrarySource = 'UPLOAD' | 'FAVORITE' | 'HISTORY';
-const LIBRARY_SOURCES = new Set<MaterialLibrarySource>(['UPLOAD', 'FAVORITE', 'HISTORY']);
+export type MaterialLibrarySource = 'UPLOAD' | 'FAVORITE' | 'HISTORY' | 'GENERATION';
+const LIBRARY_SOURCES = new Set<MaterialLibrarySource>([
+  'UPLOAD',
+  'FAVORITE',
+  'HISTORY',
+  'GENERATION',
+]);
 
 /** Plan C Task 11：能落 librarySource=HISTORY 素材的资源类型——只有这三类会被映射进素材库。 */
 const HISTORY_MAPPABLE_TYPES = new Set<ResourceType>([

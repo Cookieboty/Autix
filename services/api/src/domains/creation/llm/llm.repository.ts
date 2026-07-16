@@ -10,6 +10,7 @@ import {
   type AgentRunStatus,
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+import { buildGenerationMaterialRows } from '../materials/generation-library';
 
 const ACTIVE_AGENT_RUN_STATUSES: AgentRunStatus[] = [
   'pending', 'running', 'paused_user_confirm', 'paused_user_stop', 'paused_failure',
@@ -367,6 +368,26 @@ export class LlmRepository {
       await tx.image_templates.update({
         where: { id: input.templateId },
         data: { useCount: { increment: 1 } },
+      });
+
+      // 生成物同步进素材库，让 /asset 能聚合到全部生成内容。
+      // 放在本事务内：生成记录与其素材要么一起可见、要么都不落库，
+      // 避免素材库出现指向不存在生成的悬挂行。
+      await tx.material_assets.createMany({
+        data: buildGenerationMaterialRows({
+          userId: input.userId,
+          generationId: generation.id,
+          urls: input.generatedImages,
+          prompt: input.resolvedPrompt,
+          kind: 'image',
+          createdAt: generation.createdAt,
+          metadata: {
+            modelUsed: input.modelUsed,
+            width: input.width ?? null,
+            height: input.height ?? null,
+          },
+        }),
+        skipDuplicates: true,
       });
 
       const imageItems = input.buildImageItems(generation.id);
