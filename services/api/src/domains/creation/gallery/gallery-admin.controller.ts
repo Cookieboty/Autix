@@ -16,6 +16,7 @@ import {
 } from '../../identity/auth/decorators/current-user.decorator';
 import { GalleryService } from './gallery.service';
 import { GalleryTemplateConversionService } from './gallery-template-conversion.service';
+import { BatchModerateGalleryDto } from './dto/batch-moderate.dto';
 import { RejectGalleryPostDto } from './dto/reject-post.dto';
 import { ResolveGalleryReportDto } from './dto/resolve-report.dto';
 
@@ -56,6 +57,12 @@ export class GalleryAdminController {
       page,
       pageSize,
     });
+  }
+
+  /** 批量审核：一次收 ids + action，逐条尽力执行并返回每条结果。 */
+  @Post('batch')
+  batchModerate(@CurrentUser() user: AuthUser, @Body() body: BatchModerateGalleryDto) {
+    return this.service.batchModerate(getCurrentUserId(user), body);
   }
 
   @Post(':id/approve')

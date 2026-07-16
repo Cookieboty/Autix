@@ -4,3 +4,4 @@ export * from './update-gallery-post.dto';
 export * from './create-report.dto';
 export * from './reject-post.dto';
 export * from './resolve-report.dto';
+export * from './batch-moderate.dto';

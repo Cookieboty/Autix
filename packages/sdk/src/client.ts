@@ -2189,6 +2189,13 @@ export interface GalleryAdminListResult {
   totalPages: number;
 }
 
+export type GalleryBatchAction = 'approve' | 'reject' | 'hide' | 'remove';
+
+export interface GalleryBatchResult {
+  succeeded: string[];
+  failed: { id: string; reason: string }[];
+}
+
 function galleryAdminListQuery(params: GalleryAdminListParams): Record<string, string> {
   const q: Record<string, string> = {};
   if (params.status) q.status = params.status;
@@ -2218,6 +2225,8 @@ export const galleryAdminApi = {
     chatApi.post<GalleryPostAdminItem>(`/api/admin/gallery/${id}/remove`, {}),
   resolveReport: (reportId: string, status: 'RESOLVED' | 'DISMISSED') =>
     chatApi.post(`/api/admin/gallery/reports/${reportId}/resolve`, { status }),
+  batch: (ids: string[], action: GalleryBatchAction, reason?: string) =>
+    chatApi.post<GalleryBatchResult>('/api/admin/gallery/batch', { ids, action, reason }),
 };
 
 // ── Gallery 公开热度 Feed (首页图片/视频画廊消费) ───────────────────────────
