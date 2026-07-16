@@ -11,7 +11,7 @@ import { ResourceInteractionRepository } from '../../platform/common/resource-in
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { FavoriteLibraryService } from '../materials/favorite-library.service';
 import { GalleryRepository } from './gallery.repository';
-import { presentAuthor, type PresentedAuthor } from './gallery-author.presenter';
+import { firstNonBlank, presentAuthor, type PresentedAuthor } from './gallery-author.presenter';
 import { runWithConcurrency } from './run-with-concurrency';
 import type { BatchModerateGalleryDto } from './dto/batch-moderate.dto';
 import {
@@ -114,7 +114,7 @@ export class GalleryService {
           author: presentAuthor({
             id: row.author.id,
             status: row.author.status,
-            displayName: row.author.nickname ?? row.author.realName ?? null,
+            displayName: firstNonBlank(row.author.nickname, row.author.realName),
             username: row.author.username,
             avatar: row.author.avatar ?? null,
           }),
@@ -585,7 +585,7 @@ export class GalleryService {
         const author: PresentedAuthor = presentAuthor({
           id: row.author.id,
           status: row.author.status,
-          displayName: row.author.nickname ?? row.author.realName ?? null,
+          displayName: firstNonBlank(row.author.nickname, row.author.realName),
           username: row.author.username,
           avatar: row.author.avatar ?? null,
         });
@@ -636,7 +636,7 @@ export class GalleryService {
     const author: PresentedAuthor = presentAuthor({
       id: post.author.id,
       status: post.author.status,
-      displayName: post.author.nickname ?? post.author.realName ?? null,
+      displayName: firstNonBlank(post.author.nickname, post.author.realName),
       username: post.author.username,
       avatar: post.author.avatar ?? null,
     });

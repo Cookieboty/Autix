@@ -1,4 +1,4 @@
-import { presentAuthor } from './gallery-author.presenter';
+import { firstNonBlank, presentAuthor } from './gallery-author.presenter';
 
 /**
  * Plan C Task 7：作者 presenter 单元测试（纯函数）。
@@ -48,5 +48,56 @@ describe('presentAuthor', () => {
     expect(serialized).not.toContain('deleted_');
     expect(serialized).not.toContain('deleted_u3');
     expect(serialized).not.toContain('stale-avatar');
+  });
+
+  it("ACTIVE：displayName 为空字符串 '' → 应回落到 username（?? 挡不住空串，这是本 bug 的核心 case）", () => {
+    expect(
+      presentAuthor({
+        id: 'u4',
+        status: 'ACTIVE',
+        displayName: '',
+        username: 'cookieboty',
+        avatar: null,
+      }),
+    ).toEqual({ userId: 'u4', nickname: 'cookieboty', avatar: null });
+  });
+
+  it('ACTIVE：displayName 为纯空白（空格/全角空格）→ 应回落到 username', () => {
+    expect(
+      presentAuthor({
+        id: 'u5',
+        status: 'ACTIVE',
+        displayName: '   ',
+        username: 'whitespace-user',
+        avatar: null,
+      }),
+    ).toEqual({ userId: 'u5', nickname: 'whitespace-user', avatar: null });
+
+    expect(
+      presentAuthor({
+        id: 'u6',
+        status: 'ACTIVE',
+        displayName: '　　', // 全角空格
+        username: 'fullwidth-space-user',
+        avatar: null,
+      }),
+    ).toEqual({ userId: 'u6', nickname: 'fullwidth-space-user', avatar: null });
+  });
+});
+
+describe('firstNonBlank', () => {
+  it('跳过空串/纯空白，取第一个非空值', () => {
+    expect(firstNonBlank('', '   ', 'realName', 'username')).toBe('realName');
+    expect(firstNonBlank(null, undefined, '', 'username')).toBe('username');
+  });
+
+  it('全部为空/null/undefined → 返回 null', () => {
+    expect(firstNonBlank()).toBeNull();
+    expect(firstNonBlank(null, undefined)).toBeNull();
+    expect(firstNonBlank('', '   ', '　')).toBeNull();
+  });
+
+  it('第一个非空值优先，即便后面还有非空值', () => {
+    expect(firstNonBlank('nickname', 'realName')).toBe('nickname');
   });
 });

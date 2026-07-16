@@ -19,6 +19,14 @@ export interface PresentedAuthor {
   avatar: string | null;
 }
 
+/** 空串/纯空白视同缺失 —— ?? 只挡 null/undefined，挡不住数据库里的 ''。 */
+export function firstNonBlank(...values: (string | null | undefined)[]): string | null {
+  for (const v of values) {
+    if (typeof v === 'string' && v.trim().length > 0) return v;
+  }
+  return null;
+}
+
 /**
  * 已注销用户的隐私铁律：绝不回传 username（含 deleted_<id> 前缀）或任何 PII / 旧头像，
  * 仅保留 userId（本就是帖子的 authorId，调用方已知），昵称固定为占位文案、头像置空。
@@ -27,5 +35,5 @@ export function presentAuthor(u: AuthorSource): PresentedAuthor {
   if (u.status === 'DELETED') {
     return { userId: u.id, nickname: '已注销用户', avatar: null };
   }
-  return { userId: u.id, nickname: u.displayName ?? u.username, avatar: u.avatar };
+  return { userId: u.id, nickname: firstNonBlank(u.displayName, u.username) ?? u.username, avatar: u.avatar };
 }
