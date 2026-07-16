@@ -71,6 +71,24 @@ const IMAGE_MODEL_CONFIG = {
   paramsSchema: IMAGE_PARAMS_SCHEMA,
 };
 
+/**
+ * Seedream（doubao-images@v1）—— referenceMode.kind === 'generate-json-url'：
+ * 上游只吃真实 URL，不认识 data: URL。用于验证派发前的转存 fail-fast normalize。
+ */
+const DOUBAO_MODEL_CONFIG = {
+  id: 'doubao-model-1',
+  model: 'doubao-seedream-4-0',
+  provider: 'volcengine',
+  baseUrl: 'https://api.doubao.example.com/v1',
+  apiKey: 'doubao-key',
+  metadata: {
+    protocolKey: 'doubao-images@v1',
+    operations: ['generate'],
+    limits: { maxCount: 4 },
+  },
+  paramsSchema: IMAGE_PARAMS_SCHEMA,
+};
+
 function imageRequest(overrides: Record<string, unknown> = {}) {
   return {
     mode: 'generate',
@@ -717,8 +735,8 @@ describe('ImageGenerationFlowService', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/v1/images/generations');
     // 上游收到的是**原生字段**：gpt-image 要像素尺寸，而不是「比例」「档位」。
     // aspectRatio / resolution 这两个统一参数在这里被复合成 size —— 前端从没见过 size。
+    // gpt-image 不发 response_format（见 openai-images@v1 preset 注释）——它恒返回 b64_json。
     expect(sentBody(fetchMock)).toEqual({
-      response_format: 'b64_json',
       model: 'gpt-image-2-official',
       prompt: 'A scene',
       n: 2,
@@ -896,6 +914,190 @@ describe('ImageGenerationFlowService', () => {
     expect(response?.message).toContain('protocolKey');
     expect(response?.details).toMatchObject({ modelConfigId: 'image-model-1' });
     expect(global.fetch).not.toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('uploads a data: URL reference image to storage before dispatching to a generate-json-url upstream (Seedream) — never sends the raw data: URL upstream', async () => {
+    const { service, imageTemplatesService } = createService();
+    const originalFetch = global.fetch;
+    const fetchMock = vi.fn().mockResolvedValue(
+      okJson({ data: [{ url: 'https://img.test/out.png' }] }),
+    );
+    global.fetch = fetchMock as never;
+    imageTemplatesService.uploadBase64Image.mockResolvedValue(
+      'https://cdn.example.com/uploaded.png',
+    );
+
+    const result = await service.callImageApi(
+      imageRequest({
+        modelConfig: DOUBAO_MODEL_CONFIG,
+        referenceImages: [{ url: 'data:image/png;base64,AAAA' }],
+        settings: { aspectRatio: '1:1', resolution: '1K', quality: 'medium' },
+      }),
+      1,
+    );
+
+    expect(imageTemplatesService.uploadBase64Image).toHaveBeenCalledWith(
+      'data:image/png;base64,AAAA',
+      'amux-studio/image-generations',
+    );
+    // doubao-images@v1 的 referenceMode 是 generate-json-url：body.image 必须是存储 URL，
+    // 绝不能是前端传来的 data: URL —— 上游只吃真实 URL。
+    expect(sentBody(fetchMock).image).toBe('https://cdn.example.com/uploaded.png');
+    expect(result.images).toEqual(['https://img.test/out.png']);
+    // Seedream 走的是 generate 端点（非 edit）—— operation 必须落在 /v1/images/generations。
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/v1\/images\/generations$/);
+
+    global.fetch = originalFetch;
+  });
+
+  it('uploads multiple data: URL reference images to storage and sends them as an array to a generate-json-url upstream (Seedream) — referenceMode container is scalar-or-array', async () => {
+    const { service, imageTemplatesService } = createService();
+    const originalFetch = global.fetch;
+    const fetchMock = vi.fn().mockResolvedValue(
+      okJson({ data: [{ url: 'https://img.test/out.png' }] }),
+    );
+    global.fetch = fetchMock as never;
+    imageTemplatesService.uploadBase64Image
+      .mockResolvedValueOnce('https://cdn.example.com/uploaded-1.png')
+      .mockResolvedValueOnce('https://cdn.example.com/uploaded-2.png');
+
+    await service.callImageApi(
+      imageRequest({
+        modelConfig: DOUBAO_MODEL_CONFIG,
+        referenceImages: [
+          { url: 'data:image/png;base64,AAAA' },
+          { url: 'data:image/png;base64,BBBB' },
+        ],
+        settings: { aspectRatio: '1:1', resolution: '1K', quality: 'medium' },
+      }),
+      1,
+    );
+
+    // 多张参考图：doubao-images@v1 的 referenceMode container 是 scalar-or-array，
+    // 两张以上必须发数组，且每个元素都必须是转存后的存储 URL，绝不能是 data: URL。
+    const image = sentBody(fetchMock).image;
+    expect(Array.isArray(image)).toBe(true);
+    expect(image).toHaveLength(2);
+    expect(image).toEqual([
+      'https://cdn.example.com/uploaded-1.png',
+      'https://cdn.example.com/uploaded-2.png',
+    ]);
+    for (const url of image as string[]) {
+      expect(url.startsWith('data:')).toBe(false);
+    }
+
+    global.fetch = originalFetch;
+  });
+
+  it('fails fast (no data: URL fallback) when the reference image upload fails before dispatching to a generate-json-url upstream', async () => {
+    const { service, imageTemplatesService } = createService();
+    const originalFetch = global.fetch;
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as never;
+    imageTemplatesService.uploadBase64Image.mockRejectedValue(new Error('storage down'));
+
+    let captured: { status?: number; response?: unknown } | undefined;
+    try {
+      await service.callImageApi(
+        imageRequest({
+          modelConfig: DOUBAO_MODEL_CONFIG,
+          referenceImages: [{ url: 'data:image/png;base64,AAAA' }],
+          settings: { aspectRatio: '1:1', resolution: '1K', quality: 'medium' },
+        }),
+        1,
+      );
+    } catch (err) {
+      captured = {
+        status: (err as { status?: number }).status,
+        response: (err as { response?: unknown }).response,
+      };
+    }
+
+    expect(captured).toBeDefined();
+    expect(captured?.status).toBe(400);
+    // BadRequestException(string) 把字符串包成 { message, error, statusCode }（Nest
+    // HttpException.createBody 的固定行为），message 里带上传失败的原因。
+    const response = captured?.response as { message?: string } | undefined;
+    expect(response?.message).toContain('storage down');
+    // 上传失败绝不能回退发 data: URL 给上游 —— fail fast，一次上游请求都不打。
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('does not pre-upload data: URL reference images for models without a generate-json-url reference mode (e.g. gpt-image edit-multipart)', async () => {
+    const { service, imageTemplatesService } = createService();
+    const originalFetch = global.fetch;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ data: [{ url: 'https://img.test/1.png' }] }),
+      blob: async () => new Blob(['bytes'], { type: 'image/png' }),
+    });
+    global.fetch = fetchMock as never;
+
+    await service.callImageApi(
+      imageRequest({
+        referenceImages: [{ url: 'data:image/png;base64,abc123' }],
+        settings: { size: '1024x1024@1K', quality: 'medium' },
+      }),
+      1,
+    );
+
+    // openai-images@v1 的 referenceMode 是 edit-multipart，不触发派发前转存；
+    // data: URL 直接内联进 multipart form data。
+    expect(imageTemplatesService.uploadBase64Image).not.toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('uploads a data: URL reference image exactly once end-to-end and persists the same storage URL that was dispatched upstream (Seedream, generate-json-url)', async () => {
+    // Final review LOW #2: for generate-json-url upstreams (Seedream), callImageApi
+    // uploads the data: URL reference image before dispatch. Before this fix,
+    // generateAndPersistImage then handed persistImageResult the *original*
+    // (still data: URL) persistedRequest, whose normalizeRefImages uploaded the
+    // same image a second time — two uploads of one image, and (since upload is
+    // not guaranteed deterministic) the persisted URL could diverge from the
+    // URL actually sent to the upstream provider.
+    const { service, imageTemplatesService, prisma } = createService();
+    const originalFetch = global.fetch;
+    const fetchMock = vi.fn().mockResolvedValue(
+      okJson({ data: [{ url: 'https://img.test/out.png' }] }),
+    );
+    global.fetch = fetchMock as never;
+    imageTemplatesService.uploadBase64Image.mockResolvedValue(
+      'https://cdn.example.com/uploaded.png',
+    );
+
+    await service.generateAndPersistImage(
+      { userId: 'user-1', templateId: 'tpl-1', modelConfigId: 'doubao-model-1' },
+      imageRequest({
+        modelConfig: DOUBAO_MODEL_CONFIG,
+        referenceImages: [{ url: 'data:image/png;base64,AAAA' }],
+        settings: { aspectRatio: '1:1', resolution: '1K', quality: 'medium' },
+      }),
+      1,
+    );
+
+    // Upload must happen exactly once, not twice.
+    expect(imageTemplatesService.uploadBase64Image).toHaveBeenCalledTimes(1);
+
+    const dispatchedImage = sentBody(fetchMock).image as string;
+    expect(dispatchedImage).toBe('https://cdn.example.com/uploaded.png');
+
+    // The persisted reference image URL must equal the URL actually dispatched
+    // upstream — not a second, independently-uploaded URL.
+    const created = prisma.image_generations.create.mock.calls[0][0].data as {
+      referenceImage?: string;
+      variables: { __workbench: { referenceImages: Array<{ url: string }> } };
+    };
+    expect(created.referenceImage).toBe(dispatchedImage);
+    expect(created.variables.__workbench.referenceImages).toEqual([
+      { url: dispatchedImage },
+    ]);
 
     global.fetch = originalFetch;
   });

@@ -9,7 +9,7 @@ import {
   type PricingSchema,
 } from '@autix/domain/pricing';
 import { buildVideoParamsSchema } from './seed-pricing.schemas';
-import { SEED_MODELS, DEFAULT_MULTIPLIER } from './seed-pricing.models';
+import { SEED_MODELS, DEFAULT_MULTIPLIER, IMAGE_MODEL_CONFIGS } from './seed-pricing.models';
 import { createPrismaClient } from './db';
 
 
@@ -190,12 +190,27 @@ async function seedModelSchemas() {
     // 但**只作用于 image/video**：受历史通用 schema bug 影响的就是这两类(quality 档位/
     // 分辨率不匹配)；text 模型走统一 text preset、无 per-model 差异，且更可能被运营调过
     // token 计价，故即使 force 也不动它们，避免误伤。
-    // 图片模型的 paramsSchema / metadata **不由 seed 写**——它们是运营在 admin
-    // 模型配置页填的、存在 DB 里的配置（每个模型支持哪些参数、走哪个协议、上传上限
-    // 多少，全部逐模型不同）。seed 只负责「库里没有这个模型就建一行」。
-    // 保存期的跨配置校验器会拦住存不进去的坏配置（schema 与 preset 不闭合）。
+    // 图片模型：paramsSchema / pricingSchema 按 model-id 从 IMAGE_MODEL_CONFIGS 写全量
+    // （metadata 已在 seedModels() 建行时写入）。逐模型 schema 不同，故不共用通用 image preset。
+    // 非破坏性：已配置过的行（运营在 admin 改过价）默认不覆盖；SEED_FORCE_MODEL_SCHEMAS=1 才强刷。
+    // model-id 不在 IMAGE_MODEL_CONFIGS 里的图片模型（运营自建、seed 未收录）跳过，交给 admin 配置。
     if (key === 'image') {
-      skipped.add(model.id);
+      const cfg = IMAGE_MODEL_CONFIGS[model.model];
+      if (!cfg) {
+        skipped.add(model.id);
+        console.log(`skip ${model.name} (image: no seed schema for model-id ${model.model})`);
+        continue;
+      }
+      const alreadyConfigured = model.paramsSchema !== null && model.pricingSchema !== null;
+      if (alreadyConfigured && !FORCE_MODEL_SCHEMAS) continue;
+      await prisma.model_configs.update({
+        where: { id: model.id },
+        data: {
+          paramsSchema: toInputJson(cfg.paramsSchema),
+          pricingSchema: toInputJson(cfg.pricingSchema),
+        },
+      });
+      console.log(`${model.name} -> image [${alreadyConfigured ? 'force-refreshed schema' : 'filled empty schema'}]`);
       continue;
     }
 

@@ -200,5 +200,31 @@ export function validateModelProtocolConfig(input: {
     }
   }
 
+  const rm = preset.referenceMode;
+  const uploadMax =
+    (properties.referenceImages as { 'x-ui'?: { uploadMax?: number } } | undefined)?.['x-ui']?.uploadMax ?? 0;
+
+  // (1) edit-multipart preset 允许上传参考图 ⟹ operations 必含 edit（否则运行期才 fail fast）
+  if (rm?.kind === 'edit-multipart' && uploadMax > 0 && !operations.includes('edit')) {
+    violations.push({
+      code: 'EDIT_MULTIPART_NEEDS_EDIT_OP',
+      message: `edit-multipart preset "${preset.key}" allows reference upload (uploadMax=${uploadMax}) but metadata.operations lacks "edit"`,
+    });
+  }
+  // (2) generate-json-url preset ⟹ paramsSchema 须有 referenceImages
+  if (rm?.kind === 'generate-json-url' && !properties.referenceImages) {
+    violations.push({
+      code: 'GENERATE_JSON_URL_NEEDS_REFERENCE_IMAGES',
+      message: `generate-json-url preset "${preset.key}" needs a referenceImages property in paramsSchema`,
+    });
+  }
+  // (3) uploadMax 不得超过 referenceMode.maxImages（允许收紧，不要求相等）
+  if (rm?.kind === 'generate-json-url' && rm.maxImages != null && uploadMax > rm.maxImages) {
+    violations.push({
+      code: 'UPLOAD_MAX_EXCEEDS_MODE_MAX',
+      message: `referenceImages.x-ui.uploadMax=${uploadMax} exceeds referenceMode.maxImages=${rm.maxImages} for "${preset.key}"`,
+    });
+  }
+
   return violations;
 }

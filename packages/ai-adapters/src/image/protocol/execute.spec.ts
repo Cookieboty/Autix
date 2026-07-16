@@ -125,7 +125,7 @@ describe('executeImageCall', () => {
     },
     paramBindings: {},
     staticBody: { generationConfig: { responseModalities: ['IMAGE'] } },
-    inlineImageEmbed: { partsPath: 'contents[0].parts' },
+    referenceMode: { kind: 'generate-inline-base64', partsPath: 'contents[0].parts' },
     response: {
       itemsPath: 'candidates[*].content.parts[*]',
       b64Field: 'inlineData.data', mimeField: 'inlineData.mimeType', defaultMime: 'image/png',

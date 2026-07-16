@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { assembleImageRequest } from './assemble';
+import { doubaoImagesV1 } from './presets/vendors';
 import type { ImageCallRequest, ProtocolPreset } from './types';
 
 const PRESET: ProtocolPreset = {
@@ -201,7 +202,7 @@ describe('assembleImageRequest — json inline images (gemini generateContent)',
     },
     paramBindings: { aspectRatio: { path: 'generationConfig.imageConfig.aspectRatio' } },
     staticBody: { generationConfig: { responseModalities: ['IMAGE'] } },
-    inlineImageEmbed: { partsPath: 'contents[0].parts' },
+    referenceMode: { kind: 'generate-inline-base64', partsPath: 'contents[0].parts' },
     response: {
       itemsPath: 'candidates[*].content.parts[*]',
       b64Field: 'inlineData.data', mimeField: 'inlineData.mimeType', defaultMime: 'image/png',
@@ -230,6 +231,33 @@ describe('assembleImageRequest — json inline images (gemini generateContent)',
   it('does not set inlineImages when the request carries no input images', () => {
     const out = assembleImageRequest({ ...BASE, preset: NATIVE });
     expect(out.inlineImages).toBeUndefined();
+  });
+});
+
+describe('assembleImageRequest — generate-json-url (doubao seedream)', () => {
+  function reqWith(refs: string[]) {
+    return {
+      preset: doubaoImagesV1, operation: 'generate' as const,
+      baseUrl: 'https://gw.example/v1', apiKey: 'k', model: 'doubao-seedream-4-5',
+      prompt: 'p', count: 1, params: { aspectRatio: '1:1', resolution: '2K' },
+      referenceImages: refs.map((url) => ({ url })),
+    };
+  }
+
+  it('generate-json-url: 单张写标量 body.image', () => {
+    const a = assembleImageRequest(reqWith(['https://x/1.png']));
+    expect((a.body as any).image).toBe('https://x/1.png');
+  });
+
+  it('generate-json-url: 多张写数组 body.image', () => {
+    const a = assembleImageRequest(reqWith(['https://x/1.png', 'https://x/2.png']));
+    expect((a.body as any).image).toEqual(['https://x/1.png', 'https://x/2.png']);
+  });
+
+  it('generate-json-url: 超过 maxImages 截断并记 coercion', () => {
+    const a = assembleImageRequest(reqWith(Array.from({ length: 16 }, (_, i) => `https://x/${i}.png`)));
+    expect((a.body as any).image).toHaveLength(14);
+    expect(a.applied.coercions.some((c) => /maxImages/.test(c))).toBe(true);
   });
 });
 

@@ -2,6 +2,7 @@ export * from './protocol/types';
 export { executeImageCall } from './protocol/execute';
 export { resolveImagePreset, PROTOCOL_PRESETS } from './protocol/registry';
 export { validateModelProtocolConfig, type ConfigViolation } from './protocol/validate-config';
+export { resolveImageOperation } from './protocol/image-operation';
 export {
   doubaoImagesV1,
   geminiImagesV1,

@@ -51,6 +51,46 @@ const codes = (
   ...presetArg: [ProtocolPreset | undefined] | []
 ) => run(schema, metadata, ...presetArg).map((v) => v.code);
 
+/**
+ * 夹具：openai 形状 —— gpt-image 的 size 是复合绑定，referenceMode 是 edit-multipart。
+ * 提到模块作用域，规则 (1)（edit-multipart 闭合）的用例也要用它。
+ */
+const OPENAI_SCHEMA: ParamsSchema = {
+  type: 'object',
+  required: ['aspectRatio', 'resolution', 'quality'],
+  properties: {
+    aspectRatio: {
+      type: 'string', enum: ['1:1', '16:9'], default: '1:1',
+      'x-ui': { role: 'wire', control: 'select', order: 10 },
+    },
+    resolution: {
+      type: 'string', enum: ['1K', '2K'], default: '1K',
+      'x-ui': { role: 'both', control: 'select', order: 20 },
+    },
+    quality: {
+      type: 'string', enum: ['low', 'high'], default: 'low',
+      'x-ui': { role: 'both', control: 'select', order: 30 },
+    },
+    background: {
+      type: 'string', enum: ['auto', 'opaque'], default: 'auto',
+      'x-ui': { role: 'wire', control: 'select', order: 80 },
+    },
+    outputFormat: {
+      type: 'string', enum: ['png', 'jpeg'], default: 'png',
+      'x-ui': { role: 'wire', control: 'select', order: 81 },
+    },
+    referenceImages: {
+      type: 'integer', minimum: 0, default: 0,
+      'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 16 },
+    },
+  },
+};
+const OPENAI_META = {
+  protocolKey: 'openai-images@v1',
+  operations: ['generate', 'edit'],
+  limits: { maxCount: 10 },
+};
+
 describe('validateModelProtocolConfig', () => {
   it('accepts the canonical seeded config', () => {
     expect(run(GOOD_SCHEMA, GOOD_META)).toEqual([]);
@@ -175,42 +215,6 @@ describe('validateModelProtocolConfig', () => {
  * 的函数。这组用例守的是「schema 允许的组合，preset 必须都能映射出来」。
  */
 describe('validateModelProtocolConfig — 复合绑定（composeFrom）', () => {
-  const OPENAI_SCHEMA: ParamsSchema = {
-    type: 'object',
-    required: ['aspectRatio', 'resolution', 'quality'],
-    properties: {
-      aspectRatio: {
-        type: 'string', enum: ['1:1', '16:9'], default: '1:1',
-        'x-ui': { role: 'wire', control: 'select', order: 10 },
-      },
-      resolution: {
-        type: 'string', enum: ['1K', '2K'], default: '1K',
-        'x-ui': { role: 'both', control: 'select', order: 20 },
-      },
-      quality: {
-        type: 'string', enum: ['low', 'high'], default: 'low',
-        'x-ui': { role: 'both', control: 'select', order: 30 },
-      },
-      background: {
-        type: 'string', enum: ['auto', 'opaque'], default: 'auto',
-        'x-ui': { role: 'wire', control: 'select', order: 80 },
-      },
-      outputFormat: {
-        type: 'string', enum: ['png', 'jpeg'], default: 'png',
-        'x-ui': { role: 'wire', control: 'select', order: 81 },
-      },
-      referenceImages: {
-        type: 'integer', minimum: 0, default: 0,
-        'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 16 },
-      },
-    },
-  };
-  const OPENAI_META = {
-    protocolKey: 'openai-images@v1',
-    operations: ['generate', 'edit'],
-    limits: { maxCount: 10 },
-  };
-
   it('accepts the real gpt-image config: size is composed, aspectRatio/resolution count as bound', () => {
     expect(
       validateModelProtocolConfig({
@@ -255,5 +259,65 @@ describe('validateModelProtocolConfig — 复合绑定（composeFrom）', () => 
       paramsSchema: schema, metadata: OPENAI_META, preset: openaiImagesV1,
     }).find((v) => v.code === 'BINDING_TARGETS_UNKNOWN_PARAM');
     expect(found?.message).toMatch(/can never be composed/);
+  });
+});
+
+/**
+ * referenceMode 闭合规则：preset.referenceMode 描述了各厂商原生的参考图机制
+ * （openaiImagesV1 = edit-multipart，doubaoImagesV1 = generate-json-url，maxImages=14）。
+ * 这组用例守的是 referenceMode 与 metadata.operations / paramsSchema.referenceImages 之间
+ * 不能悄悄分叉——否则要么运行期才 fail fast，要么参数被静默丢掉。
+ */
+describe('validateModelProtocolConfig — referenceMode 闭合', () => {
+  // (1) edit-multipart preset 允许上传参考图（uploadMax > 0）⟹ operations 必须含 edit
+  it('rejects an edit-multipart preset that allows upload but operations lacks "edit"', () => {
+    const metadata = { ...OPENAI_META, operations: ['generate'] };
+    const violations = validateModelProtocolConfig({
+      paramsSchema: OPENAI_SCHEMA, metadata, preset: openaiImagesV1,
+    });
+    expect(violations.map((v) => v.code)).toContain('EDIT_MULTIPART_NEEDS_EDIT_OP');
+  });
+
+  it('accepts an edit-multipart preset that allows upload when operations includes "edit"', () => {
+    const metadata = { ...OPENAI_META, operations: ['generate', 'edit'] };
+    const violations = validateModelProtocolConfig({
+      paramsSchema: OPENAI_SCHEMA, metadata, preset: openaiImagesV1,
+    });
+    expect(violations.map((v) => v.code)).not.toContain('EDIT_MULTIPART_NEEDS_EDIT_OP');
+  });
+
+  // (2) generate-json-url preset ⟹ paramsSchema 必须有 referenceImages 属性
+  it('rejects a generate-json-url preset whose paramsSchema has no referenceImages property', () => {
+    const schema = structuredClone(GOOD_SCHEMA);
+    delete schema.properties.referenceImages;
+    const violations = validateModelProtocolConfig({
+      paramsSchema: schema, metadata: GOOD_META, preset: doubaoImagesV1,
+    });
+    expect(violations.map((v) => v.code)).toContain('GENERATE_JSON_URL_NEEDS_REFERENCE_IMAGES');
+  });
+
+  it('accepts a generate-json-url preset whose paramsSchema declares referenceImages', () => {
+    const violations = validateModelProtocolConfig({
+      paramsSchema: GOOD_SCHEMA, metadata: GOOD_META, preset: doubaoImagesV1,
+    });
+    expect(violations.map((v) => v.code)).not.toContain('GENERATE_JSON_URL_NEEDS_REFERENCE_IMAGES');
+  });
+
+  // (3) uploadMax 不得超过 referenceMode.maxImages（doubaoImagesV1.maxImages = 14）
+  it('rejects an uploadMax that exceeds referenceMode.maxImages', () => {
+    const schema = structuredClone(GOOD_SCHEMA);
+    schema.properties.referenceImages['x-ui']!.uploadMax = 15; // > doubao maxImages=14
+    const violations = validateModelProtocolConfig({
+      paramsSchema: schema, metadata: GOOD_META, preset: doubaoImagesV1,
+    });
+    expect(violations.map((v) => v.code)).toContain('UPLOAD_MAX_EXCEEDS_MODE_MAX');
+  });
+
+  it('accepts an uploadMax within referenceMode.maxImages', () => {
+    // GOOD_SCHEMA.referenceImages.x-ui.uploadMax = 10, doubao maxImages = 14 → 10 <= 14
+    const violations = validateModelProtocolConfig({
+      paramsSchema: GOOD_SCHEMA, metadata: GOOD_META, preset: doubaoImagesV1,
+    });
+    expect(violations.map((v) => v.code)).not.toContain('UPLOAD_MAX_EXCEEDS_MODE_MAX');
   });
 });

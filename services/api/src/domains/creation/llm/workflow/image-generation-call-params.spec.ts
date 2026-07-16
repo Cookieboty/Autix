@@ -197,6 +197,82 @@ describe('buildImageCallRequest', () => {
     expect(call.params).not.toHaveProperty('stylePreset');
   });
 
+  it('keeps operation=generate for a non-edit-multipart preset even with reference images (Seedream, mode=generate)', () => {
+    // 广场版复用：只发 referenceImages，mode 仍是 'generate'。doubao-images@v1
+    // 的 referenceMode.kind 是 'generate-json-url'（不是 edit-multipart），
+    // 所以两轴路由的候选 operation 应保持 'generate'，不因为有输入图就跳去 'edit'。
+    const call = buildImageCallRequest(
+      {
+        ...baseRequest,
+        mode: 'generate',
+        modelConfig: {
+          ...baseRequest.modelConfig,
+          metadata: { protocolKey: 'doubao-images@v1', operations: ['generate'] },
+        },
+        referenceImages: [{ url: 'https://x/1.png' }],
+      },
+      1,
+      PARAMS_SCHEMA,
+    );
+
+    expect(call.operation).toBe('generate');
+  });
+
+  it('derives operation=edit for an edit-multipart preset when reference images are present, even though mode=generate (GPT Image)', () => {
+    // GPT Image (openai-images@v1) 的 referenceMode.kind 是 'edit-multipart'：
+    // 有输入图时两轴路由的候选 operation 是 'edit'，且 metadata.operations
+    // 声明了 'edit'，所以应该走 edit —— 即便语义 mode 仍是 'generate'。
+    const call = buildImageCallRequest(
+      {
+        ...baseRequest,
+        mode: 'generate',
+        modelConfig: {
+          ...baseRequest.modelConfig,
+          metadata: { protocolKey: 'openai-images@v1', operations: ['generate', 'edit'] },
+        },
+        referenceImages: [{ url: 'https://x/1.png' }],
+      },
+      1,
+      PARAMS_SCHEMA,
+    );
+
+    expect(call.operation).toBe('edit');
+  });
+
+  it('throws a 400 with ERR_IMAGE_OPERATION_NOT_ALLOWED (not a bare Error/500) when metadata.operations does not include the routed candidate', () => {
+    // Final review LOW #3: resolveImageOperation throws a bare Error when the
+    // routed candidate operation isn't in metadata.operations. Before this fix
+    // that Error escaped buildImageCallRequest's try/catch (which only wraps
+    // resolveImagePreset) and became an unhandled 500 for a config problem an
+    // operator could fix in the admin panel.
+    let captured: unknown;
+    try {
+      buildImageCallRequest(
+        {
+          ...baseRequest,
+          modelConfig: {
+            ...baseRequest.modelConfig,
+            // operations empty → candidate 'generate' isn't allowed.
+            metadata: { protocolKey: 'openai-images@v1', operations: [] },
+          },
+        },
+        1,
+        PARAMS_SCHEMA,
+      );
+    } catch (err) {
+      captured = err;
+    }
+
+    expect(captured).toBeInstanceOf(BadRequestException);
+    expect((captured as BadRequestException).getStatus()).toBe(400);
+    const response = (captured as BadRequestException).getResponse() as {
+      errorCode?: string;
+      message?: string;
+    };
+    expect(response.errorCode).toBe('ERR_IMAGE_OPERATION_NOT_ALLOWED');
+    expect(response.message).toContain('gemini-3-pro-image');
+  });
+
   it('maps edit mode onto the edit operation and carries the input images', () => {
     const call = buildImageCallRequest(
       {

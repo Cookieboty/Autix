@@ -1,8 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import {
+  resolveImageOperation,
   resolveImagePreset,
   type ImageArtifact,
   type ImageCallRequest,
+  type ImageOperation,
   type ImageUpstreamError,
   type ProtocolPreset,
 } from '@autix/ai-adapters/image';
@@ -26,6 +28,16 @@ export interface AppliedImageSettings {
 export interface CallImageApiResult {
   images: string[];
   appliedSettings: AppliedImageSettings;
+  /**
+   * The `sourceImages`/`referenceImages` actually dispatched upstream — after
+   * any pre-dispatch normalization (e.g. `generate-json-url` presets like
+   * Seedream upload `data:` URLs to storage before sending). Callers that
+   * persist the request (e.g. `generateAndPersistImage`) must reuse these
+   * instead of the pre-normalize refs, so the record they store points at the
+   * same URL that was actually sent upstream and the upload isn't repeated.
+   */
+  sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
 }
 
 export interface SourceImageRef {
@@ -164,9 +176,29 @@ export function buildImageCallRequest(
     throw buildImageModelNotConfiguredException(request, error);
   }
 
+  // `resolveImageOperation` throws a bare `Error('OPERATION_NOT_ALLOWED: ...')`
+  // when the routed candidate operation (generate/edit) isn't declared in
+  // metadata.operations (same "ai-adapters is a pure protocol layer, doesn't
+  // know Nest" reasoning as resolveImagePreset above). Left unwrapped it
+  // escapes this function's caller as an unhandled 500 for a fixable config
+  // problem (missing/incomplete metadata.operations) instead of a 400 the
+  // operator can act on.
+  let operation: ImageOperation;
+  try {
+    operation = resolveImageOperation(preset, metadata.operations ?? [], {
+      hasSourceImages: (request.sourceImages?.length ?? 0) > 0,
+      hasReferenceImages: (request.referenceImages?.length ?? 0) > 0,
+    });
+  } catch (error) {
+    throw new BadRequestException({
+      errorCode: 'ERR_IMAGE_OPERATION_NOT_ALLOWED',
+      message: `模型 ${request.modelConfig.model} 的能力配置不支持本次请求所需操作：${String(error instanceof Error ? error.message : error)}`,
+    });
+  }
+
   return {
     preset,
-    operation: request.mode === 'edit' ? 'edit' : 'generate',
+    operation,
     baseUrl,
     apiKey,
     model: request.modelConfig.model,

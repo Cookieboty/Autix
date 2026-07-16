@@ -7,6 +7,8 @@
  * seed-pricing.schemas.ts 的拆分理由，AGENTS.md 拆分优先级第 1 条）。
  */
 
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
+
 /**
  * type + capabilities 决定 presetKeyFor 的归类（→ text / image / video preset）；
  * metadata.imageModelKind / videoModelKind 给能力面板（尺寸/分辨率）做确定性识别，
@@ -23,14 +25,6 @@ export interface SeedModelRow {
   description: Record<string, string>;
 }
 
-/**
- * 图片模型 metadata 的协议三件套（protocolKey / operations / limits）+ 展示用
- * modelFamily。取值**必须与 IMAGE_MODEL_CAPABILITIES 一致**——`supportsSourceImage`
- * 决定 operations 是否含 'edit'，`maxCount` 直接抄能力表；用这个 helper 生成而不是
- * 手抄字面量，避免第 3 期删掉能力表前两份配置分叉（spec §7.2 的构建期校验就是防这个）。
- * 所有图片模型走同一套网关协议（spec §7.3 的决议），故 protocolKey 恒为
- * gatewayOpenAIV1.key，不按 kind 分支。
- */
 /** 任务-模型绑定的默认加价倍率（2 = 原始成本上加 100% 毛利）。运营可逐条调整。 */
 export const DEFAULT_MULTIPLIER = 2;
 
@@ -60,7 +54,7 @@ export const SEED_MODELS: SeedModelRow[] = [
   { name: 'DeepSeek V4 Flash', provider: 'amux', model: 'deepseek-v4-flash', type: 'general', capabilities: ['text'], isDefault: false, metadata: {}, description: { en: 'DeepSeek fast model', 'zh-CN': 'DeepSeek 快速模型' } },
   // 智谱 GLM 5.2 / 5.1
   { name: 'GLM-5.2', provider: 'amux', model: 'glm-5.2', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'Zhipu GLM flagship model', 'zh-CN': '智谱 GLM 旗舰模型' } },
-  { name: 'GLM-5.1', provider: 'amux', model: 'glm-5.1', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Zhipu GLM model', 'zh-CN': '智谱 GLM 模型' } },
+  // glm-5.1 已移除：线上作为 private 删除，且有 public GLM-5.2 覆盖同系列，seed 无需再建。
   // Google Gemini 3.5
   { name: 'Gemini 3.5 Pro', provider: 'amux', model: 'gemini-3.5-pro', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'Google Gemini flagship model', 'zh-CN': 'Google Gemini 旗舰模型' } },
   { name: 'Gemini 3.5 Flash', provider: 'amux', model: 'gemini-3.5-flash', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Google Gemini fast model', 'zh-CN': 'Google Gemini 快速模型' } },
@@ -72,20 +66,235 @@ export const SEED_MODELS: SeedModelRow[] = [
   { name: 'Grok 4.3', provider: 'amux', model: 'grok-4.3', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'xAI Grok model', 'zh-CN': 'xAI Grok 模型' } },
 
   // —— 图像 ——
-  // **metadata 留空**：协议路由（protocolKey）、能力（operations / limits）、参数
-  // （paramsSchema）全部由运营在 admin 模型配置页填，存 DB。seed 不猜、不写死——
-  // 每个模型支持哪些参数、走哪个协议、上传几张图，逐模型都不同。
-  // seed 只负责「库里没有这个模型就建一行」。
-  { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2-official', type: 'general', capabilities: ['image'], isDefault: true, metadata: {}, description: { en: 'OpenAI image model', 'zh-CN': 'OpenAI 图像模型' } },
-  { name: 'Nano Banana Pro', provider: 'amux', model: 'gemini-3-pro-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'Nano Banana Pro', 'zh-CN': 'Nano Banana Pro' } },
-  { name: 'Nano Banana Fast', provider: 'amux', model: 'gemini-3.1-flash-image-preview', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'Nano Banana Fast', 'zh-CN': 'Nano Banana Fast' } },
-  { name: 'Nano Banana 2 Lite', provider: 'amux', model: 'gemini-3.1-flash-lite-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'Nano Banana 2 Lite', 'zh-CN': 'Nano Banana 2 Lite' } },
-  { name: 'Gemini 2.5 Flash Image', provider: 'amux', model: 'gemini-2.5-flash-image', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'Google Gemini image model', 'zh-CN': 'Google Gemini 图像模型' } },
-  { name: 'Seedream 4.5', provider: 'amux', model: 'doubao-seedream-4-5', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'ByteDance Seedream image model', 'zh-CN': '字节 Seedream 图像模型' } },
-  { name: 'Seedream 5.0 Lite', provider: 'amux', model: 'doubao-seedream-5-0-lite', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'ByteDance Seedream lite model', 'zh-CN': '字节 Seedream 轻量模型' } },
-  { name: 'MiniMax Image 01', provider: 'amux', model: 'MiniMax-Image-01', type: 'general', capabilities: ['image'], isDefault: false, metadata: {}, description: { en: 'MiniMax image model', 'zh-CN': 'MiniMax 图像模型' } },
+  // metadata（protocolKey / operations / limits / modelFamily / imageModelKind）与
+  // paramsSchema / pricingSchema **按 DB 现状写全量**（见 IMAGE_MODEL_CONFIGS）——
+  // 让 fresh 安装的本地库与线上 DB 一致。schema 由 seedModelSchemas() 按 model-id 填。
+  // **不写 apiKey / baseUrl**：密钥/网关地址仍由运营在 admin 补，绝不进 git。
+  { name: 'GPT Image 2', provider: 'amux', model: 'gpt-image-2-official', type: 'general', capabilities: ['image'], isDefault: true, metadata: { limits: { maxCount: 10 }, operations: ['generate', 'edit'], modelFamily: 'gpt-image', protocolKey: 'openai-images@v1' }, description: { en: 'OpenAI image model', 'zh-CN': 'OpenAI 图像模型' } },
+  { name: 'Nano Banana Pro', provider: 'amux', model: 'gemini-3-pro-image-preview-official', type: 'general', capabilities: ['image'], isDefault: false, metadata: { limits: { maxCount: 1 }, operations: ['generate', 'edit'], modelFamily: 'gemini-image', protocolKey: 'gemini-generate-content@v1' }, description: { en: 'Nano Banana Pro', 'zh-CN': 'Nano Banana Pro' } },
+  { name: 'Nano Banana 2', provider: 'amux', model: 'gemini-3.1-flash-image-preview-official', type: 'general', capabilities: ['image'], isDefault: false, metadata: { limits: { maxCount: 1 }, operations: ['generate', 'edit'], modelFamily: 'gemini-image', protocolKey: 'gemini-generate-content@v1', imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Nano Banana 2', 'zh-CN': 'Nano Banana 2' } },
+  { name: 'Nano Banana 2 Lite', provider: 'amux', model: 'gemini-3.1-flash-lite-image-official', type: 'general', capabilities: ['image'], isDefault: false, metadata: { limits: { maxCount: 1 }, operations: ['generate', 'edit'], modelFamily: 'gemini-image', protocolKey: 'gemini-generate-content@v1', imageModelKind: 'gemini-3-flash-image' }, description: { en: 'Nano Banana 2 Lite', 'zh-CN': 'Nano Banana 2 Lite' } },
+  // Seedream operations 只含 generate：火山 Seedream 统一端点，图生图/编辑都走
+  // /v1/images/generations 的 image 字段，无独立 /v1/images/edits（官方文档核实）。
+  { name: 'Seedream 4.5', provider: 'amux', model: 'doubao-seedream-4-5', type: 'general', capabilities: ['image'], isDefault: false, metadata: { limits: { maxCount: 15 }, operations: ['generate'], modelFamily: 'seedream', protocolKey: 'doubao-images@v1' }, description: { en: 'ByteDance Seedream image model', 'zh-CN': '字节 Seedream 图像模型' } },
+  { name: 'Seedream 5.0 Lite', provider: 'amux', model: 'doubao-seedream-5-0-lite', type: 'general', capabilities: ['image'], isDefault: false, metadata: { limits: { maxCount: 15 }, operations: ['generate'], modelFamily: 'seedream', protocolKey: 'doubao-images@v1' }, description: { en: 'ByteDance Seedream lite model', 'zh-CN': '字节 Seedream 轻量模型' } },
 
-  // —— 视频（video preset）—— 只保留 Seedance 2.0 系列（线上真实 id）；metadata.videoModelKind 定档
-  { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0' }, description: { en: 'Seedance video model', 'zh-CN': 'Seedance 视频模型' } },
-  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
+  // —— 视频（video preset）—— metadata.videoModelKind 定档
+  // doubao-seedance-2.0 已移除：线上作为 private 删除，video 能力由 public 的 Fast 变体覆盖，
+  // video 默认改由 Fast 承担（isDefault:true）。
+  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
 ];
+
+/**
+ * 图片模型的 per-model paramsSchema + pricingSchema（按 model-id 索引）——**按 DB 现状写全量**，
+ * 由 seedModelSchemas() 在建行后填入。每个模型支持的参数轴（quality/resolution/aspectRatio…）、
+ * 参考图上传上限（referenceImages.x-ui.uploadMax）、计价（按 quality 或 resolution 查表 / 按张固定价）
+ * 逐模型都不同，故不能共用一份通用 image preset。referenceImages 恒为 role='pricing'（上游要的是图
+ * 本身、不是「几张」这个数）。
+ */
+export const IMAGE_MODEL_CONFIGS: Record<
+  string,
+  { paramsSchema: ParamsSchema; pricingSchema: PricingSchema }
+> = {
+  'gpt-image-2-official': {
+    paramsSchema: {
+      type: 'object',
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      required: ['aspectRatio', 'resolution', 'quality'],
+      properties: {
+        quality: {
+          enum: ['low', 'medium', 'high'],
+          type: 'string',
+          'x-ui': { role: 'both', order: 30, control: 'select', labelKey: 'pricing.params.quality', optionLabelKeys: { low: 'pricing.options.low', high: 'pricing.options.high', medium: 'pricing.options.medium' } },
+          default: 'medium',
+        },
+        resolution: {
+          enum: ['1K', '2K', '4K'],
+          type: 'string',
+          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '1K': '1K', '2K': '2K', '4K': '4K' } },
+          default: '1K',
+        },
+        aspectRatio: {
+          enum: ['1:1', '3:2', '2:3', '16:9', '9:16'],
+          type: 'string',
+          'x-ui': { role: 'wire', order: 10, control: 'select', labelKey: 'pricing.params.aspectRatio', optionLabels: { '1:1': '1:1', '2:3': '2:3', '3:2': '3:2', '16:9': '16:9', '9:16': '9:16' } },
+          default: '1:1',
+        },
+        referenceImages: {
+          type: 'integer',
+          'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 16 },
+          default: 0,
+          minimum: 0,
+        },
+      },
+    } as ParamsSchema,
+    pricingSchema: {
+      terms: [
+        { id: 'base', op: 'add', const: 0 },
+        { id: 'quality', op: 'add', table: { param: 'quality', values: { low: 3, high: 106, medium: 27 } } },
+      ],
+    } as PricingSchema,
+  },
+  'gemini-3.1-flash-image-preview-official': {
+    paramsSchema: {
+      type: 'object',
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      required: ['aspectRatio', 'resolution'],
+      properties: {
+        resolution: {
+          enum: ['1K', '2K', '4K'],
+          type: 'string',
+          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '1K': '1K', '2K': '2K', '4K': '4K' } },
+          default: '1K',
+        },
+        aspectRatio: {
+          enum: ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9', '1:4', '4:1', '1:8', '8:1'],
+          type: 'string',
+          'x-ui': { role: 'wire', order: 10, control: 'select', labelKey: 'pricing.params.aspectRatio', optionLabels: { '1:1': '1:1', '1:4': '1:4', '1:8': '1:8', '2:3': '2:3', '3:2': '3:2', '3:4': '3:4', '4:1': '4:1', '4:3': '4:3', '4:5': '4:5', '5:4': '5:4', '8:1': '8:1', '16:9': '16:9', '21:9': '21:9', '9:16': '9:16' } },
+          default: '1:1',
+        },
+        thinkingLevel: {
+          enum: ['minimal', 'high'],
+          type: 'string',
+          'x-ui': { role: 'wire', order: 30, control: 'select', labelKey: 'pricing.params.thinkingLevel', optionLabelKeys: { high: 'pricing.options.high', minimal: 'pricing.options.minimal' } },
+          default: 'minimal',
+        },
+        referenceImages: {
+          type: 'integer',
+          'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 14 },
+          default: 0,
+          minimum: 0,
+        },
+      },
+    } as ParamsSchema,
+    pricingSchema: {
+      terms: [
+        { id: 'base', op: 'add', const: 0 },
+        { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '1K': 34, '2K': 51, '4K': 75 } } },
+      ],
+    } as PricingSchema,
+  },
+  'gemini-3.1-flash-lite-image-official': {
+    paramsSchema: {
+      type: 'object',
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      required: ['aspectRatio'],
+      properties: {
+        aspectRatio: {
+          enum: ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'],
+          type: 'string',
+          'x-ui': { role: 'wire', order: 10, control: 'select', labelKey: 'pricing.params.aspectRatio', optionLabels: { '1:1': '1:1', '2:3': '2:3', '3:2': '3:2', '3:4': '3:4', '4:3': '4:3', '4:5': '4:5', '5:4': '5:4', '16:9': '16:9', '21:9': '21:9', '9:16': '9:16' } },
+          default: '1:1',
+        },
+        referenceImages: {
+          type: 'integer',
+          'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 14 },
+          default: 0,
+          minimum: 0,
+        },
+      },
+    } as ParamsSchema,
+    pricingSchema: {
+      terms: [{ id: 'perImage', op: 'add', const: 17 }],
+    } as PricingSchema,
+  },
+  'gemini-3-pro-image-preview-official': {
+    paramsSchema: {
+      type: 'object',
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      required: ['aspectRatio', 'resolution'],
+      properties: {
+        resolution: {
+          enum: ['1K', '2K', '4K'],
+          type: 'string',
+          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '1K': '1K', '2K': '2K', '4K': '4K' } },
+          default: '1K',
+        },
+        aspectRatio: {
+          enum: ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'],
+          type: 'string',
+          'x-ui': { role: 'wire', order: 10, control: 'select', labelKey: 'pricing.params.aspectRatio', optionLabels: { '1:1': '1:1', '2:3': '2:3', '3:2': '3:2', '3:4': '3:4', '4:3': '4:3', '4:5': '4:5', '5:4': '5:4', '16:9': '16:9', '21:9': '21:9', '9:16': '9:16' } },
+          default: '1:1',
+        },
+        referenceImages: {
+          type: 'integer',
+          'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 14 },
+          default: 0,
+          minimum: 0,
+        },
+      },
+    } as ParamsSchema,
+    pricingSchema: {
+      terms: [
+        { id: 'base', op: 'add', const: 0 },
+        { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '1K': 34, '2K': 51, '4K': 75 } } },
+      ],
+    } as PricingSchema,
+  },
+  'doubao-seedream-4-5': {
+    paramsSchema: {
+      type: 'object',
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      required: ['aspectRatio', 'resolution'],
+      properties: {
+        resolution: {
+          enum: ['2K', '4K'],
+          type: 'string',
+          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '2K': '2K', '4K': '4K' } },
+          default: '2K',
+        },
+        aspectRatio: {
+          enum: ['1:1', '4:3', '3:4', '16:9', '9:16', '3:2', '2:3', '21:9'],
+          type: 'string',
+          'x-ui': { role: 'wire', order: 10, control: 'select', labelKey: 'pricing.params.aspectRatio', optionLabels: { '1:1': '1:1', '2:3': '2:3', '3:2': '3:2', '3:4': '3:4', '4:3': '4:3', '16:9': '16:9', '21:9': '21:9', '9:16': '9:16' } },
+          default: '1:1',
+        },
+        referenceImages: {
+          type: 'integer',
+          'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 10 },
+          default: 0,
+          minimum: 0,
+        },
+      },
+    } as ParamsSchema,
+    pricingSchema: {
+      terms: [
+        { id: 'base', op: 'add', const: 0 },
+        { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '4K': 45 } } },
+      ],
+    } as PricingSchema,
+  },
+  'doubao-seedream-5-0-lite': {
+    paramsSchema: {
+      type: 'object',
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      required: ['aspectRatio', 'resolution'],
+      properties: {
+        resolution: {
+          enum: ['2K', '3K'],
+          type: 'string',
+          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '2K': '2K', '3K': '3K' } },
+          default: '2K',
+        },
+        aspectRatio: {
+          enum: ['1:1', '4:3', '3:4', '16:9', '9:16', '3:2', '2:3', '21:9'],
+          type: 'string',
+          'x-ui': { role: 'wire', order: 10, control: 'select', labelKey: 'pricing.params.aspectRatio', optionLabels: { '1:1': '1:1', '2:3': '2:3', '3:2': '3:2', '3:4': '3:4', '4:3': '4:3', '16:9': '16:9', '21:9': '21:9', '9:16': '9:16' } },
+          default: '1:1',
+        },
+        referenceImages: {
+          type: 'integer',
+          'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 10 },
+          default: 0,
+          minimum: 0,
+        },
+      },
+    } as ParamsSchema,
+    pricingSchema: {
+      terms: [
+        { id: 'base', op: 'add', const: 0 },
+        { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '3K': 34 } } },
+      ],
+    } as PricingSchema,
+  },
+};

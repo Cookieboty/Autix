@@ -181,13 +181,27 @@ export function assembleImageRequest(req: ImageCallRequest): AssembledRequest {
   }
 
   headers['Content-Type'] = 'application/json';
-  // JSON 内联图片（Gemini generateContent 的图生图）：把 source/reference 图片记为待抓取，
-  // execute 阶段再 URL→base64 追加进 partsPath 指向的数组。此刻只记 URL，assemble 保持同步。
-  const inlineInputs = [...(req.sourceImages ?? []), ...(req.referenceImages ?? [])];
+  const rm = preset.referenceMode;
+  const inputs = [...(req.sourceImages ?? []), ...(req.referenceImages ?? [])];
+
+  // Gemini 原生：图待内联 base64（execute 阶段抓取），此处只记 URL。
   const inlineImages =
-    preset.inlineImageEmbed && inlineInputs.length > 0
-      ? { partsPath: preset.inlineImageEmbed.partsPath, images: inlineInputs.map((i) => ({ url: i.url })) }
+    rm?.kind === 'generate-inline-base64' && inputs.length > 0
+      ? { partsPath: rm.partsPath, images: inputs.map((i) => ({ url: i.url })) }
       : undefined;
+
+  // 火山 Seedream 类：图 URL 直接写进 generate body 的声明 path。
+  if (rm?.kind === 'generate-json-url' && inputs.length > 0) {
+    const capped = rm.maxImages ? inputs.slice(0, rm.maxImages) : inputs;
+    if (rm.maxImages && inputs.length > rm.maxImages) {
+      coercions.push(`reference images truncated to maxImages=${rm.maxImages} (had ${inputs.length})`);
+    }
+    const items = capped.map((i) =>
+      rm.item === 'url-string' ? i.url : { ...rm.item.objectTemplate, [rm.item.urlField]: i.url },
+    );
+    const value = rm.container === 'scalar-or-array' && items.length === 1 ? items[0] : items;
+    setPath(body, rm.path, value);
+  }
 
   return {
     url, method: 'POST', headers, body,

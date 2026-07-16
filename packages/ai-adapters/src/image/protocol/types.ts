@@ -71,6 +71,22 @@ export interface ResponseSpec {
   revisedPromptField?: string;
 }
 
+/** 声明一个 preset 的参考图/图生图机制（各厂商官方原生格式）。 */
+export type ReferenceMode =
+  | { kind: 'edit-multipart' }
+  | { kind: 'generate-inline-base64'; partsPath: string }
+  | {
+      kind: 'generate-json-url';
+      /** 图 URL 写进 generate body 的 JSON path（如 'image'）。 */
+      path: string;
+      /** 'scalar-or-array'：恰好 1 张写标量、多张写数组；'array'：恒数组。 */
+      container: 'scalar-or-array' | 'array';
+      /** 'url-string'：数组元素是裸 URL 字符串；对象模板：{...objectTemplate, [urlField]: url}。 */
+      item: 'url-string' | { objectTemplate: Record<string, unknown>; urlField: string };
+      /** 上游能收的最多参考图张数；超出在 assemble 截断。 */
+      maxImages?: number;
+    };
+
 /** Protocol preset for an adapter */
 export interface ProtocolPreset {
   key: string;
@@ -93,12 +109,12 @@ export interface ProtocolPreset {
   staticBody?: Record<string, unknown>;
   multipart?: MultipartSpec;
   /**
-   * 声明「输入图片以 base64 内联进 JSON body」的落点（Gemini generateContent 的图生图）。
-   * 与 `multipart` 互斥：multipart 走表单上传，`inlineImageEmbed` 走 JSON `inlineData`。
-   * `partsPath` 指向 body 里承载 parts 的数组（如 `contents[0].parts`）——文本 prompt 由 core
-   * 绑定写在该数组的 [0]，图片 part 在 execute 阶段异步抓取后追加其后。
+   * 该 preset 的参考图机制（取代旧 inlineImageEmbed）：
+   * - edit-multipart：图走 multipart 表单 + edit 端点（OpenAI /v1/images/edits）；由路由把 operation 切到 edit。
+   * - generate-inline-base64：图 base64 内联进 JSON body 的 partsPath 数组（Gemini generateContent）。
+   * - generate-json-url：图 URL 写进 generate body 的 path（火山 Seedream 的 image 字段）。
    */
-  inlineImageEmbed?: { partsPath: string };
+  referenceMode?: ReferenceMode;
   response: ResponseSpec;
   errorMapping: Record<string, ErrorClassification>; // '400' | '*'
 }

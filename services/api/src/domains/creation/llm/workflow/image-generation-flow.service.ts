@@ -14,9 +14,16 @@ import { createChatModelFromDbConfig } from '../model.factory';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
 import { estimateTextTokens, extractTokenUsage } from '../billing/token-estimation';
 import { LlmRepository } from '../llm.repository';
-import { executeImageCall, ImageUpstreamError } from '@autix/ai-adapters/image';
+import {
+  executeImageCall,
+  resolveImagePreset,
+  ImageUpstreamError,
+  type ProtocolPreset,
+} from '@autix/ai-adapters/image';
+import { readImageModelMetadata } from '@autix/domain/model';
 import {
   buildImageCallRequest,
+  buildImageModelNotConfiguredException,
   buildUnsupportedImageParamsException,
   narrowImageParamsSchema,
   toImageUrlOrDataUri,
@@ -466,6 +473,31 @@ export class ImageGenerationFlowService {
     request: ResolvedImageRequest,
     count: number,
   ): Promise<CallImageApiResult> {
+    // 提前解析一次 preset：只是为了拿 referenceMode（决定要不要在派发前转存 data: URL）。
+    // buildImageCallRequest 内部还会再解析一次同一个 protocolKey —— 可接受的重复计算，
+    // 不为此改 buildImageCallRequest 的签名。resolveImagePreset 抛的是裸 Error（ai-adapters
+    // 是纯协议层），沿用 buildImageCallRequest 同款转换，保持「配置错误→400
+    // ERR_IMAGE_MODEL_NOT_CONFIGURED，不是 500」这条既有契约。
+    let preset: ProtocolPreset;
+    try {
+      preset = resolveImagePreset(
+        readImageModelMetadata(request.modelConfig.metadata).protocolKey,
+      );
+    } catch (error) {
+      throw buildImageModelNotConfiguredException(request, error);
+    }
+
+    // URL-only 上游（generate-json-url，如 Seedream）不认识 data: URL —— 派发前必须
+    // 把参考图/源图转成存储 URL；转存失败必须 fail fast（绝不像 uploadRefIfDataUrl
+    // 那样吞错回退 data URL，那会把整段 base64 直接怼给上游）。
+    if (preset.referenceMode?.kind === 'generate-json-url') {
+      request = {
+        ...request,
+        referenceImages: await this.uploadDataUrlsOrThrow(request.referenceImages),
+        sourceImages: await this.uploadDataUrlsOrThrow(request.sourceImages),
+      };
+    }
+
     const paramsSchema = narrowImageParamsSchema(
       request.modelConfig.paramsSchema,
       request.modelConfig.id,
@@ -502,6 +534,14 @@ export class ImageGenerationFlowService {
           coerced: result.applied.coercions.length > 0,
           notes: result.applied.coercions,
         },
+        // 派发前归一化（generate-json-url 转存）后的实际值——上面重赋值过的局部
+        // `request`。generate-json-url 时是存储 URL；其它协议时与调用方传入的
+        // 原值相同（未被此函数改动）。调用方（generateAndPersistImage）必须拿
+        // 这份去持久化，而不是自己手上那份可能仍是 data: URL 的原始 request——
+        // 否则 persistImageResult 的 normalizeRefImages 会对同一张图重新上传
+        // 一次，且入库 URL 可能与已经发给上游的 URL 不一致（Finding LOW #2）。
+        sourceImages: request.sourceImages,
+        referenceImages: request.referenceImages,
       };
     } catch (error) {
       if (error instanceof ImageUpstreamError) {
@@ -614,14 +654,26 @@ export class ImageGenerationFlowService {
     holdId = hold.id;
 
     try {
-      const { images, appliedSettings } = await this.callImageApi(
-        request,
-        normalizedCount,
-      );
+      const {
+        images,
+        appliedSettings,
+        sourceImages: dispatchedSourceImages,
+        referenceImages: dispatchedReferenceImages,
+      } = await this.callImageApi(request, normalizedCount);
       const uploadedImages = await this.uploadGeneratedImages(images);
+      // 用 callImageApi 归一化（generate-json-url 转存）后的 sourceImages/
+      // referenceImages 覆盖 persistedRequest 里的同名字段：persistImageResult
+      // 的 normalizeRefImages 看到的必须是已经发给上游的那份 URL，不是原始
+      // （可能仍是 data: URL 的）persistedRequest —— 否则会对同一张图二次上传，
+      // 且入库 URL 可能与实际发给上游的不一致（Finding LOW #2）。
+      const persistedRequestWithDispatchedRefs: ResolvedImageRequest = {
+        ...persistedRequest,
+        sourceImages: dispatchedSourceImages ?? persistedRequest.sourceImages,
+        referenceImages: dispatchedReferenceImages ?? persistedRequest.referenceImages,
+      };
       const persisted = await this.persistImageResult(
         input,
-        persistedRequest,
+        persistedRequestWithDispatchedRefs,
         uploadedImages,
         Date.now() - startedAt,
         { confirmHoldId: holdId, membershipLevel, heldImageCount: normalizedCount, appliedSettings },
@@ -651,6 +703,29 @@ export class ImageGenerationFlowService {
       }
       throw err;
     }
+  }
+
+  /** URL-only 上游（generate-json-url）派发前必须把 data:URL 转存储 URL；失败 fail fast，绝不回退 data URL。 */
+  private async uploadDataUrlsOrThrow(
+    refs: SourceImageRef[] | undefined,
+  ): Promise<SourceImageRef[] | undefined> {
+    if (!refs?.length) return refs;
+    return Promise.all(
+      refs.map(async (ref) => {
+        if (!isImageDataUrl(ref.url)) return ref;
+        try {
+          const url = await this.imageTemplatesService.uploadBase64Image(
+            ref.url,
+            'amux-studio/image-generations',
+          );
+          return { ...ref, url };
+        } catch (err) {
+          throw new BadRequestException(
+            `参考图暂存失败：${String(err instanceof Error ? err.message : err)}`,
+          );
+        }
+      }),
+    );
   }
 
   private async uploadRefIfDataUrl(
