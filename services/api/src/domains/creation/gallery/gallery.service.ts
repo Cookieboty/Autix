@@ -12,6 +12,8 @@ import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.servic
 import { FavoriteLibraryService } from '../materials/favorite-library.service';
 import { GalleryRepository } from './gallery.repository';
 import { presentAuthor, type PresentedAuthor } from './gallery-author.presenter';
+import { runWithConcurrency } from './run-with-concurrency';
+import type { BatchModerateGalleryDto } from './dto/batch-moderate.dto';
 import {
   assertInStationMediaUrls,
   assertSource,
@@ -865,6 +867,55 @@ export class GalleryService {
       targetId: id,
     });
     return updated;
+  }
+
+  /**
+   * 批量审核：逐条尽力执行，能过的都过，失败的单独收集。
+   *
+   * 刻意复用单条 approve/reject/hide/remove —— 状态机（assertTransition）和审计日志
+   * （writeAuditLog）不用重写一份，批量与单条的行为天然一致，不会随时间漂移。
+   *
+   * 不做全或全无的事务：审核场景里常常只是某条被同事先处理过，
+   * 没有理由让这一条把整批都拖回滚。
+   *
+   * 并发 5：每条要 3 次数据库往返，远程库单程约 347ms，串行 20 条要 ~20s；
+   * 并发 5 压到 ~4s。上限 5 是因为 PrismaPg 没设 max、pg.Pool 默认 max: 10，
+   * 留一半连接给其余请求，避免打满连接池反而拖垮全站。
+   */
+  async batchModerate(
+    adminId: string,
+    dto: BatchModerateGalleryDto,
+  ): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }> {
+    const succeeded: string[] = [];
+    const failed: { id: string; reason: string }[] = [];
+
+    await runWithConcurrency(dto.ids, 5, async (id) => {
+      try {
+        switch (dto.action) {
+          case 'approve':
+            await this.approve(adminId, id);
+            break;
+          case 'reject':
+            await this.reject(adminId, id, { reason: dto.reason! });
+            break;
+          case 'hide':
+            await this.hide(adminId, id);
+            break;
+          case 'remove':
+            await this.remove(adminId, id);
+            break;
+        }
+        succeeded.push(id);
+      } catch (error) {
+        // 单条失败只记录原因，不中断其余条目。
+        failed.push({
+          id,
+          reason: error instanceof Error ? error.message : '未知错误',
+        });
+      }
+    });
+
+    return { succeeded, failed };
   }
 
   async resolveReport(adminId: string, id: string, dto: ResolveGalleryReportDto) {
