@@ -14,11 +14,16 @@ export interface MaterialFolderDto {
   id: string;
   userId: string;
   name: string;
+  /** 自定义 emoji 图标；null = 没设过，渲染端回退默认文件夹图形。 */
+  icon: string | null;
   sortOrder: number;
   assetCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
+
+/** material_folders.icon 的列宽（VarChar(16)），按码位计。 */
+const ICON_MAX_CODE_POINTS = 16;
 
 @Injectable()
 export class MaterialFoldersService {
@@ -48,6 +53,7 @@ export class MaterialFoldersService {
       id: f.id,
       userId: f.userId,
       name: f.name,
+      icon: f.icon,
       sortOrder: f.sortOrder,
       assetCount: countByFolder.get(f.id) ?? 0,
       createdAt: f.createdAt,
@@ -56,23 +62,34 @@ export class MaterialFoldersService {
     return { folders: dtos, totalAssetCount, rootAssetCount };
   }
 
-  async create(userId: string, input: { name: string }) {
+  async create(userId: string, input: { name: string; icon?: string | null }) {
     await this.materialsService.assertCanAddOrUse(userId);
     const name = this.normalizeName(input.name);
     await this.assertNameAvailable(userId, name);
     return this.runWithUniqueNameGuard(() =>
-      this.repository.create({ userId, name, sortOrder: 0 }),
+      this.repository.create({
+        userId,
+        name,
+        icon: this.normalizeIcon(input.icon),
+        sortOrder: 0,
+      }),
     );
   }
 
-  async update(userId: string, id: string, input: { name?: string; sortOrder?: number }) {
+  async update(
+    userId: string,
+    id: string,
+    input: { name?: string; sortOrder?: number; icon?: string | null },
+  ) {
     await this.ensureFolderOwned(userId, id);
-    const data: { name?: string; sortOrder?: number } = {};
+    const data: { name?: string; sortOrder?: number; icon?: string | null } = {};
     if (input.name !== undefined) {
       const name = this.normalizeName(input.name);
       await this.assertNameAvailable(userId, name, id);
       data.name = name;
     }
+    // 显式传 null = 清除图标；不传 = 不动。二者语义不同，故只看 undefined。
+    if (input.icon !== undefined) data.icon = this.normalizeIcon(input.icon);
     if (input.sortOrder !== undefined) {
       data.sortOrder = Number.isFinite(input.sortOrder) ? Math.trunc(input.sortOrder) : 0;
     }
@@ -118,6 +135,29 @@ export class MaterialFoldersService {
     if (existing && existing.id !== excludeId) {
       throw new ConflictException('已存在同名文件夹');
     }
+  }
+
+  /**
+   * emoji 图标入库前的收口。
+   *
+   * 不做「是不是 emoji」的校验：判定 emoji 需要一张随 Unicode 版本漂移的表，
+   * 而风险面很小（自己的文件夹、只回给自己看）。只管长度——列宽 VarChar(16) 是硬约束，
+   * 超了 Postgres 直接报错。
+   *
+   * 按**码位**计数（Array.from）而不是 String.length：后者数的是 UTF-16 码元，
+   * 一个 emoji 动辄 2 个码元，会把本来放得下的图标误判成超长。
+   */
+  private normalizeIcon(value: string | null | undefined): string | null {
+    if (value === null || value === undefined) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    const codePoints = Array.from(text);
+    // 放不下就整个拒收，而不是截一半：ZWJ 组合序列（👨‍👩‍👧‍👦 = 7 码位）从中间切开，
+    // 得到的是「两个人 + 一个悬空连接符」这种乱码，比没有图标更糟。
+    if (codePoints.length > ICON_MAX_CODE_POINTS) {
+      throw new BadRequestException('图标不合法');
+    }
+    return text;
   }
 
   private normalizeName(value: string): string {

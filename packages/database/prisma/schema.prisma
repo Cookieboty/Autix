@@ -1912,10 +1912,13 @@ model material_assets {
 }
 
 model material_folders {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation("MaterialFolderUser", fields: [userId], references: [id], onDelete: Cascade)
-  name      String    @db.VarChar(100)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("MaterialFolderUser", fields: [userId], references: [id], onDelete: Cascade)
+  name   String @db.VarChar(100)
+  /// 自定义 emoji 图标；null = 没设过，渲染端回退默认文件夹图形。
+  /// VarChar(16)：emoji 可含肤色修饰/ZWJ 组合，多码位，不能按单字符估容量。
+  icon      String?   @db.VarChar(16)
   sortOrder Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
