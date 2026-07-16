@@ -58,6 +58,7 @@ export type {
 } from '@autix/sdk';
 export * from './material.store';
 export * from './material-folder.store';
+export * from './asset-library.queries';
 export * from './material-history.store';
 export * from './resource.store';
 export * from './resource-panel.store';
