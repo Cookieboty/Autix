@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input } from '../../ui';
+import { Button, ConfirmDialog, Input } from '../../ui';
 import { formatCurrency } from '../../format';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -35,6 +35,8 @@ export function PointsPackagesView() {
   const deletePackageMutation = useDeleteAdminPointsPackageMutation();
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; data: Record<string, unknown> } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PointsPackage | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleSave = async () => {
     if (!modal) return;
@@ -69,9 +71,15 @@ export function PointsPackagesView() {
     });
   };
 
-  const handleDeletePackage = async (pkg: PointsPackage) => {
-    if (!window.confirm(`${tCommon('confirmDelete')} ${pkg.name}?`)) return;
-    await deletePackageMutation.mutateAsync(pkg.id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deletePackageMutation.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -134,8 +142,7 @@ export function PointsPackagesView() {
                     </Button>
                     <Button
                       size="sm" variant="ghost" className="cursor-pointer"
-                      disabled={deletePackageMutation.isPending}
-                      onClick={() => handleDeletePackage(pkg)}
+                      onClick={() => setDeleteTarget(pkg)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -212,6 +219,18 @@ export function PointsPackagesView() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title={tCommon('confirmDelete')}
+        description={deleteTarget?.name}
+        confirmText={tCommon('delete')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={deleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ export * from './calendar';
 export * from './card';
 export * from './checkbox';
 export * from './collapsible';
+export * from './confirm-dialog';
 export * from './dialog';
 export * from './dropdown-menu';
 export * from './empty';

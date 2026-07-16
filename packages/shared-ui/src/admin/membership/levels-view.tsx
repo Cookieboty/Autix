@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   Button,
   Checkbox,
+  ConfirmDialog,
   Input,
   Select,
   SelectContent,
@@ -80,6 +81,8 @@ export function MembershipLevelsView() {
   const [levelModal, setLevelModal] = useState<{ mode: 'create' | 'edit'; data: Record<string, unknown> } | null>(null);
   const [planModal, setPlanModal] = useState<{ mode: 'create' | 'edit'; data: Record<string, unknown> } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ label: string; run: () => Promise<unknown> } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
@@ -115,14 +118,23 @@ export function MembershipLevelsView() {
     }
   };
 
-  const handleDeleteLevel = async (level: MembershipLevel) => {
-    if (!window.confirm(`${tCommon('confirmDelete')} ${level.name}?`)) return;
-    await deleteLevelMutation.mutateAsync(level.id);
+  const handleDeleteLevel = (level: MembershipLevel) => {
+    setPendingDelete({ label: level.name, run: () => deleteLevelMutation.mutateAsync(level.id) });
   };
 
-  const handleDeletePlan = async (plan: { id: string; billingCycle: string }) => {
-    if (!window.confirm(`${tCommon('confirmDelete')} ${plan.billingCycle}?`)) return;
-    await deletePlanMutation.mutateAsync(plan.id);
+  const handleDeletePlan = (plan: { id: string; billingCycle: string }) => {
+    setPendingDelete({ label: plan.billingCycle, run: () => deletePlanMutation.mutateAsync(plan.id) });
+  };
+
+  const runDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await pendingDelete.run();
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSavePlan = async () => {
@@ -426,6 +438,18 @@ export function MembershipLevelsView() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+        title={tCommon('confirmDelete')}
+        description={pendingDelete?.label}
+        confirmText={tCommon('delete')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={deleting}
+        onConfirm={runDelete}
+      />
     </div>
   );
 }
