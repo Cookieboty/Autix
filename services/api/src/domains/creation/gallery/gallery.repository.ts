@@ -96,6 +96,19 @@ export class GalleryRepository {
     });
   }
 
+  /**
+   * 媒体搬运成功后发布：仅当作品仍为 PENDING 时生效。
+   * where 即原子条件（而非先读后写），避免与管理员并发处置竞态 ——
+   * 管理员若已 REJECT/REMOVE，count=0，worker 不覆盖其决定。
+   */
+  async publishIfPending(id: string): Promise<number> {
+    const res = await this.prisma.gallery_posts.updateMany({
+      where: { id, status: GalleryStatus.PENDING },
+      data: { status: GalleryStatus.PUBLISHED, publishedAt: new Date() },
+    });
+    return res.count;
+  }
+
   /** 待审列表（PENDING，createdAt 升序，游标为上一页最后一条的 id）。 */
   async findPendingPage(cursor: string | undefined, take: number) {
     return this.findByStatusPage(GalleryStatus.PENDING, cursor, take);
