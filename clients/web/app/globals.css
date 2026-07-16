@@ -273,7 +273,7 @@
    - html 兜底深色背景：即使个别浏览器仍有回弹，也不会露出白色 */
 html {
   overscroll-behavior: none;
-  background-color: #050505;
+  background-color: rgb(15, 17, 19);
 }
 body {
   overscroll-behavior: none;
@@ -471,6 +471,22 @@ body {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
   }
+}
+
+/* 由下向上渐显（/asset 空状态）。复用 masonry-in 的位移量，
+   全站「内容浮现」的手感保持一致。 */
+@keyframes growth-rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+.growth-rise-in {
+  animation: growth-rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes growth-generator-pulse {
@@ -1176,9 +1192,22 @@ body {
 }
 
 /* PublicGeneratorAppNav assets/folder icon (muted green) */
+/* 素材库文件夹图标的统一色（导航 Assets 按钮 + /asset 侧栏文件夹项共用）。 */
+:root {
+  --folder-glyph: #8ad97c;
+}
+
+/* 导航 Assets 按钮的文件夹：默认不带色（跟随按钮文字色），悬浮才点亮。 */
 .growth-assets-icon {
-  color: #8ad97c;
-  fill: #8ad97c;
+  color: currentColor;
+  fill: currentColor;
+  transition:
+    color 200ms,
+    fill 200ms;
+}
+.growth-nav-btn:hover .growth-assets-icon {
+  color: var(--folder-glyph);
+  fill: var(--folder-glyph);
 }
 
 /* Large featured panel deep drop shadow (preview decks, media panels) */
