@@ -169,6 +169,20 @@ export function useGalleryModeration(callbacks?: MutationCallbacks) {
   return { approve, reject, hide, remove, resolveReport, batch, pendingIds };
 }
 
+/** JSON 批量导入。导入的作品落 PENDING（媒体搬运完成后由 worker 自动发布），故成功后失效整个 galleryAdmin 根。 */
+export function useImportGalleryMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (items: Record<string, any>[]) => galleryAdminActions.importGallery(items),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: galleryAdminQueryKeys.root() });
+      await callOnSuccess(callbacks);
+    },
+    onError: (error) => callOnError(error, callbacks),
+  });
+}
+
 /** 复用通用 batch-job 轮询 action，供 TemplateImportDialog 的 pollJob 直接使用。 */
 export function useGalleryBatchJobPoller() {
   return galleryAdminActions.getBatchJob;

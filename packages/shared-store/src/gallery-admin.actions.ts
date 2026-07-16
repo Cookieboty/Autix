@@ -10,8 +10,7 @@ import {
   type GalleryBatchResult,
   type GalleryPostAdminItem,
 } from '@autix/sdk';
-// 注：gallery import 已下线（后端 /admin/gallery/import 端点已删除，见 Plan C Task 1）；
-// batchJobApi 仍保留供 useGalleryBatchJobPoller 复用通用 batch-job 轮询。
+// batchJobApi 供 useGalleryBatchJobPoller 复用通用 batch-job 轮询，不新建第二套。
 
 export type {
   GalleryAdminKind,
@@ -50,6 +49,15 @@ export const galleryAdminActions = {
   /** 复用与模板导入相同的通用 batch-job 轮询接口，不新建第二套轮询。 */
   getBatchJob: async (jobId: string) => {
     const { data } = await batchJobApi.get(jobId);
+    return data;
+  },
+  /** JSON 批量导入 → 返回 batch job id，由 useGalleryBatchJobPoller 轮询进度。 */
+  importGallery: async (items: Record<string, any>[]): Promise<{ jobId: string }> => {
+    const { data } = await galleryAdminApi.importGallery(items);
+    return data;
+  },
+  getGalleryImportTemplate: async (): Promise<Record<string, any>[]> => {
+    const { data } = await galleryAdminApi.getGalleryImportTemplate();
     return data;
   },
 };
