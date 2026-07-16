@@ -23,6 +23,9 @@ export const chatApi = createApiInstance(
 export const updateMyLanguage = (language: string) =>
   userApi.patch('/users/me/language', { language });
 
+export const updateMyAutoPublish = (autoPublish: boolean) =>
+  userApi.patch('/users/me/auto-publish', { autoPublish });
+
 export const registerUser = (data: {
   username: string;
   email: string;

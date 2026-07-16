@@ -4,6 +4,7 @@ export {
   getAvailableModels,
   getSystemModels,
   registerUser,
+  updateMyAutoPublish,
   updateMyLanguage,
   updateSystemModel,
   userApi,
