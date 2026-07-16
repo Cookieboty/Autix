@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ResourceMigrationService } from '../../admin/admin/resource-migration.service';
 import { GalleryRepository } from './gallery.repository';
+import { runWithConcurrency } from './run-with-concurrency';
 
 /** 广场作品导入后需要迁移到 R2 的媒体字段（区别于模板的 exampleImages/exampleMedia）。 */
 const GALLERY_MEDIA_FIELDS = ['coverImage', 'mediaUrls'] as const;
@@ -24,23 +25,6 @@ export type MigrateBatchResult = {
   /** 本轮失败但未达上限、留待下轮重试的作品数 */
   retry: number;
 };
-
-/** 有限并发地跑一批异步任务（不引第三方依赖）。 */
-async function runWithConcurrency<T>(
-  items: readonly T[],
-  limit: number,
-  fn: (item: T) => Promise<void>,
-): Promise<void> {
-  let cursor = 0;
-  const workerCount = Math.max(1, Math.min(limit, items.length));
-  const workers = Array.from({ length: workerCount }, async () => {
-    while (cursor < items.length) {
-      const index = cursor++;
-      await fn(items[index]!);
-    }
-  });
-  await Promise.all(workers);
-}
 
 /**
  * 广场作品媒体异步迁移 worker 的核心逻辑（被 GalleryMediaMigrationCron 定时调用）。
