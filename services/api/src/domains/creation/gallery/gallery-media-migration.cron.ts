@@ -21,7 +21,7 @@ export class GalleryMediaMigrationCron {
       const res = await this.service.migratePendingBatch();
       if (res.scanned > 0) {
         this.logger.log(
-          `tick: scanned=${res.scanned} settled=${res.settled} retry=${res.retry}`,
+          `tick: scanned=${res.scanned} published=${res.published} retry=${res.retry} stranded=${res.stranded}`,
         );
       }
     } catch (err) {
