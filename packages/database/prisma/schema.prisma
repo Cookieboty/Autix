@@ -93,6 +93,7 @@ model User {
   avatarStorageKey               String?
   phone                          String?
   language                       String?                      @default("zh-CN")
+  autoPublish                    Boolean                      @default(false)
   status                         UserStatus                   @default(ACTIVE)
   isSuperAdmin                   Boolean                      @default(false)
   roles                          UserRole[]
