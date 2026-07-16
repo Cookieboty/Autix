@@ -1,4 +1,10 @@
 import {
+  computeTaskEstimate,
+  MODEL_PRESETS,
+  type ParamsSchema,
+  type PricingSchema,
+} from '@autix/domain/pricing';
+import {
   buildPublicVideoEstimateInput,
   findVideoModelByHint,
   resolveVideoCapabilityFromModelConfig,
@@ -152,5 +158,59 @@ describe('buildPublicVideoEstimateInput', () => {
     expect(Object.keys(input.params)).not.toContain('inputTokens');
     expect(Object.keys(input.params)).not.toContain('outputTokens');
     expect(input).not.toHaveProperty('usage');
+  });
+});
+
+/**
+ * 视频计价迁到前端本地计算（不再打 /points/estimate）。承重点是「展示 == 扣费」：
+ * VideoSidebar 用 buildPublicVideoEstimateInput 造参 + computeTaskEstimate 本地算价，
+ * 与服务端 TaskPricingEstimatorService.estimateCost 调**同一个** computeTaskEstimate。
+ * video_generation 的 fixedCostSchema 为 null（presets.ts），所以本地必须传
+ * taskFixedSchema: null —— 传错（比如误用某个 fixedFee）会让展示价与实际扣费分裂。
+ */
+describe('本地视频计价：display == charge', () => {
+  const videoPreset = MODEL_PRESETS.video;
+  const pricingSchema = videoPreset.pricingSchema as unknown as PricingSchema;
+  const paramsSchema = videoPreset.paramsSchema as unknown as ParamsSchema;
+
+  test('presenter 造参 + computeTaskEstimate 本地算出整数点数，无 violations', () => {
+    // 1080p × 5s，用 video 预设：base(add 1) → resolution(mul 800) → seconds(mul ×5) = 4000。
+    const { params } = buildPublicVideoEstimateInput({
+      model: 'seedance-2.0',
+      duration: 5,
+      resolution: '1080p',
+      generateAudio: true,
+    });
+    const result = computeTaskEstimate({
+      pricingSchema,
+      paramsSchema,
+      multiplier: 1,
+      discountFactor: 1,
+      taskFixedSchema: null,
+      params,
+    });
+    expect(result.violations).toEqual([]);
+    expect(Number.isInteger(result.total)).toBe(true);
+    expect(result.total).toBe(4000);
+  });
+
+  test('倍率与折扣参与计价，仍取整（ceil）', () => {
+    const { params } = buildPublicVideoEstimateInput({
+      model: 'seedance-2.0',
+      duration: 4,
+      resolution: '720p',
+      generateAudio: false,
+    });
+    // base 1 → ×320(720p) → ×4s = 1280；×1.5 倍率 ×0.6 折扣 = 1152。
+    const result = computeTaskEstimate({
+      pricingSchema,
+      paramsSchema,
+      multiplier: 1.5,
+      discountFactor: 0.6,
+      taskFixedSchema: null,
+      params,
+    });
+    expect(result.violations).toEqual([]);
+    expect(result.total).toBe(1152);
   });
 });

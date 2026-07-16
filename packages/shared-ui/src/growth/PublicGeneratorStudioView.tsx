@@ -105,6 +105,37 @@ export function PublicGeneratorStudioView({
     discountFactor: selectedImageTaskModel?.discountFactor ?? 1,
   };
 
+  // video_generation 的 TaskModel 列表（paramsSchema/pricingSchema/multiplier/
+  // discountFactor）——与 image 完全同构地单独拉取，按 modelConfigId 关联给 VideoSidebar
+  // 做**本地即时计价**，取代原来每次改参数都打 /points/estimate 的服务端往返。
+  // video_generation 与 image_generation 一样 fixedCostSchema 为 null（presets.ts），
+  // 所以前端本地 computeTaskEstimate（taskFixedSchema: null）与服务端扣费同函数同结果。
+  const [videoTaskModels, setVideoTaskModels] = useState<TaskModel[]>([]);
+  useEffect(() => {
+    if (kind !== 'video') return;
+    let cancelled = false;
+    pricingActions
+      .getTaskModels('video_generation')
+      .then((models) => {
+        if (!cancelled) setVideoTaskModels(models);
+      })
+      .catch(() => {
+        if (!cancelled) setVideoTaskModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [kind]);
+  const selectedVideoTaskModel = videoTaskModels.find(
+    (model) => model.modelConfigId === selectedVideoModelId,
+  );
+  const videoParamsSchema = selectedVideoTaskModel?.paramsSchema as unknown as ParamsSchema | undefined;
+  const videoPricingSchema = selectedVideoTaskModel?.pricingSchema as unknown as PricingSchema | undefined;
+  const videoPricingContext = {
+    multiplier: selectedVideoTaskModel?.multiplier ?? 1,
+    discountFactor: selectedVideoTaskModel?.discountFactor ?? 1,
+  };
+
   useEffect(() => {
     if (kind !== 'image') {
       setImageModelsLoading(false);
@@ -218,6 +249,9 @@ export function PublicGeneratorStudioView({
           selectedModelId={selectedVideoModelId}
           selectedModelValue={selectedVideoModelValue}
           modelsLoading={videoModelsLoading}
+          paramsSchema={videoParamsSchema}
+          pricingSchema={videoPricingSchema}
+          pricingContext={videoPricingContext}
           onModelChange={setSelectedVideoModelId}
         />
       ) : (

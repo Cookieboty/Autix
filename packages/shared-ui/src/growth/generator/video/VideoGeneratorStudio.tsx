@@ -12,6 +12,7 @@ import {
   useVideoProjectStore,
   type ModelConfigItem,
 } from '@autix/shared-store';
+import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
 import type { PublicGrowthMediaItem } from '../../types';
 import { VideoSidebar } from './VideoSidebar';
 import { VideoHowItWorks } from './VideoHowItWorks';
@@ -26,6 +27,9 @@ export function VideoGeneratorStudio({
   selectedModelId,
   selectedModelValue,
   modelsLoading,
+  paramsSchema,
+  pricingSchema,
+  pricingContext,
   onModelChange,
 }: {
   items: PublicGrowthMediaItem[];
@@ -35,6 +39,9 @@ export function VideoGeneratorStudio({
   selectedModelId: string | null;
   selectedModelValue?: string | null;
   modelsLoading: boolean;
+  paramsSchema: ParamsSchema | undefined;
+  pricingSchema: PricingSchema | undefined;
+  pricingContext: { multiplier: number; discountFactor: number };
   onModelChange: (modelId: string) => void;
 }) {
   const [tab, setTab] = useState<'history' | 'howItWorks'>('howItWorks');
@@ -177,6 +184,9 @@ export function VideoGeneratorStudio({
             selectedModelId={selectedModelId}
             selectedModelValue={selectedModelValue}
             modelsLoading={modelsLoading}
+            paramsSchema={paramsSchema}
+            pricingSchema={pricingSchema}
+            pricingContext={pricingContext}
             generating={generating}
             onGenerate={handleGenerate}
             onModelChange={onModelChange}

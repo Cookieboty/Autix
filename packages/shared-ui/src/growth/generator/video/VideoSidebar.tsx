@@ -21,10 +21,8 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  publicGeneratorActions,
-  type ModelConfigItem,
-} from '@autix/shared-store';
+import { computeTaskEstimate, type ParamsSchema, type PricingSchema } from '@autix/domain/pricing';
+import { type ModelConfigItem } from '@autix/shared-store';
 import { MagneticButton } from '../../GrowthInteractions';
 import {
   buildPublicVideoEstimateInput,
@@ -72,6 +70,9 @@ export function VideoSidebar({
   selectedModelId,
   selectedModelValue,
   modelsLoading,
+  paramsSchema,
+  pricingSchema,
+  pricingContext,
   generating,
   onGenerate,
   onModelChange,
@@ -88,6 +89,9 @@ export function VideoSidebar({
   selectedModelId: string | null;
   selectedModelValue?: string | null;
   modelsLoading: boolean;
+  paramsSchema: ParamsSchema | undefined;
+  pricingSchema: PricingSchema | undefined;
+  pricingContext: { multiplier: number; discountFactor: number };
   generating: boolean;
   onGenerate: (payload: PublicVideoGenerationPayload) => Promise<void>;
   onModelChange: (modelId: string) => void;
@@ -120,7 +124,6 @@ export function VideoSidebar({
   >(null);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
-  const [estimateLoading, setEstimateLoading] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [optimizeError, setOptimizeError] = useState<string | null>(null);
   const {
@@ -194,36 +197,44 @@ export function VideoSidebar({
   }, [promptDialogOpen]);
 
   useEffect(() => {
-    let cancelled = false;
-    setEstimateLoading(true);
-    const timer = window.setTimeout(() => {
-      publicGeneratorActions
-        .estimateGeneration(
-          buildPublicVideoEstimateInput({
-            model,
-            modelConfig: selectedModel,
-            duration,
-            resolution,
-            generateAudio,
-            referenceImages: selectedVideoRefs.length,
-          }),
-        )
-        .then((estimate) => {
-          if (!cancelled) setEstimateCost(estimate.estimatedCost);
-        })
-        .catch(() => {
-          if (!cancelled) setEstimateCost(null);
-        })
-        .finally(() => {
-          if (!cancelled) setEstimateLoading(false);
-        });
-    }, 250);
+    if (!selectedModel || !pricingSchema || !paramsSchema) {
+      setEstimateCost(null);
+      return;
+    }
 
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [duration, generateAudio, model, resolution, selectedModel, selectedVideoRefs.length]);
+    // 本地即时计价：与服务端 estimateCost 调**同一个** computeTaskEstimate（同函数 →
+    // 同结果，保证展示 == 扣费）。不再走 /points/estimate，无网络往返、无 250ms 防抖延迟。
+    // 报价参数 == 生成参数：buildPublicVideoEstimateInput 归一化 resolution、seconds、
+    // referenceImages 等隐藏计价参数。video_generation 与 image 一样 taskFixedSchema 恒为
+    // null（presets.ts: video_generation.fixedCostSchema = null）。
+    const { params } = buildPublicVideoEstimateInput({
+      model,
+      modelConfig: selectedModel,
+      duration,
+      resolution,
+      generateAudio,
+      referenceImages: selectedVideoRefs.length,
+    });
+    const result = computeTaskEstimate({
+      pricingSchema,
+      paramsSchema,
+      multiplier: pricingContext.multiplier,
+      discountFactor: pricingContext.discountFactor,
+      taskFixedSchema: null,
+      params,
+    });
+    setEstimateCost(result.violations.length > 0 ? null : result.total);
+  }, [
+    pricingSchema,
+    paramsSchema,
+    pricingContext,
+    duration,
+    generateAudio,
+    model,
+    resolution,
+    selectedModel,
+    selectedVideoRefs.length,
+  ]);
 
   const addVideoRefs = (refs: PublicVideoReference[]) => {
     setSelectedVideoRefs((current) => mergePublicVideoReferences(current, refs, uploadLimit));
@@ -619,10 +630,6 @@ export function VideoSidebar({
             <span className="inline-flex items-center gap-1 text-xs font-bold text-background/70">
               <Loader2 className="size-3 animate-spin" />
               {t('stayHere')}
-            </span>
-          ) : estimateLoading ? (
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-background/60">
-              <Loader2 className="size-3 animate-spin" />
             </span>
           ) : estimateCost != null ? (
             <span className="inline-flex items-center gap-1 text-xs font-bold text-background/66">
