@@ -340,6 +340,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               setSearchInput('');
               setSearch('');
               setPage(1);
+              setSelectedIds(new Set());
             }}
           >
             {t('gallery.filters.clear')}
