@@ -5086,6 +5086,26 @@
         "source": "来源",
         "submittedAt": "提交时间",
         "publishedAt": "发布时间"
+      },
+      "batch": {
+        "selected": "已选 {count} 项",
+        "clear": "取消选择",
+        "approve": "批量通过",
+        "reject": "批量拒绝",
+        "hide": "批量隐藏",
+        "unpublish": "批量下架",
+        "remove": "批量删除",
+        "processing": "处理中…",
+        "selectAll": "全选本页",
+        "selectRow": "选择此项",
+        "rejectDialogTitle": "批量拒绝 {count} 项",
+        "rejectDialogHint": "该理由将应用到选中的全部 {count} 项。",
+        "hideConfirm": "确定隐藏选中的 {count} 项？",
+        "removeConfirm": "确定删除选中的 {count} 项？此操作不可撤销。",
+        "resultAllOk": "已成功处理 {count} 项",
+        "resultPartial": "成功 {succeeded} 项，失败 {failed} 项",
+        "failuresTitle": "以下 {count} 项未能处理",
+        "failuresDismiss": "知道了"
       }
     },
     "boost": {

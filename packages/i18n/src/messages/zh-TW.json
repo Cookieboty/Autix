@@ -5086,6 +5086,26 @@
         "source": "來源",
         "submittedAt": "提交時間",
         "publishedAt": "發布時間"
+      },
+      "batch": {
+        "selected": "{count} selected",
+        "clear": "Clear selection",
+        "approve": "Bulk approve",
+        "reject": "Bulk reject",
+        "hide": "Bulk hide",
+        "unpublish": "Bulk unpublish",
+        "remove": "Bulk remove",
+        "processing": "Processing…",
+        "selectAll": "Select all on page",
+        "selectRow": "Select this row",
+        "rejectDialogTitle": "Bulk reject {count} items",
+        "rejectDialogHint": "This reason will apply to all {count} selected items.",
+        "hideConfirm": "Hide the selected {count} items?",
+        "removeConfirm": "Remove the selected {count} items? This cannot be undone.",
+        "resultAllOk": "Successfully processed {count} items",
+        "resultPartial": "{succeeded} succeeded, {failed} failed",
+        "failuresTitle": "{count} items could not be processed",
+        "failuresDismiss": "Got it"
       }
     },
     "boost": {
