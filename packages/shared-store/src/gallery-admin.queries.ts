@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { galleryAdminActions } from './gallery-admin.actions';
 import type { GalleryAdminListParams } from './gallery-admin.actions';
@@ -44,47 +45,88 @@ export function useGalleryCategories() {
 export function useGalleryModeration(callbacks?: MutationCallbacks) {
   const queryClient = useQueryClient();
 
-  // 状态迁移会跨 tab（如 approve 把作品从待审移到已审），因此统一失效整个 galleryAdmin 根。
-  const invalidatePending = () =>
-    queryClient.invalidateQueries({
-      queryKey: galleryAdminQueryKeys.root(),
+  // 按 id 追踪在飞的请求：只灰掉被点的那一行，而不是整张表。
+  // 用 Set 而不是 mutation.variables —— variables 只保留最后一次调用的值，
+  // 连点两行时前一行会被误判成已完成。
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
+
+  const addPending = useCallback((ids: string[]) => {
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
     });
+  }, []);
+
+  const clearPending = useCallback((ids: string[]) => {
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+  }, []);
+
+  /**
+   * 状态迁移会跨 tab（如 approve 把作品从待审移到已审），因此统一失效整个 galleryAdmin 根。
+   * 刻意不 await：失效只是让列表自己重新拉一遍，isFetching 已经在表达"正在刷新"。
+   * 一旦 await，mutation 的 isPending 会被拖到整个 refetch 结束才翻假，
+   * 按钮就会在请求早已成功之后继续锁住一整个往返（远程库 ~347ms 起，refetch 失败重试更久）。
+   */
+  const invalidateAll = () => {
+    void queryClient.invalidateQueries({ queryKey: galleryAdminQueryKeys.root() });
+  };
 
   const approve = useMutation({
     mutationFn: (id: string) => galleryAdminActions.approve(id),
-    onSuccess: async () => {
-      await invalidatePending();
-      await callOnSuccess(callbacks);
+    onMutate: (id) => {
+      addPending([id]);
+    },
+    onSuccess: () => {
+      invalidateAll();
+      void callOnSuccess(callbacks);
     },
     onError: (error) => callOnError(error, callbacks),
+    onSettled: (_data, _error, id) => clearPending([id]),
   });
 
   const reject = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       galleryAdminActions.reject(id, reason),
-    onSuccess: async () => {
-      await invalidatePending();
-      await callOnSuccess(callbacks);
+    onMutate: ({ id }) => {
+      addPending([id]);
+    },
+    onSuccess: () => {
+      invalidateAll();
+      void callOnSuccess(callbacks);
     },
     onError: (error) => callOnError(error, callbacks),
+    onSettled: (_data, _error, { id }) => clearPending([id]),
   });
 
   const hide = useMutation({
     mutationFn: (id: string) => galleryAdminActions.hide(id),
-    onSuccess: async () => {
-      await invalidatePending();
-      await callOnSuccess(callbacks);
+    onMutate: (id) => {
+      addPending([id]);
+    },
+    onSuccess: () => {
+      invalidateAll();
+      void callOnSuccess(callbacks);
     },
     onError: (error) => callOnError(error, callbacks),
+    onSettled: (_data, _error, id) => clearPending([id]),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => galleryAdminActions.remove(id),
-    onSuccess: async () => {
-      await invalidatePending();
-      await callOnSuccess(callbacks);
+    onMutate: (id) => {
+      addPending([id]);
+    },
+    onSuccess: () => {
+      invalidateAll();
+      void callOnSuccess(callbacks);
     },
     onError: (error) => callOnError(error, callbacks),
+    onSettled: (_data, _error, id) => clearPending([id]),
   });
 
   const resolveReport = useMutation({
@@ -95,14 +137,14 @@ export function useGalleryModeration(callbacks?: MutationCallbacks) {
       reportId: string;
       status: 'RESOLVED' | 'DISMISSED';
     }) => galleryAdminActions.resolveReport(reportId, status),
-    onSuccess: async () => {
-      await invalidatePending();
-      await callOnSuccess(callbacks);
+    onSuccess: () => {
+      invalidateAll();
+      void callOnSuccess(callbacks);
     },
     onError: (error) => callOnError(error, callbacks),
   });
 
-  return { approve, reject, hide, remove, resolveReport };
+  return { approve, reject, hide, remove, resolveReport, pendingIds };
 }
 
 /** 复用通用 batch-job 轮询 action，供 TemplateImportDialog 的 pollJob 直接使用。 */

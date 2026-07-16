@@ -171,7 +171,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
 
   const { data, isLoading, isFetching, refetch } = useGalleryAdminList(params);
   const categoriesQuery = useGalleryCategories();
-  const { approve, reject, hide, remove } = useGalleryModeration({
+  const { approve, reject, hide, remove, pendingIds } = useGalleryModeration({
     onSuccess: () => {
       setRejectTarget(null);
       setRejectReason('');
@@ -182,7 +182,6 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
   const loading = isLoading || isFetching;
-  const acting = approve.isPending || reject.isPending || hide.isPending || remove.isPending;
   const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(page * PAGE_SIZE, total);
   const isPending = status === 'PENDING';
@@ -335,6 +334,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
             <TableBody>
               {items.map((item) => {
                 const thumb = thumbnailOf(item);
+                const rowBusy = pendingIds.has(item.id);
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
@@ -379,7 +379,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={acting}
+                              disabled={rowBusy}
                               className="h-8 px-2 cursor-pointer hover:bg-success/10 hover:text-success"
                               onClick={() => approve.mutate(item.id)}
                             >
@@ -389,7 +389,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={acting}
+                              disabled={rowBusy}
                               className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => {
                                 setRejectTarget(item);
@@ -404,7 +404,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            disabled={acting}
+                            disabled={rowBusy}
                             className="h-8 px-2 cursor-pointer hover:bg-orange-500/10 hover:text-orange-500"
                             onClick={() => setBoostTarget(item)}
                           >
@@ -415,7 +415,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={acting}
+                          disabled={rowBusy}
                           className="h-8 px-2 cursor-pointer"
                           onClick={() => handleHide(item)}
                         >
@@ -425,7 +425,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={acting}
+                          disabled={rowBusy}
                           className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => handleRemove(item)}
                         >
