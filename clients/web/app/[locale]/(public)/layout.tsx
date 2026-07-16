@@ -33,6 +33,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const isImage = pathname.startsWith('/ai/image');
   const isVideo = pathname.startsWith('/ai/video');
   const isFunctionPage = isImage || isVideo;
+  // 账户设置：导航保持 contained（同首页），但布局锁定视口高度、内容在内部滚动，
+  // 内容不满时页面不产生文档滚动（否则受上方 promo/导航/内边距叠加影响会多出几像素滚动）。
+  const isSettings = pathname.startsWith('/me');
+  const lockViewport = isFunctionPage || isSettings;
 
   // 直接由 next/navigation 的 pathname 推导并传给导航（SSR/首帧即正确），
   // 避免导航内部依赖自定义适配器 usePathname 时首帧误判成首页背景、产生一瞬闪烁。
@@ -42,18 +46,18 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <div
       className={
-        isFunctionPage
+        lockViewport
           ? 'flex h-svh flex-col overflow-hidden bg-background text-foreground'
           : 'min-h-svh bg-background text-foreground'
       }
     >
       {/* 横幅在导航条上方（持久、可关闭）；功能页 shrink-0 固定，营销页随文档滚动。
           z-40 抬到功能页 studio 的全屏固定主题背景(fixed inset-0)之上，否则会被其盖住看不见 */}
-      <div className={`relative z-40 ${isFunctionPage ? 'shrink-0' : ''}`}>
+      <div className={`relative z-40 ${lockViewport ? 'shrink-0' : ''}`}>
         <PublicTopPromo />
       </div>
       <PublicGeneratorAppNav kind={navKind} variant={navVariant} />
-      <div className={isFunctionPage ? 'min-h-0 flex-1 overflow-y-auto overscroll-none' : 'contents'}>
+      <div className={lockViewport ? 'min-h-0 flex-1 overflow-y-auto overscroll-none' : 'contents'}>
         {children}
       </div>
     </div>

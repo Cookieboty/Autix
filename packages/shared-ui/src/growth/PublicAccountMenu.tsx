@@ -254,7 +254,7 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
 
   const quickLinks = [
     { label: t('viewProfile'), href: '/profile', icon: User },
-    { label: t('manageAccount'), href: '/profile', icon: Settings },
+    { label: t('manageAccount'), href: '/me/settings', icon: Settings },
     { label: t('pointsHistory'), href: '/membership/points', icon: Coins },
     { label: t('assets'), href: '/materials', icon: PackageOpen },
   ];

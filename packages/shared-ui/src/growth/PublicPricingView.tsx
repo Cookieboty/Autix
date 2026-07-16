@@ -84,10 +84,10 @@ export function PublicPricingView({
                   <Star className="size-4" />
                   {t('eyebrow')}
                 </p>
-                <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
+                <h1 className="text-3xl font-black uppercase tracking-tight text-foreground md:text-4xl">
                   {t('purchaseTitle')}
                 </h1>
-                <p className="mt-2 text-sm leading-6 text-foreground/54">{t('purchaseBody')}</p>
+                <p className="mt-2 text-sm leading-6 text-foreground/54 md:text-base">{t('purchaseBody')}</p>
               </div>
               <BillingCycleSwitch
                 cycle={cycle}

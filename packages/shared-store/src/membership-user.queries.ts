@@ -139,6 +139,16 @@ export function useCancelMembershipMutation(callbacks?: MutationCallbacks) {
   });
 }
 
+export function useCreateBillingPortalMutation(callbacks?: MutationCallbacks) {
+  return useMutation({
+    mutationFn: membershipUserActions.createBillingPortal,
+    onSuccess: async () => {
+      await callbacks?.onSuccess?.();
+    },
+    onError: (error) => callbacks?.onError?.(error),
+  });
+}
+
 export function useMembershipRewardsProgressQuery() {
   return useQuery({
     queryKey: membershipUserQueryKeys.rewardsProgress(),

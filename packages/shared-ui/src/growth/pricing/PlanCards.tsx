@@ -23,7 +23,7 @@ export function BillingCycleSwitch({
   ];
 
   return (
-    <div className="flex w-fit flex-wrap gap-2 rounded-lg border border-border bg-foreground/[0.05] p-1">
+    <div className="flex w-fit flex-wrap gap-2 rounded-xl border border-border bg-foreground/[0.05] p-1">
       {options.map(([value, label]) => (
         <button
           key={value}
@@ -65,7 +65,7 @@ export function PlanCard({
 
   return (
     <div
-      className={`growth-tilt-card group relative flex min-h-[460px] flex-col rounded-lg border bg-foreground/[0.045] p-5 text-left transition duration-300 hover:bg-foreground/[0.07] xl:min-h-[430px] ${plan.recommended ? 'growth-plan-card-featured' : 'growth-plan-card'}`}
+      className={`growth-tilt-card group relative flex min-h-[460px] flex-col rounded-2xl border bg-foreground/[0.045] p-5 text-left transition duration-300 hover:bg-foreground/[0.07] xl:min-h-[430px] ${plan.recommended ? 'growth-plan-card-featured' : 'growth-plan-card'}`}
       style={{ '--plan-accent': plan.accent } as CSSProperties}
     >
       <div className="mb-5">
@@ -79,7 +79,7 @@ export function PlanCard({
           <div className="flex min-w-0 flex-col items-end gap-2">
             {badgeLabel ? (
               <span
-                className="max-w-full truncate rounded-md px-2 py-1 text-xs font-semibold text-background"
+                className="max-w-full truncate rounded-md px-2 py-1 text-[11px] font-black uppercase italic text-background"
                 style={{ backgroundColor: plan.accent }}
               >
                 {badgeLabel}

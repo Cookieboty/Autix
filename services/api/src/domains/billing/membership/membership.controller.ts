@@ -35,4 +35,10 @@ export class MembershipController {
     const userId = getCurrentUserId(user);
     return this.membershipService.cancelAtPeriodEnd(userId);
   }
+
+  @Post('billing-portal')
+  async createBillingPortal(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
+    return this.membershipService.createBillingPortal(userId);
+  }
 }

@@ -138,13 +138,13 @@ export function ComparisonTable({ plans }: { plans: PricingPlan[] }) {
             <ShieldCheck className="size-4" />
             {t('compareEyebrow')}
           </p>
-          <h2 className="text-3xl font-semibold text-foreground md:text-5xl">
+          <h2 className="text-3xl font-black uppercase tracking-tight text-foreground md:text-5xl">
             {t('compareTitle')}
           </h2>
           <p className="mt-3 text-sm leading-6 text-foreground/60">{t('compareBody')}</p>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-foreground/10 bg-background/30">
+        <div className="overflow-x-auto rounded-2xl border border-foreground/10 bg-background/30">
           <table className="w-full min-w-[820px] border-collapse text-left">
             <thead>
               <tr className="border-b border-foreground/10 bg-foreground/[0.04]">

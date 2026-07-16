@@ -11,7 +11,7 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.11 0 0);
+  --background: rgb(15, 17, 19);
   --foreground: oklch(0.96 0 0);
   --card: oklch(0.17 0 0);
   --card-foreground: oklch(0.96 0 0);
@@ -121,7 +121,7 @@
 }
 
 [data-theme='dark'] {
-  --background: oklch(0.11 0 0);
+  --background: rgb(15, 17, 19);
   --foreground: oklch(0.96 0 0);
   --card: oklch(0.17 0 0);
   --card-foreground: oklch(0.96 0 0);
