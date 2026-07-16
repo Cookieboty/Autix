@@ -100,6 +100,7 @@ export function ImageComposer({
   const [prompt, setPrompt] = useState('');
   const autoPublish = useAuthStore((s) => Boolean(s.user?.autoPublish));
   const authHydrated = useAuthStore((s) => s.hydrated);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [visibility, setVisibility] = useState<'private' | 'public'>(() =>
     visibilityFromAutoPublish(autoPublish),
   );
@@ -112,7 +113,8 @@ export function ImageComposer({
     if (s.isAuthenticated && s.hydrated) {
       authActions.refreshProfile().catch(() => {});
     }
-  }, [authHydrated]);
+    // 依赖含 isAuthenticated：兼容「hydrated 之后才登录」的边缘，登录态变化时也重拉一次 profile。
+  }, [authHydrated, isAuthenticated]);
 
   // profile 异步落值后，只要用户未手动切过，默认可见性就跟随 autoPublish。
   useEffect(() => {
