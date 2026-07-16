@@ -73,7 +73,7 @@ const noopSse = { emit: async () => undefined };
 function makeService(overrides?: { prisma?: any }) {
   const prisma = overrides?.prisma ?? makeMockPrisma();
   const repository = new BatchJobRepository(prisma as any);
-  const service = new BatchJobService(repository, noopSse as any);
+  const service = new BatchJobService(repository, noopSse as any, prisma as any);
   return { service, prisma };
 }
 
@@ -167,5 +167,106 @@ describe('BatchJobService', () => {
     const result = await service.listJobs('user-9', 1, 20);
     expect(result.page).toBe(1);
     expect(result.total).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('BatchJobService — GALLERY_POST 导入', () => {
+  function makeImportService(opts: {
+    created: Array<Record<string, unknown>>;
+    jobUpdates: Array<Record<string, unknown>>;
+    createImpl?: (data: Record<string, unknown>) => Promise<unknown>;
+  }) {
+    const repository = {
+      createJob: async () => ({ id: 'job1' }),
+      updateJob: async (_id: string, data: Record<string, unknown>) => {
+        opts.jobUpdates.push(data);
+      },
+      findJob: async () => ({ id: 'job1', status: 'done', total: 1, processed: 1, failed: 0 }),
+    };
+    const sse = { emit: async () => undefined };
+    const prisma = {
+      gallery_posts: {
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          if (opts.createImpl) return opts.createImpl(data);
+          opts.created.push(data);
+          return { id: `post-${opts.created.length}` };
+        },
+      },
+    };
+    return new BatchJobService(repository as never, sse as never, prisma as never);
+  }
+
+  /** 等待 createAndProcess 内部 fire-and-forget 的 processJob 跑完。 */
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it('导入的作品归属当前管理员，且为 ADMIN_CURATED/PENDING/未站内化', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const jobUpdates: Array<Record<string, unknown>> = [];
+    const svc = makeImportService({ created, jobUpdates });
+
+    const res = await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+      items: [
+        {
+          kind: 'IMAGE',
+          title: 'a',
+          category: 'art',
+          mediaUrls: ['https://ext/a.png'],
+          coverImage: 'https://ext/a.png',
+        },
+      ],
+    });
+    await flush();
+
+    expect(res.jobId).toBe('job1');
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      authorId: 'admin-1',
+      sourceType: 'ADMIN_CURATED',
+      status: 'PENDING',
+      mediaMigrated: false,
+      mediaMigrationAttempts: 0,
+      mediaUrls: ['https://ext/a.png'],
+    });
+  });
+
+  it('剔除白名单外的字段（不接受 JSON 里夹带的 status/authorId）', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const svc = makeImportService({ created, jobUpdates: [] });
+
+    await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+      items: [
+        {
+          kind: 'IMAGE',
+          category: 'art',
+          mediaUrls: ['https://ext/a.png'],
+          status: 'PUBLISHED',
+          authorId: 'someone-else',
+          evil: 1,
+        },
+      ],
+    });
+    await flush();
+
+    expect(created[0]).toMatchObject({ status: 'PENDING', authorId: 'admin-1' });
+    expect(created[0]).not.toHaveProperty('evil');
+  });
+
+  it('单条非法不中断整批：计入 failed 与 errorLog', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const jobUpdates: Array<Record<string, unknown>> = [];
+    const svc = makeImportService({ created, jobUpdates });
+
+    await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+      items: [
+        { kind: 'IMAGE', category: 'art', mediaUrls: [] }, // 非法：空 mediaUrls
+        { kind: 'IMAGE', category: 'art', mediaUrls: ['https://ext/b.png'] },
+      ],
+    });
+    await flush();
+
+    expect(created).toHaveLength(1);
+    const progress = jobUpdates.find((u) => 'processed' in u);
+    expect(progress).toMatchObject({ processed: 1, failed: 1 });
+    expect((progress!.errorLog as Array<{ error: string }>)[0]!.error).toContain('mediaUrls');
   });
 });
