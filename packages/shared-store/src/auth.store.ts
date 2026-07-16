@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { checkAdmin } from '@autix/domain';
 import type { AuthProfile, AuthProfileFeatures, AuthUser, AvatarPresignResult, Menu, SystemInfo, UpdateOwnProfileInput } from '@autix/domain';
 import { getAuth, getNavigation } from '@autix/platform';
-import { storageApi, uploadToPresignedUrl, userApi } from '@autix/sdk';
+import { storageApi, uploadToPresignedUrl, userApi, updateMyAutoPublish } from '@autix/sdk';
 
 export interface AuthLoginInput {
   username: string;
@@ -339,5 +339,20 @@ export const authActions = {
     await uploadToPresignedUrl(reservation.uploadUrl, file, { contentType: file.type });
     // Step 3: consume via PATCH profile
     return authActions.updateOwnProfile({ avatarStorageKey: reservation.storageKey });
+  },
+
+  /**
+   * 个人中心「Auto-publish」开关的唯一写入口。
+   * - 服务端持久化经 SDK `updateMyAutoPublish`；
+   * - 轻量回写：只更新 `user.autoPublish`，故意不走 `setUser`（会清空 menus/systems/features），
+   *   采用与 `switchSystem` 相同的 `setState({ user }) + getAuth().setUser` 范式。
+   */
+  updateAutoPublish: async (autoPublish: boolean): Promise<void> => {
+    await updateMyAutoPublish(autoPublish);
+    const { user } = useAuthStore.getState();
+    if (!user) return;
+    const updated = { ...user, autoPublish };
+    void getAuth().setUser(updated);
+    useAuthStore.setState({ user: updated });
   },
 };
