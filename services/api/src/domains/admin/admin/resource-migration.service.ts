@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { safeFetch } from '@autix/ai-adapters/core';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
+import { isInStationMediaUrl } from '../../creation/gallery/gallery.helpers';
 
 /** Fields whose URLs should be re-hosted to R2 on import (actual media assets). */
 export const MEDIA_FIELDS = ['coverImage', 'exampleImages', 'exampleMedia'] as const;
@@ -106,10 +107,15 @@ export class ResourceMigrationService {
   ): Promise<{ data: ResourcePayload; errors: string[] }> {
     const errors: string[] = [];
     const result: ResourcePayload = { ...data };
+    // 幂等：已站内化的 URL 直接跳过。R2 链接本身也是合法 http URL，若只判 isUrl，
+    // 重试时会把已搬好的对象从 R2 下载再传回 R2，产生重复对象与孤儿垃圾。
+    const r2Base = await this.r2.getPublicBaseUrl();
+    const needsMigration = (value: unknown): value is string =>
+      typeof value === 'string' && this.isUrl(value) && !isInStationMediaUrl(value, [r2Base]);
 
     for (const key of fields) {
       const value = result[key];
-      if (typeof value === 'string' && this.isUrl(value)) {
+      if (needsMigration(value)) {
         try {
           result[key] = await this.migrateUrl(value, `${folder}/${key}`);
         } catch (err: unknown) {
@@ -120,17 +126,15 @@ export class ResourceMigrationService {
       } else if (Array.isArray(value)) {
         result[key] = await Promise.all(
           value.map(async (item, index) => {
-            if (typeof item === 'string' && this.isUrl(item)) {
-              try {
-                return await this.migrateUrl(item, `${folder}/${key}/${index}`);
-              } catch (err: unknown) {
-                const message = errorMessage(err);
-                this.logger.warn(`Failed to migrate ${key}[${index}]: ${message}`);
-                errors.push(`${key}[${index}]: ${message}`);
-                return item;
-              }
+            if (!needsMigration(item)) return item;
+            try {
+              return await this.migrateUrl(item, `${folder}/${key}/${index}`);
+            } catch (err: unknown) {
+              const message = errorMessage(err);
+              this.logger.warn(`Failed to migrate ${key}[${index}]: ${message}`);
+              errors.push(`${key}[${index}]: ${message}`);
+              return item;
             }
-            return item;
           }),
         );
       }

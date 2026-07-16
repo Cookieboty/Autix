@@ -14,6 +14,7 @@ function makeR2() {
         key: `${opts.folder}/file.${opts.ext}`,
       };
     },
+    getPublicBaseUrl: async () => 'https://cdn.test',
   };
   return r2;
 }
@@ -144,6 +145,48 @@ describe('ResourceMigrationService', () => {
       expect((data.externalMetadata as any).source_url).toBe(
         'https://x.com/some/status/123',
       );
+    });
+  });
+
+  describe('ResourceMigrationService.migrateMediaFields — 幂等', () => {
+    function makeSvc() {
+      const r2 = { getPublicBaseUrl: async () => 'https://cdn.test' };
+      return new ResourceMigrationService(r2 as never);
+    }
+
+    it('跳过已站内化的 URL，只搬外链', async () => {
+      const svc = makeSvc();
+      const migrated: string[] = [];
+      vi.spyOn(svc, 'migrateUrl').mockImplementation(async (url: string) => {
+        migrated.push(url);
+        return 'https://cdn.test/new.png';
+      });
+
+      const { data, errors } = await svc.migrateMediaFields(
+        {
+          coverImage: 'https://cdn.test/already.png',
+          mediaUrls: ['https://cdn.test/done.png', 'https://ext.example/a.png'],
+        },
+        'gallery/p1',
+        ['coverImage', 'mediaUrls'],
+      );
+
+      expect(migrated).toEqual(['https://ext.example/a.png']);
+      expect(data.coverImage).toBe('https://cdn.test/already.png');
+      expect(data.mediaUrls).toEqual(['https://cdn.test/done.png', 'https://cdn.test/new.png']);
+      expect(errors).toEqual([]);
+    });
+
+    it('全部已站内化时不发起任何搬运', async () => {
+      const svc = makeSvc();
+      const spy = vi.spyOn(svc, 'migrateUrl');
+      const { errors } = await svc.migrateMediaFields(
+        { coverImage: 'https://cdn.test/a.png', mediaUrls: ['https://cdn.test/b.png'] },
+        'gallery/p2',
+        ['coverImage', 'mediaUrls'],
+      );
+      expect(spy).not.toHaveBeenCalled();
+      expect(errors).toEqual([]);
     });
   });
 });
