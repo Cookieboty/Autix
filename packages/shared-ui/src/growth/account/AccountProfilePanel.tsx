@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
+  authActions,
   useAuthStore,
   useLanguageStore,
   useMyMembershipQuery,
@@ -70,6 +71,19 @@ export function AccountProfilePanel() {
   const [deletionOpen, setDeletionOpen] = useState(true);
   const [deletionConfirmed, setDeletionConfirmed] = useState<Record<string, boolean>>({});
   // TODO(scaffold): 删除账户走 step-up 复用 ProfileView 的自助流程后再启用真实删除。
+
+  const autoPublish = Boolean(user?.autoPublish);
+  const [savingAutoPublish, setSavingAutoPublish] = useState(false);
+  const handleAutoPublishChange = async (next: boolean) => {
+    setSavingAutoPublish(true);
+    try {
+      await authActions.updateAutoPublish(next);
+    } catch {
+      // 失败时 store.user.autoPublish 未变，Switch 的 checked 自动回退到旧值。
+    } finally {
+      setSavingAutoPublish(false);
+    }
+  };
 
   const name = displayName(user);
   const points =
@@ -183,18 +197,19 @@ export function AccountProfilePanel() {
         </Select>
       </div>
 
-      {/* 自动发布开关（暂未支持：禁用 + 即将支持标识） */}
+      {/* 自动发布开关：作为 /ai/image 隐私按钮的默认可见性来源 */}
       <div className="flex items-center justify-between gap-4 rounded-2xl bg-[rgb(24,25,28)] p-5">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
             {t('profile.autoPublishTitle')}
-            <span className="rounded-full bg-growth-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-growth-accent">
-              {t('profile.comingSoon')}
-            </span>
           </p>
           <p className="mt-1 text-xs leading-5 text-foreground/55">{t('profile.autoPublishBody')}</p>
         </div>
-        <Switch checked={false} disabled className="opacity-60" />
+        <Switch
+          checked={autoPublish}
+          disabled={savingAutoPublish}
+          onCheckedChange={(v) => void handleAutoPublishChange(v)}
+        />
       </div>
 
       {/* 账户删除折叠区 */}
