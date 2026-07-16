@@ -26,6 +26,8 @@ export interface AuthUser {
   socialTiktok?: string | null;
   avatar?: string | null;
   language?: string | null;
+  /** 个人中心「Auto-publish」开关；/ai/image 隐私按钮的默认可见性来源。走 PATCH users/me/auto-publish。 */
+  autoPublish?: boolean;
   isSuperAdmin: boolean;
   status: string;
   hasPassword?: boolean;
