@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import {
   CheckCircle,
   XCircle,
@@ -140,12 +141,17 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   const [rejectTarget, setRejectTarget] = useState<GalleryPostAdminItem | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [boostTarget, setBoostTarget] = useState<GalleryPostAdminItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
+  const [batchRejectOpen, setBatchRejectOpen] = useState(false);
+  const [batchReason, setBatchReason] = useState('');
+  const [failures, setFailures] = useState<{ id: string; reason: string }[]>([]);
 
   // 搜索防抖：输入停 400ms 才应用，并回到第 1 页
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput.trim());
       setPage(1);
+      setSelectedIds(new Set());
     }, 400);
     return () => clearTimeout(timer);
   }, [searchInput]);
@@ -153,6 +159,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   const patchFilter = (patch: Partial<Filters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
     setPage(1);
+    setSelectedIds(new Set()); // 选中只对当前页有意义，换了筛选就作废
   };
 
   const params = useMemo<GalleryAdminListParams>(
@@ -171,7 +178,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
 
   const { data, isLoading, isFetching, refetch } = useGalleryAdminList(params);
   const categoriesQuery = useGalleryCategories();
-  const { approve, reject, hide, remove, pendingIds } = useGalleryModeration({
+  const { approve, reject, hide, remove, batch, pendingIds } = useGalleryModeration({
     onSuccess: () => {
       setRejectTarget(null);
       setRejectReason('');
@@ -185,6 +192,23 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(page * PAGE_SIZE, total);
   const isPending = status === 'PENDING';
+
+  const selectedCount = selectedIds.size;
+  const allOnPageSelected = items.length > 0 && items.every((i) => selectedIds.has(i.id));
+  const someOnPageSelected = items.some((i) => selectedIds.has(i.id));
+
+  const toggleRow = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllOnPage = () => {
+    setSelectedIds(allOnPageSelected ? new Set() : new Set(items.map((i) => i.id)));
+  };
 
   const handleReject = () => {
     if (!rejectTarget || rejectReason.trim().length === 0) return;
@@ -204,6 +228,43 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
     )
       return;
     remove.mutate(item.id);
+  };
+
+  const runBatch = (action: 'approve' | 'reject' | 'hide' | 'remove', reason?: string) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    batch.mutate(
+      { ids, action, reason },
+      {
+        onSuccess: (result) => {
+          // 成功的取消选中、失败的留着，方便修正后重试。
+          setSelectedIds(new Set(result.failed.map((f) => f.id)));
+          setFailures(result.failed);
+          if (result.failed.length === 0) {
+            toast.success(t('gallery.batch.resultAllOk', { count: result.succeeded.length }));
+          } else {
+            toast.warning(
+              t('gallery.batch.resultPartial', {
+                succeeded: result.succeeded.length,
+                failed: result.failed.length,
+              }),
+            );
+          }
+          setBatchRejectOpen(false);
+          setBatchReason('');
+        },
+      },
+    );
+  };
+
+  const handleBatchHide = () => {
+    if (!window.confirm(t('gallery.batch.hideConfirm', { count: selectedCount }))) return;
+    runBatch('hide');
+  };
+
+  const handleBatchRemove = () => {
+    if (!window.confirm(t('gallery.batch.removeConfirm', { count: selectedCount }))) return;
+    runBatch('remove');
   };
 
   return (
@@ -298,6 +359,96 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
         </div>
       </div>
 
+      {selectedCount > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+          <span className="text-sm font-medium text-foreground">
+            {t('gallery.batch.selected', { count: selectedCount })}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            {t('gallery.batch.clear')}
+          </Button>
+          <div className="ml-auto flex items-center gap-1">
+            {isPending && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={batch.isPending}
+                  className="cursor-pointer hover:bg-success/10 hover:text-success"
+                  onClick={() => runBatch('approve')}
+                >
+                  <CheckCircle className="mr-1 h-3.5 w-3.5" />
+                  {t('gallery.batch.approve')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={batch.isPending}
+                  className="cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    setBatchReason('');
+                    setBatchRejectOpen(true);
+                  }}
+                >
+                  <XCircle className="mr-1 h-3.5 w-3.5" />
+                  {t('gallery.batch.reject')}
+                </Button>
+              </>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={batch.isPending}
+              className="cursor-pointer"
+              onClick={handleBatchHide}
+            >
+              <EyeOff className="mr-1 h-3.5 w-3.5" />
+              {isPending ? t('gallery.batch.unpublish') : t('gallery.batch.hide')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={batch.isPending}
+              className="cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleBatchRemove}
+            >
+              <Trash2 className="mr-1 h-3.5 w-3.5" />
+              {t('gallery.batch.remove')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {failures.length > 0 && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-destructive">
+              {t('gallery.batch.failuresTitle', { count: failures.length })}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => setFailures([])}
+            >
+              {t('gallery.batch.failuresDismiss')}
+            </Button>
+          </div>
+          <ul className="mt-1 space-y-0.5">
+            {failures.map((f) => (
+              <li key={f.id} className="text-xs text-muted-foreground">
+                {items.find((i) => i.id === f.id)?.title || f.id} — {f.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto rounded-lg border bg-surface">
         {loading && items.length === 0 ? (
           <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
@@ -323,6 +474,18 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    className="cursor-pointer"
+                    aria-label={t('gallery.batch.selectAll')}
+                    checked={allOnPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someOnPageSelected && !allOnPageSelected;
+                    }}
+                    onChange={toggleAllOnPage}
+                  />
+                </TableHead>
                 <TableHead>{t('gallery.columns.work')}</TableHead>
                 <TableHead>{t('gallery.columns.author')}</TableHead>
                 <TableHead>{t('gallery.columns.category')}</TableHead>
@@ -337,6 +500,15 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                 const rowBusy = pendingIds.has(item.id);
                 return (
                   <TableRow key={item.id}>
+                    <TableCell className="w-10">
+                      <input
+                        type="checkbox"
+                        className="cursor-pointer"
+                        aria-label={t('gallery.batch.selectRow')}
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => toggleRow(item.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {thumb ? (
@@ -449,7 +621,10 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
             size="sm"
             className="cursor-pointer"
             disabled={page <= 1 || loading}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => {
+              setPage((p) => Math.max(1, p - 1));
+              setSelectedIds(new Set());
+            }}
           >
             {t('gallery.previousPage')}
           </Button>
@@ -461,7 +636,10 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
             size="sm"
             className="cursor-pointer"
             disabled={page >= totalPages || loading}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => {
+              setPage((p) => Math.min(totalPages, p + 1));
+              setSelectedIds(new Set());
+            }}
           >
             {t('gallery.nextPage')}
           </Button>
@@ -506,6 +684,56 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               onClick={handleReject}
             >
               {reject.isPending ? t('common.processing') : t('gallery.confirmReject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={batchRejectOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBatchRejectOpen(false);
+            setBatchReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('gallery.batch.rejectDialogTitle', { count: selectedCount })}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="mb-2 text-xs text-muted-foreground">
+              {t('gallery.batch.rejectDialogHint', { count: selectedCount })}
+            </p>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              {t('gallery.rejectReason')}
+            </label>
+            <Textarea
+              value={batchReason}
+              onChange={(e) => setBatchReason(e.target.value)}
+              placeholder={t('gallery.rejectReasonPlaceholder')}
+              className="min-h-[80px]"
+            />
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => {
+                setBatchRejectOpen(false);
+                setBatchReason('');
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              className="cursor-pointer"
+              disabled={batch.isPending || batchReason.trim().length === 0}
+              onClick={() => runBatch('reject', batchReason.trim())}
+            >
+              {batch.isPending ? t('gallery.batch.processing') : t('gallery.confirmReject')}
             </Button>
           </DialogFooter>
         </DialogContent>
