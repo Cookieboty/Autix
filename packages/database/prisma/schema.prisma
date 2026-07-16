@@ -2064,6 +2064,7 @@ enum GallerySource {
   USER_UPLOAD
   FROM_GENERATION
   FROM_TEMPLATE
+  ADMIN_CURATED
 }
 
 enum FeaturedSlotKind {
