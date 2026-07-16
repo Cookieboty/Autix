@@ -104,6 +104,17 @@ export function assertSource(
       }
       return;
 
+    // 管理端 JSON 导入：与 USER_UPLOAD 一样是"直接给媒体"，但允许外链
+    // （由 mediaMigrated=false + 迁移 worker 兜底搬进站内）。
+    case 'ADMIN_CURATED':
+      if (hasTemplate || hasGeneration) {
+        throw new BadRequestException('ADMIN_CURATED 不允许携带模板/生成引用');
+      }
+      if (!p.mediaUrls || p.mediaUrls.length === 0) {
+        throw new BadRequestException('ADMIN_CURATED 必须提供 mediaUrls');
+      }
+      return;
+
     default:
       throw new BadRequestException(`未知来源类型: ${p.sourceType as string}`);
   }

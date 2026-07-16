@@ -133,15 +133,6 @@ describe('assertSource (§6.4 来源强校验)', () => {
     ).toThrow();
   });
 
-  it('ADMIN_CURATED 已删除来源：不再是合法 sourceType，任何角色均抛错（走 default 分支）', () => {
-    expect(() =>
-      assertSource({ kind: 'IMAGE', sourceType: 'ADMIN_CURATED' }, 'admin'),
-    ).toThrow();
-    expect(() =>
-      assertSource({ kind: 'IMAGE', sourceType: 'ADMIN_CURATED' }, 'author'),
-    ).toThrow();
-  });
-
   it('M1：未知 sourceType 兜底抛错（default 分支）', () => {
     expect(() =>
       assertSource(
@@ -197,5 +188,50 @@ describe('assertTransition —— UNPUBLISHED 出边', () => {
     expect(() =>
       assertTransition(GalleryStatus.HIDDEN, GalleryStatus.PUBLISHED, 'author'),
     ).toThrow();
+  });
+});
+
+describe('assertSource — ADMIN_CURATED（管理端导入）', () => {
+  it('接受带 mediaUrls 的合法导入 payload', () => {
+    expect(() =>
+      assertSource(
+        { kind: 'IMAGE', sourceType: 'ADMIN_CURATED', mediaUrls: ['https://ext/a.png'] },
+        'admin',
+      ),
+    ).not.toThrow();
+  });
+
+  it('拒绝空 mediaUrls', () => {
+    expect(() =>
+      assertSource({ kind: 'IMAGE', sourceType: 'ADMIN_CURATED', mediaUrls: [] }, 'admin'),
+    ).toThrow('ADMIN_CURATED 必须提供 mediaUrls');
+  });
+
+  it('拒绝携带模板引用', () => {
+    expect(() =>
+      assertSource(
+        {
+          kind: 'IMAGE',
+          sourceType: 'ADMIN_CURATED',
+          mediaUrls: ['https://ext/a.png'],
+          imageTemplateId: 't1',
+        },
+        'admin',
+      ),
+    ).toThrow('ADMIN_CURATED 不允许携带模板/生成引用');
+  });
+
+  it('拒绝携带生成引用', () => {
+    expect(() =>
+      assertSource(
+        {
+          kind: 'IMAGE',
+          sourceType: 'ADMIN_CURATED',
+          mediaUrls: ['https://ext/a.png'],
+          imageGenerationId: 'g1',
+        },
+        'admin',
+      ),
+    ).toThrow('ADMIN_CURATED 不允许携带模板/生成引用');
   });
 });
