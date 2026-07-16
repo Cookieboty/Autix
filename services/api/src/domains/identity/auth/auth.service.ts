@@ -608,6 +608,7 @@ export class AuthService {
       socialTiktok: fresh.socialTiktok,
       realName: fresh.realName,
       language: fresh.language,
+      autoPublish: fresh.autoPublish ?? false,
       emailVerified: fresh.emailVerified,
       pendingEmail: fresh.pendingEmail,
       hasPassword: Boolean(fresh.password),

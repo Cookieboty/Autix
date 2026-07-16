@@ -272,6 +272,13 @@ export class UserRepository {
     });
   }
 
+  updateAutoPublish(userId: string, autoPublish: boolean) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.assertMutableForUpdate(tx, userId);
+      return tx.user.update({ where: { id: userId }, data: { autoPublish } });
+    });
+  }
+
   findRolesByUser(userId: string) {
     return this.prisma.userRole.findMany({
       where: { userId },

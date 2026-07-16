@@ -265,6 +265,14 @@ export class UserService {
     return { language };
   }
 
+  async updateAutoPublish(
+    userId: string,
+    autoPublish: boolean,
+  ): Promise<{ autoPublish: boolean }> {
+    await this.userRepository.updateAutoPublish(userId, autoPublish);
+    return { autoPublish };
+  }
+
   async getUserRolesBySystem(
     userId: string,
     currentUser: AuthUser,

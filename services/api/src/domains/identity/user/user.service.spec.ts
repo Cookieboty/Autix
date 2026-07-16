@@ -347,6 +347,36 @@ describe('UserService DELETED visibility and update whitelist', () => {
   });
 });
 
+describe('UserService.updateAutoPublish', () => {
+  it('writes autoPublish=true and returns the value', async () => {
+    const tx = createTx();
+    const prisma = createPrisma(tx);
+    const service = buildService(prisma);
+
+    const result = await service.updateAutoPublish('u1', true);
+
+    expect(result).toEqual({ autoPublish: true });
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { autoPublish: true },
+    });
+  });
+
+  it('writes autoPublish=false', async () => {
+    const tx = createTx();
+    const prisma = createPrisma(tx);
+    const service = buildService(prisma);
+
+    const result = await service.updateAutoPublish('u1', false);
+
+    expect(result).toEqual({ autoPublish: false });
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { autoPublish: false },
+    });
+  });
+});
+
 describe('UserService.resetPassword', () => {
   it('hashes the validated password and revokes sessions in one repository transaction', async () => {
     const tx = createTx();

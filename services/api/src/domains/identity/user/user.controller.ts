@@ -7,11 +7,13 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { AssignRolesDto } from './dto/assign-roles.dto';
 import { UpdateLanguageDto } from './dto/update-language.dto';
+import { UpdateAutoPublishDto } from './dto/update-auto-publish.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthUser } from '@autix/domain';
 
 type UpdateLanguageResult = Awaited<ReturnType<UserService['updateLanguage']>>;
+type UpdateAutoPublishResult = Awaited<ReturnType<UserService['updateAutoPublish']>>;
 type CreateUserResult = Awaited<ReturnType<UserService['create']>>;
 type UserListResult = Awaited<ReturnType<UserService['findAll']>>;
 type UserDetailResult = Awaited<ReturnType<UserService['findOne']>>;
@@ -32,6 +34,14 @@ export class UserController {
     @CurrentUser() user: AuthUser,
   ): Promise<UpdateLanguageResult> {
     return this.userService.updateLanguage(user.id, dto.language);
+  }
+
+  @Patch('me/auto-publish')
+  updateMyAutoPublish(
+    @Body() dto: UpdateAutoPublishDto,
+    @CurrentUser() user: AuthUser,
+  ): Promise<UpdateAutoPublishResult> {
+    return this.userService.updateAutoPublish(user.id, dto.autoPublish);
   }
 
   @Post()
