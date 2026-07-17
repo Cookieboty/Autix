@@ -291,6 +291,7 @@ function makeService(options: {
 
   return {
     service,
+    repository,
     prisma,
     pointsService,
     r2Service,
@@ -369,6 +370,26 @@ describe('VideoGenerationFlowService billing', () => {
       generationId: expect.any(String),
       taskId: 'seedance-task-1',
     });
+  });
+
+  it('persists the protocol/model snapshot when creating a generation', async () => {
+    // repository 是真实实例（见本文件 :276），不是 mock —— 用 spyOn 并让它继续调用真实实现，
+    // 这样断言的是 flow 真正传下去的入参，而不是一个替身的记录。
+    const { service, repository } = makeService();
+    const createSpy = vi.spyOn(repository, 'createPendingGenerationAndMarkRunning');
+
+    await service.generateClip({
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+    });
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        protocolKey: 'ark-video@v3',
+        modelConfigId: 'model-config-1',
+      }),
+    );
   });
 
   it('combines storyboard prompt and clip prompt for storyboard generation', async () => {
@@ -481,6 +502,52 @@ describe('VideoGenerationFlowService billing', () => {
       expect.objectContaining({
         where: { projectId: 'project-1' },
         data: { status: VideoClipStatus.generating },
+      }),
+    );
+  });
+
+  it('persists the protocol/model snapshot for storyboard project generations', async () => {
+    // Same legacy-row gap as generateClip, but for the storyboard branch: it calls
+    // a *different* repository method (createPendingProjectGenerationAndMarkRunning,
+    // not createPendingGenerationAndMarkRunning), which grepping for the latter alone
+    // would miss. repository is a real instance (see makeService) — spyOn keeps the
+    // real implementation so the assertion is on what the flow actually passes down.
+    const projectClips = [
+      {
+        id: 'clip-1',
+        projectId: 'project-1',
+        order: 1,
+        title: '开场',
+        prompt: '赛博朋克城市远景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '720p',
+          duration: 2,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: false,
+        materials: [],
+      },
+    ];
+    const { service, repository, prisma } = makeService({ projectClips });
+    prisma.video_projects.findUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+    });
+    const createProjectSpy = vi.spyOn(
+      repository,
+      'createPendingProjectGenerationAndMarkRunning',
+    );
+
+    await service.generateAllClips('project-1', 'user-1');
+
+    expect(createProjectSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        protocolKey: 'ark-video@v3',
+        modelConfigId: 'model-config-1',
       }),
     );
   });

@@ -80,6 +80,10 @@ export class VideoGenerationRepository {
     model: string;
     resolvedPrompt: string;
     params: Prisma.InputJsonValue;
+    /** 提交时的协议快照（不可变）。轮询/回调据此解析 preset。 */
+    protocolKey: string;
+    /** 提交时的模型配置 identity（不可变）。 */
+    modelConfigId: string;
   }) {
     await this.prisma.$transaction(async (tx) => {
       await tx.video_clip_generations.create({
@@ -93,6 +97,8 @@ export class VideoGenerationRepository {
           resolvedPrompt: input.resolvedPrompt,
           params: input.params,
           status: VideoGenStatus.pending,
+          protocolKey: input.protocolKey,
+          modelConfigId: input.modelConfigId,
         },
       });
 
@@ -117,6 +123,10 @@ export class VideoGenerationRepository {
     model: string;
     resolvedPrompt: string;
     params: Prisma.InputJsonValue;
+    /** 提交时的协议快照（不可变）。轮询/回调据此解析 preset。 */
+    protocolKey: string;
+    /** 提交时的模型配置 identity（不可变）。 */
+    modelConfigId: string;
   }) {
     await this.prisma.$transaction(async (tx) => {
       await tx.video_clip_generations.create({
@@ -130,6 +140,8 @@ export class VideoGenerationRepository {
           resolvedPrompt: input.resolvedPrompt,
           params: input.params,
           status: VideoGenStatus.pending,
+          protocolKey: input.protocolKey,
+          modelConfigId: input.modelConfigId,
         },
       });
 

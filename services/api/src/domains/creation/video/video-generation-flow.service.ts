@@ -291,8 +291,8 @@ export class VideoGenerationFlowService {
     );
 
     try {
-      await this.repository.createPendingGenerationAndMarkRunning(
-        buildPendingGenerationInput({
+      await this.repository.createPendingGenerationAndMarkRunning({
+        ...buildPendingGenerationInput({
           generationId,
           clipId: input.clipId,
           projectId: input.projectId,
@@ -303,7 +303,11 @@ export class VideoGenerationFlowService {
           resolvedPrompt,
           taskRequest,
         }),
-      );
+        // 过渡期常量：此刻 Seedance/Ark 是唯一视频协议。计划 3 切到引擎后，
+        // 这里会改为 modelConfig.metadata.protocolKey，并与旧 flow 一起删除。
+        protocolKey: 'ark-video@v3',
+        modelConfigId,
+      });
     } catch (err) {
       if (holdId) {
         await this.holdReconciliation.safeRefund(
@@ -721,6 +725,10 @@ export class VideoGenerationFlowService {
         params: persistedParams as Prisma.InputJsonValue,
         model: taskRequest.model,
         resolvedPrompt,
+        // 过渡期常量：此刻 Seedance/Ark 是唯一视频协议。计划 3 切到引擎后，
+        // 这里会改为 modelConfig.metadata.protocolKey，并与旧 flow 一起删除。
+        protocolKey: 'ark-video@v3',
+        modelConfigId,
       });
 
       const taskResponse = await this.seedanceApi.createTask(apiKey, taskRequest, baseUrl);
