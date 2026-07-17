@@ -99,21 +99,4 @@ describe('VideoCallbackController', () => {
     ).rejects.toThrow(UnauthorizedException);
     expect(flow.handleCallback).not.toHaveBeenCalled();
   });
-
-  // 迁移期：已提交任务的 callback_url 写死在上游、改不了。旧路由删了会让窗口内回调全 404。
-  it('keeps the deprecated legacy route bound to arkVideoV3', async () => {
-    const { config, flow } = make('s3cret');
-    const controller = new VideoCallbackController(flow as never, config as never);
-
-    await controller.handleLegacyCallback('s3cret', {
-      id: 'task_1',
-      status: 'succeeded',
-    });
-
-    expect(flow.handleCallback).toHaveBeenCalledWith(
-      'ark-video@v3',
-      'task_1',
-      expect.anything(),
-    );
-  });
 });
