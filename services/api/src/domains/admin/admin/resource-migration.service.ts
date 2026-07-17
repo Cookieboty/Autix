@@ -110,22 +110,27 @@ export class ResourceMigrationService {
     // 幂等：已站内化的 URL 直接跳过。R2 链接本身也是合法 http URL，若只判 isUrl，
     // 重试时会把已搬好的对象从 R2 下载再传回 R2，产生重复对象与孤儿垃圾。
     const r2Base = await this.r2.getPublicBaseUrl();
+    // 三档判定（Fix 1b，纵深防御——主防线是 gallery.helpers.assertSource 在导入时拒绝）：
+    //   非字符串 / null / 空串        → 跳过，不报错（coverImage 允许为 null）
+    //   字符串但不是合法 http(s) URL  → push error（不再静默跳过，否则 errors.length===0
+    //                                    会让从未被搬运/校验过的"媒体"被当作搬运成功而自动发布）
+    //   合法 http(s) URL：已站内       → 跳过不报错（幂等，见下方 isInStationMediaUrl）
+    //                     非站内       → 搬运
+    const isEmpty = (value: unknown): boolean =>
+      value == null || (typeof value === 'string' && value.trim() === '');
     const needsMigration = (value: unknown): value is string =>
       typeof value === 'string' && this.isUrl(value) && !isInStationMediaUrl(value, [r2Base]);
 
     for (const key of fields) {
       const value = result[key];
-      if (needsMigration(value)) {
-        try {
-          result[key] = await this.migrateUrl(value, `${folder}/${key}`);
-        } catch (err: unknown) {
-          const message = errorMessage(err);
-          this.logger.warn(`Failed to migrate ${key}: ${message}`);
-          errors.push(`${key}: ${message}`);
-        }
-      } else if (Array.isArray(value)) {
+      if (Array.isArray(value)) {
         result[key] = await Promise.all(
           value.map(async (item, index) => {
+            if (isEmpty(item)) return item;
+            if (typeof item === 'string' && !this.isUrl(item)) {
+              errors.push(`${key}[${index}]: not a valid http(s) URL`);
+              return item;
+            }
             if (!needsMigration(item)) return item;
             try {
               return await this.migrateUrl(item, `${folder}/${key}/${index}`);
@@ -137,6 +142,18 @@ export class ResourceMigrationService {
             }
           }),
         );
+      } else if (isEmpty(value)) {
+        // 跳过：非字符串/null/空串
+      } else if (typeof value === 'string' && !this.isUrl(value)) {
+        errors.push(`${key}: not a valid http(s) URL`);
+      } else if (needsMigration(value)) {
+        try {
+          result[key] = await this.migrateUrl(value, `${folder}/${key}`);
+        } catch (err: unknown) {
+          const message = errorMessage(err);
+          this.logger.warn(`Failed to migrate ${key}: ${message}`);
+          errors.push(`${key}: ${message}`);
+        }
       }
     }
 

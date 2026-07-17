@@ -53,10 +53,22 @@ export interface GallerySourcePayload {
   kind: GalleryKind;
   sourceType: GallerySource;
   mediaUrls?: string[];
+  /** 目前仅 ADMIN_CURATED 分支校验；见 BatchJobService.createAndProcess 是否透传。 */
+  coverImage?: string | null;
   imageTemplateId?: string | null;
   videoTemplateId?: string | null;
   imageGenerationId?: string | null;
   videoGenerationId?: string | null;
+}
+
+/** 纯字符串形态校验：是否为可解析的 http(s) URL（不判断是否站内，那是 isInStationMediaUrl 的事）。 */
+function isHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -112,6 +124,15 @@ export function assertSource(
       }
       if (!p.mediaUrls || p.mediaUrls.length === 0) {
         throw new BadRequestException('ADMIN_CURATED 必须提供 mediaUrls');
+      }
+      // Fix 1a：非 URL 的媒体条目若在此放行，会被迁移 worker 的 isUrl 判定原样跳过
+      // （不 push error），进而 errors.length===0 → mediaMigrated=true → 自动发布一条
+      // 从未被搬运校验过的"媒体"。必须在导入这一步就拒绝，让管理员在 errorLog 里看见。
+      if (p.mediaUrls.some((url) => !isHttpUrl(url))) {
+        throw new BadRequestException('ADMIN_CURATED 的 mediaUrls 必须全部为合法的 http(s) URL');
+      }
+      if (p.coverImage != null && p.coverImage.trim() !== '' && !isHttpUrl(p.coverImage)) {
+        throw new BadRequestException('ADMIN_CURATED 的 coverImage 若提供必须是合法的 http(s) URL');
       }
       return;
 

@@ -188,5 +188,42 @@ describe('ResourceMigrationService', () => {
       expect(spy).not.toHaveBeenCalled();
       expect(errors).toEqual([]);
     });
+
+    // Fix 1b（纵深防御）：非空但非法 http(s) URL 的媒体值此前被 needsMigration 的
+    // isUrl 判定原样跳过、不 push error —— 于是 errors.length===0，worker 把它当
+    // "搬运成功"写 mediaMigrated=true 并自动发布，即便这条媒体从未被搬运/校验过。
+    it('非法字符串（非 URL）媒体值：不发起搬运，但必须 push error，不能静默放行', async () => {
+      const svc = makeSvc();
+      const spy = vi.spyOn(svc, 'migrateUrl');
+
+      const { data, errors } = await svc.migrateMediaFields(
+        { coverImage: 'garbage', mediaUrls: ['garbage', 'ftp://ext.example/a.png'] },
+        'gallery/p3',
+        ['coverImage', 'mediaUrls'],
+      );
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(data.coverImage).toBe('garbage');
+      expect(data.mediaUrls).toEqual(['garbage', 'ftp://ext.example/a.png']);
+      expect(errors.length).toBeGreaterThanOrEqual(2);
+      expect(errors.some((e) => e.startsWith('coverImage'))).toBe(true);
+      expect(errors.some((e) => e.startsWith('mediaUrls[0]'))).toBe(true);
+      expect(errors.some((e) => e.startsWith('mediaUrls[1]'))).toBe(true);
+    });
+
+    it('null / 空串媒体值：跳过且不报错（coverImage 可以为 null）', async () => {
+      const svc = makeSvc();
+      const spy = vi.spyOn(svc, 'migrateUrl');
+
+      const { data, errors } = await svc.migrateMediaFields(
+        { coverImage: null, mediaUrls: [] },
+        'gallery/p4',
+        ['coverImage', 'mediaUrls'],
+      );
+
+      expect(spy).not.toHaveBeenCalled();
+      expect(data.coverImage).toBeNull();
+      expect(errors).toEqual([]);
+    });
   });
 });

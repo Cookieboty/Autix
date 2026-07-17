@@ -4,6 +4,7 @@ import {
   assertSource,
   assertTransition,
   isInStationMediaUrl,
+  type GallerySourcePayload,
 } from './gallery.helpers';
 
 describe('assertTransition (§5.1.1 状态机)', () => {
@@ -233,5 +234,96 @@ describe('assertSource — ADMIN_CURATED（管理端导入）', () => {
         'admin',
       ),
     ).toThrow('ADMIN_CURATED 不允许携带模板/生成引用');
+  });
+
+  // Fix 1a：非 URL 的 mediaUrls 条目不能在导入时蒙混过关（否则会被迁移 worker
+  // 静默跳过，errors 为空，进而 mediaMigrated=true 被自动发布——见 final-fixes 审查）。
+  it('拒绝 mediaUrls 中任意一条不是 http(s) URL（纯字符串校验，非法值应在导入时就拒绝）', () => {
+    expect(() =>
+      assertSource(
+        { kind: 'IMAGE', sourceType: 'ADMIN_CURATED', mediaUrls: ['garbage'] },
+        'admin',
+      ),
+    ).toThrow(/mediaUrls/);
+    expect(() =>
+      assertSource(
+        {
+          kind: 'IMAGE',
+          sourceType: 'ADMIN_CURATED',
+          mediaUrls: ['https://ext/a.png', 'ftp://ext/b.png'],
+        },
+        'admin',
+      ),
+    ).toThrow(/mediaUrls/);
+    expect(() =>
+      assertSource(
+        {
+          kind: 'IMAGE',
+          sourceType: 'ADMIN_CURATED',
+          mediaUrls: ['javascript:alert(1)'],
+        },
+        'admin',
+      ),
+    ).toThrow(/mediaUrls/);
+    expect(() =>
+      assertSource(
+        { kind: 'IMAGE', sourceType: 'ADMIN_CURATED', mediaUrls: ['/relative/path.png'] },
+        'admin',
+      ),
+    ).toThrow(/mediaUrls/);
+    expect(() =>
+      assertSource(
+        { kind: 'IMAGE', sourceType: 'ADMIN_CURATED', mediaUrls: [''] },
+        'admin',
+      ),
+    ).toThrow(/mediaUrls/);
+  });
+
+  it('coverImage 若提供且非空，也必须是 http(s) URL', () => {
+    expect(() =>
+      assertSource(
+        {
+          kind: 'IMAGE',
+          sourceType: 'ADMIN_CURATED',
+          mediaUrls: ['https://ext/a.png'],
+          coverImage: 'garbage',
+        } as GallerySourcePayload,
+        'admin',
+      ),
+    ).toThrow(/coverImage/);
+  });
+
+  it('coverImage 缺省或空字符串（模板默认值）不触发校验', () => {
+    expect(() =>
+      assertSource(
+        { kind: 'IMAGE', sourceType: 'ADMIN_CURATED', mediaUrls: ['https://ext/a.png'] },
+        'admin',
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertSource(
+        {
+          kind: 'IMAGE',
+          sourceType: 'ADMIN_CURATED',
+          mediaUrls: ['https://ext/a.png'],
+          coverImage: '',
+        } as GallerySourcePayload,
+        'admin',
+      ),
+    ).not.toThrow();
+  });
+
+  it('coverImage 合法 URL 时通过', () => {
+    expect(() =>
+      assertSource(
+        {
+          kind: 'IMAGE',
+          sourceType: 'ADMIN_CURATED',
+          mediaUrls: ['https://ext/a.png'],
+          coverImage: 'https://ext/cover.png',
+        } as GallerySourcePayload,
+        'admin',
+      ),
+    ).not.toThrow();
   });
 });
