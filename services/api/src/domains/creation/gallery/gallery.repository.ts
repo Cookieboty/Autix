@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, GalleryKind, GalleryStatus, TemplateStatus } from '../../platform/prisma/generated';
+import { Prisma, GalleryKind, GallerySource, GalleryStatus, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
 /** gallery_posts / gallery_reports 的数据访问层。所有状态迁移由 service 层用 assertTransition 校验后再调用这里。 */
@@ -86,10 +86,19 @@ export class GalleryRepository {
   /**
    * 媒体外链 → R2 迁移 worker 的取件队列：未搬运且未达尝试上限的作品，先到先搬。
    * 命中 @@index([mediaMigrated, mediaMigrationAttempts])。
+   *
+   * 显式限定 sourceType=ADMIN_CURATED（Fix 3）：这条队列 + publishIfPending 组成的
+   * 自动发布闸门此前只靠 mediaMigrated @default(true) 这个巧合撑着——别的写入路径
+   * 从不产出 mediaMigrated=false。一旦某天有代码给非管理端投稿回填这个字段，
+   * worker 会把它们静默绕过审核发布。把隐含假设写成显式谓词。
    */
   async findPostsPendingMediaMigration(maxAttempts: number, take: number) {
     return this.prisma.gallery_posts.findMany({
-      where: { mediaMigrated: false, mediaMigrationAttempts: { lt: maxAttempts } },
+      where: {
+        mediaMigrated: false,
+        mediaMigrationAttempts: { lt: maxAttempts },
+        sourceType: GallerySource.ADMIN_CURATED,
+      },
       orderBy: { createdAt: 'asc' },
       take,
       select: { id: true, coverImage: true, mediaUrls: true, mediaMigrationAttempts: true },
@@ -97,13 +106,14 @@ export class GalleryRepository {
   }
 
   /**
-   * 媒体搬运成功后发布：仅当作品仍为 PENDING 时生效。
-   * where 即原子条件（而非先读后写），避免与管理员并发处置竞态 ——
-   * 管理员若已 REJECT/REMOVE，count=0，worker 不覆盖其决定。
+   * 媒体搬运成功后发布：仅当作品仍为 PENDING 且 sourceType=ADMIN_CURATED 时生效（Fix 3，
+   * 与 findPostsPendingMediaMigration 同一显式谓词——只有这条导入队列产出的 PENDING
+   * 才应被这个自动发布闸门处理）。where 即原子条件（而非先读后写），避免与管理员
+   * 并发处置竞态 —— 管理员若已 REJECT/REMOVE，count=0，worker 不覆盖其决定。
    */
   async publishIfPending(id: string): Promise<number> {
     const res = await this.prisma.gallery_posts.updateMany({
-      where: { id, status: GalleryStatus.PENDING },
+      where: { id, status: GalleryStatus.PENDING, sourceType: GallerySource.ADMIN_CURATED },
       data: { status: GalleryStatus.PUBLISHED, publishedAt: new Date() },
     });
     return res.count;
