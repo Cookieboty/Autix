@@ -415,8 +415,19 @@ export interface MaterialAsset {
   sourceState?: MaterialSourceState;
 }
 
-export type MaterialLibrarySource = 'UPLOAD' | 'FAVORITE' | 'HISTORY';
+/** GENERATION：生成流程内联写入的产物（见 api generation-library），/asset 聚合的主体。 */
+export type MaterialLibrarySource = 'UPLOAD' | 'FAVORITE' | 'HISTORY' | 'GENERATION';
 export type MaterialSourceState = 'available' | 'unpublished' | 'blocked' | 'missing';
+
+/** 素材库按分桶的计数，供 /asset 左侧导航角标。 */
+export interface MaterialCounts {
+  all: number;
+  favorites: number;
+  image: number;
+  video: number;
+  audio: number;
+  file: number;
+}
 
 export interface MaterialEntitlement {
   canAdd: boolean;
@@ -455,6 +466,8 @@ export interface MaterialFolderRow {
   id: string;
   userId: string;
   name: string;
+  /** 自定义 emoji 图标；null = 没设过，渲染端回退默认文件夹图形。 */
+  icon: string | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -486,6 +499,8 @@ export interface MaterialHistoryResult {
 
 export const materialsApi = {
   entitlement: () => chatApi.get<MaterialEntitlement>('/api/materials/entitlement'),
+  /** /asset 左侧导航角标计数（文件夹计数另见 materialFoldersApi.list 的 assetCount）。 */
+  counts: () => chatApi.get<MaterialCounts>('/api/materials/counts'),
   list: (params?: {
     type?: MaterialAssetType | 'all';
     search?: string;
@@ -494,6 +509,8 @@ export const materialsApi = {
     folderId?: string;
     /** Plan C Task 12：素材库来源筛选——不传即"全部"。 */
     librarySource?: MaterialLibrarySource;
+    /** 排除收藏（收藏的是别人的作品，只在「收藏」分桶展示）。与 librarySource 互斥。 */
+    excludeFavorites?: boolean;
   }) => chatApi.get<MaterialListResult>('/api/materials', { params }),
   /** Plan C Task 11：去重后的浏览历史（按 resourceType+resourceId 取最近一次），游标分页。 */
   history: (params?: { cursor?: string; take?: number }) =>
@@ -615,8 +632,9 @@ export const canvasBoardApi = {
 
 export const materialFoldersApi = {
   list: () => chatApi.get<MaterialFolderSidebar>('/api/material-folders'),
-  create: (data: { name: string }) => chatApi.post<MaterialFolderRow>('/api/material-folders', data),
-  update: (id: string, data: { name?: string; sortOrder?: number }) =>
+  create: (data: { name: string; icon?: string | null }) =>
+    chatApi.post<MaterialFolderRow>('/api/material-folders', data),
+  update: (id: string, data: { name?: string; sortOrder?: number; icon?: string | null }) =>
     chatApi.patch<MaterialFolderRow>(`/api/material-folders/${id}`, data),
   remove: (id: string) => chatApi.delete(`/api/material-folders/${id}`),
 };

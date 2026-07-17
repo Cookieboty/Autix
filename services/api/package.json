@@ -13,6 +13,7 @@
     "seed:resources": "dotenv -e ../../.env -- tsx scripts/seed-resources.ts",
     "seed:membership": "dotenv -e ../../.env -- pnpm --filter @autix/database run db:init-membership",
     "seed:pricing": "dotenv -e ../../.env -- tsx scripts/seed-pricing.ts",
+    "backfill:generation-materials": "dotenv -e ../../.env -- tsx scripts/backfill-generation-materials.ts",
     "fix:api-key": "dotenv -e ../../.env -- tsx scripts/fix-api-key-simple.ts",
     "fix:model": "dotenv -e ../../.env -- tsx scripts/quick-fix-model.ts",
     "update:model-key": "dotenv -e ../../.env -- tsx scripts/update-model-key.ts"

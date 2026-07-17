@@ -22,6 +22,30 @@ export class MaterialsRepository {
     ]);
   }
 
+  /**
+   * /asset 导航角标：按 type 分组计数 + 收藏数 + 总数，一趟并发算完。
+   *
+   * 「按类型」与「总数」都排除收藏——收藏的是别人的作品，只在收藏分桶里出现，
+   * 角标必须与分桶实际能看到的条数一致。
+   */
+  countBuckets(where: Prisma.material_assetsWhereInput) {
+    const own: Prisma.material_assetsWhereInput = {
+      ...where,
+      librarySource: { not: 'FAVORITE' },
+    };
+    return Promise.all([
+      this.prisma.material_assets.groupBy({
+        by: ['type'],
+        where: own,
+        _count: { _all: true },
+      }),
+      this.prisma.material_assets.count({
+        where: { ...where, librarySource: 'FAVORITE' },
+      }),
+      this.prisma.material_assets.count({ where: own }),
+    ]);
+  }
+
   create(data: Prisma.material_assetsUncheckedCreateInput) {
     return this.prisma.material_assets.create({ data });
   }

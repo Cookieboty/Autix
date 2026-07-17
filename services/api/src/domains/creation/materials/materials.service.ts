@@ -32,8 +32,13 @@ const SOURCE_TYPES = new Set<MaterialAssetSourceType>([
   'external',
 ]);
 
-export type MaterialLibrarySource = 'UPLOAD' | 'FAVORITE' | 'HISTORY';
-const LIBRARY_SOURCES = new Set<MaterialLibrarySource>(['UPLOAD', 'FAVORITE', 'HISTORY']);
+export type MaterialLibrarySource = 'UPLOAD' | 'FAVORITE' | 'HISTORY' | 'GENERATION';
+const LIBRARY_SOURCES = new Set<MaterialLibrarySource>([
+  'UPLOAD',
+  'FAVORITE',
+  'HISTORY',
+  'GENERATION',
+]);
 
 /** Plan C Task 11：能落 librarySource=HISTORY 素材的资源类型——只有这三类会被映射进素材库。 */
 const HISTORY_MAPPABLE_TYPES = new Set<ResourceType>([
@@ -107,6 +112,32 @@ export class MaterialsService {
     return entitlement;
   }
 
+  /**
+   * /asset 左侧导航的角标计数：全部 / 收藏 / 各类型，一次算完。
+   *
+   * 不让前端为每个分桶各发一次 list(pageSize=1) 只为读 total —— 那是 4 个请求
+   * 换 4 个数字，且每次切换分桶都要重来。
+   * 文件夹计数不在这里：material-folders 的侧栏接口已经带 assetCount。
+   */
+  async counts(userId: string) {
+    const where: Prisma.material_assetsWhereInput = { userId, deletedAt: null };
+    const [byType, favorites, all] = await this.materialsRepository.countBuckets(where);
+    // byType / all 均已在 repository 内排除收藏——角标要与各分桶实际能看到的条数一致，
+    // 否则「All Assets 9」点进去只有 7 条。
+
+    const typeCounts: Record<string, number> = {};
+    for (const row of byType) typeCounts[row.type] = row._count._all;
+
+    return {
+      all,
+      favorites,
+      image: typeCounts.image ?? 0,
+      video: typeCounts.video ?? 0,
+      audio: typeCounts.audio ?? 0,
+      file: typeCounts.file ?? 0,
+    };
+  }
+
   async list(
     userId: string,
     opts: {
@@ -116,6 +147,8 @@ export class MaterialsService {
       pageSize?: number;
       folderId?: string;
       librarySource?: string;
+      /** 排除收藏：收藏的是别人的作品，不算用户自己的素材，只该出现在「收藏」分桶里。 */
+      excludeFavorites?: boolean;
     },
   ) {
     const page = Math.max(1, opts.page ?? 1);
@@ -135,6 +168,9 @@ export class MaterialsService {
     }
     if (opts.librarySource) {
       where.librarySource = this.normalizeLibrarySource(opts.librarySource);
+    } else if (opts.excludeFavorites) {
+      // 与 librarySource 互斥：显式点名某个来源时以它为准，不再叠加排除。
+      where.librarySource = { not: 'FAVORITE' };
     }
     const search = opts.search?.trim();
     if (search) {

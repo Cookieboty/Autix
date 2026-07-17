@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ArrowUpRight, History, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Link } from '../../navigation';
@@ -105,17 +105,29 @@ export function StudioDensitySlider({
   label,
   value,
   onChange,
+  leading,
 }: {
   label: string;
   value: TemplateDensity;
   onChange: (value: TemplateDensity) => void;
+  /**
+   * 滑块左侧、**同一个 pill 背景内**的附加控件（/asset 的 contain/cover 切换按钮）。
+   * 开成插槽而不是让调用方自己在外面摆一个按钮：那样会是两个各自带底的 pill，
+   * 而设计要的是一个背景装两件东西。不传时几何与外观和原来完全一致（w-36 + px-3）。
+   */
+  leading?: ReactNode;
 }) {
   const maxIndex = TEMPLATE_DENSITY_VALUES.length - 1;
   const index = Math.max(0, TEMPLATE_DENSITY_VALUES.indexOf(value));
 
   // 带步进的拖动滑块：深色 pill 容器 + 细轨道 + 白色圆形手柄，3 档（relaxed / normal / dense）
   return (
-    <div className="flex h-7 w-36 items-center rounded-full bg-black/40 px-3">
+    <div
+      className={`flex h-7 items-center rounded-full bg-black/40 ${
+        leading ? 'gap-1.5 pl-1 pr-3' : 'w-36 px-3'
+      }`}
+    >
+      {leading}
       <input
         type="range"
         min={0}
@@ -127,11 +139,15 @@ export function StudioDensitySlider({
           const next = TEMPLATE_DENSITY_VALUES[Number(event.target.value)];
           if (next) onChange(next);
         }}
-        className="h-3.5 w-full cursor-pointer appearance-none bg-transparent outline-none
+        className={`h-3.5 cursor-pointer appearance-none bg-transparent outline-none ${
+          // 无 leading 时沿用 w-full（外层 w-36 - px-3*2 = 120px）；有 leading 时轨道自己定宽，
+          // 保证两种形态下轨道长度一致。
+          leading ? 'w-[120px]' : 'w-full'
+        }
           [&::-moz-range-thumb]:size-3.5 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white
           [&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-white/25
           [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-white/25
-          [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:transition"
+          [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:transition`}
       />
     </div>
   );

@@ -1,4 +1,9 @@
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { MaterialFoldersService } from './material-folders.service';
 
 function buildService(overrides: { repo?: any; canUse?: boolean; favoriteLibrary?: any } = {}) {
@@ -54,10 +59,55 @@ describe('MaterialFoldersService', () => {
     await expect(service.create('u1', { name: 'Logo' })).rejects.toThrow(ConflictException);
   });
 
-  it('create 规范化名(trim)并写入', async () => {
+  it('create 规范化名(trim)并写入；未给图标时落 null', async () => {
     const { service, repo } = buildService();
     await service.create('u1', { name: '  产品图  ' });
-    expect(repo.create).toHaveBeenCalledWith({ userId: 'u1', name: '产品图', sortOrder: 0 });
+    expect(repo.create).toHaveBeenCalledWith({
+      userId: 'u1',
+      name: '产品图',
+      icon: null,
+      sortOrder: 0,
+    });
+  });
+
+  it('create 带 emoji 图标：原样入库', async () => {
+    const { service, repo } = buildService();
+    await service.create('u1', { name: '产品图', icon: '🎨' });
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: '产品图', icon: '🎨' }),
+    );
+  });
+
+  it('create 多码位 ZWJ emoji 完整入库，不从中间劈开', async () => {
+    const { service, repo } = buildService();
+    // 👨‍👩‍👧‍👦 是 7 码位的 ZWJ 组合序列。列宽 VarChar(16) 放得下，必须原样保留——
+    // 截断会得到「两个人 + 一个悬空连接符」的乱码。
+    await service.create('u1', { name: '产品图', icon: '👨‍👩‍👧‍👦' });
+    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ icon: '👨‍👩‍👧‍👦' }));
+  });
+
+  it('create 图标超出列宽则拒收，而不是截一半存进去', async () => {
+    const { service } = buildService();
+    await expect(
+      service.create('u1', { name: '产品图', icon: 'x'.repeat(17) }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('create 空白图标视作无图标', async () => {
+    const { service, repo } = buildService();
+    await service.create('u1', { name: '产品图', icon: '  ' });
+    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ icon: null }));
+  });
+
+  it('update 显式传 null 清除图标；不传则不动 icon 字段', async () => {
+    const { service, repo } = buildService();
+    repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
+    await service.update('u1', 'f1', { icon: null });
+    expect(repo.update).toHaveBeenCalledWith('f1', { icon: null });
+
+    repo.update.mockClear();
+    await service.update('u1', 'f1', { sortOrder: 3 });
+    expect(repo.update).toHaveBeenCalledWith('f1', { sortOrder: 3 });
   });
 
   it('create 并发撞 DB 唯一约束(P2002)转成 ConflictException', async () => {
