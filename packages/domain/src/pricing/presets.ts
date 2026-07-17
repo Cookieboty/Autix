@@ -83,17 +83,17 @@ const videoPreset: ModelPreset = {
   paramsSchema: {
     $schema: JSON_SCHEMA_DRAFT,
     type: 'object',
-    required: ['resolution', 'seconds'],
+    required: ['resolution', 'duration'],
     properties: {
       resolution: { type: 'string', enum: ['480p', '720p', '1080p', '4k'], default: '720p', 'x-ui': { control: 'chips', labelKey: 'pricing.params.resolution', order: 10 } },
-      seconds: { type: 'integer', minimum: 4, maximum: 15, default: 5, 'x-ui': { control: 'stepper', labelKey: 'pricing.params.duration', order: 20 } },
+      duration: { type: 'integer', minimum: 4, maximum: 15, default: 5, 'x-ui': { control: 'stepper', labelKey: 'pricing.params.duration', order: 20 } },
       ratio: { type: 'string', enum: ['1:1', '16:9', '9:16'], default: '16:9', 'x-ui': { control: 'chips', labelKey: 'pricing.params.ratio', order: 30 } },
     },
     allOf: [
       {
         if: { properties: { resolution: { const: '4k' } } },
         // then 分支重声明 type，否则 ajv strictTypes 拒绝编译（见 Task 9）
-        then: { properties: { seconds: { type: 'integer', maximum: 8 } } },
+        then: { properties: { duration: { type: 'integer', maximum: 8 } } },
       },
     ],
   },
@@ -101,7 +101,7 @@ const videoPreset: ModelPreset = {
     terms: [
       { id: 'base', op: 'add', const: 1 },
       { id: 'resolution', op: 'mul', table: { param: 'resolution', values: { '480p': 160, '720p': 320, '1080p': 800, '4k': 1600 } } },
-      { id: 'seconds', op: 'mul', perUnit: { param: 'seconds', unitCost: 1 } },
+      { id: 'duration', op: 'mul', perUnit: { param: 'duration', unitCost: 1 } },
     ],
   },
 };

@@ -53,14 +53,14 @@ describe('assembleVideoRequest — content', () => {
 describe('assembleVideoRequest — 省略语义（四种，逐条复刻 buildTaskRequest）', () => {
   // omitWhen: 'undefined' —— false 必须发出去
   it('sends generateAudio: false (undefined-omit, not falsy-omit)', () => {
-    const body = assembleVideoRequest(base({ params: { generateAudio: false } }));
+    const body = assembleVideoRequest(base({ params: { generate_audio: false } }));
     expect(body.generate_audio).toBe(false);
     expect('generate_audio' in body).toBe(true);
   });
 
   // omitWhen: 'undefined' —— 0 必须发出去
   it('sends seconds: 0 (undefined-omit, not falsy-omit)', () => {
-    const body = assembleVideoRequest(base({ params: { seconds: 0 } }));
+    const body = assembleVideoRequest(base({ params: { duration: 0 } }));
     expect(body.duration).toBe(0);
   });
 
@@ -71,9 +71,9 @@ describe('assembleVideoRequest — 省略语义（四种，逐条复刻 buildTas
   });
 
   it('omits returnLastFrame: false (falsy-omit)', () => {
-    const off = assembleVideoRequest(base({ params: { returnLastFrame: false } }));
+    const off = assembleVideoRequest(base({ params: { return_last_frame: false } }));
     expect('return_last_frame' in off).toBe(false);
-    expect(assembleVideoRequest(base({ params: { returnLastFrame: true } })).return_last_frame).toBe(true);
+    expect(assembleVideoRequest(base({ params: { return_last_frame: true } })).return_last_frame).toBe(true);
   });
 
   // omitValues: [-1] —— 哨兵值必须省略，其余 seed 照发

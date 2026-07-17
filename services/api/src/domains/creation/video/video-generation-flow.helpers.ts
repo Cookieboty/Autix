@@ -51,15 +51,15 @@ export interface SeedanceContentSummary {
 /**
  * Shape consumed directly as `TaskEstimateInput` (Task 3/4). Video params are all
  * order-time `params` sourced from the `video` pricing preset's paramsSchema
- * (resolution/seconds/ratio — see packages/domain/src/pricing/presets.ts) — video
- * has no token/usage-source pricing, so there is no `usage` field here.
+ * (resolution/duration/ratio — 火山原生名，见 packages/domain/src/pricing/presets.ts)
+ * — video has no token/usage-source pricing, so there is no `usage` field here.
  */
 export interface SeedanceCostEstimateInput {
   taskType: string;
   modelConfigId?: string;
   params: {
     resolution: NormalizedVideoResolution;
-    seconds: number;
+    duration: number;
     ratio?: string;
   };
   membershipLevel?: number;
@@ -423,16 +423,16 @@ export function buildSeedanceCostEstimateInput(input: {
   modelConfigId?: string;
   membershipLevel?: number;
 }): SeedanceCostEstimateInput {
-  // 先经唯一投影拿到统一词汇（duration → seconds），再套计价自己的归一化。
+  // 先经唯一投影拿到火山原生参数（duration 直接透传），再套计价自己的归一化。
   // 归一化必须留在这里：上游请求体发的是原值，投影若归一化会改变实际生成参数。
-  const unified = toUnifiedVideoParams(input.params);
+  const native = toUnifiedVideoParams(input.params);
   return {
     taskType: VIDEO_GENERATION_TASK_TYPE,
     ...(input.modelConfigId !== undefined ? { modelConfigId: input.modelConfigId } : {}),
     params: {
-      resolution: normalizeVideoResolution(unified.resolution),
-      seconds: normalizeVideoDuration(unified.seconds),
-      ...(unified.ratio !== undefined ? { ratio: unified.ratio } : {}),
+      resolution: normalizeVideoResolution(native.resolution),
+      duration: normalizeVideoDuration(native.duration),
+      ...(native.ratio !== undefined ? { ratio: native.ratio } : {}),
     },
     ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
   };

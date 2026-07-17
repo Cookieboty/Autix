@@ -36,14 +36,14 @@ export const arkVideoV3: VideoProtocolPreset = {
       },
     },
     paramBindings: {
-      // key = 统一参数名（UNIFIED_VIDEO_PARAM_KEYS）；path = Ark 原生字段。
+      // key = path = 火山原生字段名（UNIFIED_VIDEO_PARAM_KEYS 已原生化，paramsSchema 同名）。
       // 省略语义逐条对齐 buildTaskRequest:288-303，注释里标出对应的那一行。
       ratio: { path: 'ratio', omitWhen: 'falsy' }, // if (opts.ratio)
-      seconds: { path: 'duration', omitWhen: 'undefined' }, // if (opts.duration !== undefined) → 0 会发
+      duration: { path: 'duration', omitWhen: 'undefined' }, // if (opts.duration !== undefined) → 0 会发
       resolution: { path: 'resolution', omitWhen: 'falsy' }, // if (opts.resolution)
-      generateAudio: { path: 'generate_audio', omitWhen: 'undefined' }, // !== undefined → false 会发
+      generate_audio: { path: 'generate_audio', omitWhen: 'undefined' }, // !== undefined → false 会发
       watermark: { path: 'watermark', omitWhen: 'falsy' }, // if (opts.watermark)
-      returnLastFrame: { path: 'return_last_frame', omitWhen: 'falsy' }, // if (opts.returnLastFrame)
+      return_last_frame: { path: 'return_last_frame', omitWhen: 'falsy' }, // if (opts.returnLastFrame)
       seed: { path: 'seed', omitWhen: 'undefined', omitValues: [-1] }, // !== undefined && !== -1
     },
     // 出处是**厂商文档**而非代码：amux 的提交响应同时返回 id 与 task_id（值相同）。

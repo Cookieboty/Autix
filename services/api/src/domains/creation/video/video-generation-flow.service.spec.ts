@@ -369,16 +369,16 @@ describe('VideoGenerationFlowService billing', () => {
     });
 
     // Exact shape (not objectContaining): pins the new task/params contract —
-    // resolution/seconds/ratio live under `params`, modelConfigId is present
+    // resolution/duration/ratio live under `params`, modelConfigId is present
     // because generateClip always has one in scope by this point, and there is
     // no referenceImages/hasVideoInput/hasAudioInput (not part of the `video`
-    // pricing preset's paramsSchema) and no top-level resolution/seconds.
+    // pricing preset's paramsSchema) and no top-level resolution/duration.
     expect(pointsService.estimateCost).toHaveBeenCalledWith({
       taskType: 'video_generation',
       modelConfigId: 'model-config-1',
       params: {
         resolution: '720p',
-        seconds: 5,
+        duration: 5,
         ratio: '16:9',
       },
       membershipLevel: 3,
@@ -507,10 +507,10 @@ describe('VideoGenerationFlowService billing', () => {
 
     expect(submitVideoTaskMock).toHaveBeenCalledTimes(1);
     const submitCalls = submitVideoTaskMock.mock.calls as unknown as Array<
-      [{ params: { seconds?: number }; prompt?: string | null }]
+      [{ params: { duration?: number }; prompt?: string | null }]
     >;
     const callRequest = submitCalls.at(-1)?.[0];
-    expect(callRequest?.params.seconds).toBe(5);
+    expect(callRequest?.params.duration).toBe(5);
     expect(callRequest?.prompt).toContain('完整分镜脚本');
     expect(callRequest?.prompt).toContain('分镜 1「开场」：赛博朋克城市远景');
     expect(callRequest?.prompt).toContain('分镜 2「特写」：红衣少女半身近景');
@@ -521,7 +521,7 @@ describe('VideoGenerationFlowService billing', () => {
       modelConfigId: 'model-config-1',
       params: {
         resolution: '720p',
-        seconds: 5,
+        duration: 5,
         ratio: '16:9',
       },
       membershipLevel: 3,
@@ -778,18 +778,18 @@ describe('VideoGenerationFlowService billing', () => {
       expect.objectContaining({
         params: expect.objectContaining({
           resolution: '1080p',
-          seconds: 7,
+          duration: 7,
         }),
       }),
     );
     expect(submitVideoTaskMock).toHaveBeenCalledTimes(1);
     const submitCalls = submitVideoTaskMock.mock.calls as unknown as Array<
-      [{ params: { seconds?: number }; prompt?: string | null }]
+      [{ params: { duration?: number }; prompt?: string | null }]
     >;
     const callRequest = submitCalls.at(-1)?.[0];
     expect(callRequest).toBeDefined();
     if (!callRequest) throw new Error('expected submitVideoTask call');
-    expect(callRequest.params.seconds).toBe(7);
+    expect(callRequest.params.duration).toBe(7);
     expect(callRequest.prompt).toContain('分镜 1「开场」：雨夜城市远景');
     expect(callRequest.prompt).toContain('分镜 2「推进」：镜头推向少女');
     expect(callRequest.prompt).toContain('分镜 3「收束」：摩托驶离路口');
@@ -886,12 +886,12 @@ describe('VideoGenerationFlowService billing', () => {
 
     expect(submitVideoTaskMock).toHaveBeenCalledTimes(1);
     const submitCalls = submitVideoTaskMock.mock.calls as unknown as Array<
-      [{ materials: unknown[]; params: { seconds?: number }; prompt?: string | null }]
+      [{ materials: unknown[]; params: { duration?: number }; prompt?: string | null }]
     >;
     const callRequest = submitCalls.at(-1)?.[0];
     expect(callRequest).toBeDefined();
     if (!callRequest) throw new Error('expected submitVideoTask call');
-    expect(callRequest.params.seconds).toBe(10);
+    expect(callRequest.params.duration).toBe(10);
     // 五个分镜都没有 materials，故素材数组为空——一条纯文本 content item，不是五个。
     expect(callRequest.materials).toEqual([]);
     for (let index = 1; index <= 5; index += 1) {
@@ -901,7 +901,7 @@ describe('VideoGenerationFlowService billing', () => {
     }
     expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
     expect(pointsService.estimateCost).toHaveBeenCalledWith(
-      expect.objectContaining({ params: expect.objectContaining({ seconds: 10 }) }),
+      expect.objectContaining({ params: expect.objectContaining({ duration: 10 }) }),
     );
     expect(prisma.video_clip_generations.create).toHaveBeenCalledTimes(1);
   });

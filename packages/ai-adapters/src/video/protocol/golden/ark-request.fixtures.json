@@ -5,7 +5,7 @@
       "model": "doubao-seedance-2.0-fast",
       "prompt": "a cat in the rain",
       "materials": [],
-      "params": { "resolution": "720p", "ratio": "16:9", "seconds": 5, "generateAudio": true }
+      "params": { "resolution": "720p", "ratio": "16:9", "duration": 5, "generate_audio": true }
     },
     "expected": {
       "model": "doubao-seedance-2.0-fast",
@@ -22,7 +22,7 @@
       "model": "doubao-seedance-2.0-fast",
       "prompt": "zoom in",
       "materials": [{ "role": "first_frame", "url": "https://x/start.jpg" }],
-      "params": { "resolution": "720p", "ratio": "16:9", "seconds": 5 }
+      "params": { "resolution": "720p", "ratio": "16:9", "duration": 5 }
     },
     "expected": {
       "model": "doubao-seedance-2.0-fast",
@@ -44,7 +44,7 @@
         { "role": "first_frame", "url": "https://x/a.jpg" },
         { "role": "last_frame", "url": "https://x/b.jpg" }
       ],
-      "params": { "ratio": "16:9", "seconds": 5 }
+      "params": { "ratio": "16:9", "duration": 5 }
     },
     "expected": {
       "model": "doubao-seedance-2.0-fast",
@@ -92,7 +92,7 @@
       "model": "m",
       "prompt": "p",
       "materials": [],
-      "params": { "generateAudio": false }
+      "params": { "generate_audio": false }
     },
     "expected": {
       "model": "m",
@@ -102,7 +102,7 @@
   },
   {
     "name": "zero-seconds-must-be-sent",
-    "input": { "model": "m", "prompt": "p", "materials": [], "params": { "seconds": 0 } },
+    "input": { "model": "m", "prompt": "p", "materials": [], "params": { "duration": 0 } },
     "expected": { "model": "m", "content": [{ "type": "text", "text": "p" }], "duration": 0 }
   },
   {
@@ -121,7 +121,7 @@
       "model": "m",
       "prompt": "p",
       "materials": [],
-      "params": { "watermark": false, "returnLastFrame": false }
+      "params": { "watermark": false, "return_last_frame": false }
     },
     "expected": { "model": "m", "content": [{ "type": "text", "text": "p" }] }
   },
@@ -131,7 +131,7 @@
       "model": "m",
       "prompt": "p",
       "materials": [],
-      "params": { "watermark": true, "returnLastFrame": true }
+      "params": { "watermark": true, "return_last_frame": true }
     },
     "expected": {
       "model": "m",

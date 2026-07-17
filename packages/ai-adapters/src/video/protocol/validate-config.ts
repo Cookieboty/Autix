@@ -1,4 +1,3 @@
-import { UNIFIED_VIDEO_PARAM_KEYS } from '@autix/domain/video';
 import type { ParamsSchema } from '@autix/domain/pricing';
 import type { VideoProtocolPreset } from './types';
 
@@ -12,21 +11,22 @@ export interface ConfigViolation {
 /** 会真正发给上游的角色。与 image 侧的 WIRE_ROLES 同义。 */
 const WIRE_ROLES: ReadonlySet<string> = new Set(['wire', 'both']);
 
-const KNOWN_UNIFIED: ReadonlySet<string> = new Set(UNIFIED_VIDEO_PARAM_KEYS);
-
 /**
- * 跨配置校验：paramsSchema ⟷ preset 的 paramBindings 必须双向闭合。
+ * 跨配置校验：paramsSchema（DB 下发，运营可配）⟷ preset 的 paramBindings（代码里的协议
+ * 知识）必须闭合。
  *
- * **方向很关键**：规则不是「绑定必须存在于 schema」—— 线上 video_generation 的 schema
- * 只有 resolution/seconds/ratio 三个属性，而 arkVideoV3 有 7 个绑定（generateAudio /
- * watermark / returnLastFrame / seed 是不进计价、不给用户选的传输参数，本就不该出现在
- * schema 里）。按那个方向写会拒绝 preset 自己。
+ * 正向闭合（方向同 image/protocol/validate-config.ts:49-58）：schema 里 role 为
+ * wire/both 的**标量**属性必须在 preset 里有绑定 —— 否则用户以为调了参数、上游其实
+ * 永远收不到（静默丢弃）。
  *
- * 正确的两条（方向同 image/protocol/validate-config.ts:49-58 的「规则 1a 正向闭合」）：
- *   1. 正向：schema 里 role 为 wire/both 的属性必须有绑定 —— 否则用户以为调了参数、
- *      上游其实永远收不到（静默丢弃）。
- *   2. 反向：绑定 key 不必在 schema 里，但必须属于 UNIFIED_VIDEO_PARAM_KEYS —— 否则
- *      一个拼错的 `wartermark` 绑定会永远不生效且无人察觉。
+ * **不再有反向白名单**：原生化后 paramBindings 的 key 就是火山 wire 字段名（key==path），
+ * 拼错 = wire 请求体错 = golden 逐字节比对会红。原先的 UNIFIED_VIDEO_PARAM_KEYS 是
+ * 「统一内部词汇」时代为跨 preset 校验绑定名而设的全局白名单，原生化后它恰好等于绑定名
+ * 集合、变成自己校验自己的冗余，已删。
+ *
+ * **素材字段例外**：带 `x-content-role` 的属性（first_frame / reference_images /
+ * reference_video / reference_audio 等）通过 video_clip_materials 表走 content 组装，
+ * 不是标量 wire 参数、不进 paramBindings —— 正向闭合跳过它们。
  */
 export function validateVideoProtocolConfig(input: {
   paramsSchema: ParamsSchema;
@@ -39,24 +39,19 @@ export function validateVideoProtocolConfig(input: {
 
   // 规则 1：正向闭合
   for (const [name, property] of Object.entries(properties)) {
-    const role = (property as { 'x-ui'?: { role?: string } })['x-ui']?.role ?? 'both';
+    const prop = property as {
+      'x-ui'?: { role?: string };
+      'x-content-role'?: string;
+    };
+    // 素材字段（走 materials 表，不通过 paramBindings 发标量）不参与正向闭合。
+    if (prop['x-content-role'] !== undefined) continue;
+    const role = prop['x-ui']?.role ?? 'both';
     if (!WIRE_ROLES.has(role)) continue;
     if (bindings[name] === undefined) {
       violations.push({
         code: 'WIRE_PARAM_NOT_BOUND',
         param: name,
         message: `param "${name}" (role: ${role}) has no binding in preset "${preset.key}" — it would be silently dropped`,
-      });
-    }
-  }
-
-  // 规则 2：反向白名单
-  for (const name of Object.keys(bindings)) {
-    if (!KNOWN_UNIFIED.has(name)) {
-      violations.push({
-        code: 'UNKNOWN_UNIFIED_PARAM',
-        param: name,
-        message: `preset "${preset.key}" binds "${name}", which is not a known unified video param — it would never take effect`,
       });
     }
   }

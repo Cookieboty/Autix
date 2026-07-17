@@ -205,7 +205,7 @@ describe('video generation flow helpers', () => {
   });
 
   describe('buildSeedanceCostEstimateInput', () => {
-    it('packs resolution/seconds/ratio into params under the task/params contract, with modelConfigId when known', () => {
+    it('packs resolution/duration/ratio into params under the task/params contract, with modelConfigId when known', () => {
       expect(
         buildSeedanceCostEstimateInput({
           params: { resolution: '1080P', duration: 5.2, ratio: '9:16', sourceTemplateId: 'tpl-1' },
@@ -217,7 +217,7 @@ describe('video generation flow helpers', () => {
         modelConfigId: 'model-config-1',
         params: {
           resolution: '1080p',
-          seconds: 6,
+          duration: 6,
           ratio: '9:16',
         },
         membershipLevel: 3,
@@ -233,14 +233,14 @@ describe('video generation flow helpers', () => {
         taskType: 'video_generation',
         params: {
           resolution: '720p',
-          seconds: 5,
+          duration: 5,
         },
       });
       expect(result).not.toHaveProperty('modelConfigId');
       expect(result).not.toHaveProperty('membershipLevel');
       expect(result.params).not.toHaveProperty('ratio');
       // video params are only what the `video` pricing preset declares
-      // (resolution/seconds/ratio) — no referenceImages/hasVideoInput/hasAudioInput,
+      // (resolution/duration/ratio) — no referenceImages/hasVideoInput/hasAudioInput,
       // those never appear in the video preset's paramsSchema.
       expect(result.params).not.toHaveProperty('referenceImages');
       expect(result.params).not.toHaveProperty('hasVideoInput');
