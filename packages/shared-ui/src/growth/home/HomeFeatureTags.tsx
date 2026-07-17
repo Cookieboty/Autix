@@ -1,45 +1,31 @@
-type FeatureTag = { label: string; href: string };
+'use client';
 
-// 站内功能 tag（真实路由）
-const FEATURE_TAGS: FeatureTag[] = [
-  { label: 'Image', href: '/ai/image' },
-  { label: 'Video', href: '/ai/video' },
-  { label: 'Canvas', href: '/draw' },
-  { label: 'Templates', href: '/ai/image?mode=gallery' },
-  { label: 'Presets', href: '/presets' },
-  { label: 'Viral Presets', href: '/viral-presets' },
-  { label: 'Marketing Studio', href: '/marketing-studio' },
-  { label: 'Cinema Studio', href: '/original-series' },
-  { label: 'Originals', href: '/original-series' },
-  { label: 'Edit Image', href: '/ai/image' },
-  { label: 'Upscale', href: '/ai/image' },
-  { label: 'Multi Reference', href: '/ai/image' },
-  { label: 'Pricing', href: '/pricing' },
-];
-
-// 模型 tag（跳转到对应生成器并带上 model 提示）
-const IMAGE_MODELS = [
-  'Nano Banana Pro',
-  'Nano Banana 2',
-  'Nano Banana 2 Lite',
-  'GPT Image 2',
-  'Seedream 5 Lite',
-  'SeedReam 4.5',
-];
-const VIDEO_MODELS = ['Seedance 2.0', 'Gemini Omni Flash'];
-
-const MODEL_TAGS: FeatureTag[] = [
-  ...IMAGE_MODELS.map((label) => ({ label, href: `/ai/image?model=${encodeURIComponent(label)}` })),
-  ...VIDEO_MODELS.map((label) => ({ label, href: `/ai/video?model=${encodeURIComponent(label)}` })),
-];
-
-const ALL_TAGS: FeatureTag[] = [...FEATURE_TAGS, ...MODEL_TAGS];
+import { useTranslations } from 'next-intl';
+import { Link } from '../../navigation';
+import { IMAGE_NAV_FEATURES, imageModelHref, useImageNavModels } from '../image-nav';
 
 /**
- * 「EXPLORE MORE AI FEATURES」：站内功能 tag + 模型 tag 的药丸云。
- * 目前为策展式静态列表，后续可接入真实的功能导航 / 模型接口。
+ * 「EXPLORE MORE AI FEATURES」标签云。
+ * 收敛为导航 Image 下拉的全部项：Features（Create Image / Edit Image / Gallery）+ 全部图片模型，
+ * 均可点击跳转。Video 暂不加，待 video 功能完善后再补 video 的功能与模型标签。
  */
 export function HomeFeatureTags({ title }: { title: string }) {
+  const t = useTranslations('publicGrowth.imageNavFlyout');
+  const models = useImageNavModels();
+
+  const tags: Array<{ key: string; label: string; href: string }> = [
+    ...IMAGE_NAV_FEATURES.map((feature) => ({
+      key: feature.key,
+      label: t(feature.key),
+      href: feature.href,
+    })),
+    ...models.map((model) => ({
+      key: model.id,
+      label: model.name,
+      href: imageModelHref(model.name),
+    })),
+  ];
+
   return (
     <section className="bg-background py-16 md:py-24">
       <div className="mx-auto max-w-[1200px] px-4 text-center md:px-6">
@@ -47,14 +33,14 @@ export function HomeFeatureTags({ title }: { title: string }) {
           {title}
         </h2>
         <div className="flex flex-wrap justify-center gap-2.5">
-          {ALL_TAGS.map((tag) => (
-            <a
-              key={tag.label}
+          {tags.map((tag) => (
+            <Link
+              key={tag.key}
               href={tag.href}
               className="rounded-lg border border-border bg-secondary px-3.5 py-1.5 text-sm font-medium text-foreground/65 transition hover:border-input hover:bg-accent hover:text-foreground"
             >
               {tag.label}
-            </a>
+            </Link>
           ))}
         </div>
       </div>

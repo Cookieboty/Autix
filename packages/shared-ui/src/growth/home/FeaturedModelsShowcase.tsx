@@ -3,13 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Link } from '../../navigation';
+import { buildGeneratorWorkbenchHref } from '../generator-workbench-href';
+import { imageModelHref } from '../image-nav';
 
 type FeaturedModel = {
   id: string;
   title: string;
   description: string;
-  /** 跳转地址（先留空，模型上线后统一补） */
-  href: string;
+  /** 媒体类型，决定跳转到 image / video 生成页 */
+  kind: 'image' | 'video';
+  /** 跳转地址（留空则按 kind + id 自动生成，跳转到对应生成页并预选该模型） */
+  href?: string;
   /** 图片背景（留空待补） */
   image?: string;
   /** 视频背景（留空待补），优先级高于 image */
@@ -22,66 +27,73 @@ const FEATURED_MODELS: FeaturedModel[] = [
     id: 'seedance-2',
     title: 'Seedance 2.0',
     description: 'Cinematic AI video generation — standard and lightning-fast variants.',
-    href: '',
+    kind: 'video',
     video: 'https://cdn.amux.ai/playground/video/video/demo/short-film-mini.mp4',
   },
   {
     id: 'gemini-omni-flash',
     title: 'Gemini Omni Flash',
     description: 'Generate and edit video from any input, in a single flash.',
-    href: '',
+    kind: 'video',
     video: 'https://cdn.amux.ai/background/gemini-omni__page-cover__hero.webm',
   },
   {
     id: 'nano-banana-2-lite',
     title: 'Nano Banana 2 Lite',
     description: 'Rapid generation with sharp in-image text.',
-    href: '',
+    kind: 'image',
     image: 'https://cdn.amux.ai/background/unnamed.webp',
   },
   {
     id: 'nano-banana-pro',
     title: 'Nano Banana Pro',
     description: 'Studio-grade image generation and precise editing.',
-    href: '',
+    kind: 'image',
     image: 'https://cdn.amux.ai/background/123.webp',
   },
   {
     id: 'nano-banana-2',
     title: 'Nano Banana 2',
     description: 'Balanced quality and speed for everyday visuals.',
-    href: '',
+    kind: 'image',
     image: 'https://cdn.amux.ai/background/456.webp',
   },
   {
     id: 'gpt-image-2',
     title: 'GPT Image 2',
     description: 'Prompt-driven image creation with sharp fidelity.',
-    href: '',
+    kind: 'image',
     image: 'https://cdn.amux.ai/background/16-9-6.webp',
   },
   {
     id: 'seedream-5-lite',
-    title: 'Seedream 5 Lite',
+    title: 'Seedream 5.0 Lite',
     description: 'Fast, expressive image generation at scale.',
-    href: '',
+    kind: 'image',
     image:
       'https://cdn.amux.ai/background/e71ada1e05b011f1bd68b8599f1d1fe2~tplv-d77oumduh0-watermark_ai.jpg',
   },
   {
     id: 'seedream-4-5',
-    title: 'SeedReam 4.5',
+    title: 'Seedream 4.5',
     description: 'High-fidelity images with rich, detailed texture.',
-    href: '',
+    kind: 'image',
     image:
       'https://cdn.amux.ai/background/a1104d22cdfd11f0ba0900163e56377f~tplv-d77oumduh0-watermark_ai.jpg',
   },
 ];
 
 function ModelCard({ model }: { model: FeaturedModel }) {
+  // 图片模型统一走共享的 `?model=<模型名，空格转下划线>` 约定（与导航下拉一致，能被 page 精确预选）；
+  // video 暂沿用既有 workbench href（待 video 功能完善再统一）。
+  const href =
+    model.href ||
+    (model.kind === 'image'
+      ? imageModelHref(model.title)
+      : buildGeneratorWorkbenchHref({ kind: model.kind, model: model.id }));
   return (
-    <a
-      href={model.href}
+    <Link
+      href={href}
       className="group/card w-[80%] shrink-0 snap-start sm:w-[42%] lg:w-[calc((100%-2.6rem)/3.6)]"
       aria-label={model.title}
     >
@@ -117,7 +129,7 @@ function ModelCard({ model }: { model: FeaturedModel }) {
         {model.title}
       </h3>
       <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{model.description}</p>
-    </a>
+    </Link>
   );
 }
 

@@ -11,7 +11,7 @@ import {
   type GalleryFeedItem,
 } from '@autix/shared-store';
 import { HomeGallerySkeleton } from './HomeGallerySkeleton';
-import { useRouter } from '../../navigation';
+import { Link, useRouter } from '../../navigation';
 import { GalleryDetailDialog, type GalleryInteraction } from '../detail/GalleryDetailDialog';
 import { useGalleryPostModal } from '../detail/useGalleryPostModal';
 import { AuthorAvatar } from '../AuthorAvatar';
@@ -172,13 +172,13 @@ export function HomeGallerySection({
 
             {/* 底部渐隐 + View all 按钮（半透明） */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-64 items-end justify-center bg-gradient-to-t from-background via-background/85 to-transparent pb-4">
-              <a
+              <Link
                 href={viewAllHref}
                 className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-growth-accent/35 bg-growth-accent/20 px-5 py-2.5 text-sm font-bold text-growth-accent backdrop-blur-md transition hover:bg-growth-accent/30"
               >
                 {t('viewAllOf', { title })}
                 <ArrowUpRight className="size-4" />
-              </a>
+              </Link>
             </div>
           </div>
         )}

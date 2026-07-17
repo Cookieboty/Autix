@@ -11,6 +11,7 @@ import { useAuthStore, useUiStore } from '@autix/shared-store';
 import { Link, useRouter } from '../navigation';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
+import { IMAGE_NAV_FEATURES, imageModelHref, useImageNavModels } from './image-nav';
 
 const FOOTER_YEAR = '2026';
 
@@ -20,65 +21,95 @@ const FOOTER_YEAR = '2026';
  */
 type FooterLink = { labelKey?: string; label?: string; href: string };
 
-const FOOTER_GROUPS: Array<{ titleKey: string; links: FooterLink[] }> = [
-  {
-    titleKey: 'studio',
-    links: [
-      { labelKey: 'explore', href: '/' },
-      { labelKey: 'pricing', href: '/pricing' },
-      { labelKey: 'canvas', href: '/draw' },
-      { labelKey: 'marketingStudio', href: '/marketing-studio' },
-      { labelKey: 'cinemaStudio', href: '/original-series' },
-      { labelKey: 'originals', href: '/original-series' },
-      { labelKey: 'docs', href: '/docs' },
-    ],
-  },
-  {
-    titleKey: 'image',
-    links: [
-      { labelKey: 'aiImage', href: '/ai/image' },
-      { labelKey: 'templates', href: '/ai/image?mode=gallery' },
-      { labelKey: 'editImage', href: '/ai/image' },
-      { labelKey: 'imageUpscale', href: '/ai/image' },
-      { label: 'Nano Banana Pro', href: '/ai/image?model=Nano%20Banana%20Pro' },
-      { label: 'Nano Banana 2', href: '/ai/image?model=Nano%20Banana%202' },
-      { label: 'GPT Image 2', href: '/ai/image?model=GPT%20Image%202' },
-      { label: 'Seedream 5 Lite', href: '/ai/image?model=Seedream%205%20Lite' },
-    ],
-  },
-  {
-    titleKey: 'video',
-    links: [
-      { labelKey: 'aiVideo', href: '/ai/video' },
-      { labelKey: 'createVideo', href: '/ai/video' },
-      { label: 'Seedance 2.0', href: '/ai/video?model=Seedance%202.0' },
-      { label: 'Gemini Omni Flash', href: '/ai/video?model=Gemini%20Omni%20Flash' },
-    ],
-  },
-  {
-    titleKey: 'discover',
-    links: [
-      { labelKey: 'presets', href: '/presets' },
-      { labelKey: 'viralPresets', href: '/viral-presets' },
-      { labelKey: 'membership', href: '/membership' },
-      { labelKey: 'pricing', href: '/pricing' },
-    ],
-  },
-];
+type FooterGroup = { titleKey: string; links: FooterLink[] };
 
+// 左侧 Amux Studio 列：只留 Explore / Profile / Assets / Pricing
+const FOOTER_STUDIO_GROUP: FooterGroup = {
+  titleKey: 'studio',
+  links: [
+    { labelKey: 'explore', href: '/' },
+    { labelKey: 'profile', href: '/profile' },
+    { labelKey: 'assets', href: '/asset' },
+    { labelKey: 'pricing', href: '/pricing' },
+  ],
+};
+
+// Video 列暂不动，待 video 功能改造时再统一
+const FOOTER_VIDEO_GROUP: FooterGroup = {
+  titleKey: 'video',
+  links: [
+    { labelKey: 'aiVideo', href: '/ai/video' },
+    { labelKey: 'createVideo', href: '/ai/video' },
+    { label: 'Seedance 2.0', href: '/ai/video?model=Seedance%202.0' },
+    { label: 'Gemini Omni Flash', href: '/ai/video?model=Gemini%20Omni%20Flash' },
+  ],
+};
+
+// 社交超链只保留 X/Twitter + Youtube（移到底部法务区，隐私/用户协议左侧）
 const FOOTER_SOCIAL: Array<[string, string]> = [
   ['X / Twitter', '#'],
   ['Youtube', '#'],
-  ['Instagram', '#'],
-  ['LinkedIn', '#'],
-  ['Tiktok', '#'],
 ];
 
+// 法务：去掉 Cookie Notice
 const FOOTER_LEGAL: Array<[string, string]> = [
   ['privacy', '#'],
   ['terms', '#'],
-  ['cookieNotice', '#'],
 ];
+
+const FOOTER_LINK_CLASS = 'text-sm text-background/80 transition hover:text-background';
+
+/** 静态链接列（Studio / Video） */
+function FooterLinkColumn({ group }: { group: FooterGroup }) {
+  const t = useTranslations('publicGrowth.footer');
+  const groupTitle = t(`groups.${group.titleKey}`);
+  return (
+    <nav aria-label={groupTitle}>
+      <h3 className="mb-4 text-sm font-semibold text-background/45">{groupTitle}</h3>
+      <ul className="space-y-2.5">
+        {group.links.map((link) => {
+          const label = link.labelKey ? t(`links.${link.labelKey}`) : link.label!;
+          return (
+            <li key={`${link.labelKey ?? link.label}-${link.href}`}>
+              <Link href={link.href} className={FOOTER_LINK_CLASS}>
+                {label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+/** Image 列：与导航 Image 下拉一致——Features（Create/Edit/Gallery）+ 全部图片模型，均可跳转 */
+function FooterImageColumn() {
+  const t = useTranslations('publicGrowth.footer');
+  const tFlyout = useTranslations('publicGrowth.imageNavFlyout');
+  const models = useImageNavModels();
+  const title = t('groups.image');
+  return (
+    <nav aria-label={title}>
+      <h3 className="mb-4 text-sm font-semibold text-background/45">{title}</h3>
+      <ul className="space-y-2.5">
+        {IMAGE_NAV_FEATURES.map((feature) => (
+          <li key={feature.key}>
+            <Link href={feature.href} className={FOOTER_LINK_CLASS}>
+              {tFlyout(feature.key)}
+            </Link>
+          </li>
+        ))}
+        {models.map((model) => (
+          <li key={model.id}>
+            <Link href={imageModelHref(model.name)} className={FOOTER_LINK_CLASS}>
+              {model.name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
 
 export function PublicFooter() {
   const t = useTranslations('publicGrowth.footer');
@@ -86,53 +117,27 @@ export function PublicFooter() {
   return (
     <footer className="bg-growth-accent text-background">
       <div className="mx-auto max-w-[1920px] px-6 py-14 md:px-10 md:py-20">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:pr-8">
             <h2 className="max-w-md text-3xl font-black uppercase leading-[1.05] tracking-tight md:text-4xl">
               {t('headline')}
             </h2>
           </div>
-          {FOOTER_GROUPS.map((group) => {
-            const groupTitle = t(`groups.${group.titleKey}`);
-            return (
-              <nav key={group.titleKey} aria-label={groupTitle}>
-                <h3 className="mb-4 text-sm font-semibold text-background/45">{groupTitle}</h3>
-                <ul className="space-y-2.5">
-                  {group.links.map((link) => {
-                    const label = link.labelKey ? t(`links.${link.labelKey}`) : link.label!;
-                    return (
-                      <li key={`${link.labelKey ?? link.label}-${link.href}`}>
-                        <Link
-                          href={link.href}
-                          className="text-sm text-background/80 transition hover:text-background"
-                        >
-                          {label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </nav>
-            );
-          })}
-        </div>
-
-        <div className="mt-16 flex flex-col gap-5 border-t border-background/15 pt-6 md:flex-row md:items-center md:justify-between">
-          <span className="text-sm font-bold text-background/80">Amux Studio</span>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-background/80">
-            {FOOTER_SOCIAL.map(([label, href]) => (
-              <a key={label} href={href} className="transition hover:text-background">
-                {label}
-              </a>
-            ))}
-          </div>
+          <FooterLinkColumn group={FOOTER_STUDIO_GROUP} />
+          <FooterImageColumn />
+          <FooterLinkColumn group={FOOTER_VIDEO_GROUP} />
         </div>
       </div>
 
       <div className="bg-background text-foreground/55">
         <div className="mx-auto flex max-w-[1920px] flex-col gap-3 px-6 pt-4 pb-24 text-xs md:flex-row md:items-center md:justify-between md:px-10 md:pb-4">
           <span>{t('copyright', { year: FOOTER_YEAR })}</span>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {FOOTER_SOCIAL.map(([label, href]) => (
+              <a key={label} href={href} className="transition hover:text-foreground">
+                {label}
+              </a>
+            ))}
             {FOOTER_LEGAL.map(([labelKey, href]) => (
               <a key={labelKey} href={href} className="transition hover:text-foreground">
                 {t(`legal.${labelKey}`)}
@@ -190,23 +195,29 @@ export function PublicGrowthShell({
   promo,
   children,
   navKind = 'home',
+  navVariant,
   showNav = true,
   showPromo = true,
+  showFooter = true,
 }: {
   promo?: { label?: string; href?: string };
   children: React.ReactNode;
   navKind?: 'home' | 'image' | 'video';
+  /** 传给导航的 variant：'fluid' 让导航默认收缩（不依赖滚动）。不传按 navKind 推导 */
+  navVariant?: 'contained' | 'fluid';
   /** false 时不渲染导航（由外层持久 (public) layout 提供），用于纳入持久导航的页面（首页/pricing） */
   showNav?: boolean;
   /** false 时不渲染顶部横幅（由外层持久 (public) layout 在导航上方提供） */
   showPromo?: boolean;
+  /** false 时不渲染站点页尾（如个人页这类沉浸式页面） */
+  showFooter?: boolean;
 }) {
   return (
     <div className="min-h-svh bg-background text-foreground">
       {showPromo ? <PublicPromoBar label={promo?.label} href={promo?.href} /> : null}
-      {showNav ? <PublicGeneratorAppNav kind={navKind} /> : null}
+      {showNav ? <PublicGeneratorAppNav kind={navKind} variant={navVariant} /> : null}
       {children}
-      <PublicFooter />
+      {showFooter ? <PublicFooter /> : null}
       <MobilePublicTabs />
     </div>
   );

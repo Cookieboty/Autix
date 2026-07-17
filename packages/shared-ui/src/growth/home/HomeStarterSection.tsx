@@ -9,6 +9,9 @@ import {
   type HomeStarterTask,
 } from '@autix/shared-store';
 import { ByteDanceIcon, GoogleGeminiIcon, OpenAIIcon } from '../../brand';
+import { Link } from '../../navigation';
+import { buildGeneratorWorkbenchHref } from '../generator-workbench-href';
+import { imageModelHref } from '../image-nav';
 
 /* ----------------------------- 数据 ----------------------------- */
 
@@ -16,7 +19,10 @@ type QualityModel = {
   id: string;
   title: string;
   description: string;
-  href: string;
+  /** 媒体类型，决定跳转到 image / video 生成页 */
+  kind: 'image' | 'video';
+  /** 跳转地址（留空则按 kind + id 自动生成，跳转到对应生成页并预选该模型） */
+  href?: string;
   /** 厂商图标 */
   Icon: ComponentType<SVGProps<SVGSVGElement> & { className?: string }>;
   /** 图标颜色类（Gemini 自带渐变，无需设置） */
@@ -31,7 +37,7 @@ const QUALITY_MODELS: QualityModel[] = [
     id: 'seedance-2',
     title: 'Seedance 2.0',
     description: 'Create high-quality videos in seconds.',
-    href: '',
+    kind: 'video',
     Icon: ByteDanceIcon,
     mediaType: 'video',
   },
@@ -39,7 +45,7 @@ const QUALITY_MODELS: QualityModel[] = [
     id: 'gemini-omni-flash',
     title: 'Gemini Omni Flash',
     description: 'Generate and edit video from any input.',
-    href: '',
+    kind: 'video',
     Icon: GoogleGeminiIcon,
     badge: 'new',
   },
@@ -47,7 +53,7 @@ const QUALITY_MODELS: QualityModel[] = [
     id: 'nano-banana-2-lite',
     title: 'Nano Banana 2 Lite',
     description: 'Lightweight image generation at speed.',
-    href: '',
+    kind: 'image',
     Icon: GoogleGeminiIcon,
     badge: 'new',
   },
@@ -55,7 +61,7 @@ const QUALITY_MODELS: QualityModel[] = [
     id: 'nano-banana-pro',
     title: 'Nano Banana Pro',
     description: 'Studio-grade image generation and editing.',
-    href: '',
+    kind: 'image',
     Icon: GoogleGeminiIcon,
     mediaType: 'image',
   },
@@ -63,16 +69,16 @@ const QUALITY_MODELS: QualityModel[] = [
     id: 'gpt-image-2',
     title: 'GPT Image 2',
     description: 'Precise prompt-driven image creation.',
-    href: '',
+    kind: 'image',
     Icon: OpenAIIcon,
     iconClass: 'text-foreground',
     mediaType: 'image',
   },
   {
     id: 'seedream-5-lite',
-    title: 'Seedream 5 Lite',
+    title: 'Seedream 5.0 Lite',
     description: 'Fast, expressive image generation.',
-    href: '',
+    kind: 'image',
     Icon: ByteDanceIcon,
     mediaType: 'image',
   },
@@ -196,12 +202,12 @@ function TaskAction({
   }
 
   return (
-    <a
+    <Link
       href={task.hrefPath}
       className={`${baseClass} bg-white text-neutral-900 hover:bg-white/90`}
     >
       {translateHome(t, task.ctaI18nKey)}
-    </a>
+    </Link>
   );
 }
 
@@ -291,9 +297,15 @@ function OnboardingPanel() {
 
 function QualityModelCard({ model }: { model: QualityModel }) {
   const Icon = model.Icon;
+  // 图片模型走共享的 `?model=<模型名>` 约定（与导航下拉一致，可被 page 精确预选）；video 暂沿用旧 href
+  const href =
+    model.href ||
+    (model.kind === 'image'
+      ? imageModelHref(model.title)
+      : buildGeneratorWorkbenchHref({ kind: model.kind, model: model.id }));
   return (
-    <a
-      href={model.href}
+    <Link
+      href={href}
       aria-label={model.title}
       className="group/card flex flex-col justify-between rounded-2xl border border-border bg-[#1c1e20] p-4 transition duration-300 hover:bg-[#23252a]"
     >
@@ -320,7 +332,7 @@ function QualityModelCard({ model }: { model: QualityModel }) {
         </h3>
         <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{model.description}</p>
       </div>
-    </a>
+    </Link>
   );
 }
 
