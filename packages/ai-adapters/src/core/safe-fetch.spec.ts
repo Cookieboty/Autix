@@ -124,6 +124,32 @@ describe('safeFetch timeout', () => {
     await expect(promise).rejects.toThrow('aborted-by-signal');
   });
 
+  // 回归守卫：超时只约束「拿到响应头」，必须在 safeFetch 返回 Response 时**解除**。
+  //
+  // 为什么这条至关重要：调用方拿到 Response 后才在函数外读 body
+  // （video-asset-persistence 用 `await res.arrayBuffer()` 下 mp4，core/http.ts 用 `res.blob()`）。
+  // 若超时未解除，它会一路延续到 body 流 —— 一个 30s 才下完的大视频会被判超时，
+  // 而上游其实早已成功出片、积分也已扣掉，generation 却被误标 failed。
+  //
+  // 这正是把手动 controller + `finally { clearTimeout }` 换成 AbortSignal.timeout
+  // 会引入的回归（后者无法解除）。断言"响应头之后 signal 未被 abort"即锁死该语义。
+  it('disarms the timeout once the response headers arrived', async () => {
+    stubPublicDns();
+    let seenSignal: AbortSignal | undefined;
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      seenSignal = init.signal ?? undefined;
+      return new Response('ok', { status: 200 });
+    });
+
+    const res = await safeFetch('https://example.com/x', {}, { timeoutMs: 30 });
+    expect(res.status).toBe(200);
+
+    // 等到远超 timeoutMs：若超时未被解除，它会在此期间 fire 并 abort 掉 signal，
+    // 而真实场景里此刻调用方正在读 body。
+    await new Promise((resolve) => setTimeout(resolve, 90));
+    expect(seenSignal?.aborted).toBe(false);
+  });
+
   it('defaults to 30s when no timeoutMs is given', async () => {
     stubPublicDns();
     let seenSignal: AbortSignal | undefined;

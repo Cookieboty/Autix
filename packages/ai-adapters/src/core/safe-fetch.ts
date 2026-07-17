@@ -126,24 +126,38 @@ export async function safeFetch(
   let currentUrl = url;
   for (let redirects = 0; redirects <= MAX_SAFE_FETCH_REDIRECTS; redirects += 1) {
     await assertSafeFetchUrl(currentUrl);
-    const timeoutSignal = AbortSignal.timeout(opts?.timeoutMs ?? SAFE_FETCH_TIMEOUT_MS);
+    // 超时用手动 controller + `finally { clearTimeout }`，**不能**换成 AbortSignal.timeout：
+    // 那个 finally 不是单纯的清理 —— 它在本函数 return Response 的瞬间**解除**超时，使超时
+    // 只约束「拿到响应头」，而不约束调用方随后在函数外读 body（`res.arrayBuffer()` 等）。
+    // AbortSignal.timeout 无法解除，会一路延续到 body 流：一个 30s 才下完的大视频/大图会
+    // 被判超时，即便上游早已成功出片（generation 被误标 failed 且已扣费）。
+    // 调用方 signal 用 AbortSignal.any 组合进来，不覆盖 —— 上层的取消/更长窗口必须生效。
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(),
+      opts?.timeoutMs ?? SAFE_FETCH_TIMEOUT_MS,
+    );
     const signal = init?.signal
-      ? AbortSignal.any([init.signal, timeoutSignal])
-      : timeoutSignal;
-    const res = await fetch(currentUrl, {
-      ...init,
-      redirect: 'manual',
-      signal,
-    });
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      if (!location || redirects === MAX_SAFE_FETCH_REDIRECTS) {
-        throw new Error('Unsafe fetch URL (too many or invalid redirects)');
+      ? AbortSignal.any([init.signal, controller.signal])
+      : controller.signal;
+    try {
+      const res = await fetch(currentUrl, {
+        ...init,
+        redirect: 'manual',
+        signal,
+      });
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get('location');
+        if (!location || redirects === MAX_SAFE_FETCH_REDIRECTS) {
+          throw new Error('Unsafe fetch URL (too many or invalid redirects)');
+        }
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
       }
-      currentUrl = new URL(location, currentUrl).toString();
-      continue;
+      return res;
+    } finally {
+      clearTimeout(timer);
     }
-    return res;
   }
   throw new Error('Unsafe fetch URL (too many redirects)');
 }
