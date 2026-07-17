@@ -7,10 +7,7 @@ import {
   type video_clip_generations,
   type video_clip_materials,
 } from '../../platform/prisma/generated';
-import type {
-  SeedanceContentItem,
-  SeedanceTaskRequest,
-} from './seedance-api.service';
+import type { SeedanceContentItem } from './seedance-api.service';
 import {
   normalizeVideoResolution as normalizeDomainVideoResolution,
   normalizeVideoResolutionForModel,
@@ -485,7 +482,10 @@ export function buildVideoHoldInput(input: {
   projectId: string;
   clipId: string;
   modelConfigId: string;
-  taskRequest: SeedanceTaskRequest;
+  // 计划 4：调用方现在传入引擎 assembleVideoRequest 的输出（Ark 请求体快照），
+  // 不再是 SeedanceApiService.buildTaskRequest 的返回值 —— 两者字段形状经 golden
+  // 测试锁定等价，但类型上不再是同一个具名接口，故放宽为 JSON 快照类型。
+  taskRequest: Record<string, unknown>;
 }): VideoHoldInput {
   return {
     taskType: input.billingTaskType,
@@ -516,7 +516,8 @@ export function buildPendingGenerationInput(input: {
   params: Pick<VideoGenerationClipParams, 'model'>;
   fallbackModel: string;
   resolvedPrompt: string;
-  taskRequest: SeedanceTaskRequest;
+  // 计划 4：见 buildVideoHoldInput 同名字段注释。
+  taskRequest: Record<string, unknown>;
 }): PendingGenerationInput {
   return {
     generationId: input.generationId,

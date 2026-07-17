@@ -22,7 +22,6 @@ import { VideoGenerationTerminalConvergenceService } from './video-generation-te
 import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
 import {
   buildSeedanceCostEstimateInput,
-  buildSeedanceTaskRequestOptions,
   buildCompletedGenerationInput,
   buildCreateTaskFailureInput,
   buildExpiredGenerationInput,
@@ -43,7 +42,22 @@ import {
   type VideoGenerationClipParams as ClipParams,
   splitQueuedGenerationsForPolling,
 } from './video-generation-flow.helpers';
-import type { VideoModelHint } from '@autix/domain/video';
+import { assembleVideoRequest, resolveVideoPreset, submitVideoTask } from '@autix/ai-adapters/video';
+import { readProtocolKey } from '@autix/domain/model';
+import { toUnifiedVideoParams, type VideoModelHint } from '@autix/domain/video';
+
+// Ark 的公有默认 host。旧路径里这条兜底藏在 seedance-api.service.ts 的
+// SEEDANCE_BASE_URL + resolveSeedanceBaseUrl 内部（仅当 model_configs.baseUrl /
+// metadata.baseUrl / AMUX_BASE_URL 均未配置时触发）——该文件属于 Task 4 删除范围，
+// 不从那里 import，避免留一条注定要断的依赖。协议引擎的 VideoCallRequest.baseUrl
+// 是必填 string（不像旧 createTask 接受 null 并自行兜底），故这条兜底必须留在
+// 调用方，翻译过来保持与今天逐字节一致。
+const ARK_DEFAULT_BASE_URL = 'https://ark.cn-beijing.volces.com';
+
+function resolveEngineBaseUrl(baseUrl: string | null | undefined): string {
+  const trimmed = baseUrl?.trim();
+  return trimmed ? trimmed.replace(/\/+$/, '') : ARK_DEFAULT_BASE_URL;
+}
 
 export interface ClipGenerateInput {
   clipId: string;
@@ -194,10 +208,33 @@ export class VideoGenerationFlowService {
     );
 
     const materials = clip.materials;
-    const returnLastFrame = false;
 
     const resolvedPrompt = resolveClipPrompt(clip.prompt, params);
-    const content = this.seedanceApi.buildContent(materials, resolvedPrompt);
+    // 计划 4：提交路径切到声明式协议引擎，不再经 SeedanceApiService。
+    // preset 从服务端解析的 modelConfig.metadata.protocolKey 路由；resolveVideoPreset
+    // 对缺失/未注册的 key fail-loud（前置门禁已确认生产视频模型都有 protocolKey）。
+    const preset = resolveVideoPreset(readProtocolKey(modelConfig.metadata));
+    const callbackUrl = this.callbackUrlBuilder.build();
+    const callRequest = {
+      preset,
+      baseUrl: resolveEngineBaseUrl(baseUrl),
+      apiKey,
+      // FIX-3: 始终使用服务端解析/鉴权过的模型，忽略客户端传入的 params.model，
+      // 防止"选便宜模型过鉴权、用 params.model 偷换为贵模型"导致跑贵付便宜。
+      // toUnifiedVideoParams 不投影 model，这条不变量天然成立。
+      model: modelConfig.model,
+      prompt: resolvedPrompt,
+      materials,
+      params: toUnifiedVideoParams(params),
+      callbackUrl,
+    };
+    // assembleVideoRequest 是 submitVideoTask 内部实际组装请求体所用的同一纯函数
+    // （golden 测试已锁死其与旧 buildTaskRequest 逐字节等价）——这里先算一次，
+    // 既用于日志/hold 快照，也用于「内容是否为空」的判定，避免重复造轮子。
+    const requestBody = assembleVideoRequest(callRequest);
+    const requestContent = Array.isArray(requestBody.content)
+      ? (requestBody.content as Array<{ type: string }>)
+      : [];
     this.logger.log(
       `generateClip prompt resolved: ${JSON.stringify({
         projectId: input.projectId,
@@ -212,23 +249,13 @@ export class VideoGenerationFlowService {
             : 0,
         resolvedPromptLength: resolvedPrompt.length,
         resolvedPromptPreview: resolvedPrompt.slice(0, 260),
-        contentTextCount: content.filter((item) => item.type === 'text').length,
-        contentTypes: content.map((item) => item.type),
+        contentTextCount: requestContent.filter((item) => item.type === 'text').length,
+        contentTypes: requestContent.map((item) => item.type),
       })}`,
     );
 
-    if (content.length === 0)
+    if (requestContent.length === 0)
       throw new BadRequestException('Clip 缺少素材或 prompt');
-
-    const taskRequest = this.seedanceApi.buildTaskRequest(
-      buildSeedanceTaskRequestOptions({
-        params,
-        model: modelConfig.model,
-        content,
-        callbackUrl: this.callbackUrlBuilder.build(),
-        returnLastFrame,
-      }),
-    );
 
     const generationId: string = randomUUID();
     const estimateInput = buildSeedanceCostEstimateInput({
@@ -243,18 +270,17 @@ export class VideoGenerationFlowService {
         projectId: input.projectId,
         clipId: input.clipId,
         modelConfigId,
-        model: taskRequest.model,
+        model: requestBody.model,
         billingTaskType,
-        contentCount: content.length,
-        contentTypes: content.map((item) => item.type),
+        contentCount: requestContent.length,
+        contentTypes: requestContent.map((item) => item.type),
         materialCount: materials.length,
-        returnLastFrame,
         promptLength: resolvedPrompt?.length ?? 0,
-        resolution: taskRequest.resolution,
-        ratio: taskRequest.ratio,
-        duration: taskRequest.duration,
-        generateAudio: taskRequest.generate_audio,
-        watermark: taskRequest.watermark,
+        resolution: requestBody.resolution,
+        ratio: requestBody.ratio,
+        duration: requestBody.duration,
+        generateAudio: requestBody.generate_audio,
+        watermark: requestBody.watermark,
       })}`,
     );
     let holdId: string | null = null;
@@ -277,7 +303,7 @@ export class VideoGenerationFlowService {
         projectId: input.projectId,
         clipId: input.clipId,
         modelConfigId,
-        taskRequest,
+        taskRequest: requestBody,
       }),
     );
     holdId = hold.id;
@@ -301,7 +327,7 @@ export class VideoGenerationFlowService {
           params,
           fallbackModel: modelConfig.model,
           resolvedPrompt,
-          taskRequest,
+          taskRequest: requestBody,
         }),
         // 过渡期常量：此刻 Seedance/Ark 是唯一视频协议。计划 3 切到引擎后，
         // 这里会改为 modelConfig.metadata.protocolKey，并与旧 flow 一起删除。
@@ -319,23 +345,19 @@ export class VideoGenerationFlowService {
     }
 
     try {
-      const taskResponse = await this.seedanceApi.createTask(
-        apiKey,
-        taskRequest,
-        baseUrl,
-      );
+      const { providerTaskId } = await submitVideoTask(callRequest);
 
-      await this.repository.markGenerationQueued(generationId, taskResponse.id);
+      await this.repository.markGenerationQueued(generationId, providerTaskId);
       this.logger.log(
         `generateClip queued: ${JSON.stringify({
           generationId,
-          providerTaskId: taskResponse.id,
+          providerTaskId,
           projectId: input.projectId,
           clipId: input.clipId,
         })}`,
       );
 
-      return { generationId, taskId: taskResponse.id };
+      return { generationId, taskId: providerTaskId };
     } catch (err) {
       await this.repository.markGenerationCreateTaskFailedAndRefund(
         buildCreateTaskFailureInput({
@@ -660,19 +682,26 @@ export class VideoGenerationFlowService {
     const { modelConfigId, modelConfig, apiKey, baseUrl } = modelContext;
     const resolvedPrompt = resolveStoryboardVideoPrompt({ clips, params });
     const storyboardMaterials = clips.flatMap((clip) => clip.materials ?? []);
-    const content = this.seedanceApi.buildContent(storyboardMaterials, resolvedPrompt);
-    if (content.length === 0)
+    // 计划 4：提交路径切到声明式协议引擎，不再经 SeedanceApiService（同 generateClip）。
+    const preset = resolveVideoPreset(readProtocolKey(modelConfig.metadata));
+    const callbackUrl = this.callbackUrlBuilder.build();
+    const callRequest = {
+      preset,
+      baseUrl: resolveEngineBaseUrl(baseUrl),
+      apiKey,
+      // FIX-3: 服务端解析过的模型，不采信 params.model（同 generateClip）。
+      model: modelConfig.model,
+      prompt: resolvedPrompt,
+      materials: storyboardMaterials,
+      params: toUnifiedVideoParams(params),
+      callbackUrl,
+    };
+    const requestBody = assembleVideoRequest(callRequest);
+    const requestContent = Array.isArray(requestBody.content)
+      ? (requestBody.content as Array<{ type: string }>)
+      : [];
+    if (requestContent.length === 0)
       throw new BadRequestException('项目缺少分镜 prompt');
-
-    const taskRequest = this.seedanceApi.buildTaskRequest(
-      buildSeedanceTaskRequestOptions({
-        params,
-        model: modelConfig.model,
-        content,
-        callbackUrl: this.callbackUrlBuilder.build(),
-        returnLastFrame: false,
-      }),
-    );
 
     const generationId = randomUUID();
     const estimateInput = buildSeedanceCostEstimateInput({
@@ -690,12 +719,12 @@ export class VideoGenerationFlowService {
         totalClips: clips.length,
         duration: params.duration,
         modelConfigId,
-        model: taskRequest.model,
+        model: requestBody.model,
         billingTaskType,
         promptLength: resolvedPrompt.length,
         promptPreview: resolvedPrompt.slice(0, 400),
-        contentCount: content.length,
-        contentTypes: content.map((item) => item.type),
+        contentCount: requestContent.length,
+        contentTypes: requestContent.map((item) => item.type),
         materialCount: storyboardMaterials.length,
       })}`,
     );
@@ -713,7 +742,7 @@ export class VideoGenerationFlowService {
           projectId,
           clipId: anchorClip.id,
           modelConfigId,
-          taskRequest,
+          taskRequest: requestBody,
         }),
       );
       holdId = hold.id;
@@ -723,7 +752,7 @@ export class VideoGenerationFlowService {
         projectId,
         userId,
         params: persistedParams as Prisma.InputJsonValue,
-        model: taskRequest.model,
+        model: modelConfig.model,
         resolvedPrompt,
         // 过渡期常量：此刻 Seedance/Ark 是唯一视频协议。计划 3 切到引擎后，
         // 这里会改为 modelConfig.metadata.protocolKey，并与旧 flow 一起删除。
@@ -731,17 +760,17 @@ export class VideoGenerationFlowService {
         modelConfigId,
       });
 
-      const taskResponse = await this.seedanceApi.createTask(apiKey, taskRequest, baseUrl);
-      await this.repository.markGenerationQueued(generationId, taskResponse.id);
+      const { providerTaskId } = await submitVideoTask(callRequest);
+      await this.repository.markGenerationQueued(generationId, providerTaskId);
       this.logger.log(
         `generateAllClips storyboard project queued: ${JSON.stringify({
           projectId,
           generationId,
-          providerTaskId: taskResponse.id,
+          providerTaskId,
           holdId,
         })}`,
       );
-      return [{ generationId, taskId: taskResponse.id, clipId: anchorClip.id }];
+      return [{ generationId, taskId: providerTaskId, clipId: anchorClip.id }];
     } catch (err) {
       if (holdId) {
         await this.holdReconciliation.safeRefund(
