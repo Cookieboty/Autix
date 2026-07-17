@@ -3575,6 +3575,11 @@
       "image": "Image",
       "me": "Me"
     },
+    "notifications": {
+      "title": "Notifications",
+      "close": "Fermer",
+      "empty": "Vous n'avez aucune notification"
+    },
     "accountMenu": {
       "accountMenu": "Account menu",
       "signIn": "Sign in",
@@ -3618,7 +3623,9 @@
         "editImage": "Retoucher une image",
         "imageUpscale": "Agrandissement d'image",
         "createVideo": "Créer une vidéo",
-        "membership": "Abonnement"
+        "membership": "Abonnement",
+        "profile": "Profil",
+        "assets": "Ressources"
       },
       "headline": "Le studio IA tout-en-un pour les créateurs d'images et de vidéos",
       "copyright": "© {year} Amux Studio. Tous droits réservés.",
@@ -4078,6 +4085,20 @@
           "name": "Pack Équipe",
           "description": "Complément d'équipe avec droits commerciaux selon le niveau d'abonnement"
         }
+      },
+      "creditsMo": "{count} crédits/mois",
+      "fixedCredits": "Montant fixe de {count} crédits/mois",
+      "perMonthLabel": "par mois",
+      "billedAnnually": "par mois, facturé annuellement",
+      "saveVsMonthly": "Économisez {amount} par rapport au mensuel",
+      "noDiffVsMonthly": "Aucune différence par rapport au mensuel",
+      "bestValue": "Meilleur rapport",
+      "getPlan": "Choisir {plan}",
+      "parallelGenerations": "Générations parallèles : jusqu’à {videos} vidéos, {images} images",
+      "taglines": {
+        "0": "Pour débuter dans la création IA",
+        "1": "Pour une création IA régulière au quotidien",
+        "2": "Pour les utilisateurs avancés et les projets IA"
       }
     },
     "metadata": {
@@ -4422,6 +4443,17 @@
         "reset": "Reset to default",
         "failed": "Could not update icon"
       }
+    },
+    "imageNavFlyout": {
+      "models": "Modèles",
+      "loading": "Chargement des modèles…",
+      "features": "Fonctions",
+      "createImage": "Créer une image",
+      "createImageDesc": "Générer des images IA",
+      "editImage": "Modifier l’image",
+      "editImageDesc": "Retoucher et affiner les images",
+      "gallery": "Galerie",
+      "galleryDesc": "Explorer les créations de la communauté"
     }
   },
   "videoShare": {

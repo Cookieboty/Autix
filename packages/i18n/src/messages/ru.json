@@ -3239,6 +3239,11 @@
       "image": "Image",
       "me": "Me"
     },
+    "notifications": {
+      "title": "Уведомления",
+      "close": "Закрыть",
+      "empty": "У вас нет уведомлений"
+    },
     "accountMenu": {
       "accountMenu": "Account menu",
       "signIn": "Sign in",
@@ -3282,7 +3287,9 @@
         "editImage": "Редактирование изображений",
         "imageUpscale": "Увеличение изображений",
         "createVideo": "Создать видео",
-        "membership": "Подписка"
+        "membership": "Подписка",
+        "profile": "Профиль",
+        "assets": "Ресурсы"
       },
       "headline": "Универсальная AI-студия для авторов изображений и видео",
       "copyright": "© {year} Amux Studio. Все права защищены.",
@@ -3742,6 +3749,20 @@
           "name": "Командный пакет",
           "description": "Командное пополнение с коммерческими правами по уровню подписки"
         }
+      },
+      "creditsMo": "{count} кредитов/мес.",
+      "fixedCredits": "Фиксировано {count} кредитов/мес.",
+      "perMonthLabel": "в месяц",
+      "billedAnnually": "в месяц при оплате за год",
+      "saveVsMonthly": "Экономия {amount} по сравнению с помесячной",
+      "noDiffVsMonthly": "Без разницы с помесячной оплатой",
+      "bestValue": "Лучшая цена",
+      "getPlan": "Выбрать {plan}",
+      "parallelGenerations": "Параллельная генерация: до {videos} видео, {images} изображений",
+      "taglines": {
+        "0": "Для старта в AI-творчестве",
+        "1": "Для регулярного ежедневного творчества",
+        "2": "Для продвинутых пользователей и проектов"
       }
     },
     "metadata": {
@@ -4086,6 +4107,17 @@
         "reset": "Reset to default",
         "failed": "Could not update icon"
       }
+    },
+    "imageNavFlyout": {
+      "models": "Модели",
+      "loading": "Загрузка моделей…",
+      "features": "Функции",
+      "createImage": "Создать изображение",
+      "createImageDesc": "Генерация ИИ-изображений",
+      "editImage": "Редактировать изображение",
+      "editImageDesc": "Изменение и доработка изображений",
+      "gallery": "Галерея",
+      "galleryDesc": "Смотреть работы сообщества"
     }
   },
   "videoShare": {

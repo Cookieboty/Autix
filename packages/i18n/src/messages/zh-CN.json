@@ -3575,6 +3575,11 @@
       "image": "图片",
       "me": "我的"
     },
+    "notifications": {
+      "title": "消息通知",
+      "close": "关闭",
+      "empty": "暂无消息通知"
+    },
     "accountMenu": {
       "accountMenu": "账号菜单",
       "signIn": "登录",
@@ -3618,7 +3623,9 @@
         "editImage": "图片编辑",
         "imageUpscale": "图片高清放大",
         "createVideo": "视频生成",
-        "membership": "会员"
+        "membership": "会员",
+        "profile": "个人中心",
+        "assets": "素材"
       },
       "headline": "面向图片与视频创作者的一站式 AI 工作室",
       "copyright": "© {year} Amux Studio. 保留所有权利。",
@@ -4078,6 +4085,20 @@
           "name": "团队包",
           "description": "团队积分补充，商业授权随会员等级适用"
         }
+      },
+      "creditsMo": "{count} 积分/月",
+      "fixedCredits": "每月固定 {count} 积分",
+      "perMonthLabel": "每月",
+      "billedAnnually": "每月，按年结算",
+      "saveVsMonthly": "相比月付节省 {amount}",
+      "noDiffVsMonthly": "与月付价格一致",
+      "bestValue": "超值之选",
+      "getPlan": "开通 {plan}",
+      "parallelGenerations": "并发生成：最多 {videos} 个视频、{images} 张图片",
+      "taglines": {
+        "0": "适合初次尝试 AI 创作",
+        "1": "适合日常稳定的 AI 创作",
+        "2": "适合进阶用户与 AI 项目"
       }
     },
     "metadata": {
@@ -4422,6 +4443,17 @@
         "reset": "恢复默认图标",
         "failed": "修改图标失败"
       }
+    },
+    "imageNavFlyout": {
+      "models": "模型",
+      "loading": "正在加载模型…",
+      "features": "功能",
+      "createImage": "创建图像",
+      "createImageDesc": "生成 AI 图像",
+      "editImage": "编辑图像",
+      "editImageDesc": "修改与精修图像",
+      "gallery": "作品广场",
+      "galleryDesc": "探索社区创作"
     }
   },
   "videoShare": {
