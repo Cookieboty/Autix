@@ -9,10 +9,10 @@ import {
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { RiskService } from '../risk/risk.service';
-import {
-  SeedanceApiService,
-  type SeedanceTaskStatus,
-} from './seedance-api.service';
+// SeedanceApiService 保留在构造函数里但不再被本文件调用 —— 提交/轮询/回调都已切到
+// 协议引擎。该类整体属于计划 4 Task 4 的删除范围，不在这里顺手拆，避免把两个任务的
+// 改动混在一次 diff 里。
+import { SeedanceApiService } from './seedance-api.service';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
 import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
 import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
@@ -30,7 +30,6 @@ import {
   buildPendingGenerationInput,
   buildQueuedGenerationPollWindow,
   buildVideoHoldInput,
-  normalizeSeedanceTaskOutcome,
   normalizeVideoGenerationClipParamsForModel,
   resolveClipPrompt,
   resolveStoryboardTotalDuration,
@@ -42,9 +41,17 @@ import {
   type VideoGenerationClipParams as ClipParams,
   splitQueuedGenerationsForPolling,
 } from './video-generation-flow.helpers';
-import { assembleVideoRequest, resolveVideoPreset, submitVideoTask } from '@autix/ai-adapters/video';
+import {
+  assembleVideoRequest,
+  parseVideoCallback,
+  queryVideoTask,
+  resolveVideoPreset,
+  submitVideoTask,
+  type VideoTaskOutcome,
+} from '@autix/ai-adapters/video';
 import { readProtocolKey } from '@autix/domain/model';
 import { toUnifiedVideoParams, type VideoModelHint } from '@autix/domain/video';
+import { toLegacyVideoOutcome } from './video-outcome.adapter';
 
 // Ark 的公有默认 host。旧路径里这条兜底藏在 seedance-api.service.ts 的
 // SEEDANCE_BASE_URL + resolveSeedanceBaseUrl 内部（仅当 model_configs.baseUrl /
@@ -58,6 +65,13 @@ function resolveEngineBaseUrl(baseUrl: string | null | undefined): string {
   const trimmed = baseUrl?.trim();
   return trimmed ? trimmed.replace(/\/+$/, '') : ARK_DEFAULT_BASE_URL;
 }
+
+/**
+ * 残余 legacy 行（计划 1 迁移时快照缺失，protocolKey/modelConfigId 为 NULL）唯一可能
+ * 归属的协议 —— 这些行都是切引擎前提交的，而切引擎前 Ark 是唯一协议。
+ * resolveLegacyApiContext 会先校验实时配置确实还指向这个协议，不是拿它直接信任。
+ */
+const LEGACY_VIDEO_PROTOCOL_KEY = 'ark-video@v3';
 
 export interface ClipGenerateInput {
   clipId: string;
@@ -119,25 +133,38 @@ export class VideoGenerationFlowService {
 
     const pairs: Array<{
       generation: typeof toPoll[number];
-      payload: Record<string, unknown> | SeedanceTaskStatus;
+      outcome: VideoTaskOutcome;
     }> = [];
 
     for (const g of toPoll) {
       try {
-        const clip = await this.repository.findClipParams(g.clipId);
         if (!g.providerTaskId) continue;
 
-        const apiContext = await this.modelResolver.resolveApiContextForClipParams(
-          clip?.params ?? null,
-        );
+        // 优先用提交时的快照（不可变）：clip params 生成后仍可改
+        // （video-project.store.ts 的 updateClipParams），若轮询读实时 params，
+        // 用户中途切模型会导致 in-flight 任务被拿新渠道的凭证去查。
+        // 残余 legacy 行（modelConfigId 为 NULL，计划 1 迁移时快照缺失）走受限回退。
+        const apiContext = g.modelConfigId
+          ? await this.modelResolver.resolveApiContextByModelConfigId(
+              g.modelConfigId,
+            )
+          : await this.resolveLegacyApiContext(g);
         if (!apiContext) continue;
 
-        const payload = await this.seedanceApi.queryTask(
-          apiContext.apiKey,
-          g.providerTaskId,
-          apiContext.baseUrl,
+        // preset 只在拿到经校验的 apiContext 之后再解析：legacy 行的 g.protocolKey
+        // 为 null，resolveVideoPreset(undefined) 会 fail-loud 抛出——resolveLegacyApiContext
+        // 已经确认了实时配置就是 ark-video@v3，这里的默认值因此是安全的，不是猜测。
+        const preset = resolveVideoPreset(
+          g.protocolKey ?? LEGACY_VIDEO_PROTOCOL_KEY,
         );
-        pairs.push({ generation: g, payload });
+        const outcome = await queryVideoTask({
+          preset,
+          baseUrl: resolveEngineBaseUrl(apiContext.baseUrl),
+          apiKey: apiContext.apiKey,
+          taskId: g.providerTaskId,
+          onWarn: (m) => this.logger.warn(`generation ${g.id}: ${m}`),
+        });
+        pairs.push({ generation: g, outcome });
       } catch (err) {
         this.logger.warn(
           `pollPendingGenerations: query ${g.id} failed: ${String(err instanceof Error ? err.message : err)}`,
@@ -148,6 +175,31 @@ export class VideoGenerationFlowService {
     if (pairs.length > 0) {
       await this.pollPendingByTaskIds(pairs);
     }
+  }
+
+  /**
+   * 残余 legacy 行（计划 1 迁移时 hold 快照缺失、无从回填 modelConfigId）的受限回退。
+   *
+   * **必须校验实时配置仍指向同一协议且模型一致** —— 否则用户中途改了模型，我们就会拿
+   * 另一家的凭证去查这个旧任务（串渠道）。宁可拒绝查询、让它走终态收敛超时（用户侧表现
+   * 为失败 + 退款），也不能串。
+   *
+   * 该分支在确认零残余行后删除（见计划 1 的残余审计 SQL）。
+   */
+  private async resolveLegacyApiContext(g: video_clip_generations) {
+    const clip = await this.repository.findClipParams(g.clipId);
+    const live = await this.modelResolver.resolveApiContextForClipParams(
+      clip?.params ?? null,
+    );
+    if (!live) return null;
+    const liveKey = readProtocolKey(live.metadata);
+    if (liveKey !== LEGACY_VIDEO_PROTOCOL_KEY || live.model !== g.model) {
+      this.logger.error(
+        `legacy generation ${g.id}: live config drifted (protocolKey=${liveKey}, model=${live.model}) — refusing cross-channel query`,
+      );
+      return null;
+    }
+    return live;
   }
 
   async generateClip(input: ClipGenerateInput) {
@@ -214,7 +266,7 @@ export class VideoGenerationFlowService {
     // preset 从服务端解析的 modelConfig.metadata.protocolKey 路由；resolveVideoPreset
     // 对缺失/未注册的 key fail-loud（前置门禁已确认生产视频模型都有 protocolKey）。
     const preset = resolveVideoPreset(readProtocolKey(modelConfig.metadata));
-    const callbackUrl = this.callbackUrlBuilder.build();
+    const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
       preset,
       baseUrl: resolveEngineBaseUrl(baseUrl),
@@ -329,9 +381,9 @@ export class VideoGenerationFlowService {
           resolvedPrompt,
           taskRequest: requestBody,
         }),
-        // 过渡期常量：此刻 Seedance/Ark 是唯一视频协议。计划 3 切到引擎后，
-        // 这里会改为 modelConfig.metadata.protocolKey，并与旧 flow 一起删除。
-        protocolKey: 'ark-video@v3',
+        // 计划 3：protocolKey 快照改为提交时实际解析出的 preset.key（而非硬编码常量），
+        // 供轮询/回调据此按快照凭证查询，不受 clip params 后续被改动的影响。
+        protocolKey: preset.key,
         modelConfigId,
       });
     } catch (err) {
@@ -382,24 +434,26 @@ export class VideoGenerationFlowService {
   /**
    * 回调链路与查询链路共用的状态收敛入口。
    * 进入即对终态短路，保证 callback + cron/refresh 同时命中时的幂等性。
-   * payload 来自 Seedance（callback body 或 GET /tasks/{id} / list）；二者结构一致。
+   *
+   * outcome 是协议引擎已归一化的终态（query 响应或 callback body 二者同构）。
+   * toLegacyVideoOutcome 把它翻译回既有内部词汇（含 refundReason 等引擎不返回的
+   * 面向用户字段）——下游整段逻辑因此**一行不改**，切换的爆炸半径收敛在这条适配器上。
    */
   async applyTaskStatus(
     generation: video_clip_generations,
-    payload: Record<string, unknown> | SeedanceTaskStatus,
+    outcome: VideoTaskOutcome,
   ) {
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
 
-    const raw = payload as Record<string, unknown>;
-    const outcome = normalizeSeedanceTaskOutcome(raw);
-    if (outcome.kind === 'missing_status') {
+    const legacy = toLegacyVideoOutcome(outcome);
+    if (legacy.kind === 'missing_status') {
       this.logger.warn(
         `applyTaskStatus: missing status for generation ${generation.id}`,
       );
       return;
     }
 
-    if (outcome.kind === 'succeeded') {
+    if (legacy.kind === 'succeeded') {
       const generationParams =
         generation.params && typeof generation.params === 'object' && !Array.isArray(generation.params)
           ? (generation.params as Record<string, unknown>)
@@ -407,7 +461,7 @@ export class VideoGenerationFlowService {
       const isStoryboardProjectGeneration =
         generationParams.generationMode === 'storyboard';
       const failureReason = resolveSucceededGenerationFailureReason({
-        sourceUrl: outcome.sourceUrl,
+        sourceUrl: legacy.sourceUrl,
       });
       if (failureReason) {
         this.logger.warn(
@@ -416,17 +470,17 @@ export class VideoGenerationFlowService {
         await this.markGenerationFailed(
           generation,
           failureReason,
-          outcome.externalStatus,
+          legacy.externalStatus,
         );
         return;
       }
 
       const videoUrl = await this.videoAssets.persistProviderVideo(
-        outcome.sourceUrl,
+        legacy.sourceUrl,
         generation.id,
       );
       const videoResolution = resolveSucceededGenerationVideo({
-        sourceUrl: outcome.sourceUrl,
+        sourceUrl: legacy.sourceUrl,
         persistedVideoUrl: videoUrl,
         persistAttempted: true,
       });
@@ -437,14 +491,14 @@ export class VideoGenerationFlowService {
         await this.markGenerationFailed(
           generation,
           videoResolution.reason,
-          outcome.externalStatus,
+          legacy.externalStatus,
         );
         return;
       }
 
       const completedInput = buildCompletedGenerationInput({
         generation,
-        outcome,
+        outcome: legacy,
         videoUrl: videoResolution.videoUrl,
       });
       if (isStoryboardProjectGeneration) {
@@ -478,14 +532,14 @@ export class VideoGenerationFlowService {
           generation.projectId,
         );
       }
-    } else if (outcome.kind === 'failed') {
+    } else if (legacy.kind === 'failed') {
       const generationParams =
         generation.params && typeof generation.params === 'object' && !Array.isArray(generation.params)
           ? (generation.params as Record<string, unknown>)
           : {};
       const isStoryboardProjectGeneration =
         generationParams.generationMode === 'storyboard';
-      const failedInput = buildFailedGenerationInput({ generation, outcome });
+      const failedInput = buildFailedGenerationInput({ generation, outcome: legacy });
       if (isStoryboardProjectGeneration) {
         await this.repository.markProjectGenerationFailedAndRefund(
           {
@@ -499,7 +553,7 @@ export class VideoGenerationFlowService {
             this.holdReconciliation.refundGenerationHoldWithinTx(
               tx,
               generation.id,
-              outcome.refundReason,
+              legacy.refundReason,
             ),
         );
         return;
@@ -511,7 +565,7 @@ export class VideoGenerationFlowService {
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
             generation.id,
-            outcome.refundReason,
+            legacy.refundReason,
           ),
       );
       await this.projectStatusConvergence.convergeAfterClipFailure({
@@ -521,25 +575,44 @@ export class VideoGenerationFlowService {
     } else {
       await this.repository.updateGenerationExternalStatus(
         generation.id,
-        outcome.externalStatus,
+        legacy.externalStatus,
       );
     }
   }
 
-  async handleCallback(taskId: string, payload: Record<string, unknown>) {
+  /**
+   * 回调入口：按 (protocolKey, taskId) 定位 generation（协议路由已在计划 1 收窄成
+   * 两列查询），再用同一协议的 preset 解析回调体，交给 applyTaskStatus 统一收敛。
+   */
+  async handleCallback(
+    protocolKey: string,
+    taskId: string,
+    payload: Record<string, unknown>,
+  ) {
     const generation = await this.repository.findGenerationByProviderTaskId(
-      'ark-video@v3',
+      protocolKey,
       taskId,
     );
     if (!generation) {
-      this.logger.warn(`Callback for unknown taskId: ${taskId}`);
+      this.logger.warn(`Callback for unknown task: ${protocolKey}/${taskId}`);
       return;
     }
-    await this.applyTaskStatus(generation, payload);
+    const preset = resolveVideoPreset(protocolKey);
+    const { outcome } = parseVideoCallback({
+      preset,
+      body: payload,
+      onWarn: (m) => this.logger.warn(`generation ${generation.id}: ${m}`),
+    });
+    await this.applyTaskStatus(generation, outcome);
   }
 
   /**
-   * 用户/管理员手动刷新单个 generation。走 `queryTask` 单查 + 统一收敛入口。
+   * 用户/管理员手动刷新单个 generation。走引擎的 `queryVideoTask` 单查 + 统一收敛入口。
+   *
+   * 与 pollPendingGenerations 同一套快照优先策略：优先用 generation 自身的
+   * protocolKey/modelConfigId 快照；残余 legacy 行（快照缺失）走受限回退，
+   * 拒绝时抛出而非静默跳过——手动刷新是用户主动触发的单次请求，没有轮询兜底，
+   * 必须给出明确的失败反馈而不是悄悄什么都不做。
    */
   async refreshGeneration(args: {
     projectId: string;
@@ -555,18 +628,27 @@ export class VideoGenerationFlowService {
       return this.repository.findGenerationById(generation.id);
     }
 
-    const clip = await this.repository.findClipById(generation.clipId);
-    const apiContext = await this.modelResolver.resolveApiContextForClipParamsOrThrow(
-      clip?.params ?? null,
+    const apiContext = generation.modelConfigId
+      ? await this.modelResolver.resolveApiContextByModelConfigId(
+          generation.modelConfigId,
+        )
+      : await this.resolveLegacyApiContext(generation);
+    if (!apiContext) {
+      throw new BadRequestException('视频模型缺少 API Key 配置或已跨渠道漂移，无法刷新');
+    }
+    const preset = resolveVideoPreset(
+      generation.protocolKey ?? LEGACY_VIDEO_PROTOCOL_KEY,
     );
 
     try {
-      const payload = await this.seedanceApi.queryTask(
-        apiContext.apiKey,
-        generation.providerTaskId,
-        apiContext.baseUrl,
-      );
-      await this.applyTaskStatus(generation, payload);
+      const outcome = await queryVideoTask({
+        preset,
+        baseUrl: resolveEngineBaseUrl(apiContext.baseUrl),
+        apiKey: apiContext.apiKey,
+        taskId: generation.providerTaskId,
+        onWarn: (m) => this.logger.warn(`generation ${generation.id}: ${m}`),
+      });
+      await this.applyTaskStatus(generation, outcome);
     } catch (err) {
       this.logger.warn(
         `refreshGeneration ${generation.id} failed: ${String(err instanceof Error ? err.message : err)}`,
@@ -579,20 +661,20 @@ export class VideoGenerationFlowService {
 
   /**
    * cron 批查后批量收敛入口。
-   * 接收 (generation, payload) 元组数组，串行调用 `applyTaskStatus`。
-   * 本方法不做 API 调用，调用方需自行完成 Seedance.listTasks/queryTask 并配对。
+   * 接收 (generation, outcome) 元组数组，串行调用 `applyTaskStatus`。
+   * 本方法不做 API 调用，调用方需自行完成引擎的 queryVideoTask 并配对。
    */
   async pollPendingByTaskIds(
     pairs: Array<{
       generation: video_clip_generations;
-      payload: Record<string, unknown> | SeedanceTaskStatus;
+      outcome: VideoTaskOutcome;
     }>,
   ) {
-    for (const { generation, payload } of pairs) {
+    for (const { generation, outcome } of pairs) {
       try {
         if (await this.terminalConvergence.reconcileIfTerminal(generation))
           continue;
-        await this.applyTaskStatus(generation, payload);
+        await this.applyTaskStatus(generation, outcome);
       } catch (err) {
         this.logger.warn(
           `pollPendingByTaskIds: apply ${generation.id} failed: ${String(err instanceof Error ? err.message : err)}`,
@@ -684,7 +766,7 @@ export class VideoGenerationFlowService {
     const storyboardMaterials = clips.flatMap((clip) => clip.materials ?? []);
     // 计划 4：提交路径切到声明式协议引擎，不再经 SeedanceApiService（同 generateClip）。
     const preset = resolveVideoPreset(readProtocolKey(modelConfig.metadata));
-    const callbackUrl = this.callbackUrlBuilder.build();
+    const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
       preset,
       baseUrl: resolveEngineBaseUrl(baseUrl),
@@ -754,9 +836,8 @@ export class VideoGenerationFlowService {
         params: persistedParams as Prisma.InputJsonValue,
         model: modelConfig.model,
         resolvedPrompt,
-        // 过渡期常量：此刻 Seedance/Ark 是唯一视频协议。计划 3 切到引擎后，
-        // 这里会改为 modelConfig.metadata.protocolKey，并与旧 flow 一起删除。
-        protocolKey: 'ark-video@v3',
+        // 计划 3：protocolKey 快照改为提交时实际解析出的 preset.key（同 generateClip）。
+        protocolKey: preset.key,
         modelConfigId,
       });
 
