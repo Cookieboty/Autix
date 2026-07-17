@@ -4108,6 +4108,24 @@
         "failed": "Could not update icon"
       }
     },
+    "publicProfile": {
+      "creator": "Автор",
+      "editProfile": "Редактировать профиль",
+      "generations": "Работы",
+      "views": "Просмотры",
+      "likes": "Лайки",
+      "works": "Работы",
+      "addCover": "Добавить обложку",
+      "changeCover": "Изменить обложку",
+      "removeCover": "Удалить обложку",
+      "changeAvatar": "Изменить аватар",
+      "emptyTitle": "Пока нет работ",
+      "emptyOwnerSubtitle": "Ваши опубликованные работы появятся здесь.",
+      "emptyVisitorSubtitle": "Этот автор ещё ничего не опубликовал.",
+      "notFoundTitle": "Пользователь не найден",
+      "notFoundSubtitle": "Этот профиль не существует или больше недоступен.",
+      "coverError": "Не удалось обновить обложку. Попробуйте ещё раз."
+    },
     "imageNavFlyout": {
       "models": "Модели",
       "loading": "Загрузка моделей…",

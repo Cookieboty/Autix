@@ -4444,6 +4444,24 @@
         "failed": "修改图标失败"
       }
     },
+    "publicProfile": {
+      "creator": "创作者",
+      "editProfile": "编辑资料",
+      "generations": "作品",
+      "views": "浏览",
+      "likes": "点赞",
+      "works": "作品",
+      "addCover": "添加封面",
+      "changeCover": "更换封面",
+      "removeCover": "移除封面",
+      "changeAvatar": "更换头像",
+      "emptyTitle": "还没有作品",
+      "emptyOwnerSubtitle": "你发布的作品会展示在这里。",
+      "emptyVisitorSubtitle": "TA 还没有发布任何作品。",
+      "notFoundTitle": "用户不存在",
+      "notFoundSubtitle": "该主页不存在或已不可用。",
+      "coverError": "封面更新失败，请重试。"
+    },
     "imageNavFlyout": {
       "models": "模型",
       "loading": "正在加载模型…",

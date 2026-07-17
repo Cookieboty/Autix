@@ -244,7 +244,9 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
   };
 
   const quickLinks = [
-    { label: t('viewProfile'), href: '/profile', icon: User },
+    // View Profile → 公开个人内容页 `/@username`（客态可见的那张页面），
+    // 账号设置仍走下面的 Manage Account（/me/settings）。
+    { label: t('viewProfile'), href: `/@${user.username}`, icon: User },
     { label: t('manageAccount'), href: '/me/settings', icon: Settings },
   ];
 

@@ -22,35 +22,47 @@ export function useGalleryDetailQuery(id: string | undefined, enabled = true) {
   });
 }
 
+/** 一页 feed 结果的最小形状；gallery feed 与个人页 Generations feed 共用。 */
+export interface GalleryFeedPageResult {
+  items: GalleryFeedItem[];
+  nextCursor: string | null;
+}
+
 /**
- * 广场 Feed 控制器：游标累积翻页（本仓库列表页统一走"手动 cursor 状态 + 累积 items"，
- * 未使用 useInfiniteQuery——与 profileResourcesController 等 controller hook 风格一致）。
- * kind 切换时重置到第一页。
+ * 游标累积翻页 + 卡片方向性点赞/收藏的通用 feed 控制器核心（本仓库列表页统一走"手动 cursor
+ * 状态 + 累积 items"，未使用 useInfiniteQuery——与 profileResourcesController 等 controller
+ * hook 风格一致）。
+ *
+ * 参数化两点：
+ * - `fetchPage(cursor)`：拉一页（cursor 为 undefined 即第一页）。调用方用闭包注入数据源
+ *   （公开广场按 kind、个人页按 username）。
+ * - `resetKey`：变化时重置到第一页（kind 切换 / username 切换）。
  *
  * patchItem：卡片上 like/favorite 的方向性本地更新——后端 favorite 现为幂等
  * POST=favorite/DELETE=unfavorite（非切换），调用方必须按当前 liked/favorited 状态
  * 决定调哪个端点，成功后用 patchItem 写回该条目的 liked/favorited + 对应计数，
  * 不做整页重新拉取（避免滚动位置/其它条目状态被打断）。
  */
-export function useGalleryFeedController(kind: 'IMAGE' | 'VIDEO' = 'IMAGE') {
+export function useAccumulatingGalleryFeed(
+  fetchPageFn: (cursor: string | undefined) => Promise<GalleryFeedPageResult>,
+  resetKey: string,
+) {
   const [items, setItems] = useState<GalleryFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cursorRef = useRef<string | null>(null);
-  const kindRef = useRef(kind);
+  // fetchPageFn 每次 render 都是新闭包（捕获最新 kind/username），存 ref 以免进 fetchPage 依赖数组。
+  const fetchPageRef = useRef(fetchPageFn);
+  fetchPageRef.current = fetchPageFn;
 
   const fetchPage = useCallback(async (append: boolean) => {
     if (append) setLoadingMore(true);
     else setLoading(true);
     setError(null);
     try {
-      const result = await galleryActions.getFeed({
-        kind: kindRef.current,
-        cursor: append ? (cursorRef.current ?? undefined) : undefined,
-        limit: FEED_PAGE_SIZE,
-      });
+      const result = await fetchPageRef.current(append ? (cursorRef.current ?? undefined) : undefined);
       setItems((prev) => (append ? [...prev, ...result.items] : result.items));
       cursorRef.current = result.nextCursor;
       setHasMore(Boolean(result.nextCursor));
@@ -64,12 +76,11 @@ export function useGalleryFeedController(kind: 'IMAGE' | 'VIDEO' = 'IMAGE') {
   }, []);
 
   useEffect(() => {
-    kindRef.current = kind;
     cursorRef.current = null;
     void fetchPage(false);
-    // fetchPage 是稳定引用（无依赖），只需在 kind 变化时重新拉第一页。
+    // fetchPage 是稳定引用（无依赖），只需在 resetKey 变化时重新拉第一页。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind]);
+  }, [resetKey]);
 
   const loadMore = useCallback(() => {
     if (loading || loadingMore || !hasMore) return;
@@ -145,6 +156,20 @@ export function useGalleryFeedController(kind: 'IMAGE' | 'VIDEO' = 'IMAGE') {
     toggleFavorite,
     reload: () => fetchPage(false),
   };
+}
+
+/**
+ * 公开广场 Feed 控制器（首页图片/视频画廊）：按 kind 分流，kind 切换重置到第一页。
+ * 只是给通用核心注入「按 kind 拉 gallery feed」的数据源。
+ */
+export function useGalleryFeedController(kind: 'IMAGE' | 'VIDEO' = 'IMAGE') {
+  return useAccumulatingGalleryFeed(
+    (cursor) =>
+      galleryActions
+        .getFeed({ kind, cursor, limit: FEED_PAGE_SIZE })
+        .then((r) => ({ items: r.items, nextCursor: r.nextCursor })),
+    kind,
+  );
 }
 
 interface DetailOverlay {

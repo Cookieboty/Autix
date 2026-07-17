@@ -4108,6 +4108,24 @@
         "failed": "Could not update icon"
       }
     },
+    "publicProfile": {
+      "creator": "Người sáng tạo",
+      "editProfile": "Chỉnh sửa hồ sơ",
+      "generations": "Tác phẩm",
+      "views": "Lượt xem",
+      "likes": "Lượt thích",
+      "works": "Tác phẩm",
+      "addCover": "Thêm ảnh bìa",
+      "changeCover": "Đổi ảnh bìa",
+      "removeCover": "Gỡ ảnh bìa",
+      "changeAvatar": "Đổi ảnh đại diện",
+      "emptyTitle": "Chưa có tác phẩm nào",
+      "emptyOwnerSubtitle": "Các tác phẩm đã đăng của bạn sẽ hiển thị ở đây.",
+      "emptyVisitorSubtitle": "Người sáng tạo này chưa đăng gì cả.",
+      "notFoundTitle": "Không tìm thấy người dùng",
+      "notFoundSubtitle": "Hồ sơ này không tồn tại hoặc không còn khả dụng.",
+      "coverError": "Cập nhật ảnh bìa thất bại. Vui lòng thử lại."
+    },
     "imageNavFlyout": {
       "models": "Mô hình",
       "loading": "Đang tải mô hình…",

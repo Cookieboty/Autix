@@ -7,6 +7,8 @@ import type {
   CanvasBoardState,
   CanvasEntitlement,
   AvatarPresignResult,
+  BannerPresignResult,
+  PublicProfile,
 } from '@autix/domain';
 import { createApiInstance, getApiBaseUrl, LLM_REQUEST_TIMEOUT_MS } from './client-core';
 
@@ -1586,6 +1588,12 @@ export const storageApi = {
    */
   presignAvatarUpload: (data: { fileName: string; contentType: string; sizeBytes: number }) =>
     userApi.post<AvatarPresignResult>('/storage/avatar-presign', data),
+  /**
+   * Profile banner 上传 reservation。与头像同构：拿到 storageKey 后
+   * PUT 直传 R2，再 `PATCH auth/profile { bannerStorageKey }` 消费。
+   */
+  presignBannerUpload: (data: { fileName: string; contentType: string; sizeBytes: number }) =>
+    userApi.post<BannerPresignResult>('/storage/banner-presign', data),
 };
 
 // ── Membership ──────────────────────────────────────────────────────────
@@ -2407,6 +2415,25 @@ export const galleryApi = {
     chatApi.post<{ favorited: boolean }>(`/api/gallery/${id}/favorite`),
   unfavorite: (id: string) =>
     chatApi.delete<{ favorited: boolean }>(`/api/gallery/${id}/favorite`),
+};
+
+// ── Public Profile (`/@username` 公开个人页) ─────────────────────────────
+export const publicProfileApi = {
+  /** GET /api/profiles/:username —— 公开个人页基础信息（匿名可读；用户不存在/已注销 404）。 */
+  getByUsername: (username: string) =>
+    chatApi.get<PublicProfile>(`/api/profiles/${encodeURIComponent(username)}`),
+  /**
+   * GET /api/profiles/:username/generations —— 该用户已发布作品 feed（image+video 混排）。
+   * 匿名可读；登录态附每项 liked/favorited。响应与 gallery feed 同形（GalleryFeedResult）。
+   */
+  getGenerations: (
+    username: string,
+    params?: { cursor?: string; limit?: number },
+  ) =>
+    chatApi.get<GalleryFeedResult>(
+      `/api/profiles/${encodeURIComponent(username)}/generations`,
+      { params },
+    ),
 };
 
 // ── Telemetry (PV/UV 浏览上报) ───────────────────────────────────────────

@@ -4444,6 +4444,24 @@
         "failed": "Could not update icon"
       }
     },
+    "publicProfile": {
+      "creator": "Créateur",
+      "editProfile": "Modifier le profil",
+      "generations": "Créations",
+      "views": "Vues",
+      "likes": "J’aime",
+      "works": "Œuvres",
+      "addCover": "Ajouter une couverture",
+      "changeCover": "Changer la couverture",
+      "removeCover": "Retirer la couverture",
+      "changeAvatar": "Changer l’avatar",
+      "emptyTitle": "Aucune création pour l’instant",
+      "emptyOwnerSubtitle": "Vos créations publiées apparaîtront ici.",
+      "emptyVisitorSubtitle": "Ce créateur n’a encore rien publié.",
+      "notFoundTitle": "Utilisateur introuvable",
+      "notFoundSubtitle": "Ce profil n’existe pas ou n’est plus disponible.",
+      "coverError": "Échec de la mise à jour de la couverture. Réessayez."
+    },
     "imageNavFlyout": {
       "models": "Modèles",
       "loading": "Chargement des modèles…",

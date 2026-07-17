@@ -693,7 +693,7 @@ describe('AuthService', () => {
      */
     it('T16/T18: avatarStorageKey 路径 —— processor 处理 + 事务消费 reservation + enqueue AVATAR_REPLACED（processor 降级路径）', async () => {
       const { service, identityRepository, r2, avatarImageProcessor, storageCleanup } = setupSvc();
-      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      vi.spyOn(identityRepository, 'assertPendingUploadReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
       const consumeSpy = vi
         .spyOn(identityRepository, 'consumeAvatarReservation')
         .mockResolvedValue({ oldStorageKey: 'avatars/user-1/old.png' });
@@ -712,7 +712,7 @@ describe('AuthService', () => {
 
     it('拒绝不存在或元数据不匹配的 R2 对象，且不消费 reservation', async () => {
       const { service, identityRepository, r2, avatarImageProcessor } = setupSvc();
-      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({
+      vi.spyOn(identityRepository, 'assertPendingUploadReservation').mockResolvedValue({
         sizeBytes: 1024,
         contentType: 'image/png',
       });
@@ -746,7 +746,7 @@ describe('AuthService', () => {
      */
     it('T18: processor processed=true 路径 —— consume 用 processedKey + enqueue AVATAR_ORIGINAL_REPLACED', async () => {
       const { service, identityRepository, avatarImageProcessor, storageCleanup } = setupSvc();
-      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      vi.spyOn(identityRepository, 'assertPendingUploadReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
       (avatarImageProcessor.processAndUpload as Mock).mockResolvedValue({
         storageKey: 'avatars/user-1/processed.webp',
         publicUrl: 'https://cdn.mock/avatars/user-1/processed.webp',
@@ -770,7 +770,7 @@ describe('AuthService', () => {
 
     it('T18: reservation 并发失效时清理未引用的预处理派生对象', async () => {
       const { service, identityRepository, avatarImageProcessor, storageCleanup } = setupSvc();
-      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      vi.spyOn(identityRepository, 'assertPendingUploadReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
       (avatarImageProcessor.processAndUpload as Mock).mockResolvedValue({
         storageKey: 'avatars/user-1/processed.webp',
         publicUrl: 'https://cdn.mock/avatars/user-1/processed.webp',
@@ -795,7 +795,7 @@ describe('AuthService', () => {
      */
     it('T16: 幂等 —— oldStorageKey 与新 key 相同 / 为 null 时不 enqueue AVATAR_REPLACED', async () => {
       const { service, identityRepository, storageCleanup } = setupSvc();
-      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      vi.spyOn(identityRepository, 'assertPendingUploadReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
       vi
         .spyOn(identityRepository, 'consumeAvatarReservation')
         .mockResolvedValueOnce({ oldStorageKey: 'avatars/user-1/same.png' })
@@ -816,7 +816,7 @@ describe('AuthService', () => {
      */
     it('T16: 越权 —— 使用他人 reservation 时 BadRequestException 冒泡，不触发 cleanup', async () => {
       const { service, identityRepository, storageCleanup } = setupSvc();
-      vi.spyOn(identityRepository, 'assertPendingAvatarReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
+      vi.spyOn(identityRepository, 'assertPendingUploadReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
       vi
         .spyOn(identityRepository, 'consumeAvatarReservation')
         .mockRejectedValue(new BadRequestException('头像上传凭据无效或已过期'));

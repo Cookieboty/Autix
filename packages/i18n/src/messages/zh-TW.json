@@ -4108,6 +4108,24 @@
         "failed": "修改圖示失敗"
       }
     },
+    "publicProfile": {
+      "creator": "創作者",
+      "editProfile": "編輯資料",
+      "generations": "作品",
+      "views": "瀏覽",
+      "likes": "讚",
+      "works": "作品",
+      "addCover": "新增封面",
+      "changeCover": "更換封面",
+      "removeCover": "移除封面",
+      "changeAvatar": "更換頭像",
+      "emptyTitle": "還沒有作品",
+      "emptyOwnerSubtitle": "你發布的作品會顯示在這裡。",
+      "emptyVisitorSubtitle": "TA 還沒有發布任何作品。",
+      "notFoundTitle": "使用者不存在",
+      "notFoundSubtitle": "此個人頁不存在或已不可用。",
+      "coverError": "封面更新失敗，請重試。"
+    },
     "imageNavFlyout": {
       "models": "模型",
       "loading": "正在載入模型…",

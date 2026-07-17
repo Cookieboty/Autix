@@ -4444,6 +4444,24 @@
         "failed": "Could not update icon"
       }
     },
+    "publicProfile": {
+      "creator": "Creator",
+      "editProfile": "Edit profile",
+      "generations": "Generations",
+      "views": "Views",
+      "likes": "Likes",
+      "works": "Works",
+      "addCover": "Add Cover",
+      "changeCover": "Change cover",
+      "removeCover": "Remove cover",
+      "changeAvatar": "Change avatar",
+      "emptyTitle": "No generations yet",
+      "emptyOwnerSubtitle": "Your published creations will show up here.",
+      "emptyVisitorSubtitle": "This creator hasn’t published anything yet.",
+      "notFoundTitle": "User not found",
+      "notFoundSubtitle": "This profile doesn’t exist or is no longer available.",
+      "coverError": "Failed to update cover. Please try again."
+    },
     "imageNavFlyout": {
       "models": "Models",
       "loading": "Loading models…",

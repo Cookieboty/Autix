@@ -5,13 +5,13 @@ import { CloudflareR2Service } from './cloudflare-r2.service';
 import { StorageCleanupService } from './storage-cleanup.service';
 import { StorageCleanupCron } from './storage-cleanup.cron';
 import { StorageController } from './storage.controller';
-import { AvatarPresignService } from './avatar-presign.service';
+import { ProfileMediaPresignService } from './profile-media-presign.service';
 import { AvatarImageProcessor } from './avatar-image-processor.service';
 
 @Module({
   imports: [SystemSettingsModule, PrismaModule],
   controllers: [StorageController],
-  providers: [CloudflareR2Service, StorageCleanupService, StorageCleanupCron, AvatarPresignService, AvatarImageProcessor],
-  exports: [CloudflareR2Service, StorageCleanupService, AvatarPresignService, AvatarImageProcessor],
+  providers: [CloudflareR2Service, StorageCleanupService, StorageCleanupCron, ProfileMediaPresignService, AvatarImageProcessor],
+  exports: [CloudflareR2Service, StorageCleanupService, ProfileMediaPresignService, AvatarImageProcessor],
 })
 export class StorageModule { }
