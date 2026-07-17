@@ -82,7 +82,11 @@ export function toUnifiedVideoParams(clip: VideoGenerationClipParams): UnifiedVi
   if (clip.duration !== undefined) unified.seconds = clip.duration;
   if (clip.resolution !== undefined) unified.resolution = clip.resolution;
   if (clip.ratio !== undefined) unified.ratio = clip.ratio;
-  if (clip.generateAudio !== undefined) unified.generateAudio = clip.generateAudio;
+  // 历史遗留：clip params 同时存在 generateAudio 与 generate_audio 两种写法。
+  // `??` 语义必须与 services 侧的 resolveVideoGenerateAudio 完全一致 —— 那是本投影
+  // 要取代的对象，语义分叉就等于把「唯一真相」变成第二个真相。
+  const generateAudio = clip.generateAudio ?? clip.generate_audio;
+  if (generateAudio !== undefined) unified.generateAudio = generateAudio;
   if (clip.watermark !== undefined) unified.watermark = clip.watermark;
   if (clip.returnLastFrame !== undefined) unified.returnLastFrame = clip.returnLastFrame;
   if (clip.seed !== undefined) unified.seed = clip.seed;

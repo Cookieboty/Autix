@@ -1,3 +1,4 @@
+export * from './material-role';
 export * from './capabilities';
 export * from './params';
 

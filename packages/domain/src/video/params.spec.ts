@@ -49,4 +49,22 @@ describe('toUnifiedVideoParams', () => {
       expect(UNIFIED_VIDEO_PARAM_KEYS).toContain(key);
     }
   });
+
+  it('falls back to the snake_case generate_audio when the camelCase one is absent', () => {
+    // 历史遗留：clip params 同时存在 generateAudio 与 generate_audio 两种写法。
+    // 投影是「唯一真相」，必须与 resolveVideoGenerateAudio 的 `??` 语义一致，
+    // 否则只带 generate_audio 的 clip 会静默丢掉音频设置。
+    expect(toUnifiedVideoParams({ generate_audio: true }).generateAudio).toBe(true);
+    expect(toUnifiedVideoParams({ generate_audio: false }).generateAudio).toBe(false);
+  });
+
+  it('prefers the camelCase generateAudio when both are present', () => {
+    expect(
+      toUnifiedVideoParams({ generateAudio: false, generate_audio: true }).generateAudio,
+    ).toBe(false);
+  });
+
+  it('omits generateAudio when neither form is set', () => {
+    expect('generateAudio' in toUnifiedVideoParams({ duration: 5 })).toBe(false);
+  });
 });
