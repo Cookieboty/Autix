@@ -36,7 +36,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   // 账户设置：导航保持 contained（同首页），但布局锁定视口高度、内容在内部滚动，
   // 内容不满时页面不产生文档滚动（否则受上方 promo/导航/内边距叠加影响会多出几像素滚动）。
   const isSettings = pathname.startsWith('/me');
-  const lockViewport = isFunctionPage || isSettings;
+  // 素材库：左侧导航钉住不动、右侧网格在内部滚动，故同样锁视口高度。
+  const isAsset = pathname.startsWith('/asset');
+  const lockViewport = isFunctionPage || isSettings || isAsset;
 
   // 直接由 next/navigation 的 pathname 推导并传给导航（SSR/首帧即正确），
   // 避免导航内部依赖自定义适配器 usePathname 时首帧误判成首页背景、产生一瞬闪烁。

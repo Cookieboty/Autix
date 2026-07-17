@@ -202,7 +202,8 @@ export interface MaterialFolderNavProps {
   activeFolderId: ActiveFolderKey;
   onSelectFolder: (key: ActiveFolderKey) => void;
   canCreateFolder: boolean;
-  onCreateFolder: (name: string) => Promise<void>;
+  /** 只关心「建完了」，不看返回值——store 的 createFolder 现在会回新建的行。 */
+  onCreateFolder: (name: string) => Promise<unknown>;
   onRenameFolder: (id: string, name: string) => Promise<void>;
   onRequestDeleteFolder: (folder: MaterialFolder) => void;
 }

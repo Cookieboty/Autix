@@ -147,7 +147,7 @@ export function PublicGeneratorAppNav({
                       href={item.href}
                       className={`inline-flex shrink-0 items-center gap-1 rounded-md font-semibold transition-all duration-300 ${linkSize} ${item.active
                         ? 'text-growth-accent'
-                        : 'text-foreground/55 hover:bg-secondary hover:text-foreground'
+                        : 'text-[#737475] hover:bg-secondary hover:text-white'
                         }`}
                     >
                       {item.label}
@@ -170,14 +170,14 @@ export function PublicGeneratorAppNav({
             <button
               type="button"
               aria-label={navLabel('search')}
-              className={`growth-nav-btn grid place-items-center text-foreground/60 transition-all duration-300 hover:text-foreground ${compact ? 'size-7' : 'size-9'
+              className={`growth-nav-btn grid place-items-center text-[#737475] transition-all duration-300 hover:text-white ${compact ? 'size-7' : 'size-9'
                 }`}
             >
               <Search className="size-4" />
             </button>
             <Link
               href="/pricing"
-              className={`growth-nav-btn relative inline-flex items-center gap-2 font-semibold text-foreground transition-all duration-300 ${pillSize}`}
+              className={`growth-nav-btn relative inline-flex items-center gap-2 font-semibold text-[#737475] transition-all duration-300 hover:text-white ${pillSize}`}
             >
               <Gem className="size-4" />
               {navLabel('pricing')}
@@ -189,8 +189,8 @@ export function PublicGeneratorAppNav({
               </span>
             </Link>
             <Link
-              href="/materials"
-              className={`growth-nav-btn inline-flex items-center gap-2 font-semibold text-foreground transition-all duration-300 ${pillSize}`}
+              href="/asset"
+              className={`growth-nav-btn inline-flex items-center gap-2 font-semibold text-[#737475] transition-all duration-300 hover:text-white ${pillSize}`}
             >
               <Folder className="size-4 growth-assets-icon" />
               {navLabel('assets')}

@@ -3587,9 +3587,6 @@
       "upgrade": "升级",
       "viewProfile": "个人中心",
       "manageAccount": "账号管理",
-      "pointsHistory": "积分记录",
-      "assets": "素材库",
-      "membershipCenter": "会员中心",
       "signOut": "退出登录"
     },
     "footer": {
@@ -4352,6 +4349,78 @@
         "errorAvatarSize": "图片需小于 {maxMb}MB。",
         "nickname": "昵称",
         "nicknamePlaceholder": "你的显示名"
+      }
+    },
+    "assets": {
+      "searchPlaceholder": "搜索",
+      "type": "类型",
+      "density": "缩略图大小",
+      "newFolder": "新建文件夹",
+      "loading": "正在加载素材…",
+      "loadingMore": "加载更多…",
+      "unknownDate": "未知日期",
+      "selectedCount": "已选 {count} 项",
+      "clearSelection": "取消选择",
+      "bucket": {
+        "all": "全部素材",
+        "favorites": "收藏",
+        "image": "图片",
+        "video": "视频"
+      },
+      "empty": {
+        "title": "你的素材会出现在这里",
+        "description": "你生成的一切都会进入这个素材库。"
+      },
+      "detail": {
+        "author": "创作者",
+        "type": "类型",
+        "model": "模型",
+        "size": "尺寸",
+        "createdAt": "创建时间",
+        "download": "下载",
+        "delete": "删除"
+      },
+      "fit": {
+        "toCover": "铺满卡片",
+        "toContain": "完整展示"
+      },
+      "folder": {
+        "rename": "重命名",
+        "delete": "删除",
+        "renamePrompt": "文件夹名称",
+        "deleteConfirm": "删除文件夹「{name}」？里面的素材会保留在素材库中。",
+        "createFailed": "创建文件夹失败",
+        "renameFailed": "重命名文件夹失败",
+        "deleteFailed": "删除文件夹失败"
+      },
+      "card": {
+        "open": "打开",
+        "addToFolder": "添加到文件夹",
+        "privateFolders": "私有文件夹",
+        "folderAssets": "{count} 个素材",
+        "createFolder": "新建文件夹",
+        "download": "下载",
+        "delete": "删除",
+        "moveFailed": "移动素材失败",
+        "deleteFailed": "删除素材失败",
+        "save": "保存",
+        "more": "更多"
+      },
+      "bulk": {
+        "download": "下载",
+        "publishAll": "全部发布",
+        "addTo": "添加到",
+        "delete": "删除",
+        "publishOk": "已发布 {count} 个到广场",
+        "publishFailed": "{count} 个发布失败",
+        "publishSkipped": "{count} 个无法发布（非生成图片）"
+      },
+      "icon": {
+        "change": "修改图标",
+        "search": "搜索 Emoji",
+        "empty": "没有匹配",
+        "reset": "恢复默认图标",
+        "failed": "修改图标失败"
       }
     }
   },

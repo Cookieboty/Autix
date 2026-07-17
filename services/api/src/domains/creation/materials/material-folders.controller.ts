@@ -26,7 +26,7 @@ export class MaterialFoldersController {
   }
 
   @Post()
-  create(@CurrentUser() user: AuthUser, @Body() body: { name: string }) {
+  create(@CurrentUser() user: AuthUser, @Body() body: { name: string; icon?: string | null }) {
     return this.service.create(getCurrentUserId(user), body);
   }
 
@@ -34,7 +34,7 @@ export class MaterialFoldersController {
   update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() body: { name?: string; sortOrder?: number },
+    @Body() body: { name?: string; sortOrder?: number; icon?: string | null },
   ) {
     return this.service.update(getCurrentUserId(user), id, body);
   }

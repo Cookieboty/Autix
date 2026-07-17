@@ -31,6 +31,13 @@ export class MaterialsController {
     return this.materialsService.getEntitlement(userId);
   }
 
+  /** /asset 左侧导航角标：全部/收藏/各类型的素材数。注意须在 @Get() 之前声明，否则被通配吃掉。 */
+  @Get('counts')
+  counts(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
+    return this.materialsService.counts(userId);
+  }
+
   /**
    * Plan C Task 11：去重后的浏览历史（按 (resourceType,resourceId) 取最近一次），游标分页。
    * 与 POST /materials/save-from-history 配对，构成 Task 12 前端"从历史保存到素材库"的读写两端。
@@ -58,6 +65,7 @@ export class MaterialsController {
     @Query('pageSize') pageSize?: string,
     @Query('folderId') folderId?: string,
     @Query('librarySource') librarySource?: string,
+    @Query('excludeFavorites') excludeFavorites?: string,
   ) {
     const userId = getCurrentUserId(user);
     return this.materialsService.list(userId, {
@@ -67,6 +75,8 @@ export class MaterialsController {
       pageSize: pageSize ? Number(pageSize) : undefined,
       folderId,
       librarySource,
+      // query 参数是字符串，'false' 也是真值——必须显式比对。
+      excludeFavorites: excludeFavorites === 'true',
     });
   }
 

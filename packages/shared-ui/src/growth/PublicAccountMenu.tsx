@@ -1,16 +1,7 @@
 'use client';
 
 import { useRef, useState, type ReactNode } from 'react';
-import {
-  ChevronRight,
-  Coins,
-  Crown,
-  LogOut,
-  PackageOpen,
-  Settings,
-  ShieldCheck,
-  User,
-} from 'lucide-react';
+import { ChevronRight, Crown, LogOut, Settings, User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   useAuthStore,
@@ -255,8 +246,6 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
   const quickLinks = [
     { label: t('viewProfile'), href: '/profile', icon: User },
     { label: t('manageAccount'), href: '/me/settings', icon: Settings },
-    { label: t('pointsHistory'), href: '/membership/points', icon: Coins },
-    { label: t('assets'), href: '/materials', icon: PackageOpen },
   ];
 
   return (
@@ -339,15 +328,6 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
               </DropdownMenuItem>
             );
           })}
-          <DropdownMenuItem
-            asChild
-            className="cursor-pointer rounded-xl px-3 py-1.5 text-foreground/88 focus:bg-secondary focus:text-foreground"
-          >
-            <Link href="/membership/benefits" className="flex items-center gap-3">
-              <ShieldCheck className="size-4 text-foreground/48" />
-              <span className="text-[13px] font-medium">{t('membershipCenter')}</span>
-            </Link>
-          </DropdownMenuItem>
           <DropdownMenuSeparator className="mx-3 my-1.5 bg-border" />
           <DropdownMenuItem
             onClick={handleLogout}
