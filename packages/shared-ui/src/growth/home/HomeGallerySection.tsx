@@ -12,6 +12,7 @@ import {
 } from '@autix/shared-store';
 import { HomeGallerySkeleton } from './HomeGallerySkeleton';
 import { Link, useRouter } from '../../navigation';
+import { ImpressionSentinel } from '../ImpressionSentinel';
 import { GalleryDetailDialog, type GalleryInteraction } from '../detail/GalleryDetailDialog';
 import { useGalleryPostModal } from '../detail/useGalleryPostModal';
 import { AuthorAvatar } from '../AuthorAvatar';
@@ -250,6 +251,8 @@ function HomeGalleryGrid({
                 <ImageIcon className="size-10" />
               </div>
             )}
+
+            <ImpressionSentinel resourceType="GALLERY_POST" resourceId={post.id} />
 
             <button
               type="button"

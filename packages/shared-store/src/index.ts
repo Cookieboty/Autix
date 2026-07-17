@@ -44,6 +44,7 @@ export * from './campaign.actions';
 export * from './campaign.queries';
 export * from './public-generator.actions';
 export * from './public-gallery.actions';
+export * from './telemetry.actions';
 export * from './gallery.actions';
 export * from './gallery.queries';
 // Generic content-shape types (not tied to the deleted public-growth API/store),

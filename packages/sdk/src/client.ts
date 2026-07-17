@@ -2409,6 +2409,26 @@ export const galleryApi = {
     chatApi.delete<{ favorited: boolean }>(`/api/gallery/${id}/favorite`),
 };
 
+// ── Telemetry (PV/UV 浏览上报) ───────────────────────────────────────────
+/** 单条浏览事件。userId/visitorId 由前端携带（后端 @Public，从 body 读身份做 PV/UV 去重）。 */
+export interface ResourceViewEventInput {
+  resourceType: string;
+  resourceId: string;
+  scope: 'list' | 'detail' | 'hero';
+  userId?: string | null;
+  visitorId?: string | null;
+  sessionId?: string | null;
+}
+
+export const telemetryApi = {
+  /**
+   * POST /api/telemetry/resource-view —— 批量上报浏览事件（@Public，best-effort）。
+   * 后端写明细表（按分钟/天 insert-or-ignore），cron 每 10min 聚合进 resource_metrics。
+   */
+  reportResourceViews: (events: ResourceViewEventInput[]) =>
+    chatApi.post<{ accepted: number }>('/api/telemetry/resource-view', events),
+};
+
 // ── Featured Slots Admin (运营位编排) ────────────────────────────────────
 export type FeaturedSlotKind = 'RESOURCE' | 'CUSTOM';
 
