@@ -56,8 +56,4 @@ export const galleryAdminActions = {
     const { data } = await galleryAdminApi.importGallery(items);
     return data;
   },
-  getGalleryImportTemplate: async (): Promise<Record<string, any>[]> => {
-    const { data } = await galleryAdminApi.getGalleryImportTemplate();
-    return data;
-  },
 };

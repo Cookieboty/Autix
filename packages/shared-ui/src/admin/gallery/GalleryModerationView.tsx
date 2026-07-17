@@ -64,7 +64,7 @@ const SOURCE_OPTIONS: { value: GalleryAdminSourceType; labelKey: string }[] = [
   { value: 'ADMIN_CURATED', labelKey: 'gallery.sources.ADMIN_CURATED' },
 ];
 
-/** 广场作品 JSON 导入模板：与后端 GET /api/admin/gallery/import-template 返回结构保持一致。 */
+/** 广场作品 JSON 导入模板：字段须与后端 BatchJobService.GALLERY_FIELDS 白名单保持一致。 */
 const GALLERY_IMPORT_TEMPLATE = [
   {
     kind: 'IMAGE',

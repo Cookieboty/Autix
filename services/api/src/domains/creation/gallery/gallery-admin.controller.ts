@@ -52,24 +52,6 @@ export class GalleryAdminController {
     );
   }
 
-  /** 导入 JSON 模板：字段须与 BatchJobService.GALLERY_FIELDS 白名单保持一致。 */
-  @Get('import-template')
-  getImportTemplate() {
-    return [
-      {
-        kind: 'IMAGE',
-        title: '',
-        description: '',
-        category: '',
-        tags: [],
-        coverImage: '',
-        mediaUrls: [],
-        aspectRatio: '',
-        durationSec: 0,
-      },
-    ];
-  }
-
   /** 页码分页 + 筛选列表（total/page/pageSize/totalPages）。 */
   @Get()
   list(
