@@ -189,24 +189,6 @@ function makeService(options: {
       ...options.modelConfig,
     })),
   };
-  const seedanceApi = {
-    buildContent: vi.fn((materials: any[], prompt: string) => [
-      { type: 'text', text: prompt },
-      ...materials.map((material) => ({
-        type: 'image_url',
-        image_url: { url: material.url },
-      })),
-    ]),
-    buildTaskRequest: vi.fn((opts: any) => ({
-      model: opts.model,
-      content: opts.content,
-      resolution: opts.resolution,
-      ratio: opts.ratio,
-      duration: opts.duration,
-    })),
-    createTask: vi.fn(async () => ({ id: 'seedance-task-1' })),
-    queryTask: vi.fn(),
-  };
   const modelResolver = {
     resolveForGeneration: vi.fn(async () => {
       // 无兜底：clip 必须显式带 modelConfigId，缺失即拒绝（与 resolver 真身一致）。
@@ -328,7 +310,6 @@ function makeService(options: {
     repository,
     pointsService as never,
     modelResolver as never,
-    seedanceApi as never,
     callbackUrlBuilder as never,
     videoAssets as never,
     membershipService as never,
@@ -346,7 +327,6 @@ function makeService(options: {
     r2Service,
     modelConfigService,
     modelResolver,
-    seedanceApi,
     callbackUrlBuilder,
     videoAssets,
     membershipService,
@@ -1234,24 +1214,9 @@ describe('VideoGenerationFlowService billing', () => {
     expect(submitVideoTaskMock).not.toHaveBeenCalled();
   });
 
-  it('submits through the protocol engine, not SeedanceApiService', async () => {
-    const { service, seedanceApi } = makeService();
-
-    await service.generateClip({
-      clipId: 'clip-1',
-      projectId: 'project-1',
-      userId: 'user-1',
-    });
-
-    // 旧实现的三个入口都不该再被调用——它们下个 Task 就要被删掉了。
-    expect(seedanceApi.buildContent).not.toHaveBeenCalled();
-    expect(seedanceApi.buildTaskRequest).not.toHaveBeenCalled();
-    expect(seedanceApi.createTask).not.toHaveBeenCalled();
-  });
-
   it('sends the server-resolved model, never params.model', async () => {
-    // 安全不变量（buildSeedanceTaskRequestOptions:329-331 记着这笔账，现由
-    // toUnifiedVideoParams 天然维持——它不投影 model）：防「选便宜模型过鉴权、
+    // 安全不变量（原 buildSeedanceTaskRequestOptions 记着这笔账，Task 4 删除后
+    // 由 toUnifiedVideoParams 天然维持——它不投影 model）：防「选便宜模型过鉴权、
     // 用 params.model 偷换成贵模型」→ 跑贵付便宜。
     const { service, submitVideoTaskMock } = makeService({
       clip: {

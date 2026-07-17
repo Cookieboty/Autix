@@ -6,7 +6,6 @@ import { ModelConfigModule } from '../model-config/model-config.module';
 import { AuthModule } from '../../identity/auth/auth.module';
 import { MembershipModule } from '../../billing/membership/membership.module';
 import { RiskModule } from '../risk/risk.module';
-import { SeedanceApiService } from './seedance-api.service';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
 import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
 import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
@@ -45,7 +44,6 @@ import { VideoWorkflowTemplateRepository } from './video-workflow-template.repos
     VideoWorkflowTemplatesController,
   ],
   providers: [
-    SeedanceApiService,
     VideoAssetPersistenceService,
     VideoCallbackUrlBuilder,
     VideoChainTriggerDispatcherService,

@@ -9,10 +9,6 @@ import {
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { RiskService } from '../risk/risk.service';
-// SeedanceApiService 保留在构造函数里但不再被本文件调用 —— 提交/轮询/回调都已切到
-// 协议引擎。该类整体属于计划 4 Task 4 的删除范围，不在这里顺手拆，避免把两个任务的
-// 改动混在一次 diff 里。
-import { SeedanceApiService } from './seedance-api.service';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
 import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
 import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
@@ -53,10 +49,9 @@ import { readProtocolKey } from '@autix/domain/model';
 import { toUnifiedVideoParams, type VideoModelHint } from '@autix/domain/video';
 import { toLegacyVideoOutcome } from './video-outcome.adapter';
 
-// Ark 的公有默认 host。旧路径里这条兜底藏在 seedance-api.service.ts 的
+// Ark 的公有默认 host。旧路径里这条兜底曾藏在已删除的 seedance-api.service.ts 的
 // SEEDANCE_BASE_URL + resolveSeedanceBaseUrl 内部（仅当 model_configs.baseUrl /
-// metadata.baseUrl / AMUX_BASE_URL 均未配置时触发）——该文件属于 Task 4 删除范围，
-// 不从那里 import，避免留一条注定要断的依赖。协议引擎的 VideoCallRequest.baseUrl
+// metadata.baseUrl / AMUX_BASE_URL 均未配置时触发）。协议引擎的 VideoCallRequest.baseUrl
 // 是必填 string（不像旧 createTask 接受 null 并自行兜底），故这条兜底必须留在
 // 调用方，翻译过来保持与今天逐字节一致。
 const ARK_DEFAULT_BASE_URL = 'https://ark.cn-beijing.volces.com';
@@ -103,7 +98,6 @@ export class VideoGenerationFlowService {
     private readonly repository: VideoGenerationRepository,
     private readonly pointsService: PointsService,
     private readonly modelResolver: VideoGenerationModelResolverService,
-    private readonly seedanceApi: SeedanceApiService,
     private readonly callbackUrlBuilder: VideoCallbackUrlBuilder,
     private readonly videoAssets: VideoAssetPersistenceService,
     private readonly membershipService: MembershipService,

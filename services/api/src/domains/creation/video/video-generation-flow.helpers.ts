@@ -7,7 +7,6 @@ import {
   type video_clip_generations,
   type video_clip_materials,
 } from '../../platform/prisma/generated';
-import type { SeedanceContentItem } from './seedance-api.service';
 import {
   normalizeVideoResolution as normalizeDomainVideoResolution,
   normalizeVideoResolutionForModel,
@@ -16,16 +15,19 @@ import {
   type VideoModelHint,
   type VideoResolution,
 } from '@autix/domain/video';
-import {
-  getSeedanceDuration,
-  getSeedanceErrorMessage,
-  getSeedanceLastFrameUrl,
-  getSeedanceStatus,
-  getSeedanceVideoUrl,
-  type SeedanceTaskPayload,
-} from './seedance-task-payload';
 
 export type { VideoGenerationClipParams };
+
+// 计划 4 Task 4：类型原定义于已删除的 seedance-api.service.ts。仍被
+// summarizeSeedanceContent 使用（该函数不在本次删除范围内），故就地保留定义。
+export interface SeedanceContentItem {
+  type: 'text' | 'image_url' | 'video_url' | 'audio_url';
+  text?: string;
+  image_url?: { url: string };
+  video_url?: { url: string };
+  audio_url?: { url: string };
+  role?: string;
+}
 
 export interface StoryboardVideoPromptClip {
   order: number;
@@ -61,19 +63,6 @@ export interface SeedanceCostEstimateInput {
     ratio?: string;
   };
   membershipLevel?: number;
-}
-
-export interface SeedanceTaskRequestOptions {
-  model: string;
-  content: SeedanceContentItem[];
-  callbackUrl?: string;
-  returnLastFrame: boolean;
-  generateAudio?: boolean;
-  resolution?: string;
-  ratio?: string;
-  duration?: number;
-  seed?: number;
-  watermark?: boolean;
 }
 
 export interface VideoHoldInput {
@@ -313,29 +302,6 @@ export function resolveVideoPricingTaskType(
   _model: string,
 ): string {
   return VIDEO_GENERATION_TASK_TYPE;
-}
-
-export function buildSeedanceTaskRequestOptions(input: {
-  params: VideoGenerationClipParams;
-  model: string;
-  content: SeedanceContentItem[];
-  callbackUrl?: string;
-  returnLastFrame: boolean;
-}): SeedanceTaskRequestOptions {
-  return {
-    // FIX-3: 始终使用服务端解析/鉴权过的模型，忽略客户端传入的 params.model，
-    // 防止"选便宜模型过鉴权、用 params.model 偷换为贵模型"导致跑贵付便宜。
-    model: input.model,
-    content: input.content,
-    callbackUrl: input.callbackUrl,
-    returnLastFrame: input.returnLastFrame,
-    generateAudio: resolveVideoGenerateAudio(input.params),
-    resolution: input.params.resolution,
-    ratio: input.params.ratio,
-    duration: input.params.duration,
-    seed: input.params.seed,
-    watermark: input.params.watermark,
-  };
 }
 
 export function buildQueuedGenerationPollWindow(
@@ -600,38 +566,6 @@ export function buildExpiredGenerationInput(input: {
     externalStatus: 'expired',
     error: input.reason,
   };
-}
-
-export function normalizeSeedanceTaskOutcome(
-  payload: SeedanceTaskPayload,
-): NormalizedSeedanceTaskOutcome {
-  const status = getSeedanceStatus(payload);
-  if (!status) return { kind: 'missing_status' };
-
-  if (status === 'succeeded') {
-    return {
-      kind: 'succeeded',
-      externalStatus: status,
-      sourceUrl: getSeedanceVideoUrl(payload),
-      lastFrameUrl: getSeedanceLastFrameUrl(payload) ?? null,
-      durationSec: getSeedanceDuration(payload),
-    };
-  }
-
-  if (status === 'failed' || status === 'expired') {
-    const error = getSeedanceErrorMessage(payload, status);
-    return {
-      kind: 'failed',
-      externalStatus: status,
-      generationStatus:
-        status === 'expired' ? VideoGenStatus.expired : VideoGenStatus.failed,
-      error,
-      refundReason:
-        status === 'expired' ? '视频生成超时' : `视频生成失败: ${error}`,
-    };
-  }
-
-  return { kind: 'active', externalStatus: status };
 }
 
 export function getPendingHeadClips<T extends GenerateAllClipCandidate>(

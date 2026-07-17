@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ModelType, ModelVisibility, Prisma } from '../../platform/prisma/generated';
@@ -157,6 +158,8 @@ export function toClientModelConfig(record: object): Record<string, unknown> {
 
 @Injectable()
 export class ModelConfigService {
+  private readonly logger = new Logger(ModelConfigService.name);
+
   constructor(
     private readonly modelConfigRepository: ModelConfigRepository,
     private readonly membershipService: MembershipService,
@@ -453,6 +456,17 @@ export class ModelConfigService {
           },
         ],
       });
+    }
+
+    if (entry.media === 'video') {
+      const meta = metadata as { videoModelKind?: unknown } | null;
+      if (!meta?.videoModelKind) {
+        // 不硬失败：现网可能已有依赖该 fallback 的模型记录，硬失败会中断线上生成。
+        // 告警足以暴露配置缺失。
+        this.logger.warn(
+          `video model config has no explicit metadata.videoModelKind — falling back to 'compatible' capabilities, which drives paramsSchema and therefore pricing`,
+        );
+      }
     }
 
     const violations =

@@ -16,11 +16,9 @@ import {
   buildPendingGenerationInput,
   buildQueuedGenerationPollWindow,
   buildSeedanceCostEstimateInput,
-  buildSeedanceTaskRequestOptions,
   buildVideoHoldInput,
   getFirstPendingClip,
   getPendingHeadClips,
-  normalizeSeedanceTaskOutcome,
   normalizeVideoDuration,
   normalizeVideoResolution,
   presentGenerateAllClipResults,
@@ -153,40 +151,6 @@ describe('video generation flow helpers', () => {
     expect(resolveVideoPricingTaskType({ resolution: '480p' }, 'seedance-pro')).toBe('video_generation');
     expect(resolveVideoPricingTaskType({ resolution: '720p' }, 'seedance-fast')).toBe('video_generation');
     expect(resolveVideoPricingTaskType({ resolution: '720p' }, 'seedance-pro')).toBe('video_generation');
-  });
-
-  it('builds Seedance task request options from clip params without provider side effects', () => {
-    const content = [{ type: 'text' as const, text: 'prompt' }];
-
-    expect(
-      buildSeedanceTaskRequestOptions({
-        params: {
-          model: 'seedance-fast',
-          resolution: '480p',
-          ratio: '9:16',
-          duration: 6,
-          seed: 123,
-          generate_audio: true,
-          watermark: true,
-        },
-        model: 'seedance-pro',
-        content,
-        callbackUrl: 'https://api.test/callback',
-        returnLastFrame: true,
-      }),
-    ).toEqual({
-      // FIX-3: 始终使用服务端解析的 model（seedance-pro），忽略客户端 params.model（seedance-fast）。
-      model: 'seedance-pro',
-      content,
-      callbackUrl: 'https://api.test/callback',
-      returnLastFrame: true,
-      generateAudio: true,
-      resolution: '480p',
-      ratio: '9:16',
-      duration: 6,
-      seed: 123,
-      watermark: true,
-    });
   });
 
   it('builds queued generation poll windows and splits queued generations', () => {
@@ -576,51 +540,6 @@ describe('video generation flow helpers', () => {
       status: VideoGenStatus.expired,
       externalStatus: 'expired',
       error: 'cron: queued 超过 30 分钟未完成',
-    });
-  });
-
-  it('normalizes Seedance task outcome for callback and refresh convergence', () => {
-    expect(normalizeSeedanceTaskOutcome({})).toEqual({
-      kind: 'missing_status',
-    });
-    expect(
-      normalizeSeedanceTaskOutcome({
-        status: 'succeeded',
-        content: {
-          video_url: 'https://provider.test/video.mp4',
-          last_frame_url: 'https://provider.test/last.png',
-        },
-        duration: 5,
-      }),
-    ).toEqual({
-      kind: 'succeeded',
-      externalStatus: 'succeeded',
-      sourceUrl: 'https://provider.test/video.mp4',
-      lastFrameUrl: 'https://provider.test/last.png',
-      durationSec: 5,
-    });
-    expect(
-      normalizeSeedanceTaskOutcome({
-        status: 'failed',
-        error: { message: 'provider rejected' },
-      }),
-    ).toEqual({
-      kind: 'failed',
-      externalStatus: 'failed',
-      generationStatus: VideoGenStatus.failed,
-      error: 'provider rejected',
-      refundReason: '视频生成失败: provider rejected',
-    });
-    expect(normalizeSeedanceTaskOutcome({ status: 'expired' })).toEqual({
-      kind: 'failed',
-      externalStatus: 'expired',
-      generationStatus: VideoGenStatus.expired,
-      error: 'expired',
-      refundReason: '视频生成超时',
-    });
-    expect(normalizeSeedanceTaskOutcome({ status: 'running' })).toEqual({
-      kind: 'active',
-      externalStatus: 'running',
     });
   });
 

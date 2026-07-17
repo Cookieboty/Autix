@@ -12,7 +12,8 @@ import type { NormalizedSeedanceTaskOutcome } from './video-generation-flow.help
  * 这层翻译让 applyTaskStatus 的整条下游（buildFailedGenerationInput / refundGenerationHoldWithinTx）
  * **一行都不用改** —— 切换的爆炸半径就此收敛在协议层。
  *
- * 取值逐字抄自 normalizeSeedanceTaskOutcome（video-generation-flow.helpers.ts:604-634）。
+ * 取值逐字抄自已删除的 normalizeSeedanceTaskOutcome（计划 4 Task 4；`NormalizedSeedanceTaskOutcome`
+ * 类型本身留存于 video-generation-flow.helpers.ts，仍是本文件与其它下游共用的词汇）。
  */
 export function toLegacyVideoOutcome(outcome: VideoTaskOutcome): NormalizedSeedanceTaskOutcome {
   switch (outcome.kind) {
