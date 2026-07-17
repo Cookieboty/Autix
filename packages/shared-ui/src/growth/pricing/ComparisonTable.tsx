@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Minus, ShieldCheck } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { formatCount, type PlanComparison, type PricingPlan } from '../public-pricing-helpers';
 import type { TFunc } from './pricing-parts';
@@ -131,14 +131,10 @@ export function ComparisonTable({ plans }: { plans: PricingPlan[] }) {
   ];
 
   return (
-    <section className="border-y border-foreground/10 growth-pricing-compare-bg">
-      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-14">
+    <section>
+      <div className="mx-auto max-w-6xl px-4 pt-24 md:px-6">
         <div className="mb-7 max-w-3xl">
-          <p className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-info">
-            <ShieldCheck className="size-4" />
-            {t('compareEyebrow')}
-          </p>
-          <h2 className="text-3xl font-black uppercase tracking-tight text-foreground md:text-5xl">
+          <h2 className="text-3xl font-black uppercase tracking-tight text-foreground md:text-4xl">
             {t('compareTitle')}
           </h2>
           <p className="mt-3 text-sm leading-6 text-foreground/60">{t('compareBody')}</p>

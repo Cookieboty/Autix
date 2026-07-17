@@ -1,11 +1,11 @@
 'use client';
 
-import { ArrowRight, Clock, Gift, Minus, Package } from 'lucide-react';
+import { ArrowRight, Gift, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PointsPackage } from '@autix/shared-store';
 import { formatCurrency } from '../../format';
 import { MagneticLink } from '../GrowthInteractions';
-import { PLAN_ACCENTS, formatCount, pointsPerDollar } from '../public-pricing-helpers';
+import { formatCount, pointsPerDollar } from '../public-pricing-helpers';
 
 const FALLBACK_CODE_MAP: Record<string, 'trial' | 'standard' | 'pro' | 'team'> = {
   trial_topup: 'trial',
@@ -14,7 +14,7 @@ const FALLBACK_CODE_MAP: Record<string, 'trial' | 'standard' | 'pro' | 'team'> =
   team_topup: 'team',
 };
 
-function TopUpCard({ pkg, index }: { pkg: PointsPackage; index: number }) {
+function TopUpCard({ pkg }: { pkg: PointsPackage }) {
   const t = useTranslations('publicGrowth.pricing');
   const creditUnit = t('creditUnit');
 
@@ -37,36 +37,33 @@ function TopUpCard({ pkg, index }: { pkg: PointsPackage; index: number }) {
   return (
     <MagneticLink
       href="/membership/packages"
-      className="group rounded-2xl border border-foreground/10 bg-foreground/[0.045] p-5 transition duration-300 hover:border-foreground/22 hover:bg-foreground/[0.07]"
+      className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.025] p-5 transition duration-300 hover:border-white/20 hover:bg-white/[0.05]"
     >
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div
-          className="flex size-10 items-center justify-center rounded-full bg-foreground/[0.08]"
-          style={{ color: PLAN_ACCENTS[(index + 2) % PLAN_ACCENTS.length] }}
-        >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <span className="grid size-9 place-items-center rounded-lg border border-white/8 bg-white/5 text-growth-accent">
           <Gift className="size-5" />
-        </div>
-        <span className="text-xs text-foreground/42">
+        </span>
+        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-foreground/45">
           {t('validDays', { days: pkg.validityDays ?? 180 })}
         </span>
       </div>
-      <h3 className="text-xl font-semibold text-foreground">{displayName}</h3>
-      <p className="mt-2 min-h-10 text-sm leading-5 text-foreground/54">{displayDescription}</p>
-      <div className="mt-5 border-y border-foreground/10 py-4">
-        <p className="text-3xl font-semibold text-foreground">
-          {formatCount(pkg.points)} <span className="text-sm text-foreground/46">{creditUnit}</span>
-        </p>
-        <p className="mt-2 text-lg font-semibold text-foreground/84">{formatCurrency(pkg.price)}</p>
+
+      <h3 className="text-base font-bold text-foreground">{displayName}</h3>
+      <p className="mt-1 min-h-9 text-xs leading-5 text-foreground/50 line-clamp-2">
+        {displayDescription}
+      </p>
+
+      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-black text-foreground">{formatCount(pkg.points)}</span>
+          <span className="text-xs font-medium text-foreground/45">{creditUnit}</span>
+        </div>
+        <div className="mt-1 text-lg font-bold text-foreground/85">{formatCurrency(pkg.price)}</div>
       </div>
-      <div className="mt-4 grid gap-2 text-sm text-foreground/58">
-        <div className="flex items-center gap-2">
-          <Clock className="size-4 text-foreground/34" />
-          {t('pointsPerDollar', { ratio: pointsPerDollar(pkg) })}
-        </div>
-        <div className="flex items-center gap-2">
-          <Minus className="size-4 text-foreground/34" />
-          {t('noPerks')}
-        </div>
+
+      <div className="mt-3 flex items-center gap-1.5 text-xs text-foreground/45">
+        <Zap className="size-3.5 text-growth-accent/80" />
+        {t('pointsPerDollar', { ratio: pointsPerDollar(pkg) })}
       </div>
     </MagneticLink>
   );
@@ -76,14 +73,10 @@ export function TopUpSection({ packages }: { packages: PointsPackage[] }) {
   const t = useTranslations('publicGrowth.pricing');
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-14">
+    <section className="mx-auto max-w-6xl px-4 pt-24 pb-16 md:px-6">
       <div className="mb-7 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="growth-pricing-topup-eyebrow mb-3 inline-flex items-center gap-2 text-sm font-semibold">
-            <Package className="size-4" />
-            {t('topUpMembershipOnly')}
-          </p>
-          <h2 className="text-3xl font-black uppercase tracking-tight text-foreground md:text-5xl">
+          <h2 className="text-3xl font-black uppercase tracking-tight text-foreground md:text-4xl">
             {t('topUpTitle')}
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-foreground/60">
@@ -100,8 +93,8 @@ export function TopUpSection({ packages }: { packages: PointsPackage[] }) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {packages.slice(0, 4).map((pkg, index) => (
-          <TopUpCard key={pkg.id} pkg={pkg} index={index} />
+        {packages.slice(0, 4).map((pkg) => (
+          <TopUpCard key={pkg.id} pkg={pkg} />
         ))}
       </div>
     </section>

@@ -3,6 +3,15 @@ import type { MembershipLevel, MembershipPlan, PointsPackage } from '@autix/shar
 
 export type BillingCycle = 'MONTHLY' | 'YEARLY';
 
+/** 统一色调：neutral=中性白 / brand=品牌绿(推荐) / top=品红(最高档)。全站定价模块共用 */
+export type PlanTone = 'neutral' | 'brand' | 'top';
+
+export const TONE_ACCENT: Record<PlanTone, string> = {
+  neutral: 'var(--color-foreground)',
+  brand: 'var(--growth-accent)',
+  top: '#ff2f87',
+};
+
 export type QueuePriority = 'standard' | 'high' | 'highest';
 export type BatchLevel = 'disabled' | 'limited' | 'enabled';
 export type InvoiceStatus = 'included' | 'requestable';
@@ -20,6 +29,8 @@ export type FeatureItem =
 export type PlanComparison = {
   monthlyPoints: number;
   videoSpec: string | null;
+  imageConcurrency: number | null;
+  videoConcurrency: number | null;
   removeWatermark: boolean;
   commercialLicense: boolean;
   queuePriority: QueuePriority;
@@ -37,12 +48,17 @@ export type PricingPlan = {
   serverName: string;
   badgeKey: 'popular' | 'free' | string | null;
   hasYearlyDiscount: boolean;
+  tone: PlanTone;
   accent: string;
   href: string;
   level: number;
   points: number;
   price: string;
+  /** 按月展示价：月付=月价；年付=年费/12（用于「per month, billed annually」样式） */
+  pricePerMonth: string;
   originalPrice: string | null;
+  /** 年付相对逐月付费的节省金额（无优惠时为 null） */
+  annualSavings: string | null;
   billingCycle: BillingCycle;
   recommended: boolean;
   isFree: boolean;
@@ -229,10 +245,13 @@ function buildComparison(level: MembershipLevel, points: number): PlanComparison
   const invoice = mapInvoice(features?.invoice);
   const historyDays = readNumber(features?.historyRetentionDays);
   const carryover = getRecord(features?.pointsCarryover);
+  const seedance = readSeedance(level.features);
 
   return {
     monthlyPoints: points,
     videoSpec: videoSpec,
+    imageConcurrency: readNumber(getRecord(features?.image)?.concurrency),
+    videoConcurrency: seedance?.enabled ? readNumber(seedance.concurrency) : null,
     removeWatermark: Boolean(features?.removeWatermark),
     commercialLicense: Boolean(features?.commercialLicense),
     queuePriority,
@@ -251,12 +270,15 @@ function buildFreePlan(): PricingPlan {
     planId: null,
     serverName: 'Free',
     badgeKey: 'free',
-    accent: FREE_PLAN_ACCENT,
+    tone: 'neutral',
+    accent: TONE_ACCENT.neutral,
     href: '/register',
     level: 0,
     points: 0,
     price: '$0',
+    pricePerMonth: '$0',
     originalPrice: null,
+    annualSavings: null,
     billingCycle: 'MONTHLY',
     recommended: false,
     isFree: true,
@@ -269,6 +291,8 @@ function buildFreePlan(): PricingPlan {
     comparison: {
       monthlyPoints: 0,
       videoSpec: null,
+      imageConcurrency: null,
+      videoConcurrency: null,
       removeWatermark: false,
       commercialLicense: false,
       queuePriority: 'standard',
@@ -287,17 +311,21 @@ function buildFallbackPlans(cycle: BillingCycle): PricingPlan[] {
   const points = [0, 12000, 52000];
   const prices = ['$0', '$19', '$79'];
 
+  const fallbackTones: PlanTone[] = ['neutral', 'brand', 'top'];
   return serverNames.map((serverName, index) => ({
     id: `fallback-${serverName.toLowerCase()}`,
     planId: index === 0 ? null : `fallback-plan-${serverName.toLowerCase()}`,
     serverName,
     badgeKey: index === 0 ? 'free' : index === 1 ? 'popular' : null,
-    accent: index === 0 ? FREE_PLAN_ACCENT : PLAN_ACCENTS[index - 1]!,
+    tone: fallbackTones[index]!,
+    accent: TONE_ACCENT[fallbackTones[index]!],
     href: index === 0 ? '/register' : '/membership/upgrade',
     level: index,
     points: points[index]!,
     price: prices[index]!,
+    pricePerMonth: prices[index]!,
     originalPrice: null,
+    annualSavings: null,
     billingCycle: cycle,
     recommended: index === 1,
     isFree: index === 0,
@@ -310,6 +338,8 @@ function buildFallbackPlans(cycle: BillingCycle): PricingPlan[] {
     comparison: {
       monthlyPoints: points[index]!,
       videoSpec: index === 0 ? null : index === 1 ? '720p · 5s · 1x' : '1080p · 30s · 4x',
+      imageConcurrency: index === 0 ? null : index === 1 ? 4 : 8,
+      videoConcurrency: index === 0 ? null : index === 1 ? 1 : 4,
       removeWatermark: index > 0,
       commercialLicense: index > 1,
       queuePriority: (index === 2 ? 'highest' : 'standard') as QueuePriority,
@@ -340,14 +370,23 @@ export function buildPricingPlans(
     ?? paidLevels[Math.min(1, paidLevels.length - 1)]?.id
     ?? activeLevels[0]?.id;
 
-  let paidAccentIndex = 0;
+  // 色调统一：推荐档=brand(绿)，最高价付费档=top(品红)，其余=neutral(白)
+  const maxPaidLevel = Math.max(
+    0,
+    ...activeLevels.filter((level) => !isFreeLevel(level)).map((level) => level.level),
+  );
 
   const plans = activeLevels.map((level) => {
     const plan = pickPlan(level, cycle);
     const points = plan?.points ?? level.pointsPerMonth;
     const recommended = level.id === recommendedId;
     const isFree = isFreeLevel(level);
-    const accent = isFree ? FREE_PLAN_ACCENT : PLAN_ACCENTS[paidAccentIndex++ % PLAN_ACCENTS.length]!;
+    const tone: PlanTone = recommended
+      ? 'brand'
+      : !isFree && level.level === maxPaidLevel
+        ? 'top'
+        : 'neutral';
+    const accent = TONE_ACCENT[tone];
     const badgeKey = recommended
       ? 'popular'
       : isFree
@@ -356,17 +395,43 @@ export function buildPricingPlans(
     const originalPrice =
       plan && plan.originalPrice !== plan.price ? formatCurrency(plan.originalPrice) : null;
 
+    // 按月展示价：年付时用 年费 / 月数（无优惠则与月付价一致）
+    const months = plan?.months && plan.months > 0 ? plan.months : cycle === 'YEARLY' ? 12 : 1;
+    const rawTotal = Number(plan?.firstTimePrice ?? plan?.price ?? level.monthlyPrice ?? 0);
+    const pricePerMonth = formatCurrency(
+      Number.isFinite(rawTotal) && months > 1 ? rawTotal / months : rawTotal,
+    );
+
+    // 年付相对逐月付费的节省（仅当确有优惠时展示）
+    let annualSavings: string | null = null;
+    if (cycle === 'YEARLY' && !isFree) {
+      const monthlyPlan = level.plans.find((p) => p.billingCycle === 'MONTHLY');
+      const monthlyOverYear = Number(monthlyPlan?.price) * 12;
+      const yearlyTotal = Number(plan?.price);
+      if (
+        monthlyPlan &&
+        Number.isFinite(monthlyOverYear) &&
+        Number.isFinite(yearlyTotal) &&
+        monthlyOverYear - yearlyTotal > 0.01
+      ) {
+        annualSavings = formatCurrency(monthlyOverYear - yearlyTotal);
+      }
+    }
+
     return {
       id: level.id,
       planId: isFree ? null : plan?.id ?? null,
       serverName: level.name,
       badgeKey,
+      tone,
       accent,
       href: level.level <= 0 ? '/register' : '/membership/upgrade',
       level: level.level,
       points,
       price: formatPlanPrice(plan, level.monthlyPrice),
+      pricePerMonth,
       originalPrice,
+      annualSavings,
       billingCycle: cycle,
       recommended,
       isFree,
