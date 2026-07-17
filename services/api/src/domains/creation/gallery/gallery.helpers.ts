@@ -61,8 +61,17 @@ export interface GallerySourcePayload {
   videoGenerationId?: string | null;
 }
 
-/** 纯字符串形态校验：是否为可解析的 http(s) URL（不判断是否站内，那是 isInStationMediaUrl 的事）。 */
-function isHttpUrl(value: string): boolean {
+/**
+ * 纯字符串形态校验：是否为可解析的 http(s) URL（不判断是否站内，那是 isInStationMediaUrl 的事）。
+ * 用 WHATWG `new URL()` 解析而非裸正则，语义偏"宽"：scheme 大小写不敏感（`HTTP://x` 合法）、
+ * 自动剥离首尾空白/控制字符、`https:/x` 单斜杠会被规范化为 `https://x`。
+ *
+ * 这是导入侧（assertSource）与搬运 worker 侧（ResourceMigrationService.isUrl）**共用的唯一**
+ * URL 合法性判定——历史上两侧曾各写一套（worker 用大小写敏感的 `/^https?:\/\/.+/`），导致
+ * `HTTP://x/a.png` 这类值被导入放行、却被 worker 判定为不合法而永久卡在 PENDING。收敛于此，
+ * 任何一侧要放宽/收紧判定，都只改这一处。
+ */
+export function isHttpUrl(value: string): boolean {
   try {
     const u = new URL(value);
     return u.protocol === 'http:' || u.protocol === 'https:';

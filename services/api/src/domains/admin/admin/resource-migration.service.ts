@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { safeFetch } from '@autix/ai-adapters/core';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
-import { isInStationMediaUrl } from '../../creation/gallery/gallery.helpers';
+import { isHttpUrl, isInStationMediaUrl } from '../../creation/gallery/gallery.helpers';
 
 /** Fields whose URLs should be re-hosted to R2 on import (actual media assets). */
 export const MEDIA_FIELDS = ['coverImage', 'exampleImages', 'exampleMedia'] as const;
@@ -18,8 +18,15 @@ export class ResourceMigrationService {
 
   constructor(private readonly r2: CloudflareR2Service) {}
 
+  /**
+   * 薄委托：URL 合法性判定统一收敛到 gallery.helpers.isHttpUrl（WHATWG `new URL()` +
+   * protocol 白名单），不再自行维护一套裸正则。历史上这里曾是大小写敏感的
+   * `/^https?:\/\/.+/`，与导入侧的 assertSource 语义不一致（`HTTP://x/a.png` 会被导入
+   * 放行、却被这里判定为不合法），导致该类作品永久卡在 PENDING。见 gallery.helpers.ts
+   * 中 isHttpUrl 的文档与两侧同源性测试（resource-migration.service.spec.ts）。
+   */
   isUrl(value: string): boolean {
-    return /^https?:\/\/.+/.test(value);
+    return isHttpUrl(value);
   }
 
   /**

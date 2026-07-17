@@ -1,4 +1,5 @@
 import { ResourceMigrationService } from './resource-migration.service';
+import { assertSource, isHttpUrl } from '../../creation/gallery/gallery.helpers';
 
 function makeR2() {
   const calls: Array<{ folder?: string; ext?: string; contentType: string }> = [];
@@ -224,6 +225,72 @@ describe('ResourceMigrationService', () => {
       expect(spy).not.toHaveBeenCalled();
       expect(data.coverImage).toBeNull();
       expect(errors).toEqual([]);
+    });
+  });
+
+  // ── URL 判定同源性：导入侧（assertSource）与 worker 侧（migrateMediaFields）
+  // 曾各写一套 URL 合法性判定——assertSource 用 gallery.helpers 里模块私有的
+  // isHttpUrl（WHATWG new URL()，大小写不敏感），resource-migration.service 用
+  // isUrl（大小写敏感正则 /^https?:\/\/.+/）。真实分歧样本：`HTTP://x/a.png`——
+  // 修复前导入侧放行、worker 侧判定不合法，作品的 mediaMigrated 永远搬不成功，
+  // 卡死在 PENDING（管理员只在日志里看到一行 warn）。收敛后两侧必须一致接受/拒绝。
+  describe('URL 判定同源性（导入侧 assertSource vs worker 侧 migrateMediaFields）', () => {
+    function makeIdempotentSvc() {
+      // base 用一个不会与下方任何样本 host 撞上的域名，确保命中"需要搬运"分支
+      // 而非"已站内跳过"分支——我们要测的是"是否判定为合法 URL"，不是幂等跳过。
+      const r2 = { getPublicBaseUrl: async () => 'https://cdn.test' };
+      return new ResourceMigrationService(r2 as never);
+    }
+
+    function importSideAccepts(url: string): boolean {
+      try {
+        assertSource(
+          { kind: 'IMAGE', sourceType: 'ADMIN_CURATED', mediaUrls: [url] },
+          'admin',
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    async function workerSideAccepts(url: string): Promise<boolean> {
+      const svc = makeIdempotentSvc();
+      vi.spyOn(svc, 'migrateUrl').mockResolvedValue('https://cdn.test/new.png');
+      const { errors } = await svc.migrateMediaFields(
+        { mediaUrls: [url] },
+        'gallery/homogeneity',
+        ['mediaUrls'],
+      );
+      return errors.length === 0;
+    }
+
+    const cases: Array<[label: string, url: string, accept: boolean]> = [
+      ['标准 https', 'https://example.com/a.png', true],
+      ['标准 http', 'http://example.com/a.png', true],
+      // 真实分歧样本：大写 scheme。
+      ['大写 scheme（真实分歧样本）', 'HTTP://x/a.png', true],
+      ['大写 host+path 混合大小写', 'HTTPS://EXAMPLE.com/A.png', true],
+      ['首尾空白', '  https://x/a.png  ', true],
+      ['单斜杠 https:/x（WHATWG 规范化）', 'https:/x/a.png', true],
+      ['非 http(s) 协议', 'ftp://example.com/a.png', false],
+      ['非 URL 字符串', 'garbage', false],
+      ['javascript: 协议', 'javascript:alert(1)', false],
+      ['相对路径（无 base 无法解析）', '/relative/path.png', false],
+    ];
+
+    it.each(cases)('%s: %s → 两侧一致（accept=%s）', async (_label, url, accept) => {
+      expect(importSideAccepts(url)).toBe(accept);
+      expect(await workerSideAccepts(url)).toBe(accept);
+    });
+
+    it('大写 scheme HTTP://x/a.png：修复前导入侧放行/worker 侧拒绝，修复后两侧都必须接受', async () => {
+      const url = 'HTTP://x/a.png';
+      expect(importSideAccepts(url)).toBe(true);
+      expect(await workerSideAccepts(url)).toBe(true);
+      // 与暴露的两个判定函数本身也应一致（收敛到同一实现的直接证据）。
+      expect(isHttpUrl(url)).toBe(true);
+      expect(new ResourceMigrationService({ getPublicBaseUrl: async () => null } as never).isUrl(url)).toBe(true);
     });
   });
 });
