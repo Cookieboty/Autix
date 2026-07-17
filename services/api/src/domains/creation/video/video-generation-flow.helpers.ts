@@ -14,6 +14,8 @@ import type {
 import {
   normalizeVideoResolution as normalizeDomainVideoResolution,
   normalizeVideoResolutionForModel,
+  toUnifiedVideoParams,
+  type VideoGenerationClipParams,
   type VideoModelHint,
   type VideoResolution,
 } from '@autix/domain/video';
@@ -26,21 +28,7 @@ import {
   type SeedanceTaskPayload,
 } from './seedance-task-payload';
 
-export interface VideoGenerationClipParams {
-  model?: string;
-  resolution?: string;
-  ratio?: string;
-  duration?: number;
-  seed?: number;
-  generateAudio?: boolean;
-  generate_audio?: boolean;
-  watermark?: boolean;
-  modelConfigId?: string;
-  generationMode?: string;
-  storyboardPrompt?: string;
-  sourceTemplateId?: string;
-  sourceTemplateKind?: 'video_template' | 'video_workflow_template';
-}
+export type { VideoGenerationClipParams };
 
 export interface StoryboardVideoPromptClip {
   order: number;
@@ -470,13 +458,16 @@ export function buildSeedanceCostEstimateInput(input: {
   modelConfigId?: string;
   membershipLevel?: number;
 }): SeedanceCostEstimateInput {
+  // 先经唯一投影拿到统一词汇（duration → seconds），再套计价自己的归一化。
+  // 归一化必须留在这里：上游请求体发的是原值，投影若归一化会改变实际生成参数。
+  const unified = toUnifiedVideoParams(input.params);
   return {
     taskType: VIDEO_GENERATION_TASK_TYPE,
     ...(input.modelConfigId !== undefined ? { modelConfigId: input.modelConfigId } : {}),
     params: {
-      resolution: normalizeVideoResolution(input.params.resolution),
-      seconds: normalizeVideoDuration(input.params.duration),
-      ...(input.params.ratio !== undefined ? { ratio: input.params.ratio } : {}),
+      resolution: normalizeVideoResolution(unified.resolution),
+      seconds: normalizeVideoDuration(unified.seconds),
+      ...(unified.ratio !== undefined ? { ratio: unified.ratio } : {}),
     },
     ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
   };

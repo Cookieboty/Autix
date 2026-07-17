@@ -1,4 +1,5 @@
 export * from './capabilities';
+export * from './params';
 
 export interface VideoWorkflowClipDefinition {
   order: number;
