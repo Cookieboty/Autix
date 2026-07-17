@@ -1,4 +1,8 @@
-import { ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { MembershipService, type VideoEntitlement } from './membership.service';
 
 // P2-D1: 视频闸门覆盖 —— 未订阅 / 未配置视频权益时必须拒绝 seedance 调用
@@ -214,5 +218,118 @@ describe('MembershipService.admin writes', () => {
       ConflictException,
     );
     expect(repository.updateLevel).toHaveBeenCalledTimes(1);
+  });
+});
+
+// 订阅自助管理：期末取消 + Stripe 账单门户。此前 membership.service 只覆盖权益/后台 CRUD，
+// 这两个直接对接 Stripe 的用户侧入口无任何测试。
+describe('MembershipService.subscription self-service', () => {
+  function buildService(membership: any) {
+    const repository = {
+      findUserMembership: vi.fn().mockResolvedValue(membership),
+      cancelUserMembershipAtPeriodEnd: vi
+        .fn()
+        .mockResolvedValue({ id: 'm1', cancelAtPeriodEnd: true }),
+    } as any;
+    const stripe = {
+      cancelSubscriptionAtPeriodEnd: vi.fn().mockResolvedValue(undefined),
+      createBillingPortalSession: vi
+        .fn()
+        .mockResolvedValue({ url: 'https://billing.stripe.test/session' }),
+    } as any;
+    return { service: new MembershipService(repository, stripe), repository, stripe };
+  }
+
+  describe('cancelAtPeriodEnd', () => {
+    it('无有效会员时拒绝，且不触碰 Stripe / DB', async () => {
+      const { service, repository, stripe } = buildService(null);
+
+      await expect(service.cancelAtPeriodEnd('u1')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(stripe.cancelSubscriptionAtPeriodEnd).not.toHaveBeenCalled();
+      expect(repository.cancelUserMembershipAtPeriodEnd).not.toHaveBeenCalled();
+    });
+
+    it('会员非 ACTIVE 时拒绝', async () => {
+      const { service, repository } = buildService({
+        status: 'CANCELLED',
+        stripeSubscriptionId: 'sub_1',
+      });
+
+      await expect(service.cancelAtPeriodEnd('u1')).rejects.toThrow(
+        '当前没有可取消的有效会员',
+      );
+      expect(repository.cancelUserMembershipAtPeriodEnd).not.toHaveBeenCalled();
+    });
+
+    it('有订阅号时先取消 Stripe 订阅再落库', async () => {
+      const { service, repository, stripe } = buildService({
+        status: 'ACTIVE',
+        stripeSubscriptionId: 'sub_1',
+      });
+
+      await service.cancelAtPeriodEnd('u1');
+
+      expect(stripe.cancelSubscriptionAtPeriodEnd).toHaveBeenCalledWith('sub_1');
+      expect(repository.cancelUserMembershipAtPeriodEnd).toHaveBeenCalledWith(
+        'u1',
+        expect.any(Date),
+      );
+      // 顺序：Stripe 调用早于落库
+      expect(
+        stripe.cancelSubscriptionAtPeriodEnd.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        repository.cancelUserMembershipAtPeriodEnd.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('无订阅号（纯站内会员）时跳过 Stripe 但仍落库', async () => {
+      const { service, repository, stripe } = buildService({
+        status: 'ACTIVE',
+        stripeSubscriptionId: null,
+      });
+
+      await service.cancelAtPeriodEnd('u1');
+
+      expect(stripe.cancelSubscriptionAtPeriodEnd).not.toHaveBeenCalled();
+      expect(repository.cancelUserMembershipAtPeriodEnd).toHaveBeenCalledWith(
+        'u1',
+        expect.any(Date),
+      );
+    });
+
+    it('Stripe 取消失败时不落库（避免本地与 Stripe 状态脱节）', async () => {
+      const { service, repository, stripe } = buildService({
+        status: 'ACTIVE',
+        stripeSubscriptionId: 'sub_1',
+      });
+      stripe.cancelSubscriptionAtPeriodEnd.mockRejectedValueOnce(
+        new Error('stripe down'),
+      );
+
+      await expect(service.cancelAtPeriodEnd('u1')).rejects.toThrow('stripe down');
+      expect(repository.cancelUserMembershipAtPeriodEnd).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createBillingPortal', () => {
+    it('无 stripeCustomerId 时拒绝，且不调用 Stripe', async () => {
+      const { service, stripe } = buildService({ stripeCustomerId: null });
+
+      await expect(service.createBillingPortal('u1')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(stripe.createBillingPortalSession).not.toHaveBeenCalled();
+    });
+
+    it('有 stripeCustomerId 时返回 Stripe 门户会话', async () => {
+      const { service, stripe } = buildService({ stripeCustomerId: 'cus_1' });
+
+      const result = await service.createBillingPortal('u1');
+
+      expect(stripe.createBillingPortalSession).toHaveBeenCalledWith('cus_1');
+      expect(result).toEqual({ url: 'https://billing.stripe.test/session' });
+    });
   });
 });
