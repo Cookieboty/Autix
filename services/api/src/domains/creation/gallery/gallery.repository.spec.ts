@@ -1,16 +1,17 @@
 import { GalleryRepository } from './gallery.repository';
 
 describe('GalleryRepository.publishIfPending', () => {
-  it('以 status=PENDING 为原子条件发布，并回写 publishedAt', async () => {
+  it('以 status=PENDING 为原子条件发布，写入调用方传入的 publishedAt（不再自己 new Date()）', async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
     const repo = new GalleryRepository({ gallery_posts: { updateMany } } as never);
+    const publishedAt = new Date('2026-07-10T08:00:00.000Z');
 
-    const count = await repo.publishIfPending('p1');
+    const count = await repo.publishIfPending('p1', publishedAt);
 
     expect(count).toBe(1);
     expect(updateMany).toHaveBeenCalledWith({
       where: { id: 'p1', status: 'PENDING', sourceType: 'ADMIN_CURATED' },
-      data: { status: 'PUBLISHED', publishedAt: expect.any(Date) },
+      data: { status: 'PUBLISHED', publishedAt },
     });
   });
 
@@ -18,7 +19,7 @@ describe('GalleryRepository.publishIfPending', () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 0 });
     const repo = new GalleryRepository({ gallery_posts: { updateMany } } as never);
 
-    expect(await repo.publishIfPending('p2')).toBe(0);
+    expect(await repo.publishIfPending('p2', new Date())).toBe(0);
   });
 });
 
@@ -48,9 +49,23 @@ describe('GalleryRepository — 迁移队列显式限定 ADMIN_CURATED（Fix 3�
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
     const repo = new GalleryRepository({ gallery_posts: { updateMany } } as never);
 
-    await repo.publishIfPending('p3');
+    await repo.publishIfPending('p3', new Date());
 
     const call = updateMany.mock.calls[0]![0] as { where: Record<string, unknown> };
     expect(call.where.sourceType).toBe('ADMIN_CURATED');
+  });
+
+  // worker 要算 publishedAt = min(createdAt + offset, now)，取件队列必须带上 createdAt。
+  it('findPostsPendingMediaMigration 的 select 带上 createdAt（worker 算随机发布偏移要用）', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const repo = new GalleryRepository({ gallery_posts: { findMany } } as never);
+
+    await repo.findPostsPendingMediaMigration(3, 20);
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ createdAt: true }),
+      }),
+    );
   });
 });

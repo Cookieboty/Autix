@@ -378,4 +378,37 @@ describe('BatchJobService — GALLERY_POST 导入', () => {
     const progress = jobUpdates.find((u) => 'processed' in u);
     expect(progress).toMatchObject({ processed: 0, failed: 1 });
   });
+
+  // 广场 feed 按 publishedAt 排序；导入一批全落同一秒 createdAt 会让它们发布时挤成一坨。
+  // 显式写 createdAt = now - random(0, 7天)，覆盖 schema 的 @default(now())。
+  // Math.random 打桩确定化：随机性本身不测，测的是「公式用对了」。
+  it('createdAt 落在 [now-7天, now] 区间内（random(0,7天) 覆盖 schema 默认值）', async () => {
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const cases: Array<{ random: number }> = [{ random: 0 }, { random: 0.5 }, { random: 0.999999 }];
+
+    for (const { random } of cases) {
+      const created: Array<Record<string, unknown>> = [];
+      const svc = makeImportService({ created, jobUpdates: [] });
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(random);
+      const t0 = Date.now();
+
+      await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+        items: [{ kind: 'IMAGE', category: 'art', mediaUrls: ['https://ext/a.png'] }],
+      });
+      await flush();
+      const t1 = Date.now();
+      randomSpy.mockRestore();
+
+      expect(created).toHaveLength(1);
+      const createdAt = created[0]!.createdAt as Date;
+      expect(createdAt).toBeInstanceOf(Date);
+      const expectedOffsetMs = random * SEVEN_DAYS_MS;
+      // now 在 t0..t1 之间取值（同步执行，窗口极窄），留 1s 余量吸收 CI 抖动。
+      expect(createdAt.getTime()).toBeGreaterThanOrEqual(t0 - expectedOffsetMs - 1000);
+      expect(createdAt.getTime()).toBeLessThanOrEqual(t1 - expectedOffsetMs + 1000);
+      // 上界：offset=0 时 createdAt 不应晚于 now；下界：offset=7天 时不应早于 now-7天。
+      expect(createdAt.getTime()).toBeLessThanOrEqual(t1);
+      expect(createdAt.getTime()).toBeGreaterThanOrEqual(t0 - SEVEN_DAYS_MS - 1000);
+    }
+  });
 });

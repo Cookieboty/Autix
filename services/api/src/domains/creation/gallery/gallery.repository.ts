@@ -101,7 +101,8 @@ export class GalleryRepository {
       },
       orderBy: { createdAt: 'asc' },
       take,
-      select: { id: true, coverImage: true, mediaUrls: true, mediaMigrationAttempts: true },
+      // createdAt 供 worker 算随机发布偏移用：publishedAt = min(createdAt + random(5分钟,6小时), now)。
+      select: { id: true, coverImage: true, mediaUrls: true, mediaMigrationAttempts: true, createdAt: true },
     });
   }
 
@@ -110,11 +111,14 @@ export class GalleryRepository {
    * 与 findPostsPendingMediaMigration 同一显式谓词——只有这条导入队列产出的 PENDING
    * 才应被这个自动发布闸门处理）。where 即原子条件（而非先读后写），避免与管理员
    * 并发处置竞态 —— 管理员若已 REJECT/REMOVE，count=0，worker 不覆盖其决定。
+   *
+   * publishedAt 由调用方算好传入（不再自己 `new Date()`）：worker 要把它撒开成
+   * createdAt + random(5分钟,6小时) 再夹住 now，这里只负责原子地写库。
    */
-  async publishIfPending(id: string): Promise<number> {
+  async publishIfPending(id: string, publishedAt: Date): Promise<number> {
     const res = await this.prisma.gallery_posts.updateMany({
       where: { id, status: GalleryStatus.PENDING, sourceType: GallerySource.ADMIN_CURATED },
-      data: { status: GalleryStatus.PUBLISHED, publishedAt: new Date() },
+      data: { status: GalleryStatus.PUBLISHED, publishedAt },
     });
     return res.count;
   }

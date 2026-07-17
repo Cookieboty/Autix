@@ -13,6 +13,22 @@ const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_BATCH_SIZE = 20;
 const DEFAULT_CONCURRENCY = 5;
 
+// 广场 feed 按 publishedAt 排序；导入批次的 createdAt 已经撒开了（见 batch-job.service.ts），
+// 发布时间再叠一层随机偏移，让"投稿→过审"的间隔看起来自然。
+const MIN_PUBLISH_OFFSET_MS = 5 * 60 * 1000; // 5 分钟
+const MAX_PUBLISH_OFFSET_MS = 6 * 60 * 60 * 1000; // 6 小时
+
+/**
+ * publishedAt = min(createdAt + random(5分钟, 6小时), now)。
+ * 必须夹住 now：createdAt 是随机过去时间，可能极近（如 1 分钟前）；不夹住的话
+ * 「createdAt + 大偏移」会产生未来的 publishedAt —— 那条作品会永远钉在 feed 顶部
+ * 并显示"N 小时后发布"。
+ */
+function randomPublishedAt(createdAt: Date): Date {
+  const offset = MIN_PUBLISH_OFFSET_MS + Math.random() * (MAX_PUBLISH_OFFSET_MS - MIN_PUBLISH_OFFSET_MS);
+  return new Date(Math.min(createdAt.getTime() + offset, Date.now()));
+}
+
 export type MigrateBatchOptions = {
   maxAttempts?: number;
   batchSize?: number;
@@ -81,7 +97,7 @@ export class GalleryMediaMigrationService {
 
       if (succeeded) {
         // 仅当作品仍为 PENDING 才发布；管理员若已抢先处置，count=0，不覆盖其决定。
-        const count = await this.repo.publishIfPending(post.id);
+        const count = await this.repo.publishIfPending(post.id, randomPublishedAt(post.createdAt));
         if (count > 0) published++;
         return;
       }

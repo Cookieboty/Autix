@@ -49,6 +49,19 @@ function str(v: unknown): string | null {
 
 const GALLERY_KINDS = new Set(['IMAGE', 'VIDEO']);
 
+/**
+ * 广场 feed 按 publishedAt 排序，但 createdAt 也会外露在管理端列表/详情。导入一批的
+ * createdAt 全落在导入那一刻（schema `@default(now())`），几十条挤在同一秒一眼假。
+ * 显式写 createdAt = now - random(0, 7天)，让它们看起来像过去一周内陆续投稿。
+ * publishedAt 不在这里算——由 worker 搬运成功后另行计算（见 gallery-media-migration.service.ts），
+ * 避免 stranded 的作品带着一个它从未拥有过的发布时间。
+ */
+const CREATED_AT_MAX_PAST_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
+
+function randomPastCreatedAt(): Date {
+  return new Date(Date.now() - Math.random() * CREATED_AT_MAX_PAST_MS);
+}
+
 @Injectable()
 export class BatchJobService {
   private readonly logger = new Logger(BatchJobService.name);
@@ -202,6 +215,7 @@ export class BatchJobService {
         status: GalleryStatus.PENDING,
         mediaMigrated: false,
         mediaMigrationAttempts: 0,
+        createdAt: randomPastCreatedAt(),
       },
     });
   }
