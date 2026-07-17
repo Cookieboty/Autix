@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { isPrivateIpAddress, assertSafeFetchUrl } from './safe-fetch';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import {
+  isPrivateIpAddress,
+  assertSafeFetchUrl,
+  safeFetch,
+  setSafeFetchResolver,
+} from './safe-fetch';
 
 describe('isPrivateIpAddress', () => {
   it('flags private / reserved IPv4 ranges', () => {
@@ -57,5 +62,79 @@ describe('assertSafeFetchUrl', () => {
 
   it('accepts a public IP literal without DNS lookup', async () => {
     await expect(assertSafeFetchUrl('https://1.1.1.1/x')).resolves.toBeUndefined();
+  });
+});
+
+describe('safeFetch timeout', () => {
+  afterEach(() => {
+    setSafeFetchResolver(null);
+    vi.unstubAllGlobals();
+  });
+
+  // 让 SSRF 校验放行：注入解析到公网 IP 的 stub，避免真实 DNS。
+  const stubPublicDns = () =>
+    setSafeFetchResolver(async () => [{ address: '93.184.216.34', family: 4 }]);
+
+  it('aborts using the caller-supplied timeoutMs', async () => {
+    stubPublicDns();
+    // fetch 永不 resolve，只在 signal abort 时 reject —— 由此断言超时确实生效。
+    vi.stubGlobal('fetch', (_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () =>
+          reject(new Error('aborted-by-signal')),
+        );
+      }),
+    );
+
+    await expect(
+      safeFetch('https://example.com/x', {}, { timeoutMs: 20 }),
+    ).rejects.toThrow('aborted-by-signal');
+  });
+
+  it('honours the caller AbortSignal instead of swallowing it', async () => {
+    stubPublicDns();
+    // 真实 fetch（undici）对已 abort 的 signal 会同步立即 reject，而不仅仅监听未来的
+    // 'abort' 事件（AbortSignal 对"晚绑定"的监听器不会补放已发生过的事件）。本用例里
+    // controller.abort() 是在 safeFetch() 调用后立刻同步执行的，而 safeFetch 内部在
+    // 真正发起 fetch 前必须先 await 一次 SSRF DNS 校验 —— 这个 await 保证了等到 fetch
+    // 真正被调用时，signal 早已处于 aborted 状态。所以 stub 必须同时覆盖这两种路径
+    // （已 aborted 时同步 reject / 尚未 aborted 时监听后续事件），才能如实模拟真实 fetch，
+    // 而不是恰好只覆盖“调用时机足够晚”的那一种。
+    vi.stubGlobal('fetch', (_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        if (init.signal?.aborted) {
+          reject(new Error('aborted-by-signal'));
+          return;
+        }
+        init.signal?.addEventListener('abort', () =>
+          reject(new Error('aborted-by-signal')),
+        );
+      }),
+    );
+
+    const controller = new AbortController();
+    const promise = safeFetch(
+      'https://example.com/x',
+      { signal: controller.signal },
+      { timeoutMs: 60_000 },
+    );
+    controller.abort();
+
+    // 若实现仍用 signal: controller.signal 硬覆盖调用方 signal，这里会挂到 60s 超时后才 reject。
+    await expect(promise).rejects.toThrow('aborted-by-signal');
+  });
+
+  it('defaults to 30s when no timeoutMs is given', async () => {
+    stubPublicDns();
+    let seenSignal: AbortSignal | undefined;
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      seenSignal = init.signal ?? undefined;
+      return new Response('ok', { status: 200 });
+    });
+
+    const res = await safeFetch('https://example.com/x');
+    expect(res.status).toBe(200);
+    expect(seenSignal).toBeInstanceOf(AbortSignal);
+    expect(seenSignal?.aborted).toBe(false);
   });
 });

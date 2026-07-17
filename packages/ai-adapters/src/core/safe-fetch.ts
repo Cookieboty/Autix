@@ -109,8 +109,16 @@ const SAFE_FETCH_TIMEOUT_MS = 30_000;
 /**
  * fetch 的 SSRF 安全封装：抓取前与每一跳重定向都重新做 {@link assertSafeFetchUrl} 校验，
  * 使用 `redirect: 'manual'` 手动跟随，避免底层 fetch 自动跳转绕过校验。
+ *
+ * 超时权威归调用方：`opts.timeoutMs` 未给时才用默认 30s。调用方自带的 `init.signal`
+ * 与超时 signal **组合**（AbortSignal.any），不再被覆盖 —— 否则上层的取消/更长超时
+ * 会被本函数静默吞掉（视频任务的上游调用需要长于 30s 的窗口）。
  */
-export async function safeFetch(url: string, init?: RequestInit): Promise<Response> {
+export async function safeFetch(
+  url: string,
+  init?: RequestInit,
+  opts?: { timeoutMs?: number },
+): Promise<Response> {
   // data: URL 内联字节、不发起网络请求，无 SSRF 风险，直接交给 fetch（保持原有单参调用签名）。
   if (/^data:/i.test(url)) {
     return init ? fetch(url, init) : fetch(url);
@@ -118,26 +126,24 @@ export async function safeFetch(url: string, init?: RequestInit): Promise<Respon
   let currentUrl = url;
   for (let redirects = 0; redirects <= MAX_SAFE_FETCH_REDIRECTS; redirects += 1) {
     await assertSafeFetchUrl(currentUrl);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), SAFE_FETCH_TIMEOUT_MS);
-    try {
-      const res = await fetch(currentUrl, {
-        ...init,
-        redirect: 'manual',
-        signal: controller.signal,
-      });
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get('location');
-        if (!location || redirects === MAX_SAFE_FETCH_REDIRECTS) {
-          throw new Error('Unsafe fetch URL (too many or invalid redirects)');
-        }
-        currentUrl = new URL(location, currentUrl).toString();
-        continue;
+    const timeoutSignal = AbortSignal.timeout(opts?.timeoutMs ?? SAFE_FETCH_TIMEOUT_MS);
+    const signal = init?.signal
+      ? AbortSignal.any([init.signal, timeoutSignal])
+      : timeoutSignal;
+    const res = await fetch(currentUrl, {
+      ...init,
+      redirect: 'manual',
+      signal,
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location || redirects === MAX_SAFE_FETCH_REDIRECTS) {
+        throw new Error('Unsafe fetch URL (too many or invalid redirects)');
       }
-      return res;
-    } finally {
-      clearTimeout(timer);
+      currentUrl = new URL(location, currentUrl).toString();
+      continue;
     }
+    return res;
   }
   throw new Error('Unsafe fetch URL (too many redirects)');
 }
