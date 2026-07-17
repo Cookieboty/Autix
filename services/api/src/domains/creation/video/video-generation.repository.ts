@@ -297,6 +297,39 @@ export class VideoGenerationRepository {
     });
   }
 
+  /**
+   * 标记 generation 为终态但**不退款** —— 供超时排水用（video-generation-flow.service
+   * 的 markExpired）。退款是积分侧孤儿回收（PointsHoldReclaimCron，60min）的职责：
+   * 视频域不替上游判"我猜它失败了"然后退钱，只把无人认领的任务排出轮询队列。
+   *
+   * 与 markGenerationFailedAndRefund 逐字相同，**只去掉最后的 refundHold(tx)**：
+   * generation 与 clip 两条状态 update 都保留（clip 也要标 failed，否则项目状态收敛不对）。
+   */
+  async markGenerationExpiredWithoutRefund(input: {
+    generationId: string;
+    clipId: string;
+    status: VideoGenStatus;
+    externalStatus: string;
+    error: string;
+  }) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.video_clip_generations.update({
+        where: { id: input.generationId },
+        data: {
+          status: input.status,
+          externalStatus: input.externalStatus,
+          error: input.error,
+          callbackReceivedAt: new Date(),
+        },
+      });
+
+      await tx.video_clips.update({
+        where: { id: input.clipId },
+        data: { status: VideoClipStatus.failed },
+      });
+    });
+  }
+
   async markProjectGenerationFailedAndRefund(
     input: {
       generationId: string;

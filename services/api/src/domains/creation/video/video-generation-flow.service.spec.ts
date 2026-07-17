@@ -332,6 +332,8 @@ function makeService(options: {
     membershipService,
     riskService,
     projectStatusConvergence,
+    holdReconciliation,
+    terminalConvergence,
     submitVideoTaskMock,
     queryVideoTaskMock,
   };
@@ -1379,5 +1381,46 @@ describe('VideoGenerationFlowService callback routing', () => {
     });
 
     expect(pointsService.confirmHoldWithinTx).not.toHaveBeenCalled();
+  });
+});
+
+describe('VideoGenerationFlowService markExpired (超时排水，不退款)', () => {
+  it('标终态排出轮询队列，但不退款（退款交积分侧孤儿回收）', async () => {
+    const { service, repository, holdReconciliation, terminalConvergence } =
+      makeService();
+    const generation = {
+      id: 'gen-1',
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      status: VideoGenStatus.queued,
+    };
+    vi.spyOn(repository, 'findGenerationById').mockResolvedValue(
+      generation as never,
+    );
+    vi.spyOn(terminalConvergence, 'reconcileIfTerminal').mockResolvedValue(false);
+    const expiredSpy = vi
+      .spyOn(repository, 'markGenerationExpiredWithoutRefund')
+      .mockResolvedValue(undefined);
+    const refundSpy = vi.spyOn(
+      holdReconciliation,
+      'refundGenerationHoldWithinTx',
+    );
+    const failedRefundSpy = vi.spyOn(
+      repository,
+      'markGenerationFailedAndRefund',
+    );
+
+    await service.markExpired('gen-1', 'cron: queued 超过 65 分钟未完成');
+
+    // 排水口保留：generation 被标终态 —— 否则卡死任务会永占轮询队列前 50 名，新任务饿死。
+    expect(expiredSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        generationId: 'gen-1',
+        status: VideoGenStatus.expired,
+      }),
+    );
+    // 视频域不退款：退款是积分侧孤儿回收（PointsHoldReclaimCron，60min）的职责。
+    expect(refundSpy).not.toHaveBeenCalled();
+    expect(failedRefundSpy).not.toHaveBeenCalled();
   });
 });

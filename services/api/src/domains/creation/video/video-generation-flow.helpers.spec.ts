@@ -154,25 +154,26 @@ describe('video generation flow helpers', () => {
   });
 
   it('builds queued generation poll windows and splits queued generations', () => {
-    const now = new Date('2026-01-01T00:40:00.000Z');
+    // 排水窗口 65min（晚于积分侧孤儿回收的 60min 退款）：now=02:05 → expireBefore=01:00。
+    const now = new Date('2026-01-01T02:05:00.000Z');
     const window = buildQueuedGenerationPollWindow(now);
     expect(window).toEqual({
-      expireBefore: new Date('2026-01-01T00:10:00.000Z'),
+      expireBefore: new Date('2026-01-01T01:00:00.000Z'),
     });
 
     const expired = {
       id: 'gen-expired',
-      createdAt: new Date('2026-01-01T00:09:59.999Z'),
+      createdAt: new Date('2026-01-01T00:59:59.999Z'),
       providerTaskId: 'task-expired',
     };
     const pollable = {
       id: 'gen-pollable',
-      createdAt: new Date('2026-01-01T00:10:00.000Z'),
+      createdAt: new Date('2026-01-01T01:00:00.000Z'),
       providerTaskId: 'task-pollable',
     };
     const missingTask = {
       id: 'gen-missing-task',
-      createdAt: new Date('2026-01-01T00:20:00.000Z'),
+      createdAt: new Date('2026-01-01T01:20:00.000Z'),
       providerTaskId: null,
     };
 

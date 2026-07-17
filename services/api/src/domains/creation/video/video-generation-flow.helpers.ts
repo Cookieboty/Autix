@@ -309,7 +309,9 @@ export function buildQueuedGenerationPollWindow(
 ): QueuedGenerationPollWindow {
   const nowMs = now.getTime();
   return {
-    expireBefore: new Date(nowMs - 30 * 60 * 1000),
+    // 65min：晚于积分侧孤儿回收的 60min 退款窗口。排水只负责把无人认领的任务排出轮询
+    // 队列（防队列被卡死任务占满），退款是积分域的职责（PointsHoldReclaimCron）。
+    expireBefore: new Date(nowMs - 65 * 60 * 1000),
   };
 }
 

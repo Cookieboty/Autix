@@ -685,14 +685,12 @@ export class VideoGenerationFlowService {
     if (!generation) return;
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
 
-    await this.repository.markGenerationFailedAndRefund(
+    // 超时**不退款** —— 视频域不替上游判"我猜它失败了"。只把无人认领的任务排出轮询
+    // 队列（标终态），退款由积分侧的孤儿回收（PointsHoldReclaimCron，60min）兜底。
+    // markExpired 是轮询队列（findActiveProviderGenerations: orderBy asc, take 50）的唯一
+    // 排水口，故必须保留标终态 —— 删掉会让卡死任务永占队列前列、新任务饿死。
+    await this.repository.markGenerationExpiredWithoutRefund(
       buildExpiredGenerationInput({ generation, reason }),
-      (tx) =>
-        this.holdReconciliation.refundGenerationHoldWithinTx(
-          tx,
-          generation.id,
-          reason,
-        ),
     );
     await this.projectStatusConvergence.convergeAfterClipFailure({
       clipId: generation.clipId,
@@ -700,7 +698,7 @@ export class VideoGenerationFlowService {
     });
 
     this.logger.warn(
-      `Generation ${generationId} marked expired: ${reason}`,
+      `Generation ${generationId} 排水标记 expired（不退款，交积分侧孤儿回收）: ${reason}`,
     );
   }
 
