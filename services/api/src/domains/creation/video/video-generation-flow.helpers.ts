@@ -363,7 +363,7 @@ export function buildQueuedGenerationPollWindow(
 }
 
 export function splitQueuedGenerationsForPolling<
-  T extends Pick<video_clip_generations, 'createdAt' | 'seedanceTaskId'>,
+  T extends Pick<video_clip_generations, 'createdAt' | 'providerTaskId'>,
 >(
   generations: T[],
   window: Pick<QueuedGenerationPollWindow, 'expireBefore'>,
@@ -375,7 +375,7 @@ export function splitQueuedGenerationsForPolling<
     toPoll: generations.filter(
       (generation) =>
         generation.createdAt >= window.expireBefore &&
-        Boolean(generation.seedanceTaskId),
+        Boolean(generation.providerTaskId),
     ),
   };
 }

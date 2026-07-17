@@ -1241,7 +1241,7 @@ export const videoProjectApi = {
       projectId: string;
       userId: string;
       status: string;
-      seedanceTaskId?: string | null;
+      providerTaskId?: string | null;
       videoUrl?: string | null;
       lastFrameUrl?: string | null;
       thumbnailUrl?: string | null;
@@ -1258,7 +1258,7 @@ export const videoProjectApi = {
       projectId: string;
       userId: string;
       status: string;
-      seedanceTaskId?: string | null;
+      providerTaskId?: string | null;
       videoUrl?: string | null;
       lastFrameUrl?: string | null;
       thumbnailUrl?: string | null;

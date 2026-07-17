@@ -199,17 +199,17 @@ describe('video generation flow helpers', () => {
     const expired = {
       id: 'gen-expired',
       createdAt: new Date('2026-01-01T00:09:59.999Z'),
-      seedanceTaskId: 'task-expired',
+      providerTaskId: 'task-expired',
     };
     const pollable = {
       id: 'gen-pollable',
       createdAt: new Date('2026-01-01T00:10:00.000Z'),
-      seedanceTaskId: 'task-pollable',
+      providerTaskId: 'task-pollable',
     };
     const missingTask = {
       id: 'gen-missing-task',
       createdAt: new Date('2026-01-01T00:20:00.000Z'),
-      seedanceTaskId: null,
+      providerTaskId: null,
     };
 
     expect(

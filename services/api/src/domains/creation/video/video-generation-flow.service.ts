@@ -111,7 +111,7 @@ export class VideoGenerationFlowService {
     for (const g of toPoll) {
       try {
         const clip = await this.repository.findClipParams(g.clipId);
-        if (!g.seedanceTaskId) continue;
+        if (!g.providerTaskId) continue;
 
         const apiContext = await this.modelResolver.resolveApiContextForClipParams(
           clip?.params ?? null,
@@ -120,7 +120,7 @@ export class VideoGenerationFlowService {
 
         const payload = await this.seedanceApi.queryTask(
           apiContext.apiKey,
-          g.seedanceTaskId,
+          g.providerTaskId,
           apiContext.baseUrl,
         );
         pairs.push({ generation: g, payload });
@@ -325,7 +325,7 @@ export class VideoGenerationFlowService {
       this.logger.log(
         `generateClip queued: ${JSON.stringify({
           generationId,
-          seedanceTaskId: taskResponse.id,
+          providerTaskId: taskResponse.id,
           projectId: input.projectId,
           clipId: input.clipId,
         })}`,
@@ -501,7 +501,8 @@ export class VideoGenerationFlowService {
   }
 
   async handleCallback(taskId: string, payload: Record<string, unknown>) {
-    const generation = await this.repository.findGenerationBySeedanceTaskId(
+    const generation = await this.repository.findGenerationByProviderTaskId(
+      'ark-video@v3',
       taskId,
     );
     if (!generation) {
@@ -521,7 +522,7 @@ export class VideoGenerationFlowService {
   }) {
     const generation = await this.repository.findOwnedGeneration(args);
     if (!generation) throw new NotFoundException('Generation 不存在');
-    if (!generation.seedanceTaskId)
+    if (!generation.providerTaskId)
       throw new BadRequestException('任务尚未创建，无法刷新');
 
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) {
@@ -536,7 +537,7 @@ export class VideoGenerationFlowService {
     try {
       const payload = await this.seedanceApi.queryTask(
         apiContext.apiKey,
-        generation.seedanceTaskId,
+        generation.providerTaskId,
         apiContext.baseUrl,
       );
       await this.applyTaskStatus(generation, payload);
@@ -728,7 +729,7 @@ export class VideoGenerationFlowService {
         `generateAllClips storyboard project queued: ${JSON.stringify({
           projectId,
           generationId,
-          seedanceTaskId: taskResponse.id,
+          providerTaskId: taskResponse.id,
           holdId,
         })}`,
       );

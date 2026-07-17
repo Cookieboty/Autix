@@ -58,7 +58,7 @@ export const userGeneratedProjectsListInclude = {
           model: true,
           resolvedPrompt: true,
           params: true,
-          seedanceTaskId: true,
+          providerTaskId: true,
           status: true,
           videoUrl: true,
           lastFrameUrl: true,

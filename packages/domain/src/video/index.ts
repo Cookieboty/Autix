@@ -54,7 +54,7 @@ export interface VideoGenerationRecord {
   projectId: string;
   userId: string;
   status: string;
-  seedanceTaskId?: string | null;
+  providerTaskId?: string | null;
   videoUrl?: string | null;
   lastFrameUrl?: string | null;
   thumbnailUrl?: string | null;

@@ -16,7 +16,7 @@ export class VideoGenerationRepository {
     return this.prisma.video_clip_generations.findMany({
       where: {
         status: { in: [VideoGenStatus.queued, VideoGenStatus.pending] },
-        seedanceTaskId: { not: null },
+        providerTaskId: { not: null },
       },
       orderBy: { createdAt: 'asc' },
       take: limit,
@@ -149,7 +149,7 @@ export class VideoGenerationRepository {
     return this.prisma.video_clip_generations.update({
       where: { id: generationId },
       data: {
-        seedanceTaskId: taskId,
+        providerTaskId: taskId,
         status: VideoGenStatus.queued,
         externalStatus: 'queued',
       },
@@ -327,9 +327,9 @@ export class VideoGenerationRepository {
     });
   }
 
-  findGenerationBySeedanceTaskId(taskId: string) {
+  findGenerationByProviderTaskId(protocolKey: string, taskId: string) {
     return this.prisma.video_clip_generations.findFirst({
-      where: { seedanceTaskId: taskId },
+      where: { protocolKey, providerTaskId: taskId },
     });
   }
 
