@@ -82,7 +82,7 @@ export const SEED_MODELS: SeedModelRow[] = [
   // —— 视频（video preset）—— metadata.videoModelKind 定档
   // doubao-seedance-2.0 已移除：线上作为 private 删除，video 能力由 public 的 Fast 变体覆盖，
   // video 默认改由 Fast 承担（isDefault:true）。
-  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
+  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0-fast', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
 ];
 
 /**

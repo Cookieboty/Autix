@@ -7,9 +7,17 @@ import {
   type ParamsSchema,
   type PricingSchema,
 } from '@autix/domain/pricing';
-import { validateDescription, type LocalizedText } from '@autix/domain/model';
+import { readProtocolKey, validateDescription, type LocalizedText } from '@autix/domain/model';
+import { tryResolveAnyPreset } from '@autix/ai-adapters';
 import { PricingConfigAdminRepository } from './pricing-config-admin.repository';
 import type { Prisma } from '../../../platform/prisma/generated';
+
+/** task_definitions.category → 协议媒体。chat / prompt 无协议概念 → null。 */
+function mediaOfCategory(category: string | undefined | null): 'image' | 'video' | null {
+  if (category === 'image') return 'image';
+  if (category === 'video') return 'video';
+  return null;
+}
 
 export interface DryRunInput {
   paramsSchema: unknown;
@@ -287,6 +295,7 @@ export class PricingConfigAdminService {
     const multiplier = input.multiplier ?? 1;
     this.assertPositiveFiniteMultiplier(multiplier);
     await this.assertModelIsPriceable(input.modelConfigId);
+    await this.assertBindingMediaMatches(input.taskType, input.modelConfigId);
 
     try {
       return await this.repo.createTaskModelBinding({
@@ -353,6 +362,41 @@ export class PricingConfigAdminService {
     }
     if (model.pricingSchema === null) {
       throw new BadRequestException(`模型未配置计价规则(pricingSchema)，无法绑定: ${modelConfigId}`);
+    }
+  }
+
+  /**
+   * 绑定期的媒体一致性校验。
+   *
+   * 全局 registry 让 protocolKey 自描述媒体，解决了**模型保存期**的分派 —— 但管不到
+   * 绑定期：一个 ark-video@v3 的模型可以被绑到 image_generation，保存时完全合法，
+   * 直到运行时图片 flow 调 resolveImagePreset('ark-video@v3') 才 500。
+   * 这是「配置期静默、运行期爆炸」的典型形态。
+   *
+   * **事实源是 DB 的 task_definitions.category，不是静态的 TASK_PRESETS**：后台可以
+   * 动态创建任意 category 的任务类型（createTaskDefinition 接受任意 category），也能改
+   * 现有任务的 category（updateTaskDefinition）。拿静态数组判媒体会漏掉自定义的
+   * category:'video' 任务，也对 category 变更无感。
+   */
+  private async assertBindingMediaMatches(taskType: string, modelConfigId: string): Promise<void> {
+    const definition = await this.repo.findTaskDefinition(taskType);
+    const media = mediaOfCategory(definition?.category);
+    // chat / prompt 等任务没有协议概念，跳过。
+    if (!media) return;
+
+    const model = await this.repo.findModelConfig(modelConfigId);
+    const protocolKey = readProtocolKey(model?.metadata);
+    if (!protocolKey) {
+      throw new BadRequestException(`任务 ${taskType}（${media}）要求模型声明 metadata.protocolKey`);
+    }
+    const entry = tryResolveAnyPreset(protocolKey);
+    if (!entry) {
+      throw new BadRequestException(`未知 protocolKey: ${protocolKey}`);
+    }
+    if (entry.media !== media) {
+      throw new BadRequestException(
+        `媒体不匹配：任务 ${taskType}（${media}）不能绑定 ${entry.media} 协议的模型（${protocolKey}）`,
+      );
     }
   }
 
