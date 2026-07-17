@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { assertSource, type GallerySourcePayload } from '../../creation/gallery/gallery.helpers';
 import {
@@ -36,6 +36,18 @@ function errorDetails(error: unknown): UnknownError {
   if (error && typeof error === 'object') return error as UnknownError;
   return { message: String(error) };
 }
+
+/**
+ * Fix 2：`?? null` 只拦 null/undefined，不拦 `''`。GALLERY_IMPORT_TEMPLATE 里
+ * coverImage/title/aspectRatio 默认值就是 `''`，管理员下载模板直接填 mediaUrls
+ * 保留其余字段为空，是最正常的操作路径——不能让它落成非 null 的空串（会让
+ * `item.coverImage ?? item.mediaUrls[0]` 之类的回退失效）。纯空白同样归一。
+ */
+function str(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() ? v : null;
+}
+
+const GALLERY_KINDS = new Set(['IMAGE', 'VIDEO']);
 
 @Injectable()
 export class BatchJobService {
@@ -166,16 +178,24 @@ export class BatchJobService {
    * 媒体不在此搬运 —— 落 mediaMigrated=false 交给 GalleryMediaMigrationCron 异步处理。
    */
   private async createGalleryPost(userId: string, data: Record<string, unknown>) {
+    // 缺失/非法 kind 此前被 `?? GalleryKind.IMAGE` 静默默认为 IMAGE——一条视频误标
+    // 成图片会悄悄发布。同函数内顺手修：计入 failed 而非静默默认（见 final-fixes 审查）。
+    if (!GALLERY_KINDS.has(data.kind as string)) {
+      throw new BadRequestException(`导入项缺失或非法的 kind: ${String(data.kind)}`);
+    }
     return this.prisma.gallery_posts.create({
       data: {
-        kind: (data.kind as GalleryKind) ?? GalleryKind.IMAGE,
-        title: (data.title as string) ?? null,
-        description: (data.description as string) ?? null,
+        kind: data.kind as GalleryKind,
+        title: str(data.title),
+        description: str(data.description),
+        // category 与 CreateGalleryPostDto/UpdateGalleryPostDto 的既有设计一致：
+        // "可选：不再要求作者选分类……空缺时落 ''，由审核员在管理端补"（gallery.service.ts）。
+        // ADMIN_CURATED 导入沿用同一约定，不额外要求非空，也不落 null（category 是必填非空 String 列）。
         category: (data.category as string) ?? '',
         tags: (data.tags as string[]) ?? [],
-        coverImage: (data.coverImage as string) ?? null,
+        coverImage: str(data.coverImage),
         mediaUrls: (data.mediaUrls as string[]) ?? [],
-        aspectRatio: (data.aspectRatio as string) ?? null,
+        aspectRatio: str(data.aspectRatio),
         durationSec: (data.durationSec as number) ?? null,
         authorId: userId,
         sourceType: GallerySource.ADMIN_CURATED,

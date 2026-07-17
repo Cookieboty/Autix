@@ -251,6 +251,82 @@ describe('BatchJobService — GALLERY_POST 导入', () => {
     expect(created[0]).not.toHaveProperty('evil');
   });
 
+  // Fix 2：`(data.coverImage as string) ?? null` 只拦 null/undefined，不拦 ''。
+  // 管理员下载的 GALLERY_IMPORT_TEMPLATE 里 coverImage/title/aspectRatio 都是 ''，
+  // 最正常的操作（下载模板→填 mediaUrls→coverImage 留空）落库就是 ''，而不是 null，
+  // 导致 GalleryModerationView 的 `item.coverImage ?? item.mediaUrls[0]` 回退失效。
+  it('空字符串字段归一为 null（title/description/coverImage/aspectRatio）', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const svc = makeImportService({ created, jobUpdates: [] });
+
+    await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+      items: [
+        {
+          kind: 'IMAGE',
+          title: '',
+          description: '',
+          category: 'art',
+          coverImage: '',
+          mediaUrls: ['https://ext/a.png'],
+          aspectRatio: '',
+        },
+      ],
+    });
+    await flush();
+
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      title: null,
+      description: null,
+      coverImage: null,
+      aspectRatio: null,
+    });
+  });
+
+  it('纯空白字符串同样归一为 null（trim 后为空）', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const svc = makeImportService({ created, jobUpdates: [] });
+
+    await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+      items: [
+        {
+          kind: 'IMAGE',
+          coverImage: '   ',
+          category: 'art',
+          mediaUrls: ['https://ext/a.png'],
+        },
+      ],
+    });
+    await flush();
+
+    expect(created[0]).toMatchObject({ coverImage: null });
+  });
+
+  it('非空字符串字段照常保留原值', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const svc = makeImportService({ created, jobUpdates: [] });
+
+    await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+      items: [
+        {
+          kind: 'IMAGE',
+          title: 'hello',
+          category: 'art',
+          coverImage: 'https://ext/cover.png',
+          mediaUrls: ['https://ext/a.png'],
+          aspectRatio: '1:1',
+        },
+      ],
+    });
+    await flush();
+
+    expect(created[0]).toMatchObject({
+      title: 'hello',
+      coverImage: 'https://ext/cover.png',
+      aspectRatio: '1:1',
+    });
+  });
+
   it('单条非法不中断整批：计入 failed 与 errorLog', async () => {
     const created: Array<Record<string, unknown>> = [];
     const jobUpdates: Array<Record<string, unknown>> = [];
@@ -268,5 +344,38 @@ describe('BatchJobService — GALLERY_POST 导入', () => {
     const progress = jobUpdates.find((u) => 'processed' in u);
     expect(progress).toMatchObject({ processed: 1, failed: 1 });
     expect((progress!.errorLog as Array<{ error: string }>)[0]!.error).toContain('mediaUrls');
+  });
+
+  // 顺带修（同一函数内、低风险）：缺失/非法 kind 此前会被 `?? GalleryKind.IMAGE`
+  // 静默默认为 IMAGE，一条视频误标成图片会悄悄发布。改为计入 failed。
+  it('缺失 kind 计入 failed，而非静默默认为 IMAGE', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const jobUpdates: Array<Record<string, unknown>> = [];
+    const svc = makeImportService({ created, jobUpdates });
+
+    await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+      items: [{ category: 'art', mediaUrls: ['https://ext/a.png'] }],
+    });
+    await flush();
+
+    expect(created).toHaveLength(0);
+    const progress = jobUpdates.find((u) => 'processed' in u);
+    expect(progress).toMatchObject({ processed: 0, failed: 1 });
+    expect((progress!.errorLog as Array<{ error: string }>)[0]!.error).toContain('kind');
+  });
+
+  it('非法 kind（既非 IMAGE 也非 VIDEO）计入 failed', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const jobUpdates: Array<Record<string, unknown>> = [];
+    const svc = makeImportService({ created, jobUpdates });
+
+    await svc.createAndProcess('admin-1', 'IMPORT', ResourceType.GALLERY_POST, {
+      items: [{ kind: 'AUDIO', category: 'art', mediaUrls: ['https://ext/a.png'] }],
+    });
+    await flush();
+
+    expect(created).toHaveLength(0);
+    const progress = jobUpdates.find((u) => 'processed' in u);
+    expect(progress).toMatchObject({ processed: 0, failed: 1 });
   });
 });
