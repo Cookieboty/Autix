@@ -88,4 +88,15 @@ describe('findImageModelByHint', () => {
     expect(findImageModelByHint(models, '')).toBeNull();
     expect(findImageModelByHint(models, 'unknown')).toBeNull();
   });
+
+  test('exact name wins over substring collision regardless of array order', () => {
+    // "Nano Banana 2" 归一化 "nanobanana2" 是 "Nano Banana 2 Lite" 的子串——
+    // 精确匹配必须稳定选中自身，且与数组顺序无关（Lite 排在前也不能抢）。
+    const colliding = [
+      { id: 'nb2-lite', name: 'Nano Banana 2 Lite', provider: 'google', model: 'gemini-flash-lite' },
+      { id: 'nb2', name: 'Nano Banana 2', provider: 'google', model: 'gemini-flash' },
+    ] as ModelConfigItem[];
+    expect(findImageModelByHint(colliding, 'Nano Banana 2')?.id).toBe('nb2');
+    expect(findImageModelByHint(colliding, 'Nano Banana 2 Lite')?.id).toBe('nb2-lite');
+  });
 });

@@ -44,12 +44,21 @@ function normalizeModelHint(value: string | null | undefined) {
 export function findImageModelByHint(models: ModelConfigItem[], hint: string | null | undefined) {
   const normalizedHint = normalizeModelHint(hint);
   if (!normalizedHint) return null;
+  const fields = (model: ModelConfigItem) => [
+    model.id,
+    model.name,
+    model.model,
+    `${model.provider ?? ''} ${model.model ?? ''}`,
+  ];
+  // 先精确匹配：避免 "Nano Banana 2" 的归一化 "nanobanana2" 作为子串命中
+  // "Nano Banana 2 Lite"（"nanobanana2lite"）这类歧义——精确名/id 应稳定选中自身，
+  // 与数组顺序无关。这也让「点模型名跳转」可以安全用可读的模型名。
+  const exact = models.find((model) =>
+    fields(model).some((candidate) => normalizeModelHint(candidate) === normalizedHint),
+  );
+  if (exact) return exact;
+  // 回退：子串模糊匹配（兼容广场 recreate 等历史带入的部分 hint，如 "Nano Banana"）
   return models.find((model) =>
-    [
-      model.id,
-      model.name,
-      model.model,
-      `${model.provider ?? ''} ${model.model ?? ''}`,
-    ].some((candidate) => normalizeModelHint(candidate).includes(normalizedHint)),
+    fields(model).some((candidate) => normalizeModelHint(candidate).includes(normalizedHint)),
   ) ?? null;
 }
