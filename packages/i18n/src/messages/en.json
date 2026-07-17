@@ -5142,6 +5142,7 @@
         "source": "Source",
         "allSources": "All sources",
         "externalOnly": "External domains only",
+        "migrationFailed": "Migration failed",
         "clear": "Clear filters"
       },
       "kind": {

@@ -99,7 +99,7 @@ export class GalleryService {
     private readonly favoriteLibrary?: FavoriteLibraryService,
   ) {}
 
-  /** 管理端广场列表：页码分页 + 筛选（kind/category/sourceType/标题搜索/仅非我域名），返回 total。 */
+  /** 管理端广场列表：页码分页 + 筛选（kind/category/sourceType/标题搜索/仅非我域名/搬运失败），返回 total。 */
   async listAdminPage(rawQuery: Record<string, unknown>) {
     const q = normalizeAdminGalleryQuery(rawQuery);
     const r2Base = q.externalOnly ? (await this.r2.getPublicBaseUrl()) || null : null;

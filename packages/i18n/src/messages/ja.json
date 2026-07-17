@@ -5142,6 +5142,7 @@
         "source": "ソース",
         "allSources": "すべてのソース",
         "externalOnly": "自ドメイン以外のみ",
+        "migrationFailed": "移行失敗",
         "clear": "絞り込みをクリア"
       },
       "kind": {

@@ -2177,6 +2177,8 @@ export interface GalleryAdminListParams {
   search?: string;
   /** 仅显示非我域名（未托管到自有 R2）的作品 */
   externalOnly?: boolean;
+  /** 仅显示搬运失败（已达重试上限、worker 已止损）的作品 */
+  migrationFailed?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -2204,6 +2206,7 @@ function galleryAdminListQuery(params: GalleryAdminListParams): Record<string, s
   if (params.sourceType) q.sourceType = params.sourceType;
   if (params.search) q.search = params.search;
   if (params.externalOnly) q.externalOnly = 'true';
+  if (params.migrationFailed) q.migrationFailed = 'true';
   if (params.page) q.page = String(params.page);
   if (params.pageSize) q.pageSize = String(params.pageSize);
   return q;

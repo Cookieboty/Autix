@@ -171,9 +171,16 @@ type Filters = {
   category: string;
   sourceType: '' | GalleryAdminSourceType;
   externalOnly: boolean;
+  migrationFailed: boolean;
 };
 
-const EMPTY_FILTERS: Filters = { kind: '', category: '', sourceType: '', externalOnly: false };
+const EMPTY_FILTERS: Filters = {
+  kind: '',
+  category: '',
+  sourceType: '',
+  externalOnly: false,
+  migrationFailed: false,
+};
 
 function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   const t = useTranslations('adminOperations');
@@ -214,6 +221,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
       sourceType: filters.sourceType || undefined,
       search: search || undefined,
       externalOnly: filters.externalOnly || undefined,
+      migrationFailed: filters.migrationFailed || undefined,
       page,
       pageSize: PAGE_SIZE,
     }),
@@ -374,7 +382,17 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
           {t('gallery.filters.externalOnly')}
         </label>
 
-        {(filters.kind || filters.category || filters.sourceType || filters.externalOnly || search) && (
+        <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={filters.migrationFailed}
+            onChange={(e) => patchFilter({ migrationFailed: e.target.checked })}
+            className="cursor-pointer"
+          />
+          {t('gallery.filters.migrationFailed')}
+        </label>
+
+        {(filters.kind || filters.category || filters.sourceType || filters.externalOnly || filters.migrationFailed || search) && (
           <Button
             variant="ghost"
             size="sm"
@@ -507,7 +525,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               </EmptyMedia>
               <EmptyTitle>{isPending ? t('gallery.emptyPendingTitle') : t('gallery.emptyMatchedTitle')}</EmptyTitle>
               <EmptyDescription>
-                {search || filters.kind || filters.category || filters.sourceType || filters.externalOnly
+                {search || filters.kind || filters.category || filters.sourceType || filters.externalOnly || filters.migrationFailed
                   ? t('gallery.emptyFilteredDescription')
                   : isPending
                     ? t('gallery.emptyPendingDescription')

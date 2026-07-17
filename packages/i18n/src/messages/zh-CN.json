@@ -5142,6 +5142,7 @@
         "source": "来源",
         "allSources": "全部来源",
         "externalOnly": "仅非我域名",
+        "migrationFailed": "搬运失败",
         "clear": "清除筛选"
       },
       "kind": {

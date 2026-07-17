@@ -1,6 +1,7 @@
 import {
   ADMIN_GALLERY_DEFAULT_PAGE_SIZE,
   ADMIN_GALLERY_MAX_PAGE_SIZE,
+  GALLERY_MEDIA_MIGRATION_MAX_ATTEMPTS,
   buildAdminGalleryWhere,
   normalizeAdminGalleryQuery,
 } from './gallery.helpers';
@@ -15,6 +16,7 @@ describe('normalizeAdminGalleryQuery', () => {
       sourceType: undefined,
       search: undefined,
       externalOnly: false,
+      migrationFailed: false,
       page: 1,
       pageSize: ADMIN_GALLERY_DEFAULT_PAGE_SIZE,
     });
@@ -48,6 +50,14 @@ describe('normalizeAdminGalleryQuery', () => {
     expect(normalizeAdminGalleryQuery({ externalOnly: 'true' }).externalOnly).toBe(true);
     expect(normalizeAdminGalleryQuery({ externalOnly: '1' }).externalOnly).toBe(true);
     expect(normalizeAdminGalleryQuery({ externalOnly: 'no' }).externalOnly).toBe(false);
+  });
+
+  it('migrationFailed 接受 true/"true"/"1"，其余归一为 false', () => {
+    expect(normalizeAdminGalleryQuery({ migrationFailed: true }).migrationFailed).toBe(true);
+    expect(normalizeAdminGalleryQuery({ migrationFailed: 'true' }).migrationFailed).toBe(true);
+    expect(normalizeAdminGalleryQuery({ migrationFailed: '1' }).migrationFailed).toBe(true);
+    expect(normalizeAdminGalleryQuery({ migrationFailed: 'no' }).migrationFailed).toBe(false);
+    expect(normalizeAdminGalleryQuery({}).migrationFailed).toBe(false);
   });
 });
 
@@ -86,5 +96,38 @@ describe('buildAdminGalleryWhere', () => {
   it('externalOnly 但 R2 域名缺失：不加该过滤（无从判断）', () => {
     const where = buildAdminGalleryWhere({ ...base, externalOnly: true }, null);
     expect(where.AND).toBeUndefined();
+  });
+
+  it('migrationFailed 单独启用：mediaMigrated=false 且 mediaMigrationAttempts >= 上限', () => {
+    const where = buildAdminGalleryWhere({ ...base, migrationFailed: true }, null);
+    expect(where.AND).toEqual([
+      { mediaMigrated: false },
+      { mediaMigrationAttempts: { gte: GALLERY_MEDIA_MIGRATION_MAX_ATTEMPTS } },
+    ]);
+  });
+
+  it('未启用 migrationFailed 时 where 不含 mediaMigrated/mediaMigrationAttempts', () => {
+    const where = buildAdminGalleryWhere(base, null);
+    expect(where).not.toHaveProperty('mediaMigrated');
+    expect(where).not.toHaveProperty('mediaMigrationAttempts');
+    expect(where.AND).toBeUndefined();
+  });
+
+  // 钉住 AND 覆盖坑：externalOnly 和 migrationFailed 同时启用时，两组条件都必须出现在
+  // where.AND 里 —— 若实现直接赋值 where.AND = [...]，后写入的筛选会把先写入的整个覆盖掉。
+  it('externalOnly 与 migrationFailed 同时启用：两组条件都在 where.AND 里', () => {
+    const where = buildAdminGalleryWhere(
+      { ...base, externalOnly: true, migrationFailed: true },
+      'https://cdn.mine.com',
+    );
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        { coverImage: { not: null } },
+        { NOT: { coverImage: { startsWith: 'https://cdn.mine.com' } } },
+        { mediaMigrated: false },
+        { mediaMigrationAttempts: { gte: GALLERY_MEDIA_MIGRATION_MAX_ATTEMPTS } },
+      ]),
+    );
+    expect(Array.isArray(where.AND) && where.AND.length).toBe(4);
   });
 });

@@ -61,6 +61,7 @@ export class GalleryAdminController {
     @Query('sourceType') sourceType?: string,
     @Query('search') search?: string,
     @Query('externalOnly') externalOnly?: string,
+    @Query('migrationFailed') migrationFailed?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
@@ -71,6 +72,7 @@ export class GalleryAdminController {
       sourceType,
       search,
       externalOnly,
+      migrationFailed,
       page,
       pageSize,
     });

@@ -5142,6 +5142,7 @@
         "source": "來源",
         "allSources": "全部來源",
         "externalOnly": "僅非本站網域",
+        "migrationFailed": "搬運失敗",
         "clear": "清除篩選"
       },
       "kind": {

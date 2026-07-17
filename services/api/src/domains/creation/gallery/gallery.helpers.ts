@@ -201,6 +201,13 @@ export function assertInStationMediaUrls(
 }
 
 // ── 管理端广场列表：分页 + 筛选 ────────────────────────────────────────────
+
+// 搬不动的作品会滞留 PENDING 不发布，代价远高于旧设计（旧设计放弃=带外链继续发布），
+// 故给瞬时故障（503/超时）留重试余地。达上限后由 findPostsPendingMediaMigration 的
+// attempts < maxAttempts 条件自然掉出队列 —— 这也是「搬运失败」筛选判定"已止损"的同一上限，
+// 与 GalleryMediaMigrationService 共用同一常量，避免两处静默错位（worker 改了阈值、筛选却按旧值找）。
+export const GALLERY_MEDIA_MIGRATION_MAX_ATTEMPTS = 3;
+
 const ADMIN_STATUSES: GalleryStatus[] = ['PENDING', 'PUBLISHED', 'HIDDEN', 'REJECTED', 'UNPUBLISHED'];
 const ADMIN_KINDS: GalleryKind[] = ['IMAGE', 'VIDEO'];
 const ADMIN_SOURCE_TYPES: GallerySource[] = [
@@ -220,6 +227,8 @@ export interface AdminGalleryQuery {
   search?: string;
   /** 仅显示"非我域名"（coverImage 不在自有 R2）的作品 */
   externalOnly: boolean;
+  /** 仅显示"搬运失败"（mediaMigrated=false 且已达重试上限、worker 已止损）的作品 */
+  migrationFailed: boolean;
   page: number;
   pageSize: number;
 }
@@ -247,6 +256,7 @@ export function normalizeAdminGalleryQuery(raw: {
   sourceType?: unknown;
   search?: unknown;
   externalOnly?: unknown;
+  migrationFailed?: unknown;
   page?: unknown;
   pageSize?: unknown;
 }): AdminGalleryQuery {
@@ -259,6 +269,7 @@ export function normalizeAdminGalleryQuery(raw: {
     sourceType: pickEnum(ADMIN_SOURCE_TYPES, raw.sourceType),
     search: search || undefined,
     externalOnly: toBool(raw.externalOnly),
+    migrationFailed: toBool(raw.migrationFailed),
     page: toPositiveInt(raw.page, 1),
     pageSize: Math.min(
       toPositiveInt(raw.pageSize, ADMIN_GALLERY_DEFAULT_PAGE_SIZE),
@@ -283,11 +294,23 @@ export function buildAdminGalleryWhere(
   if (q.category) where.category = q.category;
   if (q.sourceType) where.sourceType = q.sourceType as Prisma.gallery_postsWhereInput['sourceType'];
   if (q.search) where.title = { contains: q.search, mode: 'insensitive' };
+
+  // 多个筛选各自往 AND 数组里 push 自己的条件，而不是整段赋值 where.AND ——
+  // 直接赋值会让后写入的筛选把先写入的整个覆盖掉（两个筛选同时勾选时静默少过滤一个条件）。
+  const and: Prisma.gallery_postsWhereInput[] = [];
   if (q.externalOnly && r2PublicBase) {
-    where.AND = [
+    and.push(
       { coverImage: { not: null } },
       { NOT: { coverImage: { startsWith: r2PublicBase } } },
-    ];
+    );
   }
+  if (q.migrationFailed) {
+    and.push(
+      { mediaMigrated: false },
+      { mediaMigrationAttempts: { gte: GALLERY_MEDIA_MIGRATION_MAX_ATTEMPTS } },
+    );
+  }
+  if (and.length > 0) where.AND = and;
+
   return where;
 }

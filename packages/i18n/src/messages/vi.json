@@ -5142,6 +5142,7 @@
         "source": "Nguồn",
         "allSources": "Tất cả nguồn",
         "externalOnly": "Chỉ ngoài miền của tôi",
+        "migrationFailed": "Di chuyển thất bại",
         "clear": "Xóa bộ lọc"
       },
       "kind": {

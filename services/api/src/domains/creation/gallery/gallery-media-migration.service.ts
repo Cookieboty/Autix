@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ResourceMigrationService } from '../../admin/admin/resource-migration.service';
 import { GalleryRepository } from './gallery.repository';
 import { runWithConcurrency } from './run-with-concurrency';
+import { GALLERY_MEDIA_MIGRATION_MAX_ATTEMPTS } from './gallery.helpers';
 
 /** 广场作品导入后需要迁移到 R2 的媒体字段（区别于模板的 exampleImages/exampleMedia）。 */
 const GALLERY_MEDIA_FIELDS = ['coverImage', 'mediaUrls'] as const;
@@ -9,7 +10,8 @@ const GALLERY_MEDIA_FIELDS = ['coverImage', 'mediaUrls'] as const;
 // 搬不动的作品会滞留 PENDING 不发布，代价远高于旧设计（旧设计放弃=带外链继续发布），
 // 故给瞬时故障（503/超时）留重试余地。达上限后由 findPostsPendingMediaMigration 的
 // attempts < maxAttempts 条件自然掉出队列。
-const DEFAULT_MAX_ATTEMPTS = 3;
+// 上限值定义在 gallery.helpers.ts（管理端"搬运失败"筛选与本 worker 共用同一常量，避免两处静默错位）。
+const DEFAULT_MAX_ATTEMPTS = GALLERY_MEDIA_MIGRATION_MAX_ATTEMPTS;
 const DEFAULT_BATCH_SIZE = 20;
 const DEFAULT_CONCURRENCY = 5;
 
