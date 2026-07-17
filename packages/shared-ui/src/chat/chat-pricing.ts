@@ -54,7 +54,8 @@ export function buildVideoEstimateInput(params: {
     modelConfigId: params.model?.id,
     params: {
       resolution: normalizeVideoResolutionForModel(params.resolutionValue, params.model),
-      seconds: Math.max(1, Number(params.duration) || DEFAULT_VIDEO_FRAME_DURATION),
+      // 原生化后计价参数即火山原生名 duration；pricingSchema perUnit duration。
+      duration: Math.max(1, Number(params.duration) || DEFAULT_VIDEO_FRAME_DURATION),
       referenceImages: isReferenceMode
         ? params.materials.filter((material) => material.type === 'image').length
         : params.frames.filter((frame) => frame.material?.type === 'image').length,

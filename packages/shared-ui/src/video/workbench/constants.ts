@@ -110,7 +110,7 @@ export interface VideoClipEstimate {
   clip: VideoClip;
   estimate: TaskEstimateResult;
   taskType: string;
-  seconds: number;
+  duration: number;
   resolution: string;
   referenceImages: number;
   hasVideoInput: boolean;
@@ -143,7 +143,7 @@ export function buildVideoEstimateInput(
   videoModel?: ModelConfigItem | null,
 ): TaskEstimateInput & {
   params: {
-    seconds: number;
+    duration: number;
     resolution: string;
     referenceImages: number;
     hasVideoInput: boolean;
@@ -153,7 +153,7 @@ export function buildVideoEstimateInput(
   const params = clip.params ?? {};
   const taskType = resolveVideoPricingTaskType(clip, videoModel);
   const resolution = normalizeVideoResolutionForModel(params.resolution, videoModel);
-  const seconds = normalizeVideoDuration(params.duration);
+  const duration = normalizeVideoDuration(params.duration);
   const referenceImages = clip.materials.filter((material) =>
     ['first_frame', 'last_frame', 'reference_image'].includes(material.role),
   ).length;
@@ -170,7 +170,7 @@ export function buildVideoEstimateInput(
   return {
     taskType,
     modelConfigId,
-    params: { resolution, seconds, referenceImages, hasVideoInput, hasAudioInput },
+    params: { resolution, duration, referenceImages, hasVideoInput, hasAudioInput },
   };
 }
 
@@ -179,7 +179,7 @@ export function buildVideoBatchEstimateInput(
   videoModels: ModelConfigItem[],
 ): (TaskEstimateInput & {
   params: {
-    seconds: number;
+    duration: number;
     resolution: string;
     referenceImages: number;
     hasVideoInput: boolean;
@@ -196,7 +196,7 @@ export function buildVideoBatchEstimateInput(
       ...input,
       params: {
         ...input.params,
-        seconds: input.params.seconds + clipInput.params.seconds,
+        duration: input.params.duration + clipInput.params.duration,
         referenceImages: input.params.referenceImages + clipInput.params.referenceImages,
         hasVideoInput: input.params.hasVideoInput || clipInput.params.hasVideoInput,
         hasAudioInput: input.params.hasAudioInput || clipInput.params.hasAudioInput,

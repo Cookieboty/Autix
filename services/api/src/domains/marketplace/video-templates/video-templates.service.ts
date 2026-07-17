@@ -241,7 +241,7 @@ export class VideoTemplatesService extends BaseResourceService {
       const estimate = await this.estimateTemplateGenerationCost({
         taskType: 'video_generation',
         modelConfigId: data.modelConfigId,
-        seconds: tpl.durationSec ?? undefined,
+        duration: tpl.durationSec ?? undefined,
         resolution: typeof tpl.defaultParams?.resolution === 'string'
           ? tpl.defaultParams.resolution
           : undefined,
@@ -340,7 +340,7 @@ export class VideoTemplatesService extends BaseResourceService {
   private async estimateTemplateGenerationCost(input: {
     taskType: string;
     modelConfigId?: string;
-    seconds?: number;
+    duration?: number;
     resolution?: string;
     referenceImages?: number;
     membershipLevel?: number;
@@ -349,8 +349,10 @@ export class VideoTemplatesService extends BaseResourceService {
     amount: number;
     pricingSnapshot?: Prisma.InputJsonValue;
   }> {
+    // 原生化后视频计价参数即火山原生名 duration（perUnit duration）。旧写 seconds →
+    // estimateCost 取不到值 → 模板视频每秒费归零、少收费。
     const params: Record<string, unknown> = { referenceImages: input.referenceImages ?? 0 };
-    if (input.seconds !== undefined) params.seconds = input.seconds;
+    if (input.duration !== undefined) params.duration = input.duration;
     if (input.resolution !== undefined) params.resolution = input.resolution;
 
     const estimate = await this.pointsService.estimateCost({

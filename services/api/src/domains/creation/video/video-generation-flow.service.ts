@@ -43,6 +43,8 @@ import {
   queryVideoTask,
   resolveVideoPreset,
   submitVideoTask,
+  videoQueryUrl,
+  videoSubmitUrl,
   type VideoTaskOutcome,
 } from '@autix/ai-adapters/video';
 import { readProtocolKey } from '@autix/domain/model';
@@ -391,6 +393,19 @@ export class VideoGenerationFlowService {
     }
 
     try {
+      // 运行日志：打到哪个上游接口 + 实际下发的调用参数（endpoint 与 submitVideoTask
+      // 内部同源，见 videoSubmitUrl）。放在 submit 之前——即使上游报错也能看到本次
+      // 请求的接口与参数。
+      this.logger.log(
+        `generateClip upstream call: ${JSON.stringify({
+          generationId,
+          protocolKey: preset.key,
+          endpoint: videoSubmitUrl(preset, callRequest.baseUrl),
+          method: preset.submit.endpoint.method,
+          model: callRequest.model,
+          params: callRequest.params,
+        })}`,
+      );
       const { providerTaskId } = await submitVideoTask(callRequest);
 
       await this.repository.markGenerationQueued(generationId, providerTaskId);
@@ -634,10 +649,21 @@ export class VideoGenerationFlowService {
       generation.protocolKey ?? LEGACY_VIDEO_PROTOCOL_KEY,
     );
 
+    const queryBaseUrl = resolveEngineBaseUrl(apiContext.baseUrl);
+    // 运行日志：手动刷新是用户/管理员触发的低频调用，记录查询打到哪个上游接口。
+    // 批量轮询 cron（pollActiveGenerations）不打此日志——每几秒一次会刷屏。
+    this.logger.log(
+      `refreshGeneration upstream call: ${JSON.stringify({
+        generationId: generation.id,
+        protocolKey: preset.key,
+        endpoint: videoQueryUrl(preset, queryBaseUrl, generation.providerTaskId),
+        method: preset.query.endpoint.method,
+      })}`,
+    );
     try {
       const outcome = await queryVideoTask({
         preset,
-        baseUrl: resolveEngineBaseUrl(apiContext.baseUrl),
+        baseUrl: queryBaseUrl,
         apiKey: apiContext.apiKey,
         taskId: generation.providerTaskId,
         onWarn: (m) => this.logger.warn(`generation ${generation.id}: ${m}`),
@@ -833,6 +859,17 @@ export class VideoGenerationFlowService {
         modelConfigId,
       });
 
+      // 运行日志：同 generateClip —— 接口 + 调用参数，放在 submit 之前。
+      this.logger.log(
+        `generateAllClips storyboard upstream call: ${JSON.stringify({
+          generationId,
+          protocolKey: preset.key,
+          endpoint: videoSubmitUrl(preset, callRequest.baseUrl),
+          method: preset.submit.endpoint.method,
+          model: callRequest.model,
+          params: callRequest.params,
+        })}`,
+      );
       const { providerTaskId } = await submitVideoTask(callRequest);
       await this.repository.markGenerationQueued(generationId, providerTaskId);
       this.logger.log(

@@ -135,6 +135,27 @@ describe('video generation flow helpers', () => {
     );
   });
 
+  it('sends a single clip prompt verbatim — no 分镜脚本 scaffolding even under forced storyboard mode', () => {
+    // generateAllClips 对单条 clip 也会强制 generationMode='storyboard'；这条锁死：
+    // 单条 + 无整片提示词时，原样透传用户 prompt，绝不包成「完整分镜脚本 / 分镜 1「x」：x」。
+    expect(
+      resolveStoryboardVideoPrompt({
+        params: { generationMode: 'storyboard' },
+        clips: [{ order: 1, title: '骑摩托的妹子', prompt: '骑摩托的妹子' }],
+      }),
+    ).toBe('骑摩托的妹子');
+  });
+
+  it('keeps the 整片提示词 when a single clip has a global storyboard prompt', () => {
+    // 单条但有整片提示词：仍需带上整片风格，不能只发 clip prompt。
+    expect(
+      resolveStoryboardVideoPrompt({
+        params: { generationMode: 'storyboard', storyboardPrompt: '雨夜霓虹' },
+        clips: [{ order: 1, title: '开场', prompt: '城市远景' }],
+      }),
+    ).toBe('整片提示词：雨夜霓虹\n\n完整分镜脚本：\n分镜 1「开场」：城市远景');
+  });
+
   it('resolves generate_audio params with existing precedence', () => {
     expect(
       resolveVideoGenerateAudio({

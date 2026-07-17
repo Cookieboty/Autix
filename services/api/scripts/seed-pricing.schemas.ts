@@ -43,6 +43,12 @@ export function buildVideoParamsSchema(model: ModelSchemaHint): ParamsSchema {
     : resolutions[0];
   const has4k = resolutions.includes('4k');
 
+  // ratio 也必须按能力表出，且与前端下拉同源（VIDEO_ASPECT_RATIO_VALUES）。否则前端能选
+  // adaptive/4:3/3:4/21:9，而 schema 只允许 1:1/16:9/9:16 → 创建 clip 时 ajv 直接拒
+  // 「/ratio must be equal to one of the allowed values」，链路根本进不到生成。
+  const ratios = [...cap.ratios];
+  const defaultRatio = ratios.includes(cap.defaultRatio) ? cap.defaultRatio : ratios[0];
+
   const schema: ParamsSchema = {
     $schema: base.$schema,
     type: 'object',
@@ -50,6 +56,7 @@ export function buildVideoParamsSchema(model: ModelSchemaHint): ParamsSchema {
     properties: {
       ...base.properties,
       resolution: { ...base.properties.resolution, enum: resolutions, default: defaultResolution },
+      ratio: { ...base.properties.ratio, enum: ratios, default: defaultRatio },
     },
   };
   if (has4k && base.allOf) schema.allOf = base.allOf;

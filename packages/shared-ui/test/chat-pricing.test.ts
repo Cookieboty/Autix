@@ -77,7 +77,7 @@ describe('chat pricing helpers', () => {
       modelConfigId: 'model-1',
       params: {
         resolution: '720p',
-        seconds: 5,
+        duration: 5,
         referenceImages: 1,
         hasVideoInput: true,
         hasAudioInput: true,
@@ -102,7 +102,7 @@ describe('chat pricing helpers', () => {
       taskType: 'video_generation',
       params: {
         resolution: '1080p',
-        seconds: 8,
+        duration: 8,
         referenceImages: 1,
         hasVideoInput: true,
         hasAudioInput: true,

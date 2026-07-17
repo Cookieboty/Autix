@@ -17,6 +17,23 @@ function buildUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}${path}`;
 }
 
+/**
+ * 提交端点 URL。与 `submitVideoTask` 内部真实发请求用的是同一处构造，供上层日志记录
+ * 「这次调用打到哪个上游接口」——不重算、不漂移。
+ */
+export function videoSubmitUrl(preset: VideoProtocolPreset, baseUrl: string): string {
+  return buildUrl(baseUrl, preset.submit.endpoint.path);
+}
+
+/** 查询端点 URL（含 {taskId} 替换）。与 `queryVideoTask` 内部同源。 */
+export function videoQueryUrl(
+  preset: VideoProtocolPreset,
+  baseUrl: string,
+  taskId: string,
+): string {
+  return buildUrl(baseUrl, preset.query.endpoint.path.replace('{taskId}', encodeURIComponent(taskId)));
+}
+
 function authHeaders(preset: VideoProtocolPreset, apiKey: string): Record<string, string> {
   if (preset.auth.in !== 'header') return {};
   return { [preset.auth.name]: preset.auth.template.replace('{apiKey}', apiKey) };
@@ -54,7 +71,7 @@ async function callUpstream(
 /** 提交生成任务，返回上游的任务 id。 */
 export async function submitVideoTask(req: VideoCallRequest): Promise<{ providerTaskId: string }> {
   const { preset } = req;
-  const url = buildUrl(req.baseUrl, preset.submit.endpoint.path);
+  const url = videoSubmitUrl(preset, req.baseUrl);
   const payload = await callUpstream(preset, url, {
     method: preset.submit.endpoint.method,
     headers: { 'Content-Type': 'application/json', ...authHeaders(preset, req.apiKey) },
@@ -82,10 +99,7 @@ export async function queryVideoTask(args: {
   onWarn?: (message: string) => void;
 }): Promise<VideoTaskOutcome> {
   const { preset } = args;
-  const url = buildUrl(
-    args.baseUrl,
-    preset.query.endpoint.path.replace('{taskId}', encodeURIComponent(args.taskId)),
-  );
+  const url = videoQueryUrl(preset, args.baseUrl, args.taskId);
   const payload = await callUpstream(preset, url, {
     method: preset.query.endpoint.method,
     headers: authHeaders(preset, args.apiKey),

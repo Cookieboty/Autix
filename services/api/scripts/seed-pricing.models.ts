@@ -54,7 +54,6 @@ export const SEED_MODELS: SeedModelRow[] = [
   { name: 'DeepSeek V4 Flash', provider: 'amux', model: 'deepseek-v4-flash', type: 'general', capabilities: ['text'], isDefault: false, metadata: {}, description: { en: 'DeepSeek fast model', 'zh-CN': 'DeepSeek 快速模型' } },
   // 智谱 GLM 5.2 / 5.1
   { name: 'GLM-5.2', provider: 'amux', model: 'glm-5.2', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'Zhipu GLM flagship model', 'zh-CN': '智谱 GLM 旗舰模型' } },
-  // glm-5.1 已移除：线上作为 private 删除，且有 public GLM-5.2 覆盖同系列，seed 无需再建。
   // Google Gemini 3.5
   { name: 'Gemini 3.5 Pro', provider: 'amux', model: 'gemini-3.5-pro', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'Google Gemini flagship model', 'zh-CN': 'Google Gemini 旗舰模型' } },
   { name: 'Gemini 3.5 Flash', provider: 'amux', model: 'gemini-3.5-flash', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Google Gemini fast model', 'zh-CN': 'Google Gemini 快速模型' } },
@@ -80,8 +79,10 @@ export const SEED_MODELS: SeedModelRow[] = [
   { name: 'Seedream 5.0 Lite', provider: 'amux', model: 'doubao-seedream-5-0-lite', type: 'general', capabilities: ['image'], isDefault: false, metadata: { limits: { maxCount: 15 }, operations: ['generate'], modelFamily: 'seedream', protocolKey: 'doubao-images@v1' }, description: { en: 'ByteDance Seedream lite model', 'zh-CN': '字节 Seedream 轻量模型' } },
 
   // —— 视频（video preset）—— metadata.videoModelKind 定档
-  // doubao-seedance-2.0 已移除：线上作为 private 删除，video 能力由 public 的 Fast 变体覆盖，
-  // video 默认改由 Fast 承担（isDefault:true）。
+  // doubao-seedance-2.0 恢复：与 Fast 变体一并提供。Fast 仍是 video 默认（isDefault:true），
+  // 2.0 为非默认可选项。两者 paramsSchema 由 buildVideoParamsSchema 按各自能力表生成
+  // （2.0 含 1080p/4k、Fast 到 720p），pricingSchema 走 MODEL_PRICING 的逐模型档位。
+  { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance video model', 'zh-CN': 'Seedance 视频模型' } },
   { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0-fast', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
 ];
 

@@ -89,7 +89,7 @@ describe('buildPublicVideoEstimateInput', () => {
       modelConfigId: undefined,
       params: {
         resolution: '1080p',
-        seconds: 5,
+        duration: 5,
         referenceImages: 0,
         hasVideoInput: false,
         hasAudioInput: true,
@@ -108,7 +108,7 @@ describe('buildPublicVideoEstimateInput', () => {
     ).toMatchObject({
       params: {
         resolution: '720p',
-        seconds: 1,
+        duration: 1,
         hasAudioInput: false,
       },
     });
@@ -142,7 +142,7 @@ describe('buildPublicVideoEstimateInput', () => {
       modelConfigId: 'seedance-lite-id',
       params: {
         resolution: '720p',
-        seconds: 4,
+        duration: 4,
         hasAudioInput: true,
       },
     });
@@ -174,7 +174,7 @@ describe('本地视频计价：display == charge', () => {
   const paramsSchema = videoPreset.paramsSchema as unknown as ParamsSchema;
 
   test('presenter 造参 + computeTaskEstimate 本地算出整数点数，无 violations', () => {
-    // 1080p × 5s，用 video 预设：base(add 1) → resolution(mul 800) → seconds(mul ×5) = 4000。
+    // 1080p × 5s，用 video 预设：base(add 1) → resolution(mul 800) → duration(mul ×5) = 4000。
     const { params } = buildPublicVideoEstimateInput({
       model: 'seedance-2.0',
       duration: 5,

@@ -214,14 +214,23 @@ export function resolveStoryboardVideoPrompt(input: {
   clips: StoryboardVideoPromptClip[];
   params: Pick<VideoGenerationClipParams, 'generationMode' | 'storyboardPrompt'>;
 }): string {
-  if (input.params.generationMode !== 'storyboard') {
-    return resolveClipPrompt(input.clips[0]?.prompt ?? null, input.params);
-  }
-
   const storyboardPrompt =
     typeof input.params.storyboardPrompt === 'string'
       ? input.params.storyboardPrompt.trim()
       : '';
+
+  // 单条 clip 且无整片提示词：直接发用户原始 prompt，**不套「完整分镜脚本 / 分镜 N」脚手架**。
+  // generateAllClips 会对整个项目（哪怕只有 1 条 clip）强制 generationMode='storyboard'，
+  // 于是原本一句「骑摩托的妹子」会被包成「完整分镜脚本：\n分镜 1「骑摩托的妹子」：骑摩托的妹子」。
+  // 分镜脚手架只对真正的多分镜项目有意义；单条生成必须原样透传。
+  if (input.clips.length <= 1 && !storyboardPrompt) {
+    return input.clips[0]?.prompt?.trim() ?? '';
+  }
+
+  if (input.params.generationMode !== 'storyboard') {
+    return resolveClipPrompt(input.clips[0]?.prompt ?? null, input.params);
+  }
+
   const storyboardLines = [...input.clips]
     .sort((a, b) => a.order - b.order)
     .map((clip) => {

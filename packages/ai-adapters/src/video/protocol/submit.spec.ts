@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { submitVideoTask, queryVideoTask } from './submit';
+import { submitVideoTask, queryVideoTask, videoSubmitUrl, videoQueryUrl } from './submit';
 import { arkVideoV3 } from './presets/vendors';
 import { setSafeFetchResolver } from '../../core/safe-fetch';
 import { VideoUpstreamError } from './types';
@@ -89,5 +89,27 @@ describe('queryVideoTask', () => {
 
     expect(seenUrl).toBe('https://api.example.com/api/v3/contents/generations/tasks/task_9');
     expect(outcome).toMatchObject({ kind: 'succeeded', sourceUrl: 'https://x/v.mp4' });
+  });
+});
+
+// 上层日志用这两个纯函数记录「打到哪个上游接口」，必须与 submit/query 实际发请求
+// 的 URL 逐字节一致（上面两条 fetch 断言即真相），故这里锁死同样的构造语义。
+describe('videoSubmitUrl / videoQueryUrl', () => {
+  it('builds the submit URL and strips a trailing slash on the baseUrl', () => {
+    expect(videoSubmitUrl(arkVideoV3, 'https://api.example.com')).toBe(
+      'https://api.example.com/api/v3/contents/generations/tasks',
+    );
+    expect(videoSubmitUrl(arkVideoV3, 'https://api.example.com/')).toBe(
+      'https://api.example.com/api/v3/contents/generations/tasks',
+    );
+  });
+
+  it('builds the query URL with the taskId url-encoded', () => {
+    expect(videoQueryUrl(arkVideoV3, 'https://api.example.com', 'task_9')).toBe(
+      'https://api.example.com/api/v3/contents/generations/tasks/task_9',
+    );
+    expect(videoQueryUrl(arkVideoV3, 'https://api.example.com', 'a/b?c')).toBe(
+      'https://api.example.com/api/v3/contents/generations/tasks/a%2Fb%3Fc',
+    );
   });
 });

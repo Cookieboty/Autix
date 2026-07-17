@@ -276,7 +276,7 @@ describe('VideoTemplatesService.createGeneration billing', () => {
     expect(points.estimateCost).toHaveBeenCalledWith({
       taskType: 'video_generation',
       modelConfigId: 'model-1',
-      params: { referenceImages: 1, seconds: 5 },
+      params: { referenceImages: 1, duration: 5 },
       membershipLevel: 2,
     });
 
@@ -312,7 +312,7 @@ describe('VideoTemplatesService.createGeneration billing', () => {
     expect(estimateArgs).not.toHaveProperty('modelConfigId');
     expect(estimateArgs).toEqual({
       taskType: 'video_generation',
-      params: { referenceImages: 0, seconds: 5 },
+      params: { referenceImages: 0, duration: 5 },
       membershipLevel: 2,
     });
   });
@@ -337,7 +337,7 @@ describe('VideoTemplatesService.createGeneration billing', () => {
 });
 
 describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', () => {
-  it('packs seconds/resolution/referenceImages into params', async () => {
+  it('packs duration/resolution/referenceImages into params', async () => {
     const estimateCost = vi.fn().mockResolvedValue({
       taskType: 'video_generation',
       estimatedCost: 320,
@@ -348,7 +348,7 @@ describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', 
     await (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
       taskType: 'video_generation',
       modelConfigId: 'model-1',
-      seconds: 5,
+      duration: 5,
       resolution: '720p',
       referenceImages: 0,
       membershipLevel: 0,
@@ -357,7 +357,7 @@ describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', 
     expect(estimateCost).toHaveBeenCalledWith({
       taskType: 'video_generation',
       modelConfigId: 'model-1',
-      params: { seconds: 5, resolution: '720p', referenceImages: 0 },
+      params: { duration: 5, resolution: '720p', referenceImages: 0 },
       membershipLevel: 0,
     });
   });
@@ -372,7 +372,7 @@ describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', 
 
     await (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
       taskType: 'video_generation',
-      seconds: 5,
+      duration: 5,
       resolution: '720p',
       referenceImages: 0,
     });
@@ -381,7 +381,7 @@ describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', 
     expect(args).not.toHaveProperty('modelConfigId');
     expect(args).toEqual({
       taskType: 'video_generation',
-      params: { seconds: 5, resolution: '720p', referenceImages: 0 },
+      params: { duration: 5, resolution: '720p', referenceImages: 0 },
     });
   });
 
@@ -393,7 +393,7 @@ describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', 
       (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
         taskType: 'video_generation',
         modelConfigId: 'model-1',
-        seconds: 5,
+        duration: 5,
         resolution: '720p',
       }),
     ).rejects.toThrow('模型未绑定任务');
