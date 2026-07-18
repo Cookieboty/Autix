@@ -67,6 +67,22 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   '/profile': NOINDEX,
   '/notifications': NOINDEX,
 
+  // 素材库（登录后私有，与 /library、/materials 同族）。`/asset` 本身只是
+  // 客户端 replace 到 `/asset/all`，仍需声明——getPolicy() 按精确字符串匹配。
+  '/asset': NOINDEX,
+  '/asset/[bucket]': NOINDEX,
+  '/asset/folder/[id]': NOINDEX,
+
+  // 账户设置（登录后私有，与 /profile 同族）
+  '/me/settings': NOINDEX,
+  '/me/settings/promo': NOINDEX,
+  '/me/settings/subscription': NOINDEX,
+  '/me/settings/usage': NOINDEX,
+
+  // Gallery 详情：内容客户端拉取，暂不做 per-item SEO/alternates。
+  // 上面 `/u/[handle]` 的注释即以本条为参照策略。
+  '/gallery/[id]': NOINDEX,
+
   // 后台管理（每个都是具体路径，无 catch-all）
   '/admin': NOINDEX,
   '/admin/audit-logs': NOINDEX,

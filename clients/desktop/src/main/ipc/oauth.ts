@@ -6,6 +6,7 @@ import {
   reserveOAuthStepUpLoopback,
   type OAuthStepUpLoopbackReservation,
 } from '../oauth-step-up-loopback';
+import { t } from '../i18n';
 
 const TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -47,7 +48,7 @@ function runLoopbackFlow(input: StartInput): Promise<StartResult> {
       const result = parseCallbackResult(req.url ?? '', stateToken);
       const done = Boolean(result.code || result.error);
       res.writeHead(done ? 200 : 404, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(done ? '<html><body>登录完成，可关闭此窗口。</body></html>' : 'not found');
+      res.end(done ? `<html><body>${t('desktop.oauth.loopbackDone')}</body></html>` : 'not found');
       if (done) finish(result);
     });
 

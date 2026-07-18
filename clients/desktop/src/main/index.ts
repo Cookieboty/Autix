@@ -33,6 +33,7 @@ import { registerTray } from './tray';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts';
 import { handleDeepLink, registerDeepLink } from './deep-link';
 import { initUpdater } from './updater';
+import { initMainI18n } from './i18n';
 
 log.initialize({ preload: true });
 log.info(`[app] starting Amux Studio (electron ${process.versions.electron})`);
@@ -69,6 +70,8 @@ if (!gotLock) {
 registerDeepLink();
 
 app.whenReady().then(async () => {
+  await initMainI18n();
+
   registerAuthIpc();
   registerOAuthIpc();
   registerWindowCtrlIpc();
@@ -123,7 +126,7 @@ app.on('web-contents-created', (_event, contents) => {
     ];
     if (!allowedPrefixes.some((p) => url.startsWith(p))) {
       e.preventDefault();
-      shell.openExternal(url).catch(() => {});
+      shell.openExternal(url).catch(() => { });
     }
   });
 });

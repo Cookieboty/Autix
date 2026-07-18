@@ -1,0 +1,1588 @@
+{
+  "chat": {
+    "newConversation": "New Chat",
+    "searchConversation": "Search conversations...",
+    "noConversations": "No conversations",
+    "noMatchingConversation": "No matching conversations",
+    "deleteConversationTitle": "Delete Conversation",
+    "deleteConversationMsg": "Are you sure you want to delete conversation {title}? All messages, artifacts, and version history will be permanently removed.",
+    "inputPlaceholder": "Enter your request",
+    "inputPlaceholderWithImage": "Enter text or paste an image",
+    "sendMessage": "Send message",
+    "generatingReply": "Generating reply",
+    "sendShortcut": "⌘/Ctrl + Enter to send",
+    "addImage": "Add image",
+    "imageCount": "{count}/{max} images",
+    "thinking": "Thinking",
+    "thinkingDefault": "Amux Studio is preparing the response",
+    "thinkingProgress": "Executing step {step} of {totalSteps}",
+    "thinkingPreparing": "Preparing response…",
+    "copied": "Copied",
+    "copy": "Copy",
+    "copyReply": "Copy reply",
+    "preview": {
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "download": "Download",
+      "openOriginal": "Open original",
+      "close": "Close preview"
+    },
+    "images": {
+      "title": "Images",
+      "empty": "No images yet",
+      "count": "{count} total",
+      "expand": "Expand images panel",
+      "collapse": "Collapse images panel",
+      "refresh": "Refresh",
+      "retry": "Retry",
+      "error": "Failed to load"
+    },
+    "selectModel": "Select model",
+    "default": "Default",
+    "searchModels": "Search models...",
+    "noModelsFound": "No matching models",
+    "chatWorkspace": "Chat workspace",
+    "welcomeMessage": "Hello! I'm the Amux Studio AI assistant.\nDescribe what you need, and I'll help you generate PRDs, code, designs, or prototypes.",
+    "selectOrCreateChat": "Select or create a conversation to start",
+    "requestError": "Request error, please retry",
+    "deepSearch": "Deep Search",
+    "newChat": "New Chat",
+    "deleteChat": "Delete Chat",
+    "deleteConfirm": "Are you sure you want to delete this chat?",
+    "renameChat": "Rename Chat",
+    "template": {
+      "drawerTitle": "Select Image Template",
+      "searchPlaceholder": "Search templates",
+      "current": "Current",
+      "editPrompt": "Edit Prompt",
+      "edit": "Edit",
+      "reusePrompt": "Reuse",
+      "removeTemplate": "Remove template",
+      "dialogTitle": "{name} · Prompt Editor",
+      "sectionRaw": "Template Text",
+      "sectionReferences": "Reference Images",
+      "sectionVariables": "Variables",
+      "refSelectAll": "Select All",
+      "refClear": "Deselect",
+      "refSelectedCount": "{n}/{total} selected",
+      "refEmpty": "No reference images for this template",
+      "reset": "Reset",
+      "applyToInput": "Apply to Input",
+      "noVariables": "No variables in this template",
+      "variableCount": "{count} variables",
+      "imagesCapHit": "Reference images merged up to {max} limit",
+      "confirmSwitch": "Switching will clear your current input and reference images. Continue?",
+      "pendingVariables": "{n} variables pending",
+      "empty": "No templates available",
+      "templateAlt": "Template",
+      "noCover": "No cover",
+      "untitled": "Untitled template",
+      "useThisTemplate": "Use this template",
+      "dialogDescription": "Edit template variables and reference assets. Applying will fill the session input.",
+      "drawerTitleVideo": "Select Video Template"
+    },
+    "error": {
+      "chatModelInvalid": "Selected chat model does not support text generation. Please change or leave empty for default.",
+      "defaultModelMissing": "No default general model configured for prompt generation",
+      "imageMaxReached": "You can add at most {max} images",
+      "imageMaxPartial": "Reached the {max}-image limit; only the first {n} were added",
+      "requestFailedTitle": "Request failed",
+      "imageUploadFailed": "Image upload failed",
+      "imageUploadMissingUrl": "Image upload response is missing a URL",
+      "switchModeFailed": "Failed to switch mode",
+      "selectImageTemplateFirst": "Please select an image template first",
+      "messageSaveFailed": "Failed to save message",
+      "modeComingSoon": "{kind} mode is coming soon and does not support sending yet",
+      "attachmentUploadFailed": "Attachment upload failed"
+    },
+    "toolbar": {
+      "selectModel": "Select model",
+      "selectTemplate": "Pick template",
+      "chatModelTooltip": "Chat model (used to summarize prompts)",
+      "noModels": "No available {kind} models"
+    },
+    "modelPicker": {
+      "placeholder": "Select model",
+      "searchPlaceholder": "Search by model or provider",
+      "empty": "No matching models"
+    },
+    "inputPlaceholderWithMedia": "Upload reference assets and describe what you want with images, text, audio, or video",
+    "attachments": {
+      "unsupportedType": "Unsupported file type",
+      "maxReached": "You can upload up to {max} attachments",
+      "maxRemaining": "You can still upload {remaining} attachments",
+      "uploadFile": "Upload file",
+      "remove": "Remove attachment"
+    },
+    "mentions": {
+      "title": "Reference resources",
+      "empty": "No acquired resources available to reference"
+    },
+    "imageWorkflow": {
+      "image": "Image",
+      "editImage": "Edit image",
+      "referenceToImage": "Reference to image",
+      "createImage": "Create image",
+      "editingFrom": "Editing from {count} images",
+      "removeSource": "Remove edit source",
+      "removeImage": "Remove image",
+      "clear": "Clear",
+      "editModeHint": "Choosing Edit image sends this as an image edit. Normal send continues the conversation.",
+      "referenceImage": "Reference image",
+      "editPlaceholder": "Describe how you want to change this image",
+      "cancelGeneration": "Cancel image generation",
+      "promptSuggestion": "Prompt suggestion",
+      "generateImage": "Generate image",
+      "editSuggestion": "Edit suggestion",
+      "imageResult": "Image result",
+      "regenerateFromPrompt": "Generate again with this prompt",
+      "useAsEditSource": "Use as edit source",
+      "editingImage": "Editing image...",
+      "generatingImage": "Generating image..."
+    },
+    "points": {
+      "estimatedCost": "Estimated cost: {cost} points",
+      "estimating": "Estimating point cost",
+      "cost": "{cost} points"
+    },
+    "activeResources": {
+      "title": "Session Skills",
+      "add": "Add",
+      "loading": "Loading...",
+      "empty": "No Skills activated for this session",
+      "remove": "Remove"
+    },
+    "resourceLauncher": {
+      "addResource": "+ Add Resource",
+      "openPanel": "Open resource panel"
+    },
+    "imageParams": {
+      "smartRatio": "Auto",
+      "summary": "{size}",
+      "quality": "Image quality",
+      "size": "Image size",
+      "resolution": "Resolution",
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
+    },
+    "agentKind": {
+      "chat": "Chat",
+      "image": "Image",
+      "video": "Video",
+      "avatar": "Avatar"
+    },
+    "agentPicker": {
+      "title": "Choose Agent",
+      "loading": "Loading...",
+      "locked": "The conversation has started, so the mode cannot be changed",
+      "emptyKind": "No Agents of this type",
+      "current": "Current"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "General Assistant",
+      "defaultChatDescription": "All-purpose assistant",
+      "chatAssistant": "Chat assistant",
+      "imageGeneration": "Image generation",
+      "videoCreation": "Video creation"
+    },
+    "inputMode": {
+      "chat": "Normal",
+      "image": "Image",
+      "video": "Video"
+    },
+    "emptyGreeting": "Hello! What can I help you with?",
+    "uiAction": {
+      "types": {
+        "newFeature": "New feature request",
+        "bugFix": "Bug fix",
+        "optimization": "Performance optimization",
+        "refactoring": "Refactoring"
+      },
+      "selectedType": "Selected requirement type: {type}",
+      "requirementTitle": "Requirement title: {value}",
+      "targetUsers": "Target users: {value}",
+      "businessGoal": "Business goal: {value}",
+      "functionalDescription": "Functional description: {value}",
+      "confirmSubmit": "Confirm submission",
+      "cancelAction": "Cancel action",
+      "executeAction": "Execute action: {action}"
+    },
+    "unknownError": "Unknown error",
+    "dismiss": "Dismiss"
+  },
+  "template": {
+    "discover": "Discover",
+    "recommended": "Recommended",
+    "allTemplates": "All Templates",
+    "popularRanking": "Popular",
+    "latestPublished": "Latest",
+    "categories": "Categories",
+    "searchPlaceholder": "Search templates...",
+    "publishTemplate": "Publish Template",
+    "headline": "Quality prompt templates for unlimited creativity",
+    "subline": "Product sourcing, portraits, travel vibes, from inspiration to final",
+    "noTemplates": "No templates",
+    "noCover": "No cover",
+    "noImage": "No image",
+    "title": "Title",
+    "description": "Description",
+    "category": "Category",
+    "prompt": "Prompt",
+    "variables": "Variables",
+    "variableDefinition": "Variable Definition",
+    "variableName": "Variable name",
+    "variableLabel": "Display label",
+    "defaultValue": "Default value",
+    "addVariable": "Add Variable",
+    "recommendedModel": "Recommended Model",
+    "exampleImages": "Examples",
+    "noExamples": "No examples",
+    "uses": "Uses",
+    "likes": "Likes",
+    "coverImage": "Cover Image",
+    "images": "Images",
+    "tags": "Tags",
+    "tagsPlaceholder": "Comma separated, e.g.: portrait, female, outdoor",
+    "other": "Other",
+    "approved": "Approved",
+    "categoryLabel": "Category: {category}",
+    "publishedAt": "Published {date}",
+    "selectTemplateGenerate": "Use Template",
+    "publishNewTemplate": "Publish New Template",
+    "editTemplate": "Edit Template",
+    "submitForReview": "Submit for Review",
+    "editDescription": "Changes will require re-approval",
+    "newDescription": "Create a new prompt template. It will be reviewed by an admin after submission.",
+    "reviewNote": "Will be published after admin approval",
+    "editSaveNote": "Will return to pending review status after saving",
+    "titlePlaceholder": "Give your template a name",
+    "descriptionPlaceholder": "Briefly describe the purpose and effect of this template",
+    "promptDescription": "Use '{{variable}}' to define replaceable variables",
+    "promptPlaceholder": "e.g.: A beautiful portrait of a '{{gender}}', '{{style}}' style, '{{background}}' background",
+    "typeText": "Text",
+    "typeSelect": "Select",
+    "typeNumber": "Number",
+    "basicInfo": "Basic Info",
+    "templateEyebrow": "Template",
+    "exampleNumber": "Example {n}",
+    "submitting": "Submitting...",
+    "createTemplate": "Create Template",
+    "deleteConfirm": "Are you sure you want to delete this template?",
+    "deleteSuccess": "Template deleted successfully",
+    "useTemplate": "Use Template"
+  },
+  "myTemplates": {
+    "title": "My Templates",
+    "createTemplate": "Create Template",
+    "empty": "No templates yet. Create your first one!",
+    "createFirst": "Create First Template",
+    "statusPending": "Pending",
+    "statusDeleted": "Deleted",
+    "includeDeleted": "Include deleted users",
+    "statusInReview": "In Review",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "statusArchived": "Archived"
+  },
+  "templateReview": {
+    "title": "Template Review",
+    "pending": "Pending",
+    "inReview": "In Review",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "headerTitle": "Title",
+    "headerCategory": "Category",
+    "headerStatus": "Status",
+    "headerSubmittedAt": "Submitted",
+    "headerActions": "Actions",
+    "rejectReason": "Reject Reason",
+    "rejectReasonPlaceholder": "Reason for rejection/revision (optional)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "revise": "Revise",
+    "importDropPaste": "Drag a file here / paste JSON content",
+    "setHot": "Set as hot",
+    "unsetHot": "Remove hot",
+    "batchImport": "Batch Import",
+    "downloadTemplate": "Download Template",
+    "exportTemplates": "Export",
+    "batchApprove": "Batch Approve",
+    "batchReject": "Batch Reject",
+    "batchRevise": "Batch Revise",
+    "batchDelete": "Batch Delete",
+    "selectedCount": "{count} selected",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "confirmBatchDelete": "Are you sure you want to delete {count} templates?",
+    "sourceInfo": "Source Info",
+    "authorName": "Author",
+    "authorUrl": "Author Link",
+    "originalUrl": "Original Link",
+    "sourcePlatform": "Platform",
+    "externalId": "External ID",
+    "imageTemplates": "Image Templates",
+    "videoTemplates": "Video Templates",
+    "importDialogTitle": "Batch Import Templates",
+    "importUpload": "Upload JSON file",
+    "importPreview": "Preview & Confirm",
+    "importing": "Importing...",
+    "importDone": "Import Complete",
+    "importSuccess": "Success: {count}",
+    "importFailed": "Failed: {count}",
+    "importSkipped": "Skipped: {count}",
+    "templatesFound": "{count} templates found",
+    "viewSource": "View Source"
+  },
+  "imageUploader": {
+    "defaultLabel": "Click or drag to upload image",
+    "uploading": "Uploading..."
+  },
+  "artifact": {
+    "preview": "Preview",
+    "split": "Split",
+    "workspace": "Artifact Workspace",
+    "artifactTitle": "Artifact Title",
+    "clickToEditTitle": "Click to edit title",
+    "saveToServer": "Save to server (Ctrl+S)",
+    "save": "Save",
+    "versionHistory": "Version History",
+    "aiOptimize": "AI Optimize",
+    "previewLabel": "Preview",
+    "optimizeEyebrow": "Artifact Optimize",
+    "optimizeTitle": "AI Optimize Document",
+    "optimizeDescription": "Generate a clearer, more complete version based on the current document. A new version will be created upon completion.",
+    "generating": "Generating",
+    "generatedNewVersion": "New version generated, will be applied automatically.",
+    "aiWillOptimize": "AI will generate optimization suggestions based on the current version.",
+    "startOptimize": "Start Optimize",
+    "optimizeInstruction": "Optimization Instruction",
+    "optimizeInstructionDesc": "Describe in a sentence or two how you want AI to adjust this document.",
+    "optimizePlaceholder": "e.g. Add more technical details, improve language, add risk assessment...",
+    "focusTip": "Focusing on a single goal works best.",
+    "optimizePreview": "Optimization Preview",
+    "generatingNewVersion": "Generating new version in real time...",
+    "optimizeDone": "Optimization complete, applying shortly.",
+    "waitingForResult": "Waiting for optimization result...",
+    "closeLabel": "Close",
+    "cancelLabel": "Cancel",
+    "versionHistoryEyebrow": "Version History",
+    "versionHistoryTitle": "Version History",
+    "versionCount": "{count} versions",
+    "noVersionHistory": "No version history",
+    "versionLabel": "Version {version}",
+    "currentTag": "Current",
+    "confirmRevert": "Are you sure you want to revert to version {version}? This will create a new version.",
+    "reverting": "Reverting...",
+    "revert": "Revert",
+    "loadingEditor": "Loading editor..."
+  },
+  "categoryOptions": {
+    "portrait": "Portrait",
+    "landscape": "Landscape",
+    "product": "Product",
+    "illustration": "Illustration",
+    "architecture": "Architecture",
+    "scifi": "Sci-Fi",
+    "scene": "Scene"
+  },
+  "videoCategoryOptions": {
+    "marketing": "Marketing",
+    "education": "Education",
+    "story": "Story",
+    "festival": "Festival",
+    "product": "Product"
+  },
+  "skillCategoryOptions": {
+    "engineering": "Engineering",
+    "writing": "Writing",
+    "design": "Design",
+    "data": "Data",
+    "ops": "Ops",
+    "other": "Other"
+  },
+  "mcpCategoryOptions": {
+    "database": "Database",
+    "cloud": "Cloud",
+    "devtool": "Dev Tools",
+    "communication": "Communication",
+    "other": "Other"
+  },
+  "agentCategoryOptions": {
+    "product": "Product",
+    "engineering": "Engineering",
+    "marketing": "Marketing",
+    "support": "Support",
+    "hr": "HR",
+    "other": "Other"
+  },
+  "drawWorkspace": {
+    "title": "Image Draw",
+    "untitled": "Untitled image",
+    "model": "Image Edit",
+    "dropImage": "Drop image on canvas",
+    "status": {
+      "ready": "Standalone draw mode",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "conflict": "Loaded latest"
+    },
+    "actions": {
+      "backToImage": "Image Workbench",
+      "addImage": "Add image",
+      "fit": "Fit",
+      "clear": "Clear",
+      "generate": "Generate / apply edit",
+      "generateComingSoon": "Generation is being connected; drawing and layout are available now"
+    },
+    "tools": {
+      "paint": "Draw",
+      "erase": "Erase",
+      "reference": "Reference"
+    },
+    "source": {
+      "title": "Image context",
+      "empty": "Add image"
+    },
+    "context": {
+      "imageCount": "{count} image(s)",
+      "selectedCount": "{count} selected",
+      "quickEdit": "Quick edit",
+      "upscale": "Upscale",
+      "removeBg": "Remove background",
+      "eraser": "Eraser",
+      "editElement": "Edit element",
+      "editText": "Edit text",
+      "multiAngle": "Multi-angle",
+      "moveObject": "Move object",
+      "download": "Download",
+      "quickEditPrompt": "Continue editing this image: {label}",
+      "upscalePrompt": "Upscale this image while keeping the composition and texture",
+      "removeBgPrompt": "Remove the background and keep the subject",
+      "fitSize": "Fit size",
+      "quickEditPlaceholder": "Describe the change…",
+      "quickEditSubmit": "Generate",
+      "close": "Close"
+    },
+    "contextMenu": {
+      "wrapSelectionInFrame": "Wrap selection in frame",
+      "copyElementLink": "Copy link to object"
+    },
+    "prompt": {
+      "title": "Edit prompt",
+      "placeholder": "Describe what to generate or change...",
+      "videoPlaceholder": "Describe shots, motion, transitions, or storyboard flow..."
+    },
+    "toast": {
+      "importFailed": "Failed to import image",
+      "unsupportedFile": "Please choose an image file"
+    },
+    "mode": {
+      "image": "Image",
+      "video": "Video",
+      "imageHint": "Chat to generate images onto the canvas",
+      "videoHint": "Connect images with arrows to compose the flow"
+    },
+    "dock": {
+      "select": "Select",
+      "frame": "Frame",
+      "upload": "Upload image",
+      "sticker": "Sticker",
+      "rectangle": "Rectangle",
+      "pen": "Pen",
+      "text": "Text",
+      "genImage": "Generate image",
+      "arrangeVideo": "Auto layout",
+      "genVideo": "Generate video",
+      "genText": "Generate text",
+      "color": "Color"
+    },
+    "chat": {
+      "newChat": "New chat",
+      "share": "Share",
+      "collapse": "Collapse",
+      "agent": "Agent",
+      "attach": "Attach",
+      "library": "Library",
+      "thumbUp": "Good",
+      "thumbDown": "Bad",
+      "done": "Done",
+      "tileAll": "Lay out history on canvas",
+      "locate": "Locate on canvas",
+      "empty": "Type a prompt, or upload/select images as references",
+      "expand": "Expand chat",
+      "history": "History",
+      "search": "Search conversations",
+      "emptyHistory": "No conversations yet",
+      "newConversation": "New conversation",
+      "renameFailed": "Failed to save conversation title",
+      "noModel": "No image model is available",
+      "noVideoModel": "No video model is available. Pick a video model in the toolbar first.",
+      "videoFailed": "Video generation failed. Please try again later.",
+      "modelLoading": "Loading models...",
+      "modelEmpty": "No model",
+      "modelSearchPlaceholder": "Search models",
+      "modelEmptyResult": "No matching models",
+      "videoFlowReady": "Video flow created on the canvas. Connect shots or adjust nodes next.",
+      "createFailed": "Failed to create conversation",
+      "linkCopied": "Link copied",
+      "copyFailed": "Copy failed",
+      "attachToCanvas": "Upload to canvas",
+      "referenceImages": "{count} reference image(s)",
+      "removeAttachment": "Remove attachment",
+      "thinking": "Generating",
+      "generateFailed": "Generation failed"
+    },
+    "flow": {
+      "prompt": "Shot prompt",
+      "videoOutput": "Video output",
+      "waitingForRender": "Waiting for render"
+    },
+    "topbar": {
+      "credits": "Credits"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "Enter a shot description",
+        "enterVideoPrompt": "Enter a video prompt"
+      },
+      "alreadyConnectedToVideoNode": "Already connected to the video node",
+      "imagesAlreadyConnected": "These two images are already connected",
+      "noVideoNodesOnCanvas": "There are no video nodes on the canvas yet"
+    }
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "Preview",
+      "download": "Download",
+      "delete": "Delete",
+      "edit": "Use as edit source",
+      "selected": "Selected",
+      "use": "Use",
+      "remove": "Remove"
+    },
+    "history": {
+      "modeEdit": "Edit",
+      "modeGenerate": "Generate",
+      "noPrompt": "(No prompt)",
+      "deleteTask": "Delete this task",
+      "editSource": "Edit source",
+      "referenceImage": "Reference image",
+      "refSummary": "{srcCount} edit source(s) · {refCount} reference(s)",
+      "alreadyInEditor": "Already in editor",
+      "useAsEditSource": "Use as edit source",
+      "addToMaterial": "Add to material library",
+      "reuseTask": "Reuse task settings",
+      "toMaterial": "To material",
+      "deleteImage": "Delete this image"
+    },
+    "material": {
+      "deleteMaterial": "Delete material"
+    },
+    "result": {
+      "imageCount": "{count} image(s)",
+      "seed": "Seed {seed}",
+      "duration": "{seconds}s",
+      "generatedImage": "Generated image",
+      "feedbackHelpful": "Result was helpful",
+      "feedbackImprove": "Needs improvement",
+      "copyUrl": "Copy URL",
+      "openDraw": "Open in Draw",
+      "title": "Results",
+      "subtitle": "Preview, download, copy the URL or send back to the editor",
+      "generating": "Generating",
+      "empty": {
+        "title": "No images yet",
+        "description": "Fill in the prompt and pick a model—results will show up here."
+      }
+    },
+    "toast": {
+      "feedbackRecorded": "Feedback recorded",
+      "feedbackFailed": "Failed to submit feedback",
+      "autoAdjusted": "Auto-adjusted for the current model: {changes}",
+      "refineFailed": "Failed to refine prompt",
+      "alreadyInEditor": "Already in the editor",
+      "addedToEditor": "Added to editor source",
+      "reusedTask": "Task parameters applied",
+      "materialAddedToEditor": "Material added to editor source",
+      "materialUseFailed": "Failed to use material",
+      "materialDeleted": "Material deleted",
+      "materialDeleteFailed": "Failed to delete material",
+      "addedToMaterial": "Saved to library",
+      "addToMaterialFailed": "Failed to save to library",
+      "historyDeleted": "Task deleted",
+      "historyDeleteFailed": "Failed to delete task",
+      "promptApplied": "Annotation applied to prompt"
+    },
+    "template": {
+      "hot": "Hot",
+      "usageSummary": "{category} · {count} uses",
+      "apply": "Apply",
+      "searchPlaceholder": "Search templates, tags or use cases",
+      "allCategories": "All categories",
+      "loading": "Loading templates",
+      "empty": "No matching templates"
+    },
+    "reference": {
+      "zoomAnnotate": "Zoom & annotate",
+      "annotated": "Annotated",
+      "previewOriginal": "Preview original",
+      "title": "References & sources",
+      "subtitle": "Annotations are drawn on the original and merged when sent"
+    },
+    "annotation": {
+      "overlayLoadFailed": "Failed to load annotation overlay",
+      "imageLoadFailed": "Failed to load image",
+      "needMarkArea": "Please mark an area on the image first",
+      "mergeFailed": "Failed to merge annotation",
+      "hint": "Mark the area to edit and add a prompt.",
+      "colorPickerTitle": "Switch to {color}",
+      "undo": "Undo",
+      "clear": "Clear",
+      "useAnnotation": "Apply annotation",
+      "close": "Close",
+      "loadingImage": "Loading image...",
+      "colors": {
+        "red": "red",
+        "yellow": "yellow",
+        "cyan": "cyan",
+        "green": "green",
+        "purple": "purple",
+        "white": "white"
+      },
+      "prompt": {
+        "stripLabelSuffix": " (reference)",
+        "noRegion": "For \"{label}\", please optimize the whole image.",
+        "singleRegion": "For \"{label}\", focus edits on the {region}.",
+        "multiRegion": "For \"{label}\", {count} region(s) annotated: {regions}.",
+        "regionDescription": "{position} (about {widthPercent}% width × {heightPercent}% height)",
+        "regionDescriptionWithIndex": "Region {index}: {position} (about {widthPercent}% width × {heightPercent}% height)"
+      },
+      "position": {
+        "left": "left side",
+        "right": "right side",
+        "top": "top",
+        "bottom": "bottom",
+        "centerHorizontal": "center",
+        "centerVertical": "center",
+        "full": "whole image",
+        "horizontalOnly": "{vertical} center",
+        "verticalOnly": "{horizontal} center",
+        "combined": "{vertical} {horizontal}"
+      },
+      "mergeFailedUserAction": "Failed to merge annotation. Please try again.",
+      "emptyPromptSuffix": "Continue adding details here."
+    },
+    "panel": {
+      "close": "Close",
+      "title": "Image settings",
+      "subtitle": "{provider} · current settings",
+      "size": {
+        "label": "Canvas size"
+      },
+      "resolution": {
+        "label": "Resolution"
+      },
+      "aspectRatio": {
+        "label": "Aspect ratio"
+      },
+      "quality": {
+        "label": "Quality"
+      },
+      "advanced": {
+        "label": "Advanced",
+        "seedPlaceholder": "Random seed (blank = auto)"
+      },
+      "style": {
+        "label": "Style & negative",
+        "negativePlaceholder": "Negative prompt: what to avoid",
+        "negativeHint": "Will be injected into the prompt as a negative directive."
+      },
+      "refSection": {
+        "uploadedLabel": "Uploaded reference",
+        "editSourceLabel": "Edit source",
+        "editSourceAnnotation": "Edit source annotation",
+        "uploadedAnnotationSuffix": " annotation"
+      },
+      "schemaUnavailable": "Pricing schema unavailable — generation is disabled until it loads."
+    },
+    "header": {
+      "title": "Image Studio",
+      "subtitle": "Combine settings, references, templates and annotations to craft production-ready images",
+      "paramsButton": "Params",
+      "variablesButton": "Template variables"
+    },
+    "prompt": {
+      "title": "Prompt",
+      "subtitle": "Describe creative direction, business needs or edit instructions",
+      "removeTemplate": "Remove current template",
+      "imageModelPrefix": "Image model",
+      "imageModelPlaceholder": "Select image model",
+      "noImageModelHint": "No image model available. Add a GPT Image, Gemini or compatible model in settings first.",
+      "refineModelPrefix": "Prompt refine",
+      "refineModelDefault": "Default",
+      "placeholder": "Describe what you want to generate. The workbench combines model, style, negatives and references for the final request.",
+      "refUnsupported": "Current model does not support reference images",
+      "uploadRef": "Upload reference",
+      "aiRefine": "AI refine",
+      "startEdit": "Start edit",
+      "startGenerate": "Generate",
+      "estimating": "Estimating",
+      "costPoints": "{points} pts",
+      "refinedWith": "Refined with {tuning}. You can keep editing above.",
+      "viewContext": "View context",
+      "undoRefine": "Undo refine"
+    },
+    "inspiration": {
+      "title": "Inspiration",
+      "subtitle": "Generated assets and trending templates",
+      "close": "Close inspiration",
+      "tabs": {
+        "history": "History",
+        "materials": "Library",
+        "templates": "Templates"
+      },
+      "history": {
+        "empty": "Generated tasks will appear here."
+      },
+      "materials": {
+        "loading": "Loading library",
+        "empty": "Library images will appear here."
+      }
+    },
+    "stylePresets": {
+      "general": "General",
+      "commercial": "Commercial",
+      "cinematic": "Cinematic",
+      "productPoster": "Product poster",
+      "chineseIllustration": "Chinese illustration",
+      "interior": "Interior",
+      "character": "Character",
+      "sticker": "Sticker"
+    },
+    "promptTuning": {
+      "auto": "Auto tune",
+      "faithful": "Faithful",
+      "photoDetail": "Photo detail",
+      "ecommerce": "E-commerce",
+      "storyMood": "Story mood",
+      "minimal": "Minimal"
+    },
+    "templateSort": {
+      "popular": "Most popular",
+      "newest": "Newest",
+      "likes": "Most liked"
+    },
+    "modelProvider": {
+      "unselected": "Unselected"
+    },
+    "page": {
+      "historyLoadFailed": "Failed to load history assets",
+      "historyLoadFailedWithMessage": "Failed to load history assets: {message}",
+      "modelLoadFailed": "Failed to load models",
+      "templateLoadFailed": "Failed to load templates",
+      "templateLoadFailedWithMessage": "Failed to load templates: {message}",
+      "selectImageModel": "Please configure and select an image model first",
+      "promptRequired": "Please enter a prompt",
+      "estimateFailed": "Failed to estimate image cost",
+      "generateFailed": "Image generation failed",
+      "missingGenerationForFeedback": "Missing generation record, unable to submit feedback",
+      "defaultGeneratedMaterialTitle": "Generated image material",
+      "requestFailedTitle": "Workbench request failed",
+      "close": "Close",
+      "loadingWorkbench": "Loading professional workbench...",
+      "confirmTitle": "Confirm before generation",
+      "confirmDescription": "This generation will freeze the estimated points first. Points are deducted after success and returned according to server rules if it fails.",
+      "estimatingCost": "Estimating points cost...",
+      "estimatedCost": "Estimated cost",
+      "pointsValue": "{points} points",
+      "availableBalance": "Available balance",
+      "unknown": "Unknown",
+      "taskType": "Task type",
+      "costDetails": "Cost details",
+      "noEstimate": "No estimate available.",
+      "cancel": "Cancel",
+      "confirmGenerate": "Confirm generation"
+    }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "Standard"
+      },
+      "first_last_frame": {
+        "label": "First/Last Frame"
+      },
+      "storyboard": {
+        "label": "Storyboard"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "Adaptive"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p",
+      "4k": "4K"
+    },
+    "materialTargets": {
+      "firstFrame": "First Frame",
+      "lastFrame": "Last Frame",
+      "referenceImage": "Reference Image",
+      "referenceVideo": "Reference Video",
+      "referenceAudio": "Background Audio"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 Clips",
+        "description": "Fast-paced short"
+      },
+      "count3": {
+        "label": "3 Clips",
+        "description": "Classic narrative rhythm"
+      },
+      "count5": {
+        "label": "5 Clips",
+        "description": "More complete storyline"
+      },
+      "count6": {
+        "label": "6 Clips",
+        "description": "Complex scenes and transitions"
+      }
+    },
+    "membershipGate": {
+      "title": "Your current plan does not include video generation",
+      "description": "Upgrade your membership plan to continue generating videos.",
+      "upgradeAction": "Choose a plan",
+      "dismissAction": "Maybe later",
+      "dialogTitle": "Choose a video generation plan",
+      "dialogDescription": "Choose a plan that includes video generation to continue with this video."
+    },
+    "inspirationSheet": {
+      "title": "Inspiration Library",
+      "description": "Start quickly from templates, history or materials",
+      "tabs": {
+        "history": "History",
+        "materials": "Materials",
+        "templates": "Templates"
+      },
+      "templates": {
+        "searchPlaceholder": "Search by name / style / tag",
+        "categoryAll": "All categories",
+        "loading": "Loading templates...",
+        "empty": "No templates yet",
+        "emptyHint": "Please check back later",
+        "noMatch": "No matching templates",
+        "noMatchHint": "Try adjusting the search or category",
+        "workflowMeta": "{count} clips",
+        "standardMeta": "{duration}s single shot",
+        "workflowDescriptionFallback": "Workflow template",
+        "standardDescriptionFallback": "Standard video template",
+        "kindWorkflow": "Workflow",
+        "kindStandard": "Single shot",
+        "useCount": "Used {count} times",
+        "useTemplate": "Use template"
+      },
+      "history": {
+        "empty": "No history projects",
+        "emptyHint": "History will appear after your first generation"
+      },
+      "historyDetail": {
+        "back": "Back",
+        "reuse": "Reuse config",
+        "storyboard": "Storyboard",
+        "clipTitle": "Clip {order}",
+        "emptyPrompt": "No storyboard prompt",
+        "stats": {
+          "clips": "Clips",
+          "duration": "Duration",
+          "materials": "Materials"
+        },
+        "backToWorkspace": "Back to workspace",
+        "videoUnavailable": "No playable video yet",
+        "timeline": "Storyboard timeline",
+        "currentShot": "Current: {title}",
+        "timeRange": "Range",
+        "shotIndex": "Shot index",
+        "screenshot": "Snapshot",
+        "screenshotUnavailable": "Load the video before taking a snapshot",
+        "screenshotFailed": "Snapshot failed. Please make sure the video allows captures and try again.",
+        "screenshotTitle": "Video snapshot {time}",
+        "screenshotSaved": "Snapshot added to the material library",
+        "screenshotSaveFailed": "Failed to add the snapshot. Please try again later.",
+        "screenshotPreviewTitle": "Snapshot preview",
+        "screenshotPreviewDescription": "Confirm to add this frame to the material library for later reuse as an image asset.",
+        "saveScreenshot": "Add to library",
+        "share": "Share",
+        "shareCreateFailed": "Failed to create the share link. Please try again later.",
+        "shareCopied": "Share link copied",
+        "shareCopyFailed": "Copy failed. Please copy the link manually.",
+        "shareDialogTitle": "Share video detail",
+        "shareDialogDescription": "Create a public link so others can view this video and its storyboard.",
+        "shareCreating": "Creating share link...",
+        "shareLinkLabel": "Share link",
+        "shareCopiedButton": "Copied",
+        "copyShareLink": "Copy link",
+        "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
+        "openSharePage": "Open share page",
+        "download": "Download",
+        "downloadVideo": "Download video",
+        "cancel": "Cancel"
+      },
+      "materials": {
+        "searchPlaceholder": "Search material name",
+        "typeAll": "All types",
+        "typeImage": "Image",
+        "typeVideo": "Video",
+        "typeAudio": "Audio",
+        "targetAction": "Use as {target}",
+        "loading": "Loading materials...",
+        "empty": "Material library is empty",
+        "emptyHint": "Upload from the material library to use here",
+        "audioFallback": "Audio asset",
+        "fileFallback": "File asset"
+      }
+    },
+    "estimateDialog": {
+      "title": "Generation Cost Estimate",
+      "description": "Please confirm the credits to be consumed",
+      "estimating": "Estimating...",
+      "totalCost": "Total cost",
+      "balance": "Current balance",
+      "balanceUnknown": "Unknown",
+      "submittedClips": "Clips submitted",
+      "clipsCount": "{count}",
+      "clipTitleFallback": "Clip {order}",
+      "credits": "{value} credits",
+      "cancel": "Cancel",
+      "confirm": "Confirm generation",
+      "totalDuration": "Total duration",
+      "resolution": "Resolution",
+      "pricingRule": "Pricing rule",
+      "seconds": "{value}s"
+    },
+    "storyboardDialog": {
+      "title": "Storyboard Tool",
+      "description": "Describe your video, AI will split it into clips",
+      "promptLabel": "Storyline",
+      "promptPlaceholder": "Describe the video in one sentence, e.g., A girl on a motorcycle chasing neon lights in a cyberpunk city...",
+      "clipCount": "Number of clips",
+      "estimatedTotal": "Estimated total {total}s · per clip {perClip}s",
+      "presetSummary": "{perClip}s × {count} = {total}s",
+      "modelLabel": "Director Model",
+      "modelPlaceholder": "Select a director model",
+      "modelSearchPlaceholder": "Search model / provider",
+      "modelEmptyResult": "No matching model",
+      "modelLoading": "Loading models...",
+      "modelEmpty": "No director model available",
+      "cancel": "Cancel",
+      "generate": "Generate storyboard"
+    },
+    "parameterPanel": {
+      "title": "Video Parameters",
+      "subtitle": "Mode and Seedance base parameters",
+      "closeAria": "Close video parameters",
+      "modeLabel": "Mode",
+      "basicsLabel": "Basics",
+      "durationLabel": "Duration",
+      "resolutionLabel": "Resolution",
+      "ratioLabel": "Aspect ratio",
+      "audioLabel": "Audio",
+      "audioOn": "On",
+      "audioOff": "Off",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "Leave empty for random",
+      "schemaUnavailable": "Pricing schema unavailable — generation is disabled until it loads."
+    },
+    "generationDock": {
+      "modelPlaceholder": "Select a video model",
+      "modelSearchPlaceholder": "Search video model / provider",
+      "modelEmptyResult": "No matching video model",
+      "modelLoading": "Loading video models",
+      "modelEmpty": "No video model available, please contact admin",
+      "generate": "Generate video",
+      "credits": "{value} credits"
+    },
+    "productPanel": {
+      "title": "Video Output",
+      "subtitle": "The current video preview and status appear here",
+      "generating": "Generating",
+      "addToLibrary": "Add to library"
+    },
+    "configPanel": {
+      "title": "Clip configuration",
+      "preparingClipEditor": "Preparing the clip editor...",
+      "clipDefaultTitle": "Clip {order}",
+      "promptLabel": {
+        "firstLastFrame": "First/last frame prompt",
+        "standard": "Video prompt",
+        "storyboard": "Storyboard prompt"
+      },
+      "promptInput": {
+        "standardPlaceholder": "Describe the scene, camera motion, pacing and mood you want...",
+        "storyboardLabel": "Overall prompt",
+        "storyboardPlaceholder": "Describe the overall style, pacing and constraints..."
+      },
+      "paste": {
+        "uploading": "Uploading {count} image(s)...",
+        "uploaded": "Added {count} image(s)",
+        "failed": "Image upload failed",
+        "firstLastFull": "First/last frames already full (max 2 images)",
+        "firstLastOverflow": "First/last frames only accept 2 images, {count} ignored"
+      },
+      "slots": {
+        "firstFrameImage": "First frame image",
+        "lastFrameImage": "Last frame image",
+        "referenceImage": "Reference image",
+        "referenceVideo": "Reference video",
+        "referenceAudio": "Background audio"
+      },
+      "materials": {
+        "firstLastTitle": "First/last frame assets",
+        "firstLastDescription": "Upload first and last frame images, optional audio",
+        "referenceTitle": "Reference assets",
+        "referenceDescription": "Optionally add reference image / video / audio",
+        "swapFrames": "Swap frames",
+        "preparingSlots": "Preparing material slots..."
+      },
+      "storyboard": {
+        "title": "Storyboard",
+        "description": "Manage clips on the timeline; drag the edge to resize duration",
+        "addClip": "Add clip",
+        "generateClips": "AI split clips",
+        "emptyHint": "No clips yet. Add one above or let AI split for you",
+        "timeline": "Timeline",
+        "timelineUsage": "Used {used}s / limit {limit}s",
+        "detail": {
+          "title": "Clip details",
+          "promptSummary": "Prompt: {prompt}",
+          "promptPlaceholder": "No prompt yet",
+          "materialCount": "{count} material(s) selected",
+          "noMaterials": "No materials",
+          "titleLabel": "Clip title",
+          "promptLabel": "Clip prompt",
+          "promptInputPlaceholder": "Describe the scene, action and camera details...",
+          "imagesTitle": "Clip assets",
+          "imagesDescription": "Pick the first frame, reference image or last frame for this clip"
+        }
+      },
+      "clip": {
+        "deleteAria": "Delete {title}",
+        "descriptionPlaceholder": "No description",
+        "resizeAria": "Resize {title} duration",
+        "resizeTitle": "Drag to resize duration"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "Search text model / provider",
+        "textModelEmptyResult": "No matching text model",
+        "textModelLabel": "Optimize: {name}",
+        "defaultLabel": "Default",
+        "textModelLoading": "Loading text models...",
+        "textModelDefault": "Default text model",
+        "aiOptimize": "AI optimize",
+        "videoModelSearchPlaceholder": "Search video model / provider",
+        "videoModelEmptyResult": "No matching video model",
+        "videoModelLabel": "Model: {name}",
+        "selectModel": "Select a model",
+        "videoModelLoading": "Loading video models...",
+        "videoModelEmpty": "No video model available",
+        "generateVideo": "Generate video",
+        "credits": "{value} credits"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "Clip 1",
+      "storyboardClipTitle": "Clip {order}",
+      "shotTitleFallback": "Shot {order}",
+      "loading": "Loading video workspace...",
+      "closeParamsAria": "Close video parameters",
+      "headerTitle": "Video Workbench",
+      "headerSubtitle": "Storyboard, materials, and parameters in one focused workspace",
+      "paramsButton": "Parameters",
+      "newButton": "New",
+      "inspirationButton": "Inspiration"
+    },
+    "toasts": {
+      "directorDefaultFallback": "Director update completed",
+      "directorRequestFailed": "Director request failed",
+      "insufficientDuration": "No remaining timeline duration",
+      "selectClipFirst": "Select a clip first",
+      "placedInto": "Placed into {target}",
+      "materialUseFailed": "Unable to use material",
+      "noFramesToSwap": "Add a first or last frame before swapping",
+      "swappedFrames": "First and last frames swapped",
+      "swapFramesFailed": "Failed to swap frames",
+      "emptyStoryboardPrompt": "Enter an overall prompt first",
+      "emptyVideoPrompt": "Enter a video prompt first",
+      "storyboardPromptOptimized": "Overall prompt optimized",
+      "videoPromptOptimized": "Video prompt optimized",
+      "storyboardPromptOptimizeFailed": "Failed to optimize overall prompt",
+      "videoPromptOptimizeFailed": "Failed to optimize video prompt",
+      "emptyStoryboardIdea": "Enter a video idea first",
+      "storyboardGenerated": "Generated {count} storyboard clips",
+      "storyboardGeneratedSuccess": "Storyboard generated",
+      "storyboardGenerateFailed": "Failed to generate storyboard",
+      "estimateFailed": "Failed to estimate credits",
+      "defaultMaterialTitle": "Generated video",
+      "addedToMaterials": "Added to material library",
+      "addToMaterialsFailed": "Failed to add to material library"
+    },
+    "materialPicker": {
+      "title": "Select material - {role}",
+      "roles": {
+        "firstFrame": "First frame image",
+        "lastFrame": "Last frame image",
+        "referenceImage": "Style reference",
+        "referenceVideo": "Reference video",
+        "referenceAudio": "Background audio",
+        "default": "Material"
+      },
+      "tabs": {
+        "upload": "Upload",
+        "library": "Library"
+      },
+      "description": {
+        "batch": "Starting from the current clip, up to {count} files can be applied to empty {role} slots in order. Filled clips skipped: {skipped}.",
+        "singleAvailable": "Only one empty {role} slot remains; the selected material will be applied there.",
+        "allFilled": "All {role} slots are filled; this will replace the current clip."
+      },
+      "upload": {
+        "dropArea": "Click or drag to upload a file",
+        "dropAreaBatch": "Click or drag to upload files (up to {count})",
+        "processing": "Processing..."
+      },
+      "library": {
+        "empty": "No available materials",
+        "selectionCount": "Selected {selected} / {total}",
+        "clear": "Clear",
+        "applying": "Applying...",
+        "applyBatchOrder": "Apply to {count} clips in order",
+        "useSelected": "Use selected material"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "Applied {count} materials to {count} clips",
+        "libraryError": "Unable to use material",
+        "uploadAppliedBatch": "Uploaded and applied {count} materials to {count} clips",
+        "uploadError": "Upload failed",
+        "selectionLimit": "Select up to {count}",
+        "selectionLimitDescription": "Matches the remaining unfilled clips"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "From previous clip tail frame"
+    },
+    "videoPreview": {
+      "selectClip": "Select a clip to preview",
+      "queued": "Queued",
+      "generating": "Generating video...",
+      "failed": "Generation failed",
+      "firstFrameAlt": "First frame",
+      "addMaterialOrPrompt": "Add materials or a prompt to start"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "Completed",
+        "processing": "Generating",
+        "failed": "Failed",
+        "draft": "Draft",
+        "unknown": "Unknown"
+      },
+      "noPrompt": "No storyboard prompt",
+      "openProjectAria": "Open history project",
+      "deleteProject": "Delete history project",
+      "stats": {
+        "clips": "Clips",
+        "materials": "Materials",
+        "results": "Results"
+      },
+      "clipDefaultTitle": "Clip {order}",
+      "clipPlaceholder": "Waiting for clip description",
+      "moreClips": "+{count} more clips",
+      "createdAt": "Created {date}",
+      "openProject": "View",
+      "viewDetails": "View details",
+      "reuseProject": "Reuse config",
+      "share": "Share",
+      "download": "Download",
+      "downloadVideo": "Download video"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "Chain generation progress",
+        "cancelRemaining": "Cancel remaining"
+      },
+      "directorChat": {
+        "userPrefix": "You: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "Ask the AI director to split shots, edit Prompt, or adjust video parameters..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "Untitled project",
+        "historyTitle": "History"
+      },
+      "modelSelector": {
+        "label": "Model",
+        "default": "Default",
+        "loading": "Loading models...",
+        "empty": "No video models available. Please contact an admin."
+      },
+      "variantGrid": {
+        "title": "Generated Variants ({count})",
+        "generateNew": "+ Generate new Variant",
+        "setPrimary": "Set primary"
+      },
+      "emptyState": {
+        "title": "Start Video Creation",
+        "description": "Create a new project or start from a template, then add materials and prompts to generate video clips",
+        "createProject": "New project",
+        "startFromTemplate": "Start from template"
+      },
+      "clipTimeline": {
+        "addClip": "Add Clip"
+      },
+      "historyPanel": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "deleteSuccess": "History deleted",
+        "deleteFailed": "Failed to delete history",
+        "title": "History",
+        "close": "Close history",
+        "empty": "No history yet"
+      },
+      "templatePicker": {
+        "title": "Video Templates",
+        "workflowTemplates": "Workflow Templates",
+        "parameterPresets": "Parameter Presets",
+        "clipCount": "{count} clips",
+        "useTemplate": "Use this template",
+        "emptyWorkflow": "No workflow templates",
+        "presetsComingSoon": "Parameter preset templates are coming soon"
+      },
+      "inputArea": {
+        "referenceContent": "Reference content",
+        "audio": "Audio",
+        "firstFrame": "First frame",
+        "swapFrames": "Swap first and last frames",
+        "lastFrame": "Last frame",
+        "frameIndex": "Frame {index}",
+        "clearAll": "Clear all"
+      },
+      "clipSidebar": {
+        "title": "Video Projects",
+        "close": "Close video projects",
+        "defaultProjectTitle": "Untitled project",
+        "newProject": "New project",
+        "emptyProjects": "No projects",
+        "clipCount": "{count} clips",
+        "back": "Back",
+        "addClip": "Add Clip",
+        "generationRecords": "Generation records",
+        "emptyRecords": "No records"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "First frame image",
+          "referenceImage": "Style reference",
+          "referenceVideo": "Reference video",
+          "referenceAudio": "Background audio"
+        },
+        "ratioAdaptive": "Adaptive",
+        "audioOn": "Audio on",
+        "audioOff": "Muted",
+        "clipDefaultTitle": "Clip {order}",
+        "selectClip": "Select a Clip to edit",
+        "generating": "Generating, please wait...",
+        "failed": "Generation failed - adjust parameters and regenerate",
+        "titleLabel": "Clip title",
+        "promptPlaceholder": "Enter a video prompt...",
+        "durationLabel": "Duration",
+        "resolutionLabel": "Resolution",
+        "ratioLabel": "Ratio",
+        "audioLabel": "Audio",
+        "regenerate": "Regenerate",
+        "generateVideo": "Generate video"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "All-purpose reference",
+          "firstLastFrame": "First/last frame",
+          "smartMultiframe": "Smart multi-frame"
+        },
+        "ratioAdaptive": "Adaptive",
+        "selectModel": "Select model",
+        "loadingModels": "Loading video models",
+        "emptyModels": "No video models",
+        "selectTemplate": "Pick template"
+      }
+    }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "No cover",
+      "noDescription": "No description",
+      "free": "Free",
+      "pointsCost": "{points} points",
+      "featured": "Featured",
+      "emptyResources": "No resources",
+      "resource": "Resource",
+      "untitledResource": "Untitled resource",
+      "retry": "Retry",
+      "loading": "Loading...",
+      "processing": "Processing...",
+      "cancel": "Cancel",
+      "resourceNotFound": "Resource not found",
+      "unknownResourceType": "Unknown resource type: {slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "Image template",
+      "videoTemplate": "Video template",
+      "imageTemplateShort": "Image",
+      "videoTemplateShort": "Video"
+    },
+    "runtime": {
+      "cloud": "Cloud available",
+      "cloudDesc": "Runs in the cloud and works on web and desktop",
+      "desktopOnly": "Desktop only",
+      "desktopOnlyDesc": "Requires a local runtime such as a process, file, or CLI",
+      "either": "Universal",
+      "eitherDesc": "Can run in cloud or desktop environments",
+      "desktopShort": "Desktop"
+    },
+    "card": {
+      "useInChat": "Use in chat",
+      "useInChatAria": "Use template {title} in chat",
+      "useInWorkbench": "Workbench",
+      "useInWorkbenchAria": "Apply {title} to the professional workbench"
+    },
+    "sidebar": {
+      "home": "Recommended",
+      "resourceTypes": "Resource types",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "Image templates",
+      "videoTemplates": "Video templates",
+      "mine": "Mine",
+      "acquired": "My resources",
+      "favorites": "Favorites",
+      "generations": "Generation history",
+      "published": "Published",
+      "history": "Browse history",
+      "profile": "Profile"
+    },
+    "platformStats": {
+      "title": "Platform data",
+      "totalResources": "Total resources",
+      "imageTemplates": "Image templates",
+      "videoTemplates": "Video templates",
+      "totalAcquisitions": "Total acquisitions"
+    },
+    "editorPicks": {
+      "title": "Editor picks"
+    },
+    "hotRanking": {
+      "title": "Hot ranking"
+    },
+    "resourcePanel": {
+      "eyebrow": "Resource panel",
+      "resourceDetails": "Resource details",
+      "addToCurrentSession": "Add to current session",
+      "unpin": "Unpin",
+      "pin": "Pin panel",
+      "searchPlaceholder": "Search resources...",
+      "loading": "Loading...",
+      "backToList": "Back to list",
+      "sourceInfo": "Source info",
+      "author": "Author",
+      "platform": "Platform",
+      "externalId": "External ID",
+      "viewOriginal": "View original",
+      "mcpLocalStatus": "MCP local status: ",
+      "statusReady": "Installed",
+      "statusMissingEnv": "Missing environment variables",
+      "statusFailed": "Check failed",
+      "statusNotInstalled": "Not installed",
+      "desktopOnlyWebBlocked": "This resource requires a desktop local environment and cannot be activated directly on web.",
+      "processing": "Processing...",
+      "acquireAndActivate": "Acquire and activate",
+      "openFullDetails": "Open full details"
+    },
+    "chatDock": {
+      "createSessionFailed": "Failed to create session",
+      "attachTemplateFailed": "Failed to attach template",
+      "attachmentUploadFailed": "Attachment upload failed",
+      "unknownError": "Unknown error",
+      "sendFailed": "Send failed",
+      "configureImageModelFirst": "Please configure an available image model first",
+      "messageSaveFailed": "Failed to save message",
+      "requestFailed": "Request failed",
+      "imageGenerationFailed": "Image generation failed",
+      "fullConversation": "Full conversation"
+    },
+    "home": {
+      "title": "Template marketplace",
+      "subtitle": "Image and video creation templates, ready for chat or the professional workbench",
+      "desktopTitle": "One-stop AI resource template marketplace",
+      "desktopSubtitle": "Discover and use Skills, MCP, Agents, and image/video templates",
+      "imageTemplateDesc": "Covers, posters, product images, and visual style recipes",
+      "videoTemplateDesc": "Storyboards, camera parameters, and final video workflows",
+      "hotMasonry": "Hot recommendation feed",
+      "imageVideo": "Images · Videos",
+      "hotRecommendations": "Hot recommendations"
+    },
+    "list": {
+      "sortNewest": "Newest",
+      "sortPopular": "Popular",
+      "sortLikes": "Likes",
+      "totalCount": "{count} total",
+      "emptyResources": "No resources. Try another category or keyword.",
+      "agentEyebrow": "AgentHub / Agents",
+      "agentDescription": "Choose agents, toolchains, and workflow partners that can go straight into a conversation.",
+      "imageEyebrow": "Image Recipes / Image templates",
+      "imageDescription": "Browse posters, product images, covers, and visual style templates like a gallery wall.",
+      "videoEyebrow": "Video Flows / Video templates",
+      "videoDescription": "Find a starting point for storyboards, camera parameters, and short-video generation flows.",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "Capability boosters, personalized instructions, and reusable ways to work.",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "Tools, data sources, and external connectors."
+    },
+    "detail": {
+      "applyTemplateFailed": "Failed to apply template",
+      "newImageSessionTitle": "New image session",
+      "newSessionTitle": "New session",
+      "workbench": "Professional workbench",
+      "useInChat": "Use in chat",
+      "favoriteCount": "Favorite {count}",
+      "whyDesktopOnly": "Why desktop only?",
+      "localRuntimeRequired": "This resource requires a local runtime environment",
+      "variableDefinitions": "Variable definitions",
+      "defaultValue": " · Default: {value}",
+      "resourceInfo": "Resource info",
+      "sourceInfo": "Source info",
+      "viewOriginal": "View original",
+      "hoverPreview": "Hover to preview the first few seconds",
+      "mcpDesktopRequired": "MCP resources must be enabled on desktop",
+      "selectSession": "Select session",
+      "activateTo": "Activate to",
+      "createAndActivate": "+ Create session and activate",
+      "createAndApply": "+ Create session and apply template",
+      "applying": "Applying...",
+      "recentSessions": "Recent sessions",
+      "applyDialogTitle": "Select a session and apply template",
+      "applyDialogDescription": "Select {target}, or create a new session and apply it.",
+      "templateSessionMismatch": "The current selection is {current}, but this template must be applied to {target}. Select another session or create a new one.",
+      "conversationKind": {
+        "video": "Video session",
+        "image": "Image session",
+        "avatar": "Avatar session",
+        "chat": "Chat session"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "a chat or image session",
+        "videoTemplate": "a chat session",
+        "default": "a chat session"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "Acquire and activate in current session",
+        "generateAndReturnToSession": "Generate now and return to session",
+        "acquireWithPoints": "Use {points} points to acquire and activate",
+        "getOnDesktop": "Get on desktop"
+      },
+      "info": {
+        "type": "Type",
+        "category": "Category",
+        "version": "Version",
+        "updatedAt": "Updated",
+        "author": "Author",
+        "platform": "Platform",
+        "externalId": "External ID",
+        "originalLink": "Original link"
+      }
+    }
+  },
+  "videoShare": {
+    "loading": "Loading shared video...",
+    "loadFailed": "The share link does not exist, has expired, or the video is not complete yet.",
+    "unavailableTitle": "Shared video unavailable",
+    "goCreate": "Create a video",
+    "eyebrow": "Shared video",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "copyFailed": "Copy failed. Please copy the link manually.",
+    "copiedButton": "Copied",
+    "monitor": "Monitor",
+    "storyboard": "Storyboard data",
+    "duration": "Duration",
+    "model": "Model",
+    "clipTitle": "Clip {order}",
+    "clipFallback": "Storyboard",
+    "emptyPrompt": "No storyboard prompt",
+    "timeline": "Storyboard timeline",
+    "footer": "Shared video detail",
+    "growthCtaDescription": "Create your own private video project, then publish it only when it is ready to share."
+  },
+  "gallery": {
+    "title": "Gallery",
+    "subtitle": "Discover what the community has published",
+    "kindImage": "Image",
+    "kindVideo": "Video",
+    "emptyTitle": "Nothing published yet",
+    "emptyDescription": "Be the first to publish your work to the gallery",
+    "loadMore": "Load more",
+    "unknownAuthor": "Unknown author",
+    "like": "Like",
+    "favorite": "Favorite",
+    "backToGallery": "Back to gallery",
+    "notFoundTitle": "This post isn't available",
+    "notFoundDescription": "It may have been unpublished or removed",
+    "author": "Author",
+    "metricViews": "Views",
+    "metricLikes": "Likes",
+    "metricFavorites": "Favorites",
+    "metricRecreates": "Recreates",
+    "recreate": "Recreate",
+    "download": "Download",
+    "unpublish": "Unpublish",
+    "republish": "Republish",
+    "unpublishSuccess": "Post unpublished",
+    "republishSuccess": "Submitted for review",
+    "prompt": "Prompt",
+    "copyPrompt": "Copy",
+    "copied": "Copied",
+    "noPrompt": "No prompt",
+    "information": "Information",
+    "model": "Model",
+    "auto": "Auto",
+    "dimensions": "Dimensions",
+    "category": "Category",
+    "status": {
+      "draft": "Draft",
+      "pending": "In review",
+      "published": "Published",
+      "unpublished": "Unpublished",
+      "hidden": "Hidden",
+      "rejected": "Rejected"
+    }
+  },
+  "schemaForm": {
+    "constraint": {
+      "longerThan": "{prefix}longer than {bound} seconds",
+      "shorterThan": "{prefix}shorter than {bound} seconds"
+    }
+  }
+}

@@ -1,0 +1,1588 @@
+{
+  "chat": {
+    "newConversation": "新对话",
+    "searchConversation": "搜索对话...",
+    "noConversations": "暂无对话",
+    "noMatchingConversation": "无匹配对话",
+    "deleteConversationTitle": "确认删除对话",
+    "deleteConversationMsg": "确认删除对话 {title} ？该会话的消息、产物及历史版本都将一并删除，操作不可恢复。",
+    "inputPlaceholder": "请输入您的需求",
+    "inputPlaceholderWithImage": "输入文本或粘贴图片",
+    "sendMessage": "发送消息",
+    "generatingReply": "正在生成回复",
+    "sendShortcut": "⌘/Ctrl + Enter 发送",
+    "addImage": "添加图片",
+    "imageCount": "{count}/{max} 张",
+    "thinking": "思考中",
+    "thinkingDefault": "Amux Studio 正在整理回答",
+    "thinkingProgress": "正在执行第 {step} 步，共 {totalSteps} 步",
+    "thinkingPreparing": "正在准备响应内容…",
+    "copied": "已复制",
+    "copy": "复制",
+    "copyReply": "复制回复",
+    "preview": {
+      "copyLink": "复制链接",
+      "linkCopied": "已复制",
+      "download": "下载",
+      "openOriginal": "打开原图",
+      "close": "关闭预览"
+    },
+    "images": {
+      "title": "本轮图片",
+      "empty": "暂无生成图片",
+      "count": "共 {count} 张",
+      "expand": "展开图片面板",
+      "collapse": "收起图片面板",
+      "refresh": "刷新",
+      "retry": "重试",
+      "error": "加载失败"
+    },
+    "selectModel": "选择模型",
+    "default": "默认",
+    "searchModels": "搜索模型...",
+    "noModelsFound": "无匹配模型",
+    "chatWorkspace": "对话工作区",
+    "welcomeMessage": "您好！我是 Amux Studio AI 助手。\n请描述您的需求，我来帮您生成 PRD、代码、设计稿或原型。",
+    "selectOrCreateChat": "选择或创建一个对话开始",
+    "requestError": "请求出错，请重试",
+    "deepSearch": "深度搜索",
+    "newChat": "新建对话",
+    "deleteChat": "删除对话",
+    "deleteConfirm": "确定要删除这个对话吗？",
+    "renameChat": "重命名对话",
+    "template": {
+      "drawerTitle": "选择图片模板",
+      "searchPlaceholder": "搜索模板",
+      "current": "当前",
+      "editPrompt": "编辑 Prompt",
+      "edit": "编辑",
+      "reusePrompt": "引用",
+      "removeTemplate": "移除模板",
+      "dialogTitle": "{name} · Prompt 编辑",
+      "sectionRaw": "模板原文",
+      "sectionReferences": "参考图",
+      "sectionVariables": "变量设置",
+      "refSelectAll": "全选",
+      "refClear": "取消",
+      "refSelectedCount": "已选 {n}/{total}",
+      "refEmpty": "该模板暂无参考图",
+      "reset": "重置",
+      "applyToInput": "应用到输入框",
+      "noVariables": "该模板无变量",
+      "variableCount": "{count} 个变量",
+      "imagesCapHit": "参考图已合并至 {max} 张上限",
+      "confirmSwitch": "切换会清空当前输入框与参考图，是否继续？",
+      "pendingVariables": "{n} 个变量待填",
+      "empty": "暂无可用模板",
+      "templateAlt": "模板",
+      "noCover": "暂无封面",
+      "untitled": "未命名模板",
+      "useThisTemplate": "使用此模板",
+      "dialogDescription": "编辑模板变量和参考素材，应用后会填入会话输入框。",
+      "drawerTitleVideo": "选择视频模板"
+    },
+    "error": {
+      "chatModelInvalid": "所选对话模型不支持文本生成，请更换或留空使用默认模型",
+      "defaultModelMissing": "未配置默认通用模型，无法生成提示词",
+      "imageMaxReached": "最多只能添加 {max} 张图片",
+      "imageMaxPartial": "已达到 {max} 张图片上限，仅添加前 {n} 张",
+      "requestFailedTitle": "请求失败",
+      "imageUploadFailed": "图片上传失败",
+      "imageUploadMissingUrl": "图片上传响应缺少 URL",
+      "switchModeFailed": "切换模式失败",
+      "selectImageTemplateFirst": "请先选择一个图片模板",
+      "messageSaveFailed": "消息保存失败",
+      "modeComingSoon": "{kind} 模式即将上线，暂不支持发送",
+      "attachmentUploadFailed": "附件上传失败"
+    },
+    "toolbar": {
+      "selectModel": "选择模型",
+      "selectTemplate": "选模板",
+      "chatModelTooltip": "对话模型（用于 AI 总结 prompt）",
+      "noModels": "没有可用的{kind}模型"
+    },
+    "modelPicker": {
+      "placeholder": "选择模型",
+      "searchPlaceholder": "搜索模型名 / 供应商",
+      "empty": "无匹配模型"
+    },
+    "inputPlaceholderWithMedia": "上传参考素材、输入文字描述，自由组合图、文、音、视频多元素",
+    "attachments": {
+      "unsupportedType": "不支持的文件类型",
+      "maxReached": "最多上传 {max} 个附件",
+      "maxRemaining": "最多还能上传 {remaining} 个附件",
+      "uploadFile": "上传文件",
+      "remove": "移除附件"
+    },
+    "mentions": {
+      "title": "引用资源",
+      "empty": "没有可引用的已获取资源"
+    },
+    "imageWorkflow": {
+      "image": "图片",
+      "editImage": "编辑图片",
+      "referenceToImage": "参考图生图",
+      "createImage": "创建图片",
+      "editingFrom": "正在基于 {count} 张图编辑",
+      "removeSource": "移除编辑源",
+      "removeImage": "移除图片",
+      "clear": "清空",
+      "editModeHint": "选择“编辑图片”后发送会进入图片编辑；普通发送仍会继续对话。",
+      "referenceImage": "参考图",
+      "editPlaceholder": "描述你想怎么修改这张图片",
+      "cancelGeneration": "取消图片生成",
+      "promptSuggestion": "Prompt 建议",
+      "generateImage": "生成图片",
+      "editSuggestion": "编辑建议",
+      "imageResult": "图片结果",
+      "regenerateFromPrompt": "按此 Prompt 再生成",
+      "useAsEditSource": "用作编辑源",
+      "editingImage": "正在编辑图片...",
+      "generatingImage": "正在生成图片..."
+    },
+    "points": {
+      "estimatedCost": "预计消耗 {cost} 积分",
+      "estimating": "正在估算积分消耗",
+      "cost": "{cost} 积分"
+    },
+    "activeResources": {
+      "title": "会话 Skills",
+      "add": "添加",
+      "loading": "加载中...",
+      "empty": "当前会话未激活 Skills",
+      "remove": "移除"
+    },
+    "resourceLauncher": {
+      "addResource": "+ 添加资源",
+      "openPanel": "打开资源面板"
+    },
+    "imageParams": {
+      "smartRatio": "自动",
+      "summary": "{size}",
+      "quality": "图像质量",
+      "size": "图片尺寸",
+      "resolution": "分辨率",
+      "qualityValue": {
+        "auto": "自动",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "standard": "标准",
+        "hd": "高清"
+      }
+    },
+    "agentKind": {
+      "chat": "对话",
+      "image": "图片",
+      "video": "视频",
+      "avatar": "数字人"
+    },
+    "agentPicker": {
+      "title": "选择 Agent",
+      "loading": "加载中...",
+      "locked": "对话已开始，无法切换模式",
+      "emptyKind": "暂无该类型的 Agent",
+      "current": "当前"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "通用助手",
+      "defaultChatDescription": "全能助手",
+      "chatAssistant": "对话助手",
+      "imageGeneration": "图片生成",
+      "videoCreation": "视频创作"
+    },
+    "inputMode": {
+      "chat": "普通",
+      "image": "图片",
+      "video": "视频"
+    },
+    "emptyGreeting": "您好！我能为您做些什么？",
+    "uiAction": {
+      "types": {
+        "newFeature": "新功能需求",
+        "bugFix": "缺陷修复",
+        "optimization": "性能优化",
+        "refactoring": "代码重构"
+      },
+      "selectedType": "选择需求类型：{type}",
+      "requirementTitle": "需求标题：{value}",
+      "targetUsers": "目标用户：{value}",
+      "businessGoal": "业务目标：{value}",
+      "functionalDescription": "功能描述：{value}",
+      "confirmSubmit": "确认提交",
+      "cancelAction": "取消操作",
+      "executeAction": "执行操作：{action}"
+    },
+    "unknownError": "未知错误",
+    "dismiss": "关闭"
+  },
+  "template": {
+    "discover": "发现",
+    "recommended": "推荐",
+    "allTemplates": "全部模板",
+    "popularRanking": "热门排行",
+    "latestPublished": "最新发布",
+    "categories": "分类",
+    "searchPlaceholder": "搜索模板...",
+    "publishTemplate": "发布模板",
+    "headline": "优质提示词模板，激发无限创意",
+    "subline": "经贸选品思路、女式写真、旅行高级范、从灵感到成片",
+    "noTemplates": "暂无模板",
+    "noCover": "暂无封面",
+    "noImage": "暂无图片",
+    "title": "标题",
+    "description": "描述",
+    "category": "分类",
+    "prompt": "提示词 (Prompt)",
+    "variables": "变量设置",
+    "variableDefinition": "变量定义",
+    "variableName": "变量名",
+    "variableLabel": "显示标签",
+    "defaultValue": "默认值",
+    "addVariable": "添加变量",
+    "recommendedModel": "推荐模型",
+    "exampleImages": "示例效果",
+    "noExamples": "暂无示例图",
+    "uses": "使用",
+    "likes": "赞",
+    "coverImage": "封面图",
+    "images": "图片",
+    "tags": "标签",
+    "tagsPlaceholder": "逗号分隔，如: 写真, 女性, 户外",
+    "other": "其他",
+    "approved": "已审核",
+    "categoryLabel": "分类: {category}",
+    "publishedAt": "发布于 {date}",
+    "selectTemplateGenerate": "选择模板生成",
+    "publishNewTemplate": "发布新模板",
+    "editTemplate": "编辑模板",
+    "submitForReview": "提交审核",
+    "editDescription": "修改模板内容后将重新进入审核",
+    "newDescription": "创建一个新的 Prompt 模板，提交后将由管理员审核",
+    "reviewNote": "提交后需管理员审核通过才能发布",
+    "editSaveNote": "保存后将重新进入待审核状态",
+    "titlePlaceholder": "给你的模板起个名字",
+    "descriptionPlaceholder": "简要描述这个模板的用途和效果",
+    "promptDescription": "使用 '{{变量名}}' 定义可替换变量",
+    "promptPlaceholder": "例: A beautiful portrait of a '{{gender}}', '{{style}}' style, '{{background}}' background",
+    "typeText": "文本",
+    "typeSelect": "下拉",
+    "typeNumber": "数字",
+    "basicInfo": "基本信息",
+    "templateEyebrow": "模板",
+    "exampleNumber": "示例 {n}",
+    "submitting": "提交中...",
+    "createTemplate": "创建模板",
+    "deleteConfirm": "确定要删除这个模板吗？",
+    "deleteSuccess": "模板删除成功",
+    "useTemplate": "使用模板"
+  },
+  "myTemplates": {
+    "title": "我的模板",
+    "createTemplate": "创建模板",
+    "empty": "暂无模板，创建你的第一个模板吧",
+    "createFirst": "创建第一个模板",
+    "statusPending": "待审核",
+    "statusInReview": "审核中",
+    "statusApproved": "已通过",
+    "statusRejected": "已拒绝",
+    "statusArchived": "已归档",
+    "statusDeleted": "Deleted",
+    "includeDeleted": "Include deleted users"
+  },
+  "templateReview": {
+    "title": "模板审核",
+    "pending": "待审核",
+    "inReview": "审核中",
+    "approved": "已通过",
+    "rejected": "已拒绝",
+    "headerTitle": "标题",
+    "headerCategory": "分类",
+    "headerStatus": "状态",
+    "headerSubmittedAt": "提交时间",
+    "headerActions": "操作",
+    "rejectReason": "拒绝原因",
+    "rejectReasonPlaceholder": "拒绝/修改原因（可选）",
+    "approve": "通过",
+    "reject": "拒绝",
+    "revise": "退回",
+    "importDropPaste": "拖拽文件到此处 / 粘贴 JSON 内容",
+    "setHot": "设为热门",
+    "unsetHot": "取消热门",
+    "batchImport": "批量导入",
+    "downloadTemplate": "下载模板",
+    "exportTemplates": "导出",
+    "batchApprove": "批量通过",
+    "batchReject": "批量驳回",
+    "batchRevise": "批量退回",
+    "batchDelete": "批量删除",
+    "selectedCount": "已选 {count} 条",
+    "selectAll": "全选",
+    "deselectAll": "取消全选",
+    "confirmBatchDelete": "确定要删除 {count} 个模板吗？",
+    "sourceInfo": "来源信息",
+    "authorName": "作者",
+    "authorUrl": "作者主页",
+    "originalUrl": "原始链接",
+    "sourcePlatform": "平台来源",
+    "externalId": "外部 ID",
+    "imageTemplates": "图片模板",
+    "videoTemplates": "视频模板",
+    "importDialogTitle": "批量导入模板",
+    "importUpload": "上传 JSON 文件",
+    "importPreview": "预览并确认",
+    "importing": "导入中...",
+    "importDone": "导入完成",
+    "importSuccess": "成功：{count} 条",
+    "importFailed": "失败：{count} 条",
+    "importSkipped": "跳过：{count} 条",
+    "templatesFound": "发现 {count} 个模板",
+    "viewSource": "查看来源"
+  },
+  "imageUploader": {
+    "defaultLabel": "点击或拖拽上传图片",
+    "uploading": "上传中..."
+  },
+  "artifact": {
+    "preview": "预览",
+    "split": "分屏",
+    "workspace": "Artifact 工作区",
+    "artifactTitle": "工件标题",
+    "clickToEditTitle": "点击编辑标题",
+    "saveToServer": "保存到服务器 (Ctrl+S)",
+    "save": "保存",
+    "versionHistory": "版本历史",
+    "aiOptimize": "AI优化",
+    "previewLabel": "预览",
+    "optimizeEyebrow": "Artifact 优化",
+    "optimizeTitle": "AI 优化文档",
+    "optimizeDescription": "基于当前文档生成一版更清晰、更完整的新内容，完成后将创建新版本。",
+    "generating": "生成中",
+    "generatedNewVersion": "已生成新版本，将自动应用。",
+    "aiWillOptimize": "AI 将基于当前版本生成优化建议。",
+    "startOptimize": "开始优化",
+    "optimizeInstruction": "优化指令",
+    "optimizeInstructionDesc": "用一两句话描述你希望 AI 如何调整这份文档。",
+    "optimizePlaceholder": "例如：增加更多技术细节、优化语言表达、补充风险评估……",
+    "focusTip": "建议聚焦在一个目标上，效果更好。",
+    "optimizePreview": "优化预览",
+    "generatingNewVersion": "正在实时生成新版本…",
+    "optimizeDone": "优化完成，即将应用。",
+    "waitingForResult": "等待生成优化结果…",
+    "closeLabel": "关闭",
+    "cancelLabel": "取消",
+    "versionHistoryEyebrow": "版本历史",
+    "versionHistoryTitle": "版本历史",
+    "versionCount": "{count} 个版本",
+    "noVersionHistory": "暂无版本历史",
+    "versionLabel": "版本 {version}",
+    "currentTag": "当前",
+    "confirmRevert": "确定要恢复到版本 {version} 吗？这将创建一个新版本。",
+    "reverting": "恢复中…",
+    "revert": "恢复",
+    "loadingEditor": "加载编辑器..."
+  },
+  "categoryOptions": {
+    "portrait": "人像",
+    "landscape": "风景",
+    "product": "产品",
+    "illustration": "插画",
+    "architecture": "建筑",
+    "scifi": "科幻",
+    "scene": "场景"
+  },
+  "videoCategoryOptions": {
+    "marketing": "营销",
+    "education": "教学",
+    "story": "故事",
+    "festival": "节日",
+    "product": "产品"
+  },
+  "skillCategoryOptions": {
+    "engineering": "研发",
+    "writing": "写作",
+    "design": "设计",
+    "data": "数据",
+    "ops": "运营",
+    "other": "其他"
+  },
+  "mcpCategoryOptions": {
+    "database": "数据库",
+    "cloud": "云服务",
+    "devtool": "开发工具",
+    "communication": "通信",
+    "other": "其他"
+  },
+  "agentCategoryOptions": {
+    "product": "产品",
+    "engineering": "研发",
+    "marketing": "营销",
+    "support": "客服",
+    "hr": "人事",
+    "other": "其他"
+  },
+  "drawWorkspace": {
+    "title": "图像绘制",
+    "untitled": "未命名图片",
+    "model": "图像编辑",
+    "dropImage": "释放图片到画布",
+    "status": {
+      "ready": "独立绘制模式",
+      "saving": "保存中…",
+      "saved": "已保存",
+      "conflict": "已载入最新"
+    },
+    "actions": {
+      "backToImage": "图片工作台",
+      "addImage": "添加图片",
+      "fit": "适配",
+      "clear": "清空",
+      "generate": "生成 / 应用编辑",
+      "generateComingSoon": "生成接入中，当前可先进行绘制与排版"
+    },
+    "tools": {
+      "paint": "绘制",
+      "erase": "橡皮",
+      "reference": "参考图"
+    },
+    "source": {
+      "title": "图像上下文",
+      "empty": "添加图片"
+    },
+    "context": {
+      "imageCount": "{count} 张图片",
+      "selectedCount": "{count} 个选中",
+      "quickEdit": "快捷编辑",
+      "upscale": "放大",
+      "removeBg": "去背景",
+      "eraser": "橡皮工具",
+      "editElement": "编辑元素",
+      "editText": "编辑文字",
+      "multiAngle": "多角度",
+      "moveObject": "移动对象",
+      "download": "下载",
+      "quickEditPrompt": "基于这张图继续编辑：{label}",
+      "upscalePrompt": "放大这张图，保留原构图和质感",
+      "removeBgPrompt": "去掉这张图的背景，保留主体",
+      "fitSize": "自适应尺寸",
+      "quickEditPlaceholder": "描述要修改的内容…",
+      "quickEditSubmit": "生成",
+      "close": "关闭"
+    },
+    "contextMenu": {
+      "wrapSelectionInFrame": "将选区包入画框",
+      "copyElementLink": "复制对象链接"
+    },
+    "prompt": {
+      "title": "编辑提示词",
+      "placeholder": "描述要生成或修改的内容...",
+      "videoPlaceholder": "描述视频镜头、动作、转场或分镜流程..."
+    },
+    "toast": {
+      "importFailed": "图片导入失败",
+      "unsupportedFile": "请选择图片文件"
+    },
+    "mode": {
+      "image": "图片",
+      "video": "视频",
+      "imageHint": "对话生成图片，自动排到画布",
+      "videoHint": "用箭头连接图片，编排镜头流程"
+    },
+    "dock": {
+      "select": "选择",
+      "frame": "画框",
+      "upload": "上传图片",
+      "sticker": "贴纸",
+      "rectangle": "矩形",
+      "pen": "画笔",
+      "text": "文字",
+      "genImage": "生成图片",
+      "arrangeVideo": "一键排版",
+      "genVideo": "生成视频",
+      "genText": "生成文字",
+      "color": "颜色"
+    },
+    "chat": {
+      "newChat": "新会话",
+      "share": "分享",
+      "collapse": "收起",
+      "agent": "Agent",
+      "attach": "附件",
+      "library": "素材库",
+      "thumbUp": "赞",
+      "thumbDown": "踩",
+      "done": "已生成",
+      "tileAll": "历史图铺到画布",
+      "locate": "在画布中定位",
+      "empty": "输入提示词，或上传/选中图片作为参考",
+      "expand": "展开会话",
+      "history": "历史对话",
+      "search": "请输入搜索关键词",
+      "emptyHistory": "暂无历史对话",
+      "newConversation": "新建对话",
+      "renameFailed": "会话标题保存失败",
+      "noModel": "没有可用的图片模型",
+      "noVideoModel": "没有可用的视频模型，请先在工具栏选择一个视频模型",
+      "videoFailed": "视频生成失败，请稍后重试",
+      "modelLoading": "加载模型…",
+      "modelEmpty": "暂无模型",
+      "modelSearchPlaceholder": "搜索模型",
+      "modelEmptyResult": "没有匹配的模型",
+      "videoFlowReady": "已在画布生成视频流程，可继续连接镜头或调整节点",
+      "createFailed": "新建对话失败",
+      "linkCopied": "链接已复制",
+      "copyFailed": "复制失败",
+      "attachToCanvas": "上传到画布",
+      "referenceImages": "{count} 张参考图",
+      "removeAttachment": "移除附件",
+      "thinking": "生成中",
+      "generateFailed": "生成失败"
+    },
+    "flow": {
+      "prompt": "镜头提示",
+      "videoOutput": "视频输出",
+      "waitingForRender": "等待生成"
+    },
+    "topbar": {
+      "credits": "积分"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "请输入镜头描述",
+        "enterVideoPrompt": "请输入视频提示词"
+      },
+      "alreadyConnectedToVideoNode": "已经连接到视频节点",
+      "imagesAlreadyConnected": "这两张图片已经连接",
+      "noVideoNodesOnCanvas": "画布上还没有视频节点"
+    }
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "预览",
+      "download": "下载",
+      "delete": "删除",
+      "edit": "作为编辑源",
+      "selected": "已选择",
+      "use": "使用",
+      "remove": "移除"
+    },
+    "history": {
+      "modeEdit": "编辑",
+      "modeGenerate": "生成",
+      "noPrompt": "（无提示词）",
+      "deleteTask": "删除该任务",
+      "editSource": "编辑源",
+      "referenceImage": "参考图",
+      "refSummary": "{srcCount} 张编辑源 · {refCount} 张参考",
+      "alreadyInEditor": "已在编辑器中",
+      "useAsEditSource": "作为编辑源",
+      "addToMaterial": "加入素材库",
+      "reuseTask": "复用此任务参数",
+      "toMaterial": "存入素材",
+      "deleteImage": "删除该图像"
+    },
+    "material": {
+      "deleteMaterial": "删除素材"
+    },
+    "result": {
+      "imageCount": "{count} 张",
+      "seed": "种子 {seed}",
+      "duration": "用时 {seconds}s",
+      "generatedImage": "生成结果",
+      "feedbackHelpful": "结果有帮助",
+      "feedbackImprove": "结果需改进",
+      "copyUrl": "复制地址",
+      "openDraw": "进入绘制",
+      "title": "生成结果",
+      "subtitle": "可预览、下载、复制地址，或送回编辑源继续迭代",
+      "generating": "生成中",
+      "empty": {
+        "title": "还没有图片结果",
+        "description": "填写提示词并选择模型后，本次生成的结果会显示在这里。"
+      }
+    },
+    "toast": {
+      "feedbackRecorded": "反馈已记录",
+      "feedbackFailed": "反馈提交失败",
+      "autoAdjusted": "已根据当前模型自动调整：{changes}",
+      "refineFailed": "提示词润色失败",
+      "alreadyInEditor": "已在编辑源中",
+      "addedToEditor": "已加入编辑源",
+      "reusedTask": "已套用任务参数",
+      "materialAddedToEditor": "已将素材加入编辑源",
+      "materialUseFailed": "素材使用失败",
+      "materialDeleted": "素材已删除",
+      "materialDeleteFailed": "素材删除失败",
+      "addedToMaterial": "已存入素材库",
+      "addToMaterialFailed": "存入素材失败",
+      "historyDeleted": "任务已删除",
+      "historyDeleteFailed": "任务删除失败",
+      "promptApplied": "标注已应用到提示词"
+    },
+    "template": {
+      "hot": "热门",
+      "usageSummary": "{category} · {count} 次使用",
+      "apply": "套用",
+      "searchPlaceholder": "搜索模板、标签或用途",
+      "allCategories": "全部分类",
+      "loading": "正在加载热门模板",
+      "empty": "暂无匹配模板"
+    },
+    "reference": {
+      "zoomAnnotate": "放大标注",
+      "annotated": "已标注",
+      "previewOriginal": "预览原图",
+      "title": "参考与编辑素材",
+      "subtitle": "标注会显示在原图上，发送时合并为一张图"
+    },
+    "annotation": {
+      "overlayLoadFailed": "标注层加载失败",
+      "imageLoadFailed": "图片加载失败",
+      "needMarkArea": "请先在图片上涂抹标注区域",
+      "mergeFailed": "标注合成失败",
+      "hint": "在图片上涂抹要修改的区域，并补充提示词。",
+      "colorPickerTitle": "切换为{color}色",
+      "undo": "撤销",
+      "clear": "清空",
+      "useAnnotation": "应用标注",
+      "close": "关闭",
+      "loadingImage": "加载原图中...",
+      "colors": {
+        "red": "红",
+        "yellow": "黄",
+        "cyan": "青",
+        "green": "绿",
+        "purple": "紫",
+        "white": "白"
+      },
+      "prompt": {
+        "stripLabelSuffix": "（参考图）",
+        "noRegion": "针对「{label}」请重点优化整张图。",
+        "singleRegion": "针对「{label}」的{region}进行重点修改。",
+        "multiRegion": "针对「{label}」共标注 {count} 处区域：{regions}。",
+        "regionDescription": "{position}（约占宽 {widthPercent}% × 高 {heightPercent}%）",
+        "regionDescriptionWithIndex": "区域 {index}：{position}（约占宽 {widthPercent}% × 高 {heightPercent}%）"
+      },
+      "position": {
+        "left": "左侧",
+        "right": "右侧",
+        "top": "上方",
+        "bottom": "下方",
+        "centerHorizontal": "中部",
+        "centerVertical": "中部",
+        "full": "整张图",
+        "horizontalOnly": "{vertical}居中位置",
+        "verticalOnly": "{horizontal}居中位置",
+        "combined": "{vertical}{horizontal}"
+      },
+      "mergeFailedUserAction": "标注合成失败，请稍后重试",
+      "emptyPromptSuffix": "可继续在此追加细节描述。"
+    },
+    "panel": {
+      "close": "关闭",
+      "title": "生图设置",
+      "subtitle": "{provider} · 当前参数",
+      "size": {
+        "label": "画幅尺寸"
+      },
+      "resolution": {
+        "label": "分辨率"
+      },
+      "aspectRatio": {
+        "label": "图片比例"
+      },
+      "quality": {
+        "label": "画质"
+      },
+      "advanced": {
+        "label": "高级参数",
+        "seedPlaceholder": "随机种子（留空自动）"
+      },
+      "style": {
+        "label": "风格与负向词",
+        "negativePlaceholder": "负向描述：不想出现的内容",
+        "negativeHint": "将作为负向词注入到提示词中。"
+      },
+      "refSection": {
+        "uploadedLabel": "上传参考图",
+        "editSourceLabel": "编辑源",
+        "editSourceAnnotation": "编辑源标注",
+        "uploadedAnnotationSuffix": "标注"
+      },
+      "schemaUnavailable": "计价 Schema 不可用——加载完成前无法生成。"
+    },
+    "header": {
+      "title": "图片工作台",
+      "subtitle": "组合参数、参考图、模板与标注，一站式生成商业级图片",
+      "paramsButton": "参数",
+      "variablesButton": "模板变量"
+    },
+    "prompt": {
+      "title": "提示词",
+      "subtitle": "输入创意、商业诉求或编辑指令",
+      "removeTemplate": "移除当前模板",
+      "imageModelPrefix": "图片模型",
+      "imageModelPlaceholder": "选择图片模型",
+      "noImageModelHint": "暂无图片模型，请先在模型配置里添加 GPT Image、Gemini 或兼容图片模型。",
+      "refineModelPrefix": "Prompt 微调",
+      "refineModelDefault": "默认",
+      "placeholder": "描述你想生成的图片。可以写中文，工作台会结合模型、风格、负向词和参考图生成最终请求。",
+      "refUnsupported": "当前模型不支持参考图",
+      "uploadRef": "上传参考图",
+      "aiRefine": "AI 润色",
+      "startEdit": "开始编辑",
+      "startGenerate": "开始生图",
+      "estimating": "估算中",
+      "costPoints": "{points} 积分",
+      "refinedWith": "已用 {tuning} 润色，可继续在上方编辑。",
+      "viewContext": "查看上下文",
+      "undoRefine": "撤回润色"
+    },
+    "inspiration": {
+      "title": "灵感库",
+      "subtitle": "生成资产与热门图片模板",
+      "close": "关闭灵感库",
+      "tabs": {
+        "history": "历史任务",
+        "materials": "素材库",
+        "templates": "热门模板"
+      },
+      "history": {
+        "empty": "生成图片后会自动进入历史任务"
+      },
+      "materials": {
+        "loading": "正在加载素材库",
+        "empty": "素材库中的图片会显示在这里"
+      }
+    },
+    "stylePresets": {
+      "general": "通用",
+      "commercial": "商业摄影",
+      "cinematic": "电影感",
+      "productPoster": "产品海报",
+      "chineseIllustration": "中式插画",
+      "interior": "室内场景",
+      "character": "人物特写",
+      "sticker": "潮玩贴纸"
+    },
+    "promptTuning": {
+      "auto": "自动调优",
+      "faithful": "尊重原文",
+      "photoDetail": "增强细节",
+      "ecommerce": "电商风格",
+      "storyMood": "故事情绪",
+      "minimal": "极简提炼"
+    },
+    "templateSort": {
+      "popular": "最受欢迎",
+      "newest": "最新上架",
+      "likes": "点赞最多"
+    },
+    "modelProvider": {
+      "unselected": "未选择"
+    },
+    "page": {
+      "historyLoadFailed": "历史资产加载失败",
+      "historyLoadFailedWithMessage": "历史资产加载失败：{message}",
+      "modelLoadFailed": "模型加载失败",
+      "templateLoadFailed": "模板加载失败",
+      "templateLoadFailedWithMessage": "模板加载失败：{message}",
+      "selectImageModel": "请先配置并选择图片模型",
+      "promptRequired": "请输入提示词",
+      "estimateFailed": "图片计费估算失败",
+      "generateFailed": "图片生成失败",
+      "missingGenerationForFeedback": "缺少生成记录，无法提交反馈",
+      "defaultGeneratedMaterialTitle": "图片生成素材",
+      "requestFailedTitle": "工作台请求失败",
+      "close": "关闭",
+      "loadingWorkbench": "正在加载专业工作台...",
+      "confirmTitle": "生成前确认",
+      "confirmDescription": "本次生成会先冻结预计积分，成功后确认扣除，失败会按服务端规则退还。",
+      "estimatingCost": "正在估算积分消耗...",
+      "estimatedCost": "预计消耗",
+      "pointsValue": "{points} 积分",
+      "availableBalance": "可用余额",
+      "unknown": "未知",
+      "taskType": "任务类型",
+      "costDetails": "费用明细",
+      "noEstimate": "暂无估算结果。",
+      "cancel": "取消",
+      "confirmGenerate": "确认生成"
+    }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "标准"
+      },
+      "first_last_frame": {
+        "label": "首尾帧"
+      },
+      "storyboard": {
+        "label": "分镜"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "自适应"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p",
+      "4k": "4K"
+    },
+    "materialTargets": {
+      "firstFrame": "首帧",
+      "lastFrame": "尾帧",
+      "referenceImage": "参考图",
+      "referenceVideo": "参考视频",
+      "referenceAudio": "背景音频"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 段",
+        "description": "快节奏短片"
+      },
+      "count3": {
+        "label": "3 段",
+        "description": "经典叙事节奏"
+      },
+      "count5": {
+        "label": "5 段",
+        "description": "剧情发展更完整"
+      },
+      "count6": {
+        "label": "6 段",
+        "description": "复杂场景与转场"
+      }
+    },
+    "membershipGate": {
+      "title": "当前套餐暂不支持视频生成",
+      "description": "升级会员套餐后即可继续生成视频。",
+      "upgradeAction": "选择套餐",
+      "dismissAction": "稍后处理",
+      "dialogTitle": "选择可用的视频生成套餐",
+      "dialogDescription": "选择包含视频生成能力的套餐后，可继续生成当前视频。"
+    },
+    "inspirationSheet": {
+      "title": "灵感库",
+      "description": "从模板、历史项目或素材库快速开始",
+      "tabs": {
+        "history": "历史项目",
+        "materials": "素材库",
+        "templates": "模板库"
+      },
+      "templates": {
+        "searchPlaceholder": "搜索模板名 / 风格 / 标签",
+        "categoryAll": "全部分类",
+        "loading": "正在加载模板...",
+        "empty": "暂无模板",
+        "emptyHint": "稍后再来看看",
+        "noMatch": "没有匹配的模板",
+        "noMatchHint": "试着调整搜索词或分类",
+        "workflowMeta": "{count} 个分镜",
+        "standardMeta": "{duration}s 单镜头",
+        "workflowDescriptionFallback": "工作流模板",
+        "standardDescriptionFallback": "标准视频模板",
+        "kindWorkflow": "工作流",
+        "kindStandard": "单镜头",
+        "useCount": "{count} 次使用",
+        "useTemplate": "使用模板"
+      },
+      "history": {
+        "empty": "暂无历史项目",
+        "emptyHint": "生成第一个视频后这里会出现历史记录"
+      },
+      "historyDetail": {
+        "back": "返回列表",
+        "reuse": "复用配置",
+        "storyboard": "分镜脚本",
+        "clipTitle": "分镜 {order}",
+        "emptyPrompt": "暂无分镜描述",
+        "stats": {
+          "clips": "分镜",
+          "duration": "总时长",
+          "materials": "素材"
+        },
+        "backToWorkspace": "返回工作台",
+        "videoUnavailable": "暂无可播放视频",
+        "timeline": "分镜时间轴",
+        "currentShot": "当前：{title}",
+        "timeRange": "区间",
+        "shotIndex": "分镜索引",
+        "screenshot": "截图",
+        "screenshotUnavailable": "视频加载完成后才能截图",
+        "screenshotFailed": "截图失败，请确认视频允许截图后重试",
+        "screenshotTitle": "视频截图 {time}",
+        "screenshotSaved": "截图已加入素材库",
+        "screenshotSaveFailed": "加入素材库失败，请稍后重试",
+        "screenshotPreviewTitle": "截图预览",
+        "screenshotPreviewDescription": "确认后可将当前画面加入素材库，后续可作为图片素材复用。",
+        "saveScreenshot": "加入素材库",
+        "share": "分享",
+        "shareCreateFailed": "生成分享链接失败，请稍后重试",
+        "shareCopied": "分享链接已复制",
+        "shareCopyFailed": "复制失败，请手动复制链接",
+        "shareDialogTitle": "分享视频详情",
+        "shareDialogDescription": "生成一个公开链接，其他人打开后可以查看这条视频和分镜信息。",
+        "shareCreating": "正在生成分享链接...",
+        "shareLinkLabel": "分享链接",
+        "shareCopiedButton": "已复制",
+        "copyShareLink": "复制链接",
+        "shareDialogHint": "拥有链接的人无需登录即可查看该视频详情，但不能修改你的项目配置。",
+        "openSharePage": "打开分享页",
+        "download": "下载",
+        "downloadVideo": "下载视频",
+        "cancel": "取消"
+      },
+      "materials": {
+        "searchPlaceholder": "搜索素材名",
+        "typeAll": "全部类型",
+        "typeImage": "图片",
+        "typeVideo": "视频",
+        "typeAudio": "音频",
+        "targetAction": "用作{target}",
+        "loading": "正在加载素材...",
+        "empty": "素材库为空",
+        "emptyHint": "在素材库上传后即可在此使用",
+        "audioFallback": "音频素材",
+        "fileFallback": "文件素材"
+      }
+    },
+    "estimateDialog": {
+      "title": "生成费用预估",
+      "description": "请确认本次生成将消耗的积分",
+      "estimating": "正在估算...",
+      "totalCost": "总费用",
+      "balance": "当前余额",
+      "balanceUnknown": "未知",
+      "submittedClips": "提交分镜数",
+      "clipsCount": "{count} 个",
+      "clipTitleFallback": "分镜 {order}",
+      "credits": "{value} 积分",
+      "cancel": "取消",
+      "confirm": "确认生成",
+      "totalDuration": "总时长",
+      "resolution": "分辨率",
+      "pricingRule": "计费规则",
+      "seconds": "{value}s"
+    },
+    "storyboardDialog": {
+      "title": "分镜工具",
+      "description": "描述你的视频，AI 自动拆分分镜",
+      "promptLabel": "剧情描述",
+      "promptPlaceholder": "一句话描述你想要的视频，例如：在赛博朋克城市中，少女骑摩托追逐霓虹...",
+      "clipCount": "分镜数量",
+      "estimatedTotal": "预计总时长 {total}s · 单镜 {perClip}s",
+      "presetSummary": "单镜 {perClip}s × {count} = {total}s",
+      "modelLabel": "导演模型",
+      "modelPlaceholder": "选择导演模型",
+      "modelSearchPlaceholder": "搜索模型名 / 供应商",
+      "modelEmptyResult": "无匹配模型",
+      "modelLoading": "加载模型中...",
+      "modelEmpty": "暂无可用导演模型",
+      "cancel": "取消",
+      "generate": "生成分镜"
+    },
+    "parameterPanel": {
+      "title": "视频参数",
+      "subtitle": "模式与 Seedance 基础参数",
+      "closeAria": "关闭视频参数",
+      "modeLabel": "生成模式",
+      "basicsLabel": "基础参数",
+      "durationLabel": "时长",
+      "resolutionLabel": "分辨率",
+      "ratioLabel": "画面比例",
+      "audioLabel": "音频",
+      "audioOn": "有声",
+      "audioOff": "无声",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "留空随机",
+      "schemaUnavailable": "计价 Schema 不可用——加载完成前无法生成。"
+    },
+    "generationDock": {
+      "modelPlaceholder": "选择视频模型",
+      "modelSearchPlaceholder": "搜索视频模型 / 供应商",
+      "modelEmptyResult": "没有匹配的视频模型",
+      "modelLoading": "加载视频模型",
+      "modelEmpty": "暂无视频模型，请联系管理员配置",
+      "generate": "生成视频",
+      "credits": "{value} 积分"
+    },
+    "productPanel": {
+      "title": "视频产物",
+      "subtitle": "当前视频预览和生成状态会在这里显示",
+      "generating": "生成中",
+      "addToLibrary": "加入素材库"
+    },
+    "configPanel": {
+      "title": "片段配置",
+      "preparingClipEditor": "正在准备分镜编辑器...",
+      "clipDefaultTitle": "分镜 {order}",
+      "promptLabel": {
+        "firstLastFrame": "首尾帧提示词",
+        "standard": "视频提示词",
+        "storyboard": "分镜提示词"
+      },
+      "promptInput": {
+        "standardPlaceholder": "描述你想生成的视频画面、镜头运动、节奏与氛围...",
+        "storyboardLabel": "整片提示词",
+        "storyboardPlaceholder": "描述整体视频风格、节奏与统一约束..."
+      },
+      "paste": {
+        "uploading": "正在上传 {count} 张图片...",
+        "uploaded": "已添加 {count} 张图片",
+        "failed": "图片上传失败",
+        "firstLastFull": "首尾帧已满，最多 2 张图片",
+        "firstLastOverflow": "首尾帧仅支持 2 张图片，已忽略 {count} 张"
+      },
+      "slots": {
+        "firstFrameImage": "首帧图片",
+        "lastFrameImage": "尾帧图片",
+        "referenceImage": "参考图",
+        "referenceVideo": "参考视频",
+        "referenceAudio": "背景音频"
+      },
+      "materials": {
+        "firstLastTitle": "首尾帧素材",
+        "firstLastDescription": "上传首帧与尾帧图片，可附加背景音频",
+        "referenceTitle": "参考素材",
+        "referenceDescription": "可选添加参考图 / 视频 / 音频",
+        "swapFrames": "交换首尾帧",
+        "preparingSlots": "正在准备素材槽位..."
+      },
+      "storyboard": {
+        "title": "分镜列表",
+        "description": "按时间轴管理每个分镜，可拖拽末端调整时长",
+        "addClip": "添加分镜",
+        "generateClips": "AI 拆分分镜",
+        "emptyHint": "暂无分镜，使用上方按钮添加或交给 AI 拆分",
+        "timeline": "时间轴",
+        "timelineUsage": "已用 {used}s / 上限 {limit}s",
+        "detail": {
+          "title": "分镜详情",
+          "promptSummary": "提示词：{prompt}",
+          "promptPlaceholder": "暂无提示词",
+          "materialCount": "已选 {count} 个素材",
+          "noMaterials": "暂无素材",
+          "titleLabel": "分镜标题",
+          "promptLabel": "分镜提示词",
+          "promptInputPlaceholder": "描述这个分镜的画面、动作与镜头细节...",
+          "imagesTitle": "分镜素材",
+          "imagesDescription": "为该分镜挑选首帧、参考图或尾帧"
+        }
+      },
+      "clip": {
+        "deleteAria": "删除 {title}",
+        "descriptionPlaceholder": "暂无描述",
+        "resizeAria": "调整 {title} 时长",
+        "resizeTitle": "拖拽调整时长"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "搜索文本模型 / 供应商",
+        "textModelEmptyResult": "无匹配的文本模型",
+        "textModelLabel": "优化：{name}",
+        "defaultLabel": "默认",
+        "textModelLoading": "加载文本模型...",
+        "textModelDefault": "默认文本模型",
+        "aiOptimize": "AI 优化",
+        "videoModelSearchPlaceholder": "搜索视频模型 / 供应商",
+        "videoModelEmptyResult": "无匹配的视频模型",
+        "videoModelLabel": "模型：{name}",
+        "selectModel": "选择模型",
+        "videoModelLoading": "加载视频模型...",
+        "videoModelEmpty": "暂无视频模型",
+        "generateVideo": "生成视频",
+        "credits": "{value} 积分"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "分镜 1",
+      "storyboardClipTitle": "分镜 {order}",
+      "shotTitleFallback": "镜头 {order}",
+      "loading": "正在加载视频工作台...",
+      "closeParamsAria": "关闭视频参数",
+      "headerTitle": "视频工作台",
+      "headerSubtitle": "在一个工作区内编排分镜、素材与参数",
+      "paramsButton": "参数",
+      "newButton": "新建",
+      "inspirationButton": "灵感库"
+    },
+    "toasts": {
+      "directorDefaultFallback": "导演更新已完成",
+      "directorRequestFailed": "导演请求失败",
+      "insufficientDuration": "时间轴已没有剩余时长",
+      "selectClipFirst": "请先选择一个分镜",
+      "placedInto": "已放入{target}",
+      "materialUseFailed": "当前无法使用素材",
+      "noFramesToSwap": "请先添加首帧或尾帧",
+      "swappedFrames": "已交换首尾帧",
+      "swapFramesFailed": "交换首尾帧失败",
+      "emptyStoryboardPrompt": "请先输入整片提示词",
+      "emptyVideoPrompt": "请先输入视频提示词",
+      "storyboardPromptOptimized": "整片提示词已优化",
+      "videoPromptOptimized": "视频提示词已优化",
+      "storyboardPromptOptimizeFailed": "整片提示词优化失败",
+      "videoPromptOptimizeFailed": "视频提示词优化失败",
+      "emptyStoryboardIdea": "请先输入视频创意",
+      "storyboardGenerated": "已生成 {count} 个分镜",
+      "storyboardGeneratedSuccess": "分镜已生成",
+      "storyboardGenerateFailed": "分镜生成失败",
+      "estimateFailed": "费用估算失败",
+      "defaultMaterialTitle": "生成视频",
+      "addedToMaterials": "已加入素材库",
+      "addToMaterialsFailed": "加入素材库失败"
+    },
+    "materialPicker": {
+      "title": "选择素材 - {role}",
+      "roles": {
+        "firstFrame": "首帧图片",
+        "lastFrame": "尾帧图片",
+        "referenceImage": "风格参考",
+        "referenceVideo": "参考视频",
+        "referenceAudio": "背景音频",
+        "default": "素材"
+      },
+      "tabs": {
+        "upload": "上传",
+        "library": "素材库"
+      },
+      "description": {
+        "batch": "从当前分镜开始，可按顺序填入 {count} 个未填充的「{role}」槽位。已跳过：{skipped}。",
+        "singleAvailable": "仅剩 1 个分镜的「{role}」未填充，本次选择会填入该分镜。",
+        "allFilled": "所有分镜的「{role}」均已填充，本次选择会覆盖当前分镜。"
+      },
+      "upload": {
+        "dropArea": "点击或拖拽上传文件",
+        "dropAreaBatch": "点击或拖拽上传文件（最多 {count} 个）",
+        "processing": "处理中..."
+      },
+      "library": {
+        "empty": "暂无可用素材",
+        "selectionCount": "已选 {selected} / {total}",
+        "clear": "清空",
+        "applying": "应用中...",
+        "applyBatchOrder": "按顺序应用到 {count} 个分镜",
+        "useSelected": "使用所选素材"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "已应用 {count} 张素材到 {count} 个分镜",
+        "libraryError": "当前无法使用素材",
+        "uploadAppliedBatch": "已上传并应用 {count} 张素材到 {count} 个分镜",
+        "uploadError": "上传失败",
+        "selectionLimit": "最多选择 {count} 张",
+        "selectionLimitDescription": "与剩余未填充的分镜数量一致"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "来自上一 Clip 尾帧"
+    },
+    "videoPreview": {
+      "selectClip": "选择一个分镜预览",
+      "queued": "排队中",
+      "generating": "视频生成中...",
+      "failed": "生成失败",
+      "firstFrameAlt": "首帧",
+      "addMaterialOrPrompt": "添加素材或提示词开始"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "已完成",
+        "processing": "生成中",
+        "failed": "失败",
+        "draft": "草稿",
+        "unknown": "未知"
+      },
+      "noPrompt": "没有分镜提示词",
+      "openProjectAria": "打开历史项目",
+      "deleteProject": "删除历史项目",
+      "stats": {
+        "clips": "分镜",
+        "materials": "素材",
+        "results": "结果"
+      },
+      "clipDefaultTitle": "分镜 {order}",
+      "clipPlaceholder": "等待补充分镜描述",
+      "moreClips": "还有 {count} 个分镜",
+      "createdAt": "创建于 {date}",
+      "openProject": "查看",
+      "viewDetails": "查看详情",
+      "reuseProject": "复用配置",
+      "share": "分享",
+      "download": "下载",
+      "downloadVideo": "下载视频"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "链式生成进度",
+        "cancelRemaining": "取消剩余"
+      },
+      "directorChat": {
+        "userPrefix": "你: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "让 AI 导演拆分镜头、改 Prompt 或调整视频参数..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "未命名项目",
+        "historyTitle": "历史记录"
+      },
+      "modelSelector": {
+        "label": "模型",
+        "default": "默认",
+        "loading": "加载模型中...",
+        "empty": "暂无视频模型，请联系系统管理员配置"
+      },
+      "variantGrid": {
+        "title": "生成 Variant ({count})",
+        "generateNew": "+ 生成新 Variant",
+        "setPrimary": "选为主"
+      },
+      "emptyState": {
+        "title": "开始视频创作",
+        "description": "创建新项目或从模板开始，添加素材和提示词生成视频片段",
+        "createProject": "新建项目",
+        "startFromTemplate": "从模板开始"
+      },
+      "clipTimeline": {
+        "addClip": "添加 Clip"
+      },
+      "historyPanel": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "deleteSuccess": "历史记录已删除",
+        "deleteFailed": "删除历史记录失败",
+        "title": "历史记录",
+        "close": "关闭历史记录",
+        "empty": "暂无历史记录"
+      },
+      "templatePicker": {
+        "title": "视频模板",
+        "workflowTemplates": "工作流模板",
+        "parameterPresets": "参数预设",
+        "clipCount": "{count} clips",
+        "useTemplate": "使用此模板",
+        "emptyWorkflow": "暂无工作流模板",
+        "presetsComingSoon": "参数预设模板即将上线"
+      },
+      "inputArea": {
+        "referenceContent": "参考内容",
+        "audio": "音频",
+        "firstFrame": "首帧",
+        "swapFrames": "交换首尾帧",
+        "lastFrame": "尾帧",
+        "frameIndex": "第{index}帧",
+        "clearAll": "全部清空"
+      },
+      "clipSidebar": {
+        "title": "视频项目",
+        "close": "关闭视频项目",
+        "defaultProjectTitle": "未命名项目",
+        "newProject": "新建项目",
+        "emptyProjects": "暂无项目",
+        "clipCount": "{count} clips",
+        "back": "返回",
+        "addClip": "添加 Clip",
+        "generationRecords": "生成记录",
+        "emptyRecords": "暂无记录"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "首帧图片",
+          "referenceImage": "风格参考",
+          "referenceVideo": "参考视频",
+          "referenceAudio": "背景音频"
+        },
+        "ratioAdaptive": "自适应",
+        "audioOn": "有声",
+        "audioOff": "无声",
+        "clipDefaultTitle": "分镜 {order}",
+        "selectClip": "选择一个 Clip 进行编辑",
+        "generating": "生成中，请等待...",
+        "failed": "生成失败，可修改参数后重新生成",
+        "titleLabel": "分镜标题",
+        "promptPlaceholder": "输入视频描述提示词...",
+        "durationLabel": "时长",
+        "resolutionLabel": "分辨率",
+        "ratioLabel": "比例",
+        "audioLabel": "音频",
+        "regenerate": "重新生成",
+        "generateVideo": "生成视频"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "全能参考",
+          "firstLastFrame": "首尾帧",
+          "smartMultiframe": "智能多帧"
+        },
+        "ratioAdaptive": "自适应",
+        "selectModel": "选择模型",
+        "loadingModels": "加载视频模型",
+        "emptyModels": "暂无视频模型",
+        "selectTemplate": "选模板"
+      }
+    }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "暂无封面",
+      "noDescription": "暂无描述",
+      "free": "免费",
+      "pointsCost": "{points} 积分",
+      "featured": "精选",
+      "emptyResources": "暂无资源",
+      "resource": "资源",
+      "untitledResource": "未命名资源",
+      "retry": "重试",
+      "loading": "加载中...",
+      "processing": "处理中...",
+      "cancel": "取消",
+      "resourceNotFound": "资源不存在",
+      "unknownResourceType": "未知资源类型：{slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "图片模板",
+      "videoTemplate": "视频模板",
+      "imageTemplateShort": "图片",
+      "videoTemplateShort": "视频"
+    },
+    "runtime": {
+      "cloud": "云端可用",
+      "cloudDesc": "云端运行，Web 与桌面端均可使用",
+      "desktopOnly": "仅桌面端",
+      "desktopOnlyDesc": "需要本地运行环境（进程/文件/CLI）",
+      "either": "通用",
+      "eitherDesc": "可在云端或桌面端选择性使用",
+      "desktopShort": "桌面"
+    },
+    "card": {
+      "useInChat": "会话使用",
+      "useInChatAria": "在会话中使用模板 {title}",
+      "useInWorkbench": "专业工作台",
+      "useInWorkbenchAria": "应用到专业工作台 {title}"
+    },
+    "sidebar": {
+      "home": "推荐首页",
+      "resourceTypes": "资源类型",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "图片模板",
+      "videoTemplates": "视频模板",
+      "mine": "我的",
+      "acquired": "我的资源",
+      "favorites": "我的收藏",
+      "generations": "生成历史",
+      "published": "我的发布",
+      "history": "浏览历史",
+      "profile": "个人主页"
+    },
+    "platformStats": {
+      "title": "平台数据",
+      "totalResources": "资源总数",
+      "imageTemplates": "图片模板",
+      "videoTemplates": "视频模板",
+      "totalAcquisitions": "累计获取"
+    },
+    "editorPicks": {
+      "title": "编辑精选"
+    },
+    "hotRanking": {
+      "title": "热门排行榜"
+    },
+    "resourcePanel": {
+      "eyebrow": "资源面板",
+      "resourceDetails": "资源详情",
+      "addToCurrentSession": "添加到当前会话",
+      "unpin": "取消固定",
+      "pin": "固定面板",
+      "searchPlaceholder": "搜索资源...",
+      "loading": "加载中...",
+      "backToList": "返回列表",
+      "sourceInfo": "来源信息",
+      "author": "作者",
+      "platform": "平台",
+      "externalId": "外部 ID",
+      "viewOriginal": "查看原文",
+      "mcpLocalStatus": "MCP 本地状态：",
+      "statusReady": "已安装",
+      "statusMissingEnv": "缺少环境变量",
+      "statusFailed": "检测失败",
+      "statusNotInstalled": "未安装",
+      "desktopOnlyWebBlocked": "该资源需要桌面端本地环境，Web 端不能直接激活。",
+      "processing": "处理中...",
+      "acquireAndActivate": "获取并激活",
+      "openFullDetails": "打开完整详情"
+    },
+    "chatDock": {
+      "createSessionFailed": "创建会话失败",
+      "attachTemplateFailed": "关联模板失败",
+      "attachmentUploadFailed": "附件上传失败",
+      "unknownError": "未知错误",
+      "sendFailed": "发送失败",
+      "configureImageModelFirst": "请先配置可用的图片模型",
+      "messageSaveFailed": "消息保存失败",
+      "requestFailed": "请求失败",
+      "imageGenerationFailed": "图片生成失败",
+      "fullConversation": "完整对话"
+    },
+    "home": {
+      "title": "模板市场",
+      "subtitle": "图片与视频创作模板，一键带入会话或专业工作台",
+      "desktopTitle": "一站式 AI 资源模板市场",
+      "desktopSubtitle": "发现并使用 Skills、MCP、Agents、图片/视频模板",
+      "imageTemplateDesc": "封面、海报、商品图与视觉风格配方",
+      "videoTemplateDesc": "分镜脚本、镜头参数和成片工作流",
+      "hotMasonry": "热门推荐瀑布流",
+      "imageVideo": "图片 · 视频",
+      "hotRecommendations": "热门推荐"
+    },
+    "list": {
+      "sortNewest": "最新",
+      "sortPopular": "热度",
+      "sortLikes": "点赞",
+      "totalCount": "共 {count} 个",
+      "emptyResources": "暂无资源，试试切换分类或换个关键词",
+      "agentEyebrow": "AgentHub / 智能体",
+      "agentDescription": "挑选可直接进入会话的智能体、工具链和工作流伙伴。",
+      "imageEyebrow": "Image Recipes / 图片模板",
+      "imageDescription": "浏览海报、商品图、封面与视觉风格模板，像作品墙一样快速挑选。",
+      "videoEyebrow": "Video Flows / 视频模板",
+      "videoDescription": "从分镜、镜头参数到短视频生成流程，找到适合当前创作的起点。",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "能力增强、个性化指令与可复用操作方式。",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "工具、数据源和外部连接器。"
+    },
+    "detail": {
+      "applyTemplateFailed": "应用模板失败",
+      "newImageSessionTitle": "新图片会话",
+      "newSessionTitle": "新会话",
+      "workbench": "专业工作台",
+      "useInChat": "会话使用",
+      "favoriteCount": "收藏 {count}",
+      "whyDesktopOnly": "为什么仅桌面端？",
+      "localRuntimeRequired": "该资源需要本地运行环境",
+      "variableDefinitions": "变量定义",
+      "defaultValue": " · 默认：{value}",
+      "resourceInfo": "资源信息",
+      "sourceInfo": "来源信息",
+      "viewOriginal": "查看原文",
+      "hoverPreview": "悬停预览前几秒",
+      "mcpDesktopRequired": "MCP 资源需在桌面端启用",
+      "selectSession": "选择会话",
+      "activateTo": "激活到",
+      "createAndActivate": "+ 新建会话并激活",
+      "createAndApply": "+ 新建会话并应用模板",
+      "applying": "应用中...",
+      "recentSessions": "最近会话",
+      "applyDialogTitle": "选择会话并应用模板",
+      "applyDialogDescription": "请选择{target}，或新建会话后应用。",
+      "templateSessionMismatch": "当前选择的是{current}，这个模板需要应用到{target}。请重新选择，或新建会话后应用模板。",
+      "conversationKind": {
+        "video": "视频会话",
+        "image": "图片会话",
+        "avatar": "数字人会话",
+        "chat": "对话会话"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "对话会话或图片会话",
+        "videoTemplate": "对话会话",
+        "default": "对话会话"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "获取并激活到当前会话",
+        "generateAndReturnToSession": "立即生成并回流会话",
+        "acquireWithPoints": "使用 {points} 积分获取并激活",
+        "getOnDesktop": "在桌面端获取"
+      },
+      "info": {
+        "type": "类型",
+        "category": "分类",
+        "version": "版本",
+        "updatedAt": "更新时间",
+        "author": "作者",
+        "platform": "平台",
+        "externalId": "外部 ID",
+        "originalLink": "原始链接"
+      }
+    }
+  },
+  "videoShare": {
+    "loading": "正在加载分享视频...",
+    "loadFailed": "分享链接不存在、已失效，或视频尚未完成。",
+    "unavailableTitle": "无法打开分享视频",
+    "goCreate": "去创作视频",
+    "eyebrow": "分享视频",
+    "copyLink": "复制链接",
+    "copied": "链接已复制",
+    "copyFailed": "复制失败，请手动复制链接",
+    "copiedButton": "已复制",
+    "monitor": "监视器",
+    "storyboard": "分镜数据",
+    "duration": "总时长",
+    "model": "模型",
+    "clipTitle": "分镜 {order}",
+    "clipFallback": "分镜脚本",
+    "emptyPrompt": "暂无分镜描述",
+    "timeline": "分镜时间轴",
+    "footer": "分享视频详情",
+    "growthCtaDescription": "创建你自己的私有视频项目，准备好分享时再发布。"
+  },
+  "gallery": {
+    "title": "广场",
+    "subtitle": "发现社区发布的精彩作品",
+    "kindImage": "图片",
+    "kindVideo": "视频",
+    "emptyTitle": "暂无已发布作品",
+    "emptyDescription": "成为第一个发布作品到广场的人",
+    "loadMore": "加载更多",
+    "unknownAuthor": "未知作者",
+    "like": "点赞",
+    "favorite": "收藏",
+    "backToGallery": "返回广场",
+    "notFoundTitle": "该作品当前不可访问",
+    "notFoundDescription": "可能已被下架或删除",
+    "author": "作者",
+    "metricViews": "浏览",
+    "metricLikes": "点赞",
+    "metricFavorites": "收藏",
+    "metricRecreates": "二创",
+    "recreate": "二创",
+    "download": "下载",
+    "unpublish": "下架",
+    "republish": "重新发布",
+    "unpublishSuccess": "已下架",
+    "republishSuccess": "已提交审核",
+    "prompt": "提示词",
+    "copyPrompt": "复制",
+    "copied": "已复制",
+    "noPrompt": "暂无提示词",
+    "information": "信息",
+    "model": "模型",
+    "auto": "自动",
+    "dimensions": "尺寸",
+    "category": "分类",
+    "status": {
+      "draft": "草稿",
+      "pending": "审核中",
+      "published": "已发布",
+      "unpublished": "已下架",
+      "hidden": "已隐藏",
+      "rejected": "已拒绝"
+    }
+  },
+  "schemaForm": {
+    "constraint": {
+      "longerThan": "{prefix}最长 {bound} 秒",
+      "shorterThan": "{prefix}最少 {bound} 秒"
+    }
+  }
+}

@@ -1,6 +1,8 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { flattenLeaves } from './i18n/merge-locales.core';
+import { CHUNKS } from '../packages/i18n/src/messages';
 import { ROUTE_POLICY } from '../clients/web/lib/i18n/route-policy';
 
 const LANGS = ['zh-CN', 'zh-TW', 'en', 'fr', 'ja', 'ru', 'vi'];
@@ -9,15 +11,68 @@ const APP_LOCALE_DIR = 'clients/web/app/[locale]';
 
 /**
  * `packages/i18n`'s `main` points at `dist/index.js`, and the app loads
- * `dist/messages/*.json` at runtime — never `src/messages/*.json` directly.
- * `dist/` is produced by `pnpm --filter @autix/i18n build`, whose `tsc`
- * step does NOT copy the message JSON files; only the script's trailing
- * `cp src/messages/*.json dist/messages/` does. A dev who edits
- * `src/messages/*.json` and forgets to rebuild ships a stale `dist/` with
- * the old keys — the check above (`assertAligned`) is blind to this because
- * it only ever reads `src/`.
+ * `dist/messages/**\/*.json` at runtime — never `src/messages/**\/*.json`
+ * directly. `dist/` is produced by `pnpm --filter @autix/i18n build`, whose
+ * `tsc` step does NOT copy the message JSON files; only the trailing
+ * `cp -R src/messages/. dist/messages/` in that build script does. A dev
+ * who edits `src/messages/**\/*.json` and forgets to rebuild ships a stale
+ * `dist/` with the old keys — `assertAligned` is blind to this because it
+ * only ever reads `src/`.
  */
 const DIST_DIR = 'packages/i18n/dist/messages';
+
+/**
+ * 按 CHUNKS 合并出某个 locale 的完整 message 树——刻意复刻 `loadMessages()` 的
+ * 顶层 `Object.assign` 浅合并，使检查对象与运行时真正加载的东西完全一致。
+ */
+function loadMergedByLang(root: string): Record<string, Record<string, unknown>> {
+  const byLang: Record<string, Record<string, unknown>> = {};
+  for (const l of LANGS) {
+    const merged: Record<string, unknown> = {};
+    for (const chunk of CHUNKS) {
+      const file = join(root, chunk, `${l}.json`);
+      if (!existsSync(file)) continue;
+      Object.assign(merged, JSON.parse(readFileSync(file, 'utf8')));
+    }
+    byLang[l] = merged;
+  }
+  return byLang;
+}
+
+/**
+ * 磁盘上的 chunk 目录必须与运行时的 `CHUNKS` 一一对应。
+ *
+ * 多出来的目录（含手误新建的、或历史遗留未清理的）都是静默丢键的陷阱：
+ * `loadMessages()` 只遍历 `CHUNKS`，未声明的 chunk 目录里的键在运行时永远加载不到，
+ * 而单看文件系统一切正常。少目录则是漏建 / 漏迁移，会让 `chunkLoaders` 里的
+ * dynamic import 在打包时炸掉。
+ */
+export function assertChunkDirsMatchRuntime(): string[] {
+  const onDisk = existsSync(DIR)
+    ? readdirSync(DIR).filter((e) => statSync(join(DIR, e)).isDirectory())
+    : [];
+  const declared = new Set<string>(CHUNKS);
+  const issues: string[] = [];
+  for (const dir of onDisk) {
+    if (!declared.has(dir)) {
+      issues.push(
+        `[chunk] 目录 messages/${dir}/ 不在 CHUNKS 中——运行时永远不会加载它，其中的键会静默丢失。` +
+        `请在 packages/i18n/src/messages.ts 的 CHUNKS/chunkLoaders 中声明，或删除该目录。`,
+      );
+    }
+  }
+  for (const chunk of CHUNKS) {
+    if (!onDisk.includes(chunk)) {
+      issues.push(`[chunk] CHUNKS 声明了 ${chunk}，但 messages/${chunk}/ 不存在。`);
+    }
+    for (const l of LANGS) {
+      if (!existsSync(join(DIR, chunk, `${l}.json`))) {
+        issues.push(`[chunk] 缺少 messages/${chunk}/${l}.json`);
+      }
+    }
+  }
+  return issues;
+}
 
 export function assertAligned(byLang: Record<string, Record<string, unknown>>): string[] {
   const langs = Object.keys(byLang);
@@ -92,11 +147,9 @@ export function assertRoutePolicyCoverage(pages: string[], policyKeys: string[])
 }
 
 function main() {
-  const byLang: Record<string, Record<string, unknown>> = {};
-  for (const l of LANGS) {
-    byLang[l] = JSON.parse(readFileSync(join(DIR, `${l}.json`), 'utf8'));
-  }
-  const issues = assertAligned(byLang);
+  const issues = assertChunkDirsMatchRuntime();
+  const byLang = loadMergedByLang(DIR);
+  issues.push(...assertAligned(byLang));
 
   // `packages/i18n/dist/` is gitignored: on a fresh clone before the first
   // `pnpm --filter @autix/i18n build`, it simply doesn't exist yet. That's
@@ -114,12 +167,7 @@ function main() {
   // present (e.g. only warning) would restore that blind spot; a hard
   // failure only when genuinely absent avoids punishing a clean checkout.
   if (existsSync(DIST_DIR)) {
-    const distByLang: Record<string, Record<string, unknown>> = {};
-    for (const l of LANGS) {
-      const distFile = join(DIST_DIR, `${l}.json`);
-      distByLang[l] = existsSync(distFile) ? JSON.parse(readFileSync(distFile, 'utf8')) : {};
-    }
-    issues.push(...assertDistMatchesSrc(byLang, distByLang));
+    issues.push(...assertDistMatchesSrc(byLang, loadMergedByLang(DIST_DIR)));
   } else {
     console.warn(
       `⚠ ${DIST_DIR} not found — skipping src/dist sync check (run \`pnpm --filter @autix/i18n build\` first). Expected on a fresh clone; not expected otherwise.`,
@@ -137,4 +185,22 @@ function main() {
   console.log('i18n messages aligned across all languages; route-policy covers all pages.');
 }
 
-if (import.meta.main) main();
+/**
+ * `import.meta.main` 是 Bun / Node 24+ 的特性；本仓库跑 tsx + Node 22，它恒为
+ * `undefined`，于是 main() 从未被调用——`pnpm run i18n:check` 长期零输出、exit 0，
+ * 看起来一直在通过，实际一次都没执行过。（本文件被 __tests__ import，所以不能
+ * 无条件调用 main()，必须有一个真正有效的入口判断。）
+ *
+ * 识别方法：真正跑通时会打印下面 main() 末尾那行 aligned 日志。零输出 = 没跑。
+ */
+const isDirectRun = (() => {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
+
+if (isDirectRun) main();

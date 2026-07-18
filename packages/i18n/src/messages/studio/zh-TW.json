@@ -1,0 +1,1588 @@
+{
+  "chat": {
+    "newConversation": "新對話",
+    "searchConversation": "搜尋對話...",
+    "noConversations": "暫無對話",
+    "noMatchingConversation": "無符合的對話",
+    "deleteConversationTitle": "確認刪除對話",
+    "deleteConversationMsg": "確認刪除對話 {title} ？該會話的訊息、產物及歷史版本都將一併刪除，操作不可恢復。",
+    "inputPlaceholder": "請輸入您的需求",
+    "inputPlaceholderWithImage": "輸入文字或貼上圖片",
+    "sendMessage": "傳送訊息",
+    "generatingReply": "正在產生回覆",
+    "sendShortcut": "⌘/Ctrl + Enter 傳送",
+    "addImage": "新增圖片",
+    "imageCount": "{count}/{max} 張",
+    "thinking": "思考中",
+    "thinkingDefault": "Amux Studio 正在整理回答",
+    "thinkingProgress": "正在執行第 {step} 步，共 {totalSteps} 步",
+    "thinkingPreparing": "正在準備回應內容…",
+    "copied": "已複製",
+    "copy": "複製",
+    "copyReply": "複製回覆",
+    "preview": {
+      "copyLink": "複製連結",
+      "linkCopied": "已複製",
+      "download": "下載",
+      "openOriginal": "開啟原圖",
+      "close": "關閉預覽"
+    },
+    "images": {
+      "title": "本輪圖片",
+      "empty": "暫無生成圖片",
+      "count": "共 {count} 張",
+      "expand": "展開圖片面板",
+      "collapse": "收起圖片面板",
+      "refresh": "重新整理",
+      "retry": "重試",
+      "error": "載入失敗"
+    },
+    "selectModel": "選擇模型",
+    "default": "預設",
+    "searchModels": "搜尋模型...",
+    "noModelsFound": "無符合模型",
+    "chatWorkspace": "對話工作區",
+    "welcomeMessage": "您好！我是 Amux Studio AI 助手。\n請描述您的需求，我來幫您生成 PRD、代碼、設計稿或原型。",
+    "selectOrCreateChat": "選擇或建立一個對話開始",
+    "requestError": "請求出錯，請重試",
+    "deepSearch": "深度搜尋",
+    "newChat": "新建對話",
+    "deleteChat": "刪除對話",
+    "deleteConfirm": "確定要刪除這個對話嗎？",
+    "renameChat": "重新命名對話",
+    "template": {
+      "drawerTitle": "選擇圖片範本",
+      "searchPlaceholder": "搜尋範本",
+      "current": "目前",
+      "editPrompt": "編輯 Prompt",
+      "edit": "編輯",
+      "reusePrompt": "引用",
+      "removeTemplate": "移除範本",
+      "dialogTitle": "{name} · Prompt 編輯",
+      "sectionRaw": "範本原文",
+      "sectionReferences": "參考圖",
+      "sectionVariables": "變數設定",
+      "refSelectAll": "全選",
+      "refClear": "取消",
+      "refSelectedCount": "已選 {n}/{total}",
+      "refEmpty": "此範本暫無參考圖",
+      "reset": "重設",
+      "applyToInput": "套用到輸入框",
+      "noVariables": "此範本無變數",
+      "variableCount": "{count} 個變數",
+      "imagesCapHit": "參考圖已合併至 {max} 張上限",
+      "confirmSwitch": "切換會清除目前的輸入與參考圖，是否繼續？",
+      "pendingVariables": "{n} 個變數待填",
+      "empty": "暫無可用模板",
+      "templateAlt": "模板",
+      "noCover": "暫無封面",
+      "untitled": "未命名模板",
+      "useThisTemplate": "使用此模板",
+      "dialogDescription": "編輯模板變數和參考素材，套用後會填入會話輸入框。",
+      "drawerTitleVideo": "选择视频模板"
+    },
+    "error": {
+      "chatModelInvalid": "所選對話模型不支援文字生成，請更換或留空以使用預設模型",
+      "defaultModelMissing": "未設定預設通用模型，無法生成提示詞",
+      "imageMaxReached": "最多只能新增 {max} 張圖片",
+      "imageMaxPartial": "已達到 {max} 張圖片上限，僅新增前 {n} 張",
+      "requestFailedTitle": "請求失敗",
+      "imageUploadFailed": "圖片上傳失敗",
+      "imageUploadMissingUrl": "圖片上傳回應缺少 URL",
+      "switchModeFailed": "切換模式失敗",
+      "selectImageTemplateFirst": "請先選擇一個圖片模板",
+      "messageSaveFailed": "訊息儲存失敗",
+      "modeComingSoon": "{kind} 模式即將上線，暫不支援傳送",
+      "attachmentUploadFailed": "附件上傳失敗"
+    },
+    "toolbar": {
+      "selectModel": "選擇模型",
+      "selectTemplate": "選範本",
+      "chatModelTooltip": "對話模型（用於 AI 總結 prompt）",
+      "noModels": "沒有可用的{kind}模型"
+    },
+    "modelPicker": {
+      "placeholder": "選擇模型",
+      "searchPlaceholder": "搜尋模型名 / 供應商",
+      "empty": "無符合模型"
+    },
+    "inputPlaceholderWithMedia": "上传参考素材、输入文字描述，自由组合图、文、音、视频多元素",
+    "attachments": {
+      "unsupportedType": "不支援的檔案類型",
+      "maxReached": "最多上傳 {max} 個附件",
+      "maxRemaining": "最多還能上傳 {remaining} 個附件",
+      "uploadFile": "上傳檔案",
+      "remove": "移除附件"
+    },
+    "mentions": {
+      "title": "引用資源",
+      "empty": "沒有可引用的已取得資源"
+    },
+    "imageWorkflow": {
+      "image": "图片",
+      "editImage": "编辑图片",
+      "referenceToImage": "參考圖生圖",
+      "createImage": "创建图片",
+      "editingFrom": "正在基於 {count} 張圖編輯",
+      "removeSource": "移除编辑源",
+      "removeImage": "移除图片",
+      "clear": "清除",
+      "editModeHint": "選擇「編輯圖片」後傳送會進入圖片編輯；普通傳送仍會繼續對話。",
+      "referenceImage": "參考圖",
+      "editPlaceholder": "描述你想怎么修改这张图片",
+      "cancelGeneration": "取消图片生成",
+      "promptSuggestion": "Prompt 建议",
+      "generateImage": "生成图片",
+      "editSuggestion": "编辑建议",
+      "imageResult": "图片结果",
+      "regenerateFromPrompt": "按此 Prompt 再生成",
+      "useAsEditSource": "用作编辑源",
+      "editingImage": "正在編輯圖片...",
+      "generatingImage": "正在生成圖片..."
+    },
+    "points": {
+      "estimatedCost": "预计消耗 {cost} 积分",
+      "estimating": "正在估算积分消耗",
+      "cost": "{cost} 积分"
+    },
+    "activeResources": {
+      "title": "会话 Skills",
+      "add": "添加",
+      "loading": "載入中...",
+      "empty": "目前會話未啟用 Skills",
+      "remove": "移除"
+    },
+    "resourceLauncher": {
+      "addResource": "+ 添加资源",
+      "openPanel": "打开资源面板"
+    },
+    "imageParams": {
+      "smartRatio": "自動",
+      "summary": "{size}",
+      "quality": "图像质量",
+      "size": "图片尺寸",
+      "resolution": "解析度",
+      "qualityValue": {
+        "auto": "自动",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "standard": "标准",
+        "hd": "高清"
+      }
+    },
+    "agentKind": {
+      "chat": "對話",
+      "image": "图片",
+      "video": "视频",
+      "avatar": "數位人"
+    },
+    "agentPicker": {
+      "title": "选择 Agent",
+      "loading": "載入中...",
+      "locked": "對話已開始，無法切換模式",
+      "emptyKind": "暫無此類型的 Agent",
+      "current": "目前"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "通用助手",
+      "defaultChatDescription": "全能助手",
+      "chatAssistant": "對話助手",
+      "imageGeneration": "圖片生成",
+      "videoCreation": "影片創作"
+    },
+    "inputMode": {
+      "chat": "普通",
+      "image": "图片",
+      "video": "视频"
+    },
+    "emptyGreeting": "您好！我能為您做些什麼？",
+    "uiAction": {
+      "types": {
+        "newFeature": "新功能需求",
+        "bugFix": "缺陷修復",
+        "optimization": "效能優化",
+        "refactoring": "程式碼重構"
+      },
+      "selectedType": "選擇需求類型：{type}",
+      "requirementTitle": "需求標題：{value}",
+      "targetUsers": "目標使用者：{value}",
+      "businessGoal": "業務目標：{value}",
+      "functionalDescription": "功能描述：{value}",
+      "confirmSubmit": "確認提交",
+      "cancelAction": "取消操作",
+      "executeAction": "執行操作：{action}"
+    },
+    "unknownError": "未知错误",
+    "dismiss": "关闭"
+  },
+  "template": {
+    "discover": "發現",
+    "recommended": "推薦",
+    "allTemplates": "全部範本",
+    "popularRanking": "熱門排行",
+    "latestPublished": "最新發佈",
+    "categories": "分類",
+    "searchPlaceholder": "搜尋範本...",
+    "publishTemplate": "發佈範本",
+    "headline": "優質提示詞範本，激發無限創意",
+    "subline": "經貿選品思路、女式寫真、旅行高級範、從靈感到成片",
+    "noTemplates": "暫無範本",
+    "noCover": "暫無封面",
+    "noImage": "暫無圖片",
+    "title": "標題",
+    "description": "描述",
+    "category": "分類",
+    "prompt": "提示詞 (Prompt)",
+    "variables": "變數設定",
+    "variableDefinition": "變數定義",
+    "variableName": "變數名",
+    "variableLabel": "顯示標籤",
+    "defaultValue": "預設值",
+    "addVariable": "新增變數",
+    "recommendedModel": "推薦模型",
+    "exampleImages": "範例效果",
+    "noExamples": "暫無範例圖",
+    "uses": "使用",
+    "likes": "讚",
+    "coverImage": "封面圖",
+    "images": "圖片",
+    "tags": "標籤",
+    "tagsPlaceholder": "逗號分隔，如：寫真、女性、戶外",
+    "other": "其他",
+    "approved": "已審核",
+    "categoryLabel": "分類：{category}",
+    "publishedAt": "發佈於 {date}",
+    "selectTemplateGenerate": "選擇範本生成",
+    "publishNewTemplate": "發佈新範本",
+    "editTemplate": "編輯範本",
+    "submitForReview": "提交審核",
+    "editDescription": "修改範本內容後將重新進入審核",
+    "newDescription": "建立一個新的 Prompt 範本，提交後將由管理員審核",
+    "reviewNote": "提交後需管理員審核通過才能發佈",
+    "editSaveNote": "儲存後將重新進入待審核狀態",
+    "titlePlaceholder": "給你的範本起個名字",
+    "descriptionPlaceholder": "簡要描述這個範本的用途和效果",
+    "promptDescription": "使用 '{{變數名}}' 定義可替換變數",
+    "promptPlaceholder": "例：A beautiful portrait of a '{{gender}}', '{{style}}' style, '{{background}}' background",
+    "typeText": "文字",
+    "typeSelect": "下拉",
+    "typeNumber": "數字",
+    "basicInfo": "基本資訊",
+    "templateEyebrow": "範本",
+    "exampleNumber": "範例 {n}",
+    "submitting": "提交中...",
+    "createTemplate": "建立範本",
+    "deleteConfirm": "確定要刪除這個範本嗎？",
+    "deleteSuccess": "範本刪除成功",
+    "useTemplate": "使用範本"
+  },
+  "templateReview": {
+    "title": "範本審核",
+    "pending": "待審核",
+    "inReview": "審核中",
+    "approved": "已通過",
+    "rejected": "已拒絕",
+    "headerTitle": "標題",
+    "headerCategory": "分類",
+    "headerStatus": "狀態",
+    "headerSubmittedAt": "提交時間",
+    "headerActions": "操作",
+    "rejectReason": "拒絕原因",
+    "rejectReasonPlaceholder": "拒絕/修改原因（可選）",
+    "approve": "通過",
+    "reject": "拒絕",
+    "revise": "退回",
+    "importDropPaste": "拖拽檔案到此處 / 貼上 JSON 內容",
+    "setHot": "設為熱門",
+    "unsetHot": "取消熱門",
+    "batchImport": "批次匯入",
+    "downloadTemplate": "下載範本",
+    "exportTemplates": "匯出",
+    "batchApprove": "批次通過",
+    "batchReject": "批次駁回",
+    "batchRevise": "批次退回",
+    "batchDelete": "批次刪除",
+    "selectedCount": "已選 {count} 筆",
+    "selectAll": "全選",
+    "deselectAll": "取消全選",
+    "confirmBatchDelete": "確定要刪除 {count} 個範本嗎？",
+    "sourceInfo": "來源資訊",
+    "authorName": "作者",
+    "authorUrl": "作者主頁",
+    "originalUrl": "原始連結",
+    "sourcePlatform": "平台來源",
+    "externalId": "外部 ID",
+    "imageTemplates": "圖片範本",
+    "videoTemplates": "影片範本",
+    "importDialogTitle": "批次匯入範本",
+    "importUpload": "上傳 JSON 檔案",
+    "importPreview": "預覽並確認",
+    "importing": "匯入中...",
+    "importDone": "匯入完成",
+    "importSuccess": "成功：{count} 筆",
+    "importFailed": "失敗：{count} 筆",
+    "importSkipped": "跳過：{count} 筆",
+    "templatesFound": "發現 {count} 個範本",
+    "viewSource": "查看來源"
+  },
+  "imageUploader": {
+    "defaultLabel": "點擊或拖曳上傳圖片",
+    "uploading": "上傳中..."
+  },
+  "artifact": {
+    "preview": "預覽",
+    "split": "分屏",
+    "workspace": "Artifact 工作區",
+    "artifactTitle": "工件標題",
+    "clickToEditTitle": "點擊編輯標題",
+    "saveToServer": "儲存到伺服器 (Ctrl+S)",
+    "save": "儲存",
+    "versionHistory": "版本歷史",
+    "aiOptimize": "AI優化",
+    "previewLabel": "預覽",
+    "optimizeEyebrow": "Artifact 優化",
+    "optimizeTitle": "AI 優化文件",
+    "optimizeDescription": "基於目前文件產生一版更清晰、更完整的新內容，完成後將建立新版本。",
+    "generating": "產生中",
+    "generatedNewVersion": "已產生新版本，將自動套用。",
+    "aiWillOptimize": "AI 將基於目前版本產生優化建議。",
+    "startOptimize": "開始優化",
+    "optimizeInstruction": "優化指令",
+    "optimizeInstructionDesc": "用一兩句話描述你希望 AI 如何調整這份文件。",
+    "optimizePlaceholder": "例如：增加更多技術細節、優化語言表達、補充風險評估……",
+    "focusTip": "建議聚焦在一個目標上，效果更好。",
+    "optimizePreview": "優化預覽",
+    "generatingNewVersion": "正在即時產生新版本…",
+    "optimizeDone": "優化完成，即將套用。",
+    "waitingForResult": "等待產生優化結果…",
+    "closeLabel": "關閉",
+    "cancelLabel": "取消",
+    "versionHistoryEyebrow": "版本歷史",
+    "versionHistoryTitle": "版本歷史",
+    "versionCount": "{count} 個版本",
+    "noVersionHistory": "暫無版本歷史",
+    "versionLabel": "版本 {version}",
+    "currentTag": "目前",
+    "confirmRevert": "確定要恢復到版本 {version} 嗎？這將建立一個新版本。",
+    "reverting": "恢復中…",
+    "revert": "恢復",
+    "loadingEditor": "正在載入編輯器..."
+  },
+  "categoryOptions": {
+    "portrait": "人像",
+    "landscape": "風景",
+    "product": "產品",
+    "illustration": "插畫",
+    "architecture": "建築",
+    "scifi": "科幻",
+    "scene": "場景"
+  },
+  "videoCategoryOptions": {
+    "marketing": "行銷",
+    "education": "教學",
+    "story": "故事",
+    "festival": "節慶",
+    "product": "產品"
+  },
+  "skillCategoryOptions": {
+    "engineering": "研發",
+    "writing": "寫作",
+    "design": "設計",
+    "data": "資料",
+    "ops": "營運",
+    "other": "其他"
+  },
+  "mcpCategoryOptions": {
+    "database": "資料庫",
+    "cloud": "雲端服務",
+    "devtool": "開發工具",
+    "communication": "通訊",
+    "other": "其他"
+  },
+  "agentCategoryOptions": {
+    "product": "產品",
+    "engineering": "研發",
+    "marketing": "行銷",
+    "support": "客服",
+    "hr": "人資",
+    "other": "其他"
+  },
+  "drawWorkspace": {
+    "title": "圖像繪製",
+    "untitled": "未命名圖片",
+    "model": "圖像編輯",
+    "dropImage": "將圖片放到畫布",
+    "status": {
+      "ready": "獨立繪製模式",
+      "saving": "儲存中…",
+      "saved": "已儲存",
+      "conflict": "已載入最新"
+    },
+    "actions": {
+      "backToImage": "圖片工作台",
+      "addImage": "新增圖片",
+      "fit": "適配",
+      "clear": "清空",
+      "generate": "生成 / 套用編輯",
+      "generateComingSoon": "生成接入中，目前可先進行繪製與排版"
+    },
+    "tools": {
+      "paint": "繪製",
+      "erase": "橡皮擦",
+      "reference": "參考圖"
+    },
+    "source": {
+      "title": "圖像上下文",
+      "empty": "新增圖片"
+    },
+    "context": {
+      "imageCount": "{count} 張圖片",
+      "selectedCount": "{count} 個選取",
+      "quickEdit": "快捷編輯",
+      "upscale": "放大",
+      "removeBg": "去背景",
+      "eraser": "橡皮工具",
+      "editElement": "編輯元素",
+      "editText": "編輯文字",
+      "multiAngle": "多角度",
+      "moveObject": "移動物件",
+      "download": "下載",
+      "quickEditPrompt": "基於這張圖繼續編輯：{label}",
+      "upscalePrompt": "放大這張圖，保留原構圖和質感",
+      "removeBgPrompt": "去掉這張圖的背景，保留主體",
+      "fitSize": "自適應尺寸",
+      "quickEditPlaceholder": "描述要修改的內容…",
+      "quickEditSubmit": "生成",
+      "close": "關閉"
+    },
+    "contextMenu": {
+      "wrapSelectionInFrame": "將選區包入畫框",
+      "copyElementLink": "複製物件連結"
+    },
+    "prompt": {
+      "title": "編輯提示詞",
+      "placeholder": "描述要生成或修改的內容...",
+      "videoPlaceholder": "描述影片鏡頭、動作、轉場或分鏡流程..."
+    },
+    "toast": {
+      "importFailed": "圖片匯入失敗",
+      "unsupportedFile": "請選擇圖片檔案"
+    },
+    "mode": {
+      "image": "圖片",
+      "video": "影片",
+      "imageHint": "對話生成圖片，自動排到畫布",
+      "videoHint": "用箭頭連接圖片，編排鏡頭流程"
+    },
+    "dock": {
+      "select": "選擇",
+      "frame": "畫框",
+      "upload": "上傳圖片",
+      "sticker": "貼紙",
+      "rectangle": "矩形",
+      "pen": "畫筆",
+      "text": "文字",
+      "genImage": "生成圖片",
+      "arrangeVideo": "一鍵排版",
+      "genVideo": "生成影片",
+      "genText": "生成文字",
+      "color": "顏色"
+    },
+    "chat": {
+      "newChat": "新會話",
+      "share": "分享",
+      "collapse": "收起",
+      "agent": "Agent",
+      "attach": "附件",
+      "library": "素材庫",
+      "thumbUp": "讚",
+      "thumbDown": "踩",
+      "done": "已生成",
+      "tileAll": "歷史圖鋪到畫布",
+      "locate": "在畫布中定位",
+      "empty": "輸入提示詞，或上傳/選中圖片作為參考",
+      "expand": "展開會話",
+      "history": "歷史對話",
+      "search": "請輸入搜尋關鍵字",
+      "emptyHistory": "暫無歷史對話",
+      "newConversation": "新建對話",
+      "renameFailed": "會話標題儲存失敗",
+      "noModel": "沒有可用的圖片模型",
+      "noVideoModel": "沒有可用的影片模型，請先在工具列選擇一個影片模型",
+      "videoFailed": "影片生成失敗，請稍後重試",
+      "modelLoading": "載入模型…",
+      "modelEmpty": "暫無模型",
+      "modelSearchPlaceholder": "搜尋模型",
+      "modelEmptyResult": "沒有符合的模型",
+      "videoFlowReady": "已在畫布生成影片流程，可繼續連接鏡頭或調整節點",
+      "createFailed": "新建對話失敗",
+      "linkCopied": "連結已複製",
+      "copyFailed": "複製失敗",
+      "attachToCanvas": "上傳到畫布",
+      "referenceImages": "{count} 張參考圖",
+      "removeAttachment": "移除附件",
+      "thinking": "生成中",
+      "generateFailed": "生成失敗"
+    },
+    "flow": {
+      "prompt": "鏡頭提示",
+      "videoOutput": "影片輸出",
+      "waitingForRender": "等待生成"
+    },
+    "topbar": {
+      "credits": "積分"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "請輸入鏡頭描述",
+        "enterVideoPrompt": "請輸入影片提示詞"
+      },
+      "alreadyConnectedToVideoNode": "已經連接到影片節點",
+      "imagesAlreadyConnected": "這兩張圖片已經連接",
+      "noVideoNodesOnCanvas": "畫布上還沒有影片節點"
+    }
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "預覽",
+      "download": "下載",
+      "delete": "刪除",
+      "edit": "作為編輯來源",
+      "selected": "已選擇",
+      "use": "使用",
+      "remove": "移除"
+    },
+    "history": {
+      "modeEdit": "編輯",
+      "modeGenerate": "生成",
+      "noPrompt": "（無提示詞）",
+      "deleteTask": "刪除此任務",
+      "editSource": "編輯來源",
+      "referenceImage": "參考圖",
+      "refSummary": "{srcCount} 張編輯來源 · {refCount} 張參考",
+      "alreadyInEditor": "已在編輯器中",
+      "useAsEditSource": "作為編輯來源",
+      "addToMaterial": "加入素材庫",
+      "reuseTask": "重用此任務參數",
+      "toMaterial": "存入素材",
+      "deleteImage": "刪除此圖像"
+    },
+    "material": {
+      "deleteMaterial": "刪除素材"
+    },
+    "result": {
+      "imageCount": "{count} 張",
+      "seed": "種子 {seed}",
+      "duration": "耗時 {seconds}s",
+      "generatedImage": "生成結果",
+      "feedbackHelpful": "結果有幫助",
+      "feedbackImprove": "結果需改進",
+      "copyUrl": "複製連結",
+      "openDraw": "進入繪製",
+      "title": "生成結果",
+      "subtitle": "可預覽、下載、複製連結，或送回編輯來源繼續迭代",
+      "generating": "生成中",
+      "empty": {
+        "title": "還沒有圖片結果",
+        "description": "填寫提示詞並選擇模型後，本次生成的結果會顯示在這裡。"
+      }
+    },
+    "toast": {
+      "feedbackRecorded": "反饋已記錄",
+      "feedbackFailed": "反饋提交失敗",
+      "autoAdjusted": "已根據目前模型自動調整：{changes}",
+      "refineFailed": "提示詞潤色失敗",
+      "alreadyInEditor": "已在編輯來源中",
+      "addedToEditor": "已加入編輯來源",
+      "reusedTask": "已套用任務參數",
+      "materialAddedToEditor": "已將素材加入編輯來源",
+      "materialUseFailed": "素材使用失敗",
+      "materialDeleted": "素材已刪除",
+      "materialDeleteFailed": "素材刪除失敗",
+      "addedToMaterial": "已存入素材庫",
+      "addToMaterialFailed": "存入素材失敗",
+      "historyDeleted": "任務已刪除",
+      "historyDeleteFailed": "任務刪除失敗",
+      "promptApplied": "標註已套用到提示詞"
+    },
+    "template": {
+      "hot": "熱門",
+      "usageSummary": "{category} · 已使用 {count} 次",
+      "apply": "套用",
+      "searchPlaceholder": "搜尋範本、標籤或用途",
+      "allCategories": "全部分類",
+      "loading": "正在載入熱門範本",
+      "empty": "暫無相符範本"
+    },
+    "reference": {
+      "zoomAnnotate": "放大標註",
+      "annotated": "已標註",
+      "previewOriginal": "預覽原圖",
+      "title": "參考與編輯素材",
+      "subtitle": "標註會顯示在原圖上，送出時合併為一張圖"
+    },
+    "annotation": {
+      "overlayLoadFailed": "標註層載入失敗",
+      "imageLoadFailed": "圖片載入失敗",
+      "needMarkArea": "請先在圖片上塗抹標註區域",
+      "mergeFailed": "標註合成失敗",
+      "hint": "在圖片上塗抹要修改的區域，並補充提示詞。",
+      "colorPickerTitle": "切換為{color}色",
+      "undo": "復原",
+      "clear": "清空",
+      "useAnnotation": "套用標註",
+      "close": "關閉",
+      "loadingImage": "載入原圖中...",
+      "colors": {
+        "red": "紅",
+        "yellow": "黃",
+        "cyan": "青",
+        "green": "綠",
+        "purple": "紫",
+        "white": "白"
+      },
+      "prompt": {
+        "stripLabelSuffix": "（參考圖）",
+        "noRegion": "針對「{label}」請重點優化整張圖。",
+        "singleRegion": "針對「{label}」的{region}進行重點修改。",
+        "multiRegion": "針對「{label}」共標註 {count} 處區域：{regions}。",
+        "regionDescription": "{position}（約佔寬 {widthPercent}% × 高 {heightPercent}%）",
+        "regionDescriptionWithIndex": "區域 {index}：{position}（約佔寬 {widthPercent}% × 高 {heightPercent}%）"
+      },
+      "position": {
+        "left": "左側",
+        "right": "右側",
+        "top": "上方",
+        "bottom": "下方",
+        "centerHorizontal": "中部",
+        "centerVertical": "中部",
+        "full": "整張圖",
+        "horizontalOnly": "{vertical}居中位置",
+        "verticalOnly": "{horizontal}居中位置",
+        "combined": "{vertical}{horizontal}"
+      },
+      "mergeFailedUserAction": "標註合成失敗，請稍後再試",
+      "emptyPromptSuffix": "可繼續在此追加細節描述。"
+    },
+    "panel": {
+      "close": "關閉",
+      "title": "生圖設定",
+      "subtitle": "{provider} · 目前參數",
+      "size": {
+        "label": "畫幅尺寸"
+      },
+      "resolution": {
+        "label": "解析度"
+      },
+      "aspectRatio": {
+        "label": "圖片比例"
+      },
+      "quality": {
+        "label": "畫質"
+      },
+      "advanced": {
+        "label": "進階參數",
+        "seedPlaceholder": "隨機種子（留空自動）"
+      },
+      "style": {
+        "label": "風格與負向詞",
+        "negativePlaceholder": "負向描述：不想出現的內容",
+        "negativeHint": "將作為負向詞注入到提示詞中。"
+      },
+      "refSection": {
+        "uploadedLabel": "上傳參考圖",
+        "editSourceLabel": "編輯來源",
+        "editSourceAnnotation": "編輯來源標註",
+        "uploadedAnnotationSuffix": "標註"
+      },
+      "schemaUnavailable": "計價 Schema 不可用——載入完成前無法生成。"
+    },
+    "header": {
+      "title": "圖片工作台",
+      "subtitle": "組合參數、參考圖、範本與標註，一站式生成商業級圖片",
+      "paramsButton": "參數",
+      "variablesButton": "範本變數"
+    },
+    "prompt": {
+      "title": "提示詞",
+      "subtitle": "輸入創意、商業需求或編輯指令",
+      "removeTemplate": "移除目前範本",
+      "imageModelPrefix": "圖片模型",
+      "imageModelPlaceholder": "選擇圖片模型",
+      "noImageModelHint": "目前無圖片模型，請先在模型設定中加入 GPT Image、Gemini 或相容圖片模型。",
+      "refineModelPrefix": "Prompt 微調",
+      "refineModelDefault": "預設",
+      "placeholder": "描述你想生成的圖片，可填寫中文，工作台會結合模型、風格、負向詞與參考圖生成最終請求。",
+      "refUnsupported": "目前模型不支援參考圖",
+      "uploadRef": "上傳參考圖",
+      "aiRefine": "AI 潤色",
+      "startEdit": "開始編輯",
+      "startGenerate": "開始生圖",
+      "estimating": "估算中",
+      "costPoints": "{points} 點數",
+      "refinedWith": "已用 {tuning} 潤色，可繼續在上方編輯。",
+      "viewContext": "查看上下文",
+      "undoRefine": "撤回潤色"
+    },
+    "inspiration": {
+      "title": "靈感庫",
+      "subtitle": "生成資產與熱門圖片範本",
+      "close": "關閉靈感庫",
+      "tabs": {
+        "history": "歷史任務",
+        "materials": "素材庫",
+        "templates": "熱門範本"
+      },
+      "history": {
+        "empty": "生成圖片後會自動進入歷史任務"
+      },
+      "materials": {
+        "loading": "正在載入素材庫",
+        "empty": "素材庫中的圖片會顯示在這裡"
+      }
+    },
+    "stylePresets": {
+      "general": "通用",
+      "commercial": "商業攝影",
+      "cinematic": "電影感",
+      "productPoster": "產品海報",
+      "chineseIllustration": "中式插畫",
+      "interior": "室內場景",
+      "character": "人物特寫",
+      "sticker": "潮玩貼紙"
+    },
+    "promptTuning": {
+      "auto": "自動調整",
+      "faithful": "尊重原文",
+      "photoDetail": "加強細節",
+      "ecommerce": "電商風格",
+      "storyMood": "故事氛圍",
+      "minimal": "極簡提煉"
+    },
+    "templateSort": {
+      "popular": "最受歡迎",
+      "newest": "最新上架",
+      "likes": "按讚最多"
+    },
+    "modelProvider": {
+      "unselected": "未選擇"
+    },
+    "page": {
+      "historyLoadFailed": "歷史素材載入失敗",
+      "historyLoadFailedWithMessage": "歷史素材載入失敗：{message}",
+      "modelLoadFailed": "模型載入失敗",
+      "templateLoadFailed": "模板載入失敗",
+      "templateLoadFailedWithMessage": "模板載入失敗：{message}",
+      "selectImageModel": "請先設定並選擇圖片模型",
+      "promptRequired": "請輸入提示詞",
+      "estimateFailed": "圖片計費估算失敗",
+      "generateFailed": "圖片生成失敗",
+      "missingGenerationForFeedback": "缺少生成記錄，無法提交回饋",
+      "defaultGeneratedMaterialTitle": "圖片生成素材",
+      "requestFailedTitle": "工作台請求失敗",
+      "close": "關閉",
+      "loadingWorkbench": "正在載入專業工作台...",
+      "confirmTitle": "生成前確認",
+      "confirmDescription": "本次生成會先凍結預估點數，成功後確認扣除，失敗會依服務端規則退還。",
+      "estimatingCost": "正在估算點數消耗...",
+      "estimatedCost": "預估消耗",
+      "pointsValue": "{points} 點數",
+      "availableBalance": "可用餘額",
+      "unknown": "未知",
+      "taskType": "任務類型",
+      "costDetails": "費用明細",
+      "noEstimate": "暫無估算結果。",
+      "cancel": "取消",
+      "confirmGenerate": "確認生成"
+    }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "標準"
+      },
+      "first_last_frame": {
+        "label": "首尾幀"
+      },
+      "storyboard": {
+        "label": "分鏡"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "自適應"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p",
+      "4k": "4K"
+    },
+    "materialTargets": {
+      "firstFrame": "首幀",
+      "lastFrame": "尾幀",
+      "referenceImage": "參考圖",
+      "referenceVideo": "參考影片",
+      "referenceAudio": "背景音訊"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 段",
+        "description": "快節奏短片"
+      },
+      "count3": {
+        "label": "3 段",
+        "description": "經典敘事節奏"
+      },
+      "count5": {
+        "label": "5 段",
+        "description": "劇情發展更完整"
+      },
+      "count6": {
+        "label": "6 段",
+        "description": "複雜場景與轉場"
+      }
+    },
+    "inspirationSheet": {
+      "title": "靈感庫",
+      "description": "從範本、歷史專案或素材庫快速開始",
+      "tabs": {
+        "history": "歷史專案",
+        "materials": "素材庫",
+        "templates": "範本庫"
+      },
+      "templates": {
+        "searchPlaceholder": "搜尋範本名 / 風格 / 標籤",
+        "categoryAll": "全部分類",
+        "loading": "正在載入範本...",
+        "empty": "暫無範本",
+        "emptyHint": "稍後再來看看",
+        "noMatch": "沒有符合的範本",
+        "noMatchHint": "試著調整搜尋詞或分類",
+        "workflowMeta": "{count} 個分鏡",
+        "standardMeta": "{duration}s 單鏡頭",
+        "workflowDescriptionFallback": "工作流範本",
+        "standardDescriptionFallback": "標準影片範本",
+        "kindWorkflow": "工作流",
+        "kindStandard": "單鏡頭",
+        "useCount": "{count} 次使用",
+        "useTemplate": "使用範本"
+      },
+      "history": {
+        "empty": "暫無歷史專案",
+        "emptyHint": "生成第一個影片後這裡會出現歷史紀錄"
+      },
+      "materials": {
+        "searchPlaceholder": "搜尋素材名稱",
+        "typeAll": "全部類型",
+        "typeImage": "圖片",
+        "typeVideo": "影片",
+        "typeAudio": "音訊",
+        "targetAction": "用作{target}",
+        "loading": "正在載入素材...",
+        "empty": "素材庫為空",
+        "emptyHint": "在素材庫上傳後即可在此使用",
+        "audioFallback": "音訊素材",
+        "fileFallback": "檔案素材"
+      },
+      "historyDetail": {
+        "back": "Back",
+        "reuse": "Reuse config",
+        "storyboard": "Storyboard",
+        "clipTitle": "Clip {order}",
+        "emptyPrompt": "No storyboard prompt",
+        "stats": {
+          "clips": "Clips",
+          "duration": "Duration",
+          "materials": "Materials"
+        },
+        "backToWorkspace": "Back to workspace",
+        "videoUnavailable": "No playable video yet",
+        "timeline": "Storyboard timeline",
+        "currentShot": "Current: {title}",
+        "timeRange": "Range",
+        "shotIndex": "Shot index",
+        "screenshot": "Snapshot",
+        "screenshotUnavailable": "Load the video before taking a snapshot",
+        "screenshotFailed": "Snapshot failed. Please make sure the video allows captures and try again.",
+        "screenshotTitle": "Video snapshot {time}",
+        "screenshotSaved": "Snapshot added to the material library",
+        "screenshotSaveFailed": "Failed to add the snapshot. Please try again later.",
+        "screenshotPreviewTitle": "Snapshot preview",
+        "screenshotPreviewDescription": "Confirm to add this frame to the material library for later reuse as an image asset.",
+        "saveScreenshot": "Add to library",
+        "share": "Share",
+        "shareCreateFailed": "Failed to create the share link. Please try again later.",
+        "shareCopied": "Share link copied",
+        "shareCopyFailed": "Copy failed. Please copy the link manually.",
+        "shareDialogTitle": "Share video detail",
+        "shareDialogDescription": "Create a public link so others can view this video and its storyboard.",
+        "shareCreating": "Creating share link...",
+        "shareLinkLabel": "Share link",
+        "shareCopiedButton": "Copied",
+        "copyShareLink": "Copy link",
+        "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
+        "openSharePage": "Open share page",
+        "download": "下載",
+        "downloadVideo": "下載影片",
+        "cancel": "Cancel"
+      }
+    },
+    "estimateDialog": {
+      "title": "生成費用預估",
+      "description": "請確認本次生成將消耗的點數",
+      "estimating": "正在估算...",
+      "totalCost": "總費用",
+      "balance": "目前餘額",
+      "balanceUnknown": "未知",
+      "submittedClips": "提交分鏡數",
+      "clipsCount": "{count} 個",
+      "clipTitleFallback": "分鏡 {order}",
+      "credits": "{value} 點數",
+      "cancel": "取消",
+      "confirm": "確認生成",
+      "totalDuration": "Total duration",
+      "resolution": "Resolution",
+      "pricingRule": "Pricing rule",
+      "seconds": "{value}s"
+    },
+    "storyboardDialog": {
+      "title": "分鏡工具",
+      "description": "描述你的影片，AI 自動拆分分鏡",
+      "promptLabel": "劇情描述",
+      "promptPlaceholder": "一句話描述你想要的影片，例如：在賽博龐克城市中，少女騎機車追逐霓虹...",
+      "clipCount": "分鏡數量",
+      "estimatedTotal": "預計總時長 {total}s · 單鏡 {perClip}s",
+      "presetSummary": "單鏡 {perClip}s × {count} = {total}s",
+      "modelLabel": "導演模型",
+      "modelPlaceholder": "選擇導演模型",
+      "modelSearchPlaceholder": "搜尋模型名 / 供應商",
+      "modelEmptyResult": "無符合模型",
+      "modelLoading": "載入模型中...",
+      "modelEmpty": "暫無可用導演模型",
+      "cancel": "取消",
+      "generate": "生成分鏡"
+    },
+    "parameterPanel": {
+      "title": "影片參數",
+      "subtitle": "模式與 Seedance 基礎參數",
+      "closeAria": "關閉影片參數",
+      "modeLabel": "生成模式",
+      "basicsLabel": "基礎參數",
+      "durationLabel": "時長",
+      "resolutionLabel": "解析度",
+      "ratioLabel": "畫面比例",
+      "audioLabel": "音訊",
+      "audioOn": "有聲",
+      "audioOff": "靜音",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "留空隨機",
+      "schemaUnavailable": "計價 Schema 不可用——載入完成前無法生成。"
+    },
+    "generationDock": {
+      "modelPlaceholder": "選擇影片模型",
+      "modelSearchPlaceholder": "搜尋影片模型 / 供應商",
+      "modelEmptyResult": "沒有符合的影片模型",
+      "modelLoading": "載入影片模型",
+      "modelEmpty": "暫無影片模型，請聯絡管理員設定",
+      "generate": "生成影片",
+      "credits": "{value} 點數"
+    },
+    "productPanel": {
+      "title": "影片產物",
+      "subtitle": "目前的影片預覽與生成狀態會顯示在這裡",
+      "generating": "生成中",
+      "addToLibrary": "加入素材庫"
+    },
+    "configPanel": {
+      "title": "片段設定",
+      "preparingClipEditor": "正在準備分鏡編輯器...",
+      "clipDefaultTitle": "分鏡 {order}",
+      "promptLabel": {
+        "firstLastFrame": "首尾幀提示詞",
+        "standard": "影片提示詞",
+        "storyboard": "分鏡提示詞"
+      },
+      "promptInput": {
+        "standardPlaceholder": "描述你想生成的影片畫面、鏡頭運動、節奏與氛圍...",
+        "storyboardLabel": "整片提示詞",
+        "storyboardPlaceholder": "描述整體影片風格、節奏與統一約束..."
+      },
+      "paste": {
+        "uploading": "正在上傳 {count} 張圖片...",
+        "uploaded": "已新增 {count} 張圖片",
+        "failed": "圖片上傳失敗",
+        "firstLastFull": "首尾幀已滿，最多 2 張圖片",
+        "firstLastOverflow": "首尾幀僅支援 2 張圖片，已忽略 {count} 張"
+      },
+      "slots": {
+        "firstFrameImage": "首幀圖片",
+        "lastFrameImage": "尾幀圖片",
+        "referenceImage": "參考圖",
+        "referenceVideo": "參考影片",
+        "referenceAudio": "背景音訊"
+      },
+      "materials": {
+        "firstLastTitle": "首尾幀素材",
+        "firstLastDescription": "上傳首幀與尾幀圖片，可附加背景音訊",
+        "referenceTitle": "參考素材",
+        "referenceDescription": "可選擇加入參考圖 / 影片 / 音訊",
+        "swapFrames": "交換首尾幀",
+        "preparingSlots": "正在準備素材槽位..."
+      },
+      "storyboard": {
+        "title": "分鏡列表",
+        "description": "依時間軸管理每個分鏡，可拖曳末端調整時長",
+        "addClip": "加入分鏡",
+        "generateClips": "AI 拆分分鏡",
+        "emptyHint": "暫無分鏡，使用上方按鈕加入或交給 AI 拆分",
+        "timeline": "時間軸",
+        "timelineUsage": "已用 {used}s / 上限 {limit}s",
+        "detail": {
+          "title": "分鏡詳情",
+          "promptSummary": "提示詞：{prompt}",
+          "promptPlaceholder": "暫無提示詞",
+          "materialCount": "已選 {count} 個素材",
+          "noMaterials": "暫無素材",
+          "titleLabel": "分鏡標題",
+          "promptLabel": "分鏡提示詞",
+          "promptInputPlaceholder": "描述這個分鏡的畫面、動作與鏡頭細節...",
+          "imagesTitle": "分鏡素材",
+          "imagesDescription": "為該分鏡挑選首幀、參考圖或尾幀"
+        }
+      },
+      "clip": {
+        "deleteAria": "刪除 {title}",
+        "descriptionPlaceholder": "暫無描述",
+        "resizeAria": "調整 {title} 時長",
+        "resizeTitle": "拖曳調整時長"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "搜尋文本模型 / 供應商",
+        "textModelEmptyResult": "無符合的文本模型",
+        "textModelLabel": "優化：{name}",
+        "defaultLabel": "預設",
+        "textModelLoading": "載入文本模型...",
+        "textModelDefault": "預設文本模型",
+        "aiOptimize": "AI 優化",
+        "videoModelSearchPlaceholder": "搜尋影片模型 / 供應商",
+        "videoModelEmptyResult": "無符合的影片模型",
+        "videoModelLabel": "模型：{name}",
+        "selectModel": "選擇模型",
+        "videoModelLoading": "載入影片模型...",
+        "videoModelEmpty": "暫無影片模型",
+        "generateVideo": "生成影片",
+        "credits": "{value} 點數"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "分鏡 1",
+      "storyboardClipTitle": "分鏡 {order}",
+      "shotTitleFallback": "鏡頭 {order}",
+      "loading": "正在載入影片工作台...",
+      "closeParamsAria": "關閉影片參數",
+      "headerTitle": "影片工作台",
+      "headerSubtitle": "在同一工作區編排分鏡、素材與參數",
+      "paramsButton": "參數",
+      "newButton": "新增",
+      "inspirationButton": "靈感庫"
+    },
+    "toasts": {
+      "directorDefaultFallback": "導演更新已完成",
+      "directorRequestFailed": "導演請求失敗",
+      "insufficientDuration": "時間軸已沒有剩餘時長",
+      "selectClipFirst": "請先選擇一個分鏡",
+      "placedInto": "已放入{target}",
+      "materialUseFailed": "目前無法使用素材",
+      "noFramesToSwap": "請先新增首幀或尾幀",
+      "swappedFrames": "已交換首尾幀",
+      "swapFramesFailed": "交換首尾幀失敗",
+      "emptyStoryboardPrompt": "請先輸入整片提示詞",
+      "emptyVideoPrompt": "請先輸入影片提示詞",
+      "storyboardPromptOptimized": "整片提示詞已最佳化",
+      "videoPromptOptimized": "影片提示詞已最佳化",
+      "storyboardPromptOptimizeFailed": "整片提示詞最佳化失敗",
+      "videoPromptOptimizeFailed": "影片提示詞最佳化失敗",
+      "emptyStoryboardIdea": "請先輸入影片創意",
+      "storyboardGenerated": "已生成 {count} 個分鏡",
+      "storyboardGeneratedSuccess": "分鏡已生成",
+      "storyboardGenerateFailed": "分鏡生成失敗",
+      "estimateFailed": "費用估算失敗",
+      "defaultMaterialTitle": "生成影片",
+      "addedToMaterials": "已加入素材庫",
+      "addToMaterialsFailed": "加入素材庫失敗"
+    },
+    "materialPicker": {
+      "title": "選擇素材 - {role}",
+      "roles": {
+        "firstFrame": "首幀圖片",
+        "lastFrame": "尾幀圖片",
+        "referenceImage": "風格參考",
+        "referenceVideo": "參考影片",
+        "referenceAudio": "背景音訊",
+        "default": "素材"
+      },
+      "tabs": {
+        "upload": "上傳",
+        "library": "素材庫"
+      },
+      "description": {
+        "batch": "從目前分鏡開始，可依序填入 {count} 個未填充的「{role}」槽位。已跳過：{skipped}。",
+        "singleAvailable": "僅剩 1 個分鏡的「{role}」未填充，本次選擇會填入該分鏡。",
+        "allFilled": "所有分鏡的「{role}」均已填充，本次選擇會覆蓋目前分鏡。"
+      },
+      "upload": {
+        "dropArea": "點擊或拖曳上傳檔案",
+        "dropAreaBatch": "點擊或拖曳上傳檔案（最多 {count} 個）",
+        "processing": "處理中..."
+      },
+      "library": {
+        "empty": "暫無可用素材",
+        "selectionCount": "已選 {selected} / {total}",
+        "clear": "清空",
+        "applying": "套用中...",
+        "applyBatchOrder": "依序套用到 {count} 個分鏡",
+        "useSelected": "使用所選素材"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "已套用 {count} 個素材到 {count} 個分鏡",
+        "libraryError": "目前無法使用素材",
+        "uploadAppliedBatch": "已上傳並套用 {count} 個素材到 {count} 個分鏡",
+        "uploadError": "上傳失敗",
+        "selectionLimit": "最多選擇 {count} 個",
+        "selectionLimitDescription": "與剩餘未填充的分鏡數量一致"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "來自上一個 Clip 的尾幀"
+    },
+    "videoPreview": {
+      "selectClip": "選擇一個分鏡預覽",
+      "queued": "排隊中",
+      "generating": "影片生成中...",
+      "failed": "生成失敗",
+      "firstFrameAlt": "首幀",
+      "addMaterialOrPrompt": "新增素材或提示詞開始"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "已完成",
+        "processing": "生成中",
+        "failed": "失敗",
+        "draft": "草稿",
+        "unknown": "未知"
+      },
+      "noPrompt": "沒有分鏡提示詞",
+      "openProjectAria": "開啟歷史專案",
+      "deleteProject": "刪除歷史專案",
+      "stats": {
+        "clips": "分鏡",
+        "materials": "素材",
+        "results": "結果"
+      },
+      "clipDefaultTitle": "分鏡 {order}",
+      "clipPlaceholder": "等待補充分鏡描述",
+      "moreClips": "還有 {count} 個分鏡",
+      "createdAt": "建立於 {date}",
+      "openProject": "開啟",
+      "viewDetails": "View details",
+      "reuseProject": "Reuse config",
+      "share": "分享",
+      "download": "下載",
+      "downloadVideo": "下載影片"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "鏈式生成進度",
+        "cancelRemaining": "取消剩餘"
+      },
+      "directorChat": {
+        "userPrefix": "你: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "讓 AI 導演拆分鏡頭、改 Prompt 或調整影片參數..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "未命名專案",
+        "historyTitle": "歷史記錄"
+      },
+      "modelSelector": {
+        "label": "模型",
+        "default": "預設",
+        "loading": "載入模型中...",
+        "empty": "暫無影片模型，請聯絡系統管理員設定"
+      },
+      "variantGrid": {
+        "title": "生成 Variant ({count})",
+        "generateNew": "+ 生成新 Variant",
+        "setPrimary": "設為主要"
+      },
+      "emptyState": {
+        "title": "開始影片創作",
+        "description": "建立新專案或從模板開始，加入素材和提示詞生成影片片段",
+        "createProject": "新增專案",
+        "startFromTemplate": "從模板開始"
+      },
+      "clipTimeline": {
+        "addClip": "新增 Clip"
+      },
+      "historyPanel": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "deleteSuccess": "歷史記錄已刪除",
+        "deleteFailed": "刪除歷史記錄失敗",
+        "title": "歷史記錄",
+        "close": "關閉歷史記錄",
+        "empty": "暫無歷史記錄"
+      },
+      "templatePicker": {
+        "title": "影片模板",
+        "workflowTemplates": "工作流模板",
+        "parameterPresets": "參數預設",
+        "clipCount": "{count} clips",
+        "useTemplate": "使用此模板",
+        "emptyWorkflow": "暫無工作流模板",
+        "presetsComingSoon": "參數預設模板即將上線"
+      },
+      "inputArea": {
+        "referenceContent": "參考內容",
+        "audio": "音訊",
+        "firstFrame": "首幀",
+        "swapFrames": "交換首尾幀",
+        "lastFrame": "尾幀",
+        "frameIndex": "第{index}幀",
+        "clearAll": "全部清空"
+      },
+      "clipSidebar": {
+        "title": "影片專案",
+        "close": "關閉影片專案",
+        "defaultProjectTitle": "未命名專案",
+        "newProject": "新增專案",
+        "emptyProjects": "暫無專案",
+        "clipCount": "{count} clips",
+        "back": "返回",
+        "addClip": "新增 Clip",
+        "generationRecords": "生成記錄",
+        "emptyRecords": "暫無記錄"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "首幀圖片",
+          "referenceImage": "風格參考",
+          "referenceVideo": "參考影片",
+          "referenceAudio": "背景音訊"
+        },
+        "ratioAdaptive": "自適應",
+        "audioOn": "有聲",
+        "audioOff": "無聲",
+        "clipDefaultTitle": "分鏡 {order}",
+        "selectClip": "選擇一個 Clip 進行編輯",
+        "generating": "生成中，請稍候...",
+        "failed": "生成失敗，可修改參數後重新生成",
+        "titleLabel": "分鏡標題",
+        "promptPlaceholder": "輸入影片描述提示詞...",
+        "durationLabel": "時長",
+        "resolutionLabel": "解析度",
+        "ratioLabel": "比例",
+        "audioLabel": "音訊",
+        "regenerate": "重新生成",
+        "generateVideo": "生成影片"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "全能參考",
+          "firstLastFrame": "首尾幀",
+          "smartMultiframe": "智慧多幀"
+        },
+        "ratioAdaptive": "自適應",
+        "selectModel": "選擇模型",
+        "loadingModels": "載入影片模型",
+        "emptyModels": "暫無影片模型",
+        "selectTemplate": "選模板"
+      }
+    },
+    "membershipGate": {
+      "title": "当前套餐暂不支持视频生成",
+      "description": "升级会员套餐后即可继续生成视频。",
+      "upgradeAction": "选择套餐",
+      "dismissAction": "稍后处理",
+      "dialogTitle": "选择可用的视频生成套餐",
+      "dialogDescription": "选择包含视频生成能力的套餐后，可继续生成当前视频。"
+    }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "暫無封面",
+      "noDescription": "暫無描述",
+      "free": "免费",
+      "pointsCost": "{points} 積分",
+      "featured": "精选",
+      "emptyResources": "暫無資源",
+      "resource": "资源",
+      "untitledResource": "未命名資源",
+      "retry": "重試",
+      "loading": "載入中...",
+      "processing": "處理中...",
+      "cancel": "取消",
+      "resourceNotFound": "資源不存在",
+      "unknownResourceType": "未知資源類型：{slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "圖片模板",
+      "videoTemplate": "影片模板",
+      "imageTemplateShort": "图片",
+      "videoTemplateShort": "影片"
+    },
+    "runtime": {
+      "cloud": "雲端可用",
+      "cloudDesc": "雲端執行，Web 與桌面端均可使用",
+      "desktopOnly": "僅桌面端",
+      "desktopOnlyDesc": "需要本機執行環境（程序/檔案/CLI）",
+      "either": "通用",
+      "eitherDesc": "可在雲端或桌面端選擇性使用",
+      "desktopShort": "桌面"
+    },
+    "card": {
+      "useInChat": "会话使用",
+      "useInChatAria": "在会话中使用模板 {title}",
+      "useInWorkbench": "专业工作台",
+      "useInWorkbenchAria": "应用到专业工作台 {title}"
+    },
+    "sidebar": {
+      "home": "推薦首頁",
+      "resourceTypes": "資源類型",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "图片模板",
+      "videoTemplates": "影片模板",
+      "mine": "我的",
+      "acquired": "我的资源",
+      "favorites": "我的收藏",
+      "generations": "生成歷史",
+      "published": "我的發布",
+      "history": "瀏覽歷史",
+      "profile": "個人首頁"
+    },
+    "platformStats": {
+      "title": "平台資料",
+      "totalResources": "資源總數",
+      "imageTemplates": "图片模板",
+      "videoTemplates": "影片模板",
+      "totalAcquisitions": "累計取得"
+    },
+    "editorPicks": {
+      "title": "編輯精選"
+    },
+    "hotRanking": {
+      "title": "熱門排行榜"
+    },
+    "resourcePanel": {
+      "eyebrow": "资源面板",
+      "resourceDetails": "资源详情",
+      "addToCurrentSession": "添加到当前会话",
+      "unpin": "取消固定",
+      "pin": "固定面板",
+      "searchPlaceholder": "搜索资源...",
+      "loading": "載入中...",
+      "backToList": "返回列表",
+      "sourceInfo": "來源資訊",
+      "author": "作者",
+      "platform": "平台",
+      "externalId": "外部 ID",
+      "viewOriginal": "查看原文",
+      "mcpLocalStatus": "MCP 本地状态：",
+      "statusReady": "已安装",
+      "statusMissingEnv": "缺少環境變數",
+      "statusFailed": "检测失败",
+      "statusNotInstalled": "未安装",
+      "desktopOnlyWebBlocked": "該資源需要桌面端本機環境，Web 端不能直接啟用。",
+      "processing": "處理中...",
+      "acquireAndActivate": "获取并激活",
+      "openFullDetails": "打开完整详情"
+    },
+    "chatDock": {
+      "createSessionFailed": "建立會話失敗",
+      "attachTemplateFailed": "關聯模板失敗",
+      "attachmentUploadFailed": "附件上傳失敗",
+      "unknownError": "未知錯誤",
+      "sendFailed": "傳送失敗",
+      "configureImageModelFirst": "請先配置可用的圖片模型",
+      "messageSaveFailed": "訊息儲存失敗",
+      "requestFailed": "請求失敗",
+      "imageGenerationFailed": "圖片生成失敗",
+      "fullConversation": "完整對話"
+    },
+    "home": {
+      "title": "模板市場",
+      "subtitle": "圖片與影片創作模板，一鍵帶入對話或專業工作台",
+      "desktopTitle": "一站式 AI 資源模板市場",
+      "desktopSubtitle": "探索並使用 Skills、MCP、Agents、圖片/影片模板",
+      "imageTemplateDesc": "封面、海報、商品圖與視覺風格配方",
+      "videoTemplateDesc": "分鏡腳本、鏡頭參數和成片工作流",
+      "hotMasonry": "熱門推薦瀑布流",
+      "imageVideo": "圖片 · 影片",
+      "hotRecommendations": "熱門推薦"
+    },
+    "list": {
+      "sortNewest": "最新",
+      "sortPopular": "熱度",
+      "sortLikes": "按讚",
+      "totalCount": "共 {count} 個",
+      "emptyResources": "暫無資源，試試切換分類或換個關鍵字",
+      "agentEyebrow": "AgentHub / 智能體",
+      "agentDescription": "挑選可直接進入對話的智能體、工具鏈和工作流夥伴。",
+      "imageEyebrow": "Image Recipes / 圖片模板",
+      "imageDescription": "瀏覽海報、商品圖、封面與視覺風格模板，像作品牆一樣快速挑選。",
+      "videoEyebrow": "Video Flows / 影片模板",
+      "videoDescription": "從分鏡、鏡頭參數到短影片生成流程，找到適合當前創作的起點。",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "能力增強、個人化指令與可重用操作方式。",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "工具、資料來源和外部連接器。"
+    },
+    "detail": {
+      "applyTemplateFailed": "套用模板失敗",
+      "newImageSessionTitle": "新圖片對話",
+      "newSessionTitle": "新對話",
+      "workbench": "專業工作台",
+      "useInChat": "在對話中使用",
+      "favoriteCount": "收藏 {count}",
+      "whyDesktopOnly": "為什麼僅桌面端？",
+      "localRuntimeRequired": "此資源需要本機執行環境",
+      "variableDefinitions": "變數定義",
+      "defaultValue": " · 預設：{value}",
+      "resourceInfo": "資源資訊",
+      "sourceInfo": "來源資訊",
+      "viewOriginal": "查看原文",
+      "hoverPreview": "懸停預覽前幾秒",
+      "mcpDesktopRequired": "MCP 資源需在桌面端啟用",
+      "selectSession": "選擇對話",
+      "activateTo": "啟用到",
+      "createAndActivate": "+ 新建對話並啟用",
+      "createAndApply": "+ 新建對話並套用模板",
+      "applying": "套用中...",
+      "recentSessions": "最近對話",
+      "applyDialogTitle": "選擇對話並套用模板",
+      "applyDialogDescription": "請選擇{target}，或新建對話後套用。",
+      "templateSessionMismatch": "目前選擇的是{current}，此模板需要套用到{target}。請重新選擇，或新建對話後套用模板。",
+      "conversationKind": {
+        "video": "影片對話",
+        "image": "圖片對話",
+        "avatar": "數位人對話",
+        "chat": "對話"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "對話或圖片對話",
+        "videoTemplate": "對話",
+        "default": "對話"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "取得並啟用到目前對話",
+        "generateAndReturnToSession": "立即生成並回流對話",
+        "acquireWithPoints": "使用 {points} 積分取得並啟用",
+        "getOnDesktop": "在桌面端取得"
+      },
+      "info": {
+        "type": "類型",
+        "category": "分類",
+        "version": "版本",
+        "updatedAt": "更新時間",
+        "author": "作者",
+        "platform": "平台",
+        "externalId": "外部 ID",
+        "originalLink": "原始連結"
+      }
+    }
+  },
+  "videoShare": {
+    "loading": "Loading shared video...",
+    "loadFailed": "The share link does not exist, has expired, or the video is not complete yet.",
+    "unavailableTitle": "Shared video unavailable",
+    "goCreate": "Create a video",
+    "eyebrow": "Shared video",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "copyFailed": "Copy failed. Please copy the link manually.",
+    "copiedButton": "Copied",
+    "monitor": "Monitor",
+    "storyboard": "Storyboard data",
+    "duration": "Duration",
+    "model": "Model",
+    "clipTitle": "Clip {order}",
+    "clipFallback": "Storyboard",
+    "emptyPrompt": "No storyboard prompt",
+    "timeline": "Storyboard timeline",
+    "footer": "Shared video detail",
+    "growthCtaDescription": "建立你自己的私有影片專案，準備好分享時再發布。"
+  },
+  "gallery": {
+    "title": "廣場",
+    "subtitle": "探索社群發布的精彩作品",
+    "kindImage": "圖片",
+    "kindVideo": "影片",
+    "emptyTitle": "尚無已發布作品",
+    "emptyDescription": "成為第一個發布作品到廣場的人",
+    "loadMore": "載入更多",
+    "unknownAuthor": "未知作者",
+    "like": "按讚",
+    "favorite": "收藏",
+    "backToGallery": "返回廣場",
+    "notFoundTitle": "此作品目前無法瀏覽",
+    "notFoundDescription": "可能已被下架或刪除",
+    "author": "作者",
+    "metricViews": "瀏覽",
+    "metricLikes": "按讚",
+    "metricFavorites": "收藏",
+    "metricRecreates": "二創",
+    "recreate": "二創",
+    "download": "下載",
+    "unpublish": "下架",
+    "republish": "重新發布",
+    "unpublishSuccess": "已下架",
+    "republishSuccess": "已提交審核",
+    "prompt": "提示詞",
+    "copyPrompt": "複製",
+    "copied": "已複製",
+    "noPrompt": "尚無提示詞",
+    "information": "資訊",
+    "model": "模型",
+    "auto": "自動",
+    "dimensions": "尺寸",
+    "category": "分類",
+    "status": {
+      "draft": "草稿",
+      "pending": "審核中",
+      "published": "已發布",
+      "unpublished": "已下架",
+      "hidden": "已隱藏",
+      "rejected": "已拒絕"
+    }
+  },
+  "myTemplates": {
+    "title": "我的模板",
+    "createTemplate": "创建模板",
+    "empty": "暂无模板，创建你的第一个模板吧",
+    "createFirst": "创建第一个模板",
+    "statusPending": "待审核",
+    "statusInReview": "审核中",
+    "statusApproved": "已通过",
+    "statusRejected": "已拒绝",
+    "statusArchived": "已归档",
+    "statusDeleted": "Deleted",
+    "includeDeleted": "Include deleted users"
+  },
+  "schemaForm": {
+    "constraint": {
+      "longerThan": "{prefix}最長 {bound} 秒",
+      "shorterThan": "{prefix}最少 {bound} 秒"
+    }
+  }
+}

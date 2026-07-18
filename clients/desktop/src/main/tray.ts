@@ -3,6 +3,7 @@ import log from 'electron-log/main';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { getMainWindow } from './window';
+import { t } from './i18n';
 
 let _tray: Tray | null = null;
 
@@ -43,11 +44,11 @@ export function registerTray(): void {
 
     const menu = Menu.buildFromTemplate([
       {
-        label: '显示主窗口',
+        label: t('desktop.tray.showMainWindow'),
         click: showWindow,
       },
       {
-        label: '新建对话',
+        label: t('desktop.tray.newConversation'),
         click: () => {
           showWindow();
           getMainWindow()?.webContents.send('shortcut:new-chat', '/chat');
@@ -55,7 +56,7 @@ export function registerTray(): void {
       },
       { type: 'separator' },
       {
-        label: '退出',
+        label: t('desktop.tray.quit'),
         click: () => app.quit(),
       },
     ]);
