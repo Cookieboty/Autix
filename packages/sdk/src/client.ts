@@ -1302,6 +1302,41 @@ export const videoProjectApi = {
     chatApi.post(`/api/video-projects/${projectId}/apply-video-template/${templateId}`, data ?? {}),
 };
 
+// ── Video Gen (直连视频生成) API ──────────────────────────────────────────
+export interface DirectVideoGenerationDto {
+  id: string;
+  status: string;
+  prompt: string;
+  model: string;
+  videoUrl: string | null;
+  thumbnailUrl: string | null;
+  lastFrameUrl: string | null;
+  durationSec: number | null;
+  error: string | null;
+  options: Record<string, unknown>;
+  materials: Array<{ role: string; url: string; sourceType?: string; name?: string | null }>;
+  createdAt: string;
+}
+
+export interface DirectVideoHistoryResult {
+  items: DirectVideoGenerationDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export const videoGenApi = {
+  generate: (data: { prompt: string; params?: Record<string, unknown>; materials?: Array<{ role: string; url: string; sourceType?: string; name?: string }> }) =>
+    chatApi.post<{ generationId: string; taskId: string }>('/api/video-gen/generate', data),
+  history: (params?: { page?: number; pageSize?: number }) =>
+    chatApi.get<DirectVideoHistoryResult>('/api/video-gen/history', { params }),
+  get: (id: string) => chatApi.get<DirectVideoGenerationDto>(`/api/video-gen/generations/${id}`),
+  deleteHistory: (id: string) => chatApi.delete(`/api/video-gen/history/${id}`),
+  optimizePrompt: (data: { prompt: string; modelId?: string }) =>
+    chatApi.post<{ optimizedPrompt: string }>('/api/video-gen/optimize-prompt', data, { timeout: LLM_REQUEST_TIMEOUT_MS }),
+};
+
 export interface BatchJob {
   id: string;
   userId: string;
