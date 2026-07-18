@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Bookmark, Download, Heart, ImageIcon, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { GalleryFeedItem } from '@autix/shared-store';
+import { reportResourceView, type GalleryFeedItem } from '@autix/shared-store';
 import { downloadImageFile } from '../generator/image/image-history-media';
 import { DetailPanelButton, MediaDetailShell, type MediaDetailRow } from './MediaDetailShell';
 
@@ -50,6 +51,14 @@ export function GalleryDetailDialog({
   onUseAsReference?: (item: GalleryFeedItem) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
+
+  // 浏览量上报：详情可见即记一次 scope='detail'（喂 viewCount/pvCount/uvCount）。
+  // 这是所有作品详情的唯一出口（首页/生成器/个人页弹窗、以及整页 GalleryPostView 都渲染本组件），
+  // 打在这里即全覆盖。post.id 变化才重报，同一次打开只报一次。
+  const postId = item?.post.id;
+  useEffect(() => {
+    if (postId) reportResourceView({ resourceType: 'GALLERY_POST', resourceId: postId, scope: 'detail' });
+  }, [postId]);
 
   if (!item) return null;
 

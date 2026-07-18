@@ -8,17 +8,18 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
-import type { AuthUser, AvatarPresignResult } from '@autix/domain';
+import type { AuthUser, AvatarPresignResult, BannerPresignResult } from '@autix/domain';
 import { CloudflareR2Service } from './cloudflare-r2.service';
-import { AvatarPresignService } from './avatar-presign.service';
+import { ProfileMediaPresignService } from './profile-media-presign.service';
 import { AvatarPresignDto } from './dto/avatar-presign.dto';
+import { BannerPresignDto } from './dto/banner-presign.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('storage')
 export class StorageController {
   constructor(
     private readonly r2: CloudflareR2Service,
-    private readonly avatarPresign: AvatarPresignService,
+    private readonly profileMediaPresign: ProfileMediaPresignService,
   ) {}
 
   @Post('presign')
@@ -27,9 +28,10 @@ export class StorageController {
     @Body() body: { fileName: string; contentType: string; folder?: string },
   ) {
     const userId = getCurrentUserId(user);
-    // 安全：`avatars/` 是头像专用命名空间（走 avatar-presign，含 owner 归属校验 + cleanup 归属校验）。
-    // 通用 presign 不得写入该前缀，避免用户把对象塞进他人头像命名空间造成污染/绕过归属模型。
-    if (body.folder && /^\/?avatars(\/|$)/i.test(body.folder.trim())) {
+    // 安全：`avatars/` 与 `banners/` 是个人资料图片专用命名空间（走 profile-media-presign，
+    // 含 owner 归属校验 + cleanup 归属校验）。通用 presign 不得写入这些前缀，避免用户把对象
+    // 塞进他人命名空间造成污染/绕过归属模型。
+    if (body.folder && /^\/?(avatars|banners)(\/|$)/i.test(body.folder.trim())) {
       throw new BadRequestException('该目录不可用于通用上传');
     }
     const result = await this.r2.createPresignedUpload({
@@ -62,6 +64,19 @@ export class StorageController {
     @CurrentUser() user: AuthUser,
     @Body() dto: AvatarPresignDto,
   ): Promise<AvatarPresignResult> {
-    return this.avatarPresign.presign(getCurrentUserId(user), dto);
+    return this.profileMediaPresign.presign(getCurrentUserId(user), dto, 'AVATAR');
+  }
+
+  /**
+   * Profile banner reservation 端点 —— 与 avatar-presign 同构（同一 Throttle 配额语义：
+   * 60s 内 10 次，防刷 pending_uploads 表），消费走 `PATCH auth/profile { bannerStorageKey }`。
+   */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('banner-presign')
+  async bannerPresignEndpoint(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: BannerPresignDto,
+  ): Promise<BannerPresignResult> {
+    return this.profileMediaPresign.presign(getCurrentUserId(user), dto, 'BANNER');
   }
 }

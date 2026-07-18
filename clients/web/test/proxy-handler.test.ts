@@ -14,12 +14,18 @@ describe('resolveProxyAction', () => {
     });
   });
 
-  it('裸 @handle 无落地页可 rewrite，交给 intl（404）', () => {
-    expect(resolveProxyAction('/@alice', '', API)).toEqual({ type: 'intl' });
+  it('裸 @handle → rewrite 到 /<默认locale>/u/<handle>', () => {
+    expect(resolveProxyAction('/@alice', '', API)).toEqual({
+      type: 'rewrite',
+      url: '/en/u/alice',
+    });
   });
 
-  it('带前缀 @handle 无落地页可 rewrite，交给 intl（404）', () => {
-    expect(resolveProxyAction('/ja/@alice', '', API)).toEqual({ type: 'intl' });
+  it('带前缀 @handle → rewrite 保留该 locale 段', () => {
+    expect(resolveProxyAction('/ja/@alice', '', API)).toEqual({
+      type: 'rewrite',
+      url: '/ja/u/alice',
+    });
   });
 
   it('默认 locale 前缀的 @handle 需 301 去前缀', () => {
@@ -39,8 +45,11 @@ describe('resolveProxyAction', () => {
     expect(resolveProxyAction('/zh-CN/pricing', '', API)).toEqual({ type: 'intl' });
   });
 
-  it('查询串在 @handle 上仍不触发 rewrite，交给 intl', () => {
-    expect(resolveProxyAction('/@alice', '?ref=x', API)).toEqual({ type: 'intl' });
+  it('查询串在 @handle 上随 rewrite 一并透传', () => {
+    expect(resolveProxyAction('/@alice', '?ref=x', API)).toEqual({
+      type: 'rewrite',
+      url: '/en/u/alice?ref=x',
+    });
   });
 
   it('带点号的 /api 路径也应反代（matcher 需放行，此处 pin 纯函数行为）', () => {
@@ -50,12 +59,18 @@ describe('resolveProxyAction', () => {
     });
   });
 
-  it('裸 @handle 含点号，无落地页，交给 intl', () => {
-    expect(resolveProxyAction('/@john.doe', '', API)).toEqual({ type: 'intl' });
+  it('裸 @handle 含点号 → rewrite（handle 允许点号，如邮箱型）', () => {
+    expect(resolveProxyAction('/@john.doe', '', API)).toEqual({
+      type: 'rewrite',
+      url: '/en/u/john.doe',
+    });
   });
 
-  it('带前缀 @handle 含点号，无落地页，交给 intl', () => {
-    expect(resolveProxyAction('/ja/@john.doe', '', API)).toEqual({ type: 'intl' });
+  it('带前缀 @handle 含点号 → rewrite 保留 locale', () => {
+    expect(resolveProxyAction('/ja/@john.doe', '', API)).toEqual({
+      type: 'rewrite',
+      url: '/ja/u/john.doe',
+    });
   });
 
   it('默认 locale 前缀 @handle 含点号需 301 去前缀', () => {

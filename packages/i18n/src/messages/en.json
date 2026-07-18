@@ -3575,6 +3575,11 @@
       "image": "Image",
       "me": "Me"
     },
+    "notifications": {
+      "title": "Notifications",
+      "close": "Close",
+      "empty": "You don't have any notifications"
+    },
     "accountMenu": {
       "accountMenu": "Account menu",
       "signIn": "Sign in",
@@ -3618,7 +3623,9 @@
         "editImage": "Edit Image",
         "imageUpscale": "Image Upscale",
         "createVideo": "Create Video",
-        "membership": "Membership"
+        "membership": "Membership",
+        "profile": "Profile",
+        "assets": "Assets"
       },
       "headline": "The all-in-one AI studio for image & video creators",
       "copyright": "© {year} Amux Studio. All rights reserved.",
@@ -4078,6 +4085,20 @@
           "name": "Team Pack",
           "description": "Team credit supplement with commercial rights per membership tier"
         }
+      },
+      "creditsMo": "{count} credits/mo.",
+      "fixedCredits": "Fixed amount of {count} credits/mo",
+      "perMonthLabel": "per month",
+      "billedAnnually": "per month, billed annually",
+      "saveVsMonthly": "Save {amount} compared to monthly",
+      "noDiffVsMonthly": "No difference compared to monthly",
+      "bestValue": "Best value",
+      "getPlan": "Get {plan}",
+      "parallelGenerations": "Parallel generations: up to {videos} Videos, {images} Images",
+      "taglines": {
+        "0": "For getting started with AI creation",
+        "1": "For consistent, everyday AI creation",
+        "2": "For power users building AI projects"
       }
     },
     "metadata": {
@@ -4422,6 +4443,35 @@
         "reset": "Reset to default",
         "failed": "Could not update icon"
       }
+    },
+    "publicProfile": {
+      "creator": "Creator",
+      "editProfile": "Edit profile",
+      "generations": "Generations",
+      "views": "Views",
+      "likes": "Likes",
+      "works": "Works",
+      "addCover": "Add Cover",
+      "changeCover": "Change cover",
+      "removeCover": "Remove cover",
+      "changeAvatar": "Change avatar",
+      "emptyTitle": "No generations yet",
+      "emptyOwnerSubtitle": "Your published creations will show up here.",
+      "emptyVisitorSubtitle": "This creator hasn’t published anything yet.",
+      "notFoundTitle": "User not found",
+      "notFoundSubtitle": "This profile doesn’t exist or is no longer available.",
+      "coverError": "Failed to update cover. Please try again."
+    },
+    "imageNavFlyout": {
+      "models": "Models",
+      "loading": "Loading models…",
+      "features": "Features",
+      "createImage": "Create Image",
+      "createImageDesc": "Generate AI images",
+      "editImage": "Edit Image",
+      "editImageDesc": "Modify and refine images",
+      "gallery": "Gallery",
+      "galleryDesc": "Explore community creations"
     }
   },
   "videoShare": {

@@ -563,6 +563,39 @@ export class GalleryService {
       cursor,
       clampedTake,
     );
+    return { items: await this.presentFeedRows(items, viewer), nextCursor };
+  }
+
+  /**
+   * `/@username` 个人页 Generations feed：某作者全部 **PUBLISHED** 作品（image+video 混排，
+   * 不按 kind 分流），游标翻页。可见性与公开 feed 一致——只出 PUBLISHED，故主态/客态同一份数据。
+   * 复用 presentFeedRows，输出结构与公开 feed 逐字段一致（前端 GalleryFeedItem 可直接消费）。
+   */
+  async listAuthorFeed(
+    authorId: string,
+    cursor: string | undefined,
+    take: number,
+    viewer?: AuthUser,
+  ) {
+    const n = Math.trunc(Number(take));
+    const clampedTake = Number.isFinite(n) ? Math.min(Math.max(n, 1), 48) : 24;
+    const { items, nextCursor } = await this.repo.findAuthorPublishedFeed(
+      authorId,
+      cursor,
+      clampedTake,
+    );
+    return { items: await this.presentFeedRows(items, viewer), nextCursor };
+  }
+
+  /**
+   * feed 行 → 对外响应的统一映射（公开 feed 与作者 feed 共用）：批量取 metrics/模型别名/
+   * 登录态 liked-favorited（防 N+1），并经 presentAuthor 脱敏。抽出来是为了让作者 feed
+   * 与公开 feed 的响应形状**逐字段对齐**，不各写一份漂移。
+   */
+  private async presentFeedRows(
+    items: Awaited<ReturnType<GalleryRepository['findPublishedFeed']>>['items'],
+    viewer?: AuthUser,
+  ) {
     const ids = items.map((post) => post.id);
     const [metricsMap, modelNames] = await Promise.all([
       this.metrics.getMetricsMap(ResourceType.GALLERY_POST, ids),
@@ -579,39 +612,47 @@ export class GalleryService {
       ]);
     }
 
-    return {
-      items: items.map((row) => {
-        const m = metricsMap.get(row.id);
-        const author: PresentedAuthor = presentAuthor({
-          id: row.author.id,
-          status: row.author.status,
-          displayName: firstNonBlank(row.author.nickname, row.author.realName),
-          username: row.author.username,
-          avatar: row.author.avatar ?? null,
-        });
-        // 隐私铁律（与 getDetail 同）：剥离 include 进来的原始 author 关系行，只暴露
-        // presenter 脱敏结果——否则匿名响应会把原始 username（含 deleted_<id> 前缀）、
-        // realName、旧头像一并回传，presentAuthor 形同虚设。
-        const { author: _rawAuthor, ...post } = row;
-        return {
-          // model 原样保留（厂商串，前端不展示但要有）；modelName 是展示用的别名，
-          // 解析不到（模型配置被删了）时为 null，前端回退显示 model。
-          post: { ...post, modelName: post.model ? modelNames.get(post.model) ?? null : null },
-          author,
-          metrics: {
-            pvCount: m?.pvCount ?? 0,
-            uvCount: m?.uvCount ?? 0,
-            likeCount: m?.likeCount ?? 0,
-            favoriteCount: m?.favoriteCount ?? 0,
-            viewCount: m?.viewCount ?? 0,
-            referenceCount: m?.referenceCount ?? 0,
-          },
-          liked: likedIds ? likedIds.has(post.id) : undefined,
-          favorited: favoritedIds ? favoritedIds.has(post.id) : undefined,
-        };
-      }),
-      nextCursor,
-    };
+    return items.map((row) => {
+      const m = metricsMap.get(row.id);
+      const author: PresentedAuthor = presentAuthor({
+        id: row.author.id,
+        status: row.author.status,
+        displayName: firstNonBlank(row.author.nickname, row.author.realName),
+        username: row.author.username,
+        avatar: row.author.avatar ?? null,
+      });
+      // 隐私铁律（与 getDetail 同）：剥离 include 进来的原始 author 关系行，只暴露
+      // presenter 脱敏结果——否则匿名响应会把原始 username（含 deleted_<id> 前缀）、
+      // realName、旧头像一并回传，presentAuthor 形同虚设。
+      const { author: _rawAuthor, ...post } = row;
+      return {
+        // model 原样保留（厂商串，前端不展示但要有）；modelName 是展示用的别名，
+        // 解析不到（模型配置被删了）时为 null，前端回退显示 model。
+        post: { ...post, modelName: post.model ? modelNames.get(post.model) ?? null : null },
+        author,
+        metrics: {
+          pvCount: m?.pvCount ?? 0,
+          uvCount: m?.uvCount ?? 0,
+          likeCount: m?.likeCount ?? 0,
+          favoriteCount: m?.favoriteCount ?? 0,
+          viewCount: m?.viewCount ?? 0,
+          referenceCount: m?.referenceCount ?? 0,
+        },
+        liked: likedIds ? likedIds.has(post.id) : undefined,
+        favorited: favoritedIds ? favoritedIds.has(post.id) : undefined,
+      };
+    });
+  }
+
+  /**
+   * `/@username` 个人页左侧统计：该作者全部 PUBLISHED 作品的 viewCount / likeCount 之和
+   * 与作品数。sum 通过 resource_metrics 聚合（gallery.repository.aggregateAuthorMetrics），
+   * 无作品时全部为 0。
+   */
+  async getAuthorStats(
+    authorId: string,
+  ): Promise<{ viewCount: number; likeCount: number; generationCount: number }> {
+    return this.repo.aggregateAuthorMetrics(authorId);
   }
 
   /**

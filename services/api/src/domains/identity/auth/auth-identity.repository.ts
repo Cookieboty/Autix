@@ -310,6 +310,7 @@ export class AuthIdentityRepository {
       socialYoutube?: string | null;
       socialTiktok?: string | null;
       avatar?: string | null;
+      bannerImage?: string | null;
     },
   ) {
     // 白名单重构造 —— 只有这些自助字段被落库
@@ -327,23 +328,35 @@ export class AuthIdentityRepository {
     for (const field of SELF_FIELDS) {
       if (Object.prototype.hasOwnProperty.call(input, field)) data[field] = input[field];
     }
-    if (Object.prototype.hasOwnProperty.call(input, 'avatar')) {
+    const touchesAvatar = Object.prototype.hasOwnProperty.call(input, 'avatar');
+    const touchesBanner = Object.prototype.hasOwnProperty.call(input, 'bannerImage');
+    if (touchesAvatar) {
       data.avatar = input.avatar;
       // T16: 走外链路径时同步清空 avatarStorageKey（旧的内部 key 已经不再对应当前头像）
       // 旧 key cleanup 与 profile 更新写入同一事务 outbox。
-      if (Object.prototype.hasOwnProperty.call(input, 'avatar')) data.avatarStorageKey = null;
+      data.avatarStorageKey = null;
+    }
+    if (touchesBanner) {
+      // 与头像同理：外链/清空路径下旧的内部 key 不再对应当前 banner，一并置空。
+      data.bannerImage = input.bannerImage;
+      data.bannerStorageKey = null;
     }
 
     await this.prisma.$transaction(async (tx) => {
-      const users = await tx.$queryRaw<Array<{ status: string; avatarStorageKey: string | null }>>`
-        SELECT "status", "avatarStorageKey" FROM "users" WHERE "id" = ${userId} FOR UPDATE
+      const users = await tx.$queryRaw<Array<{
+        status: string;
+        avatarStorageKey: string | null;
+        bannerStorageKey: string | null;
+      }>>`
+        SELECT "status", "avatarStorageKey", "bannerStorageKey" FROM "users" WHERE "id" = ${userId} FOR UPDATE
       `;
       const user = users[0];
       if (!user || ['DELETED', 'DISABLED', 'LOCKED'].includes(user.status)) {
         throw new BadRequestException('账户不可用');
       }
       await tx.user.update({ where: { id: userId }, data });
-      if (Object.prototype.hasOwnProperty.call(input, 'avatar') && user.avatarStorageKey) {
+      // 逐条 create（而非 createMany）：与既有头像清理路径保持同一调用形状。
+      if (touchesAvatar && user.avatarStorageKey) {
         await tx.storage_cleanup_tasks.create({
           data: {
             storageKey: user.avatarStorageKey,
@@ -352,10 +365,84 @@ export class AuthIdentityRepository {
           },
         });
       }
+      if (touchesBanner && user.bannerStorageKey) {
+        await tx.storage_cleanup_tasks.create({
+          data: {
+            storageKey: user.bannerStorageKey,
+            ownerUserId: userId,
+            // 清空（null）与换外链是两种运维语义，reason 分开记，便于审计追溯。
+            reason: input.bannerImage === null ? 'BANNER_CLEARED' : 'BANNER_REPLACED',
+          },
+        });
+      }
     });
   }
 
-  async assertPendingAvatarReservation(userId: string, storageKey: string): Promise<{
+  /**
+   * 消费 banner reservation —— 与 consumeAvatarReservation 同一套事务边界与竞态防护
+   * （updateMany 原子消费 + FOR UPDATE 锁用户 + 旧 key enqueue cleanup），
+   * 差别只有 purpose=BANNER、落 bannerImage/bannerStorageKey、reason=BANNER_REPLACED。
+   *
+   * 不做图片后处理（头像有 AvatarImageProcessor 裁方图；banner 保留原图比例），
+   * 故没有 avatar 那条 finalStorageKey 分支。
+   */
+  async consumeBannerReservation(
+    userId: string,
+    reservationStorageKey: string,
+    publicUrl: string,
+  ): Promise<{ oldStorageKey: string | null }> {
+    return this.prisma.$transaction(async (tx) => {
+      const users = await tx.$queryRaw<Array<{ status: string; bannerStorageKey: string | null }>>`
+        SELECT "status", "bannerStorageKey"
+        FROM "users"
+        WHERE "id" = ${userId}
+        FOR UPDATE
+      `;
+      const dbUser = users[0];
+      if (!dbUser || ['DELETED', 'DISABLED', 'LOCKED'].includes(dbUser.status)) {
+        throw new BadRequestException('账户不可用');
+      }
+
+      const consumed = await tx.pending_uploads.updateMany({
+        where: {
+          storageKey: reservationStorageKey,
+          ownerUserId: userId,
+          purpose: 'BANNER',
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        data: { status: 'CONSUMED', consumedAt: new Date() },
+      });
+      // 统一错误消息，不区分超时/已消费/越权/不存在——避免探测泄露
+      if (consumed.count === 0) {
+        throw new BadRequestException('banner 上传凭据无效或已过期');
+      }
+
+      const oldStorageKey = dbUser.bannerStorageKey ?? null;
+      await tx.user.update({
+        where: { id: userId },
+        data: { bannerImage: publicUrl, bannerStorageKey: reservationStorageKey },
+      });
+
+      if (oldStorageKey && oldStorageKey !== reservationStorageKey) {
+        await tx.storage_cleanup_tasks.create({
+          data: { storageKey: oldStorageKey, ownerUserId: userId, reason: 'BANNER_REPLACED' },
+        });
+      }
+
+      return { oldStorageKey };
+    });
+  }
+
+  /**
+   * 校验 reservation 仍可消费，并回传登记的 sizeBytes/contentType —— 调用方据此比对 R2 上
+   * 实际对象的元数据（防止用户 PUT 一个与凭据不符的对象）。头像与 banner 共用，按 purpose 区分。
+   */
+  async assertPendingUploadReservation(
+    userId: string,
+    storageKey: string,
+    purpose: 'AVATAR' | 'BANNER' = 'AVATAR',
+  ): Promise<{
     sizeBytes: number | null;
     contentType: string | null;
   }> {
@@ -363,13 +450,17 @@ export class AuthIdentityRepository {
       where: {
         ownerUserId: userId,
         storageKey,
-        purpose: 'AVATAR',
+        purpose,
         status: 'PENDING',
         expiresAt: { gt: new Date() },
       },
       select: { id: true, sizeBytes: true, contentType: true },
     });
-    if (!reservation) throw new BadRequestException('头像上传凭据无效或已过期');
+    if (!reservation) {
+      throw new BadRequestException(
+        purpose === 'BANNER' ? 'banner 上传凭据无效或已过期' : '头像上传凭据无效或已过期',
+      );
+    }
     return {
       sizeBytes: reservation.sizeBytes,
       contentType: reservation.contentType,

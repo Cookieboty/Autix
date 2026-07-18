@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   useAuthStore,
@@ -21,7 +20,6 @@ import type { MembershipLevel, PointsPackage } from '@autix/shared-store';
 import { BillingCycleSwitch, PlanCard } from './pricing/PlanCards';
 import { ComparisonTable } from './pricing/ComparisonTable';
 import { TopUpSection } from './pricing/TopUpPacks';
-import { UseCasesSection } from './pricing/UseCasesSection';
 
 export function PublicPricingView({
   levels,
@@ -36,15 +34,22 @@ export function PublicPricingView({
   const openAuthModal = useUiStore((state) => state.openAuthModal);
   const checkoutMutation = useCreateOrderMutation();
   const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
-  const plans = useMemo(() => buildPricingPlans(levels, cycle), [levels, cycle]);
+  const allPlans = useMemo(() => buildPricingPlans(levels, cycle), [levels, cycle]);
+  // 主卡片区只展示付费档（Plus/Pro/Max）——参考设计无独立免费卡；无付费档时回退到全部
+  const plans = useMemo(() => {
+    const paid = allPlans.filter((plan) => !plan.isFree);
+    return paid.length ? paid : allPlans;
+  }, [allPlans]);
   const packages = useMemo(() => normalizePointsPackages(pointsPackages), [pointsPackages]);
 
   const planGridClass =
     plans.length === 1
-      ? 'grid gap-4 xl:grid-cols-[minmax(0,560px)]'
+      ? 'grid gap-4 mx-auto max-w-md'
       : plans.length === 2
-        ? 'grid gap-4 lg:grid-cols-2'
-        : 'grid gap-4 md:grid-cols-2 xl:grid-cols-4';
+        ? 'grid gap-4 md:grid-cols-2 mx-auto max-w-3xl'
+        : plans.length === 3
+          ? 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'
+          : 'grid gap-4 md:grid-cols-2 xl:grid-cols-4';
 
   const handlePurchase = async (plan: PricingPlan) => {
     if (!isAuthenticated) {
@@ -74,16 +79,11 @@ export function PublicPricingView({
   return (
     <PublicGrowthShell promo={{ label: t('promo'), href: '/membership/upgrade' }} showNav={false} showPromo={false}>
       <SetPublicTopPromo label={t('promo')} href="/membership/upgrade" />
-      <main className="overflow-hidden bg-background">
-        <section className="relative border-b border-foreground/10 bg-background">
-          <div className="growth-pricing-grid-overlay" />
-          <div className="relative mx-auto max-w-7xl px-4 py-7 md:px-6 md:py-9">
-            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <main className="bg-background">
+        <section>
+          <div className="mx-auto max-w-6xl px-4 pt-10 md:px-6 md:pt-12">
+            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-growth-accent">
-                  <Star className="size-4" />
-                  {t('eyebrow')}
-                </p>
                 <h1 className="text-3xl font-black uppercase tracking-tight text-foreground md:text-4xl">
                   {t('purchaseTitle')}
                 </h1>
@@ -98,10 +98,11 @@ export function PublicPricingView({
             </div>
 
             <div className={planGridClass}>
-              {plans.map((plan) => (
+              {plans.map((plan, index) => (
                 <PlanCard
                   key={plan.id}
                   plan={plan}
+                  tagline={index < 3 ? t(`taglines.${index}`) : undefined}
                   showYearlyHint={cycle === 'YEARLY'}
                   purchasing={
                     checkoutMutation.isPending &&
@@ -116,9 +117,8 @@ export function PublicPricingView({
           </div>
         </section>
 
-        <ComparisonTable plans={plans} />
+        <ComparisonTable plans={allPlans} />
         <TopUpSection packages={packages} />
-        <UseCasesSection />
       </main>
     </PublicGrowthShell>
   );

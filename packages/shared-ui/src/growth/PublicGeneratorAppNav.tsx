@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Folder, Gem, Search } from 'lucide-react';
+import { Folder, Gem } from 'lucide-react';
 import { useMessages, useTranslations } from 'next-intl';
 import { BrandMark } from '../brand';
 import { Link, usePathname } from '../navigation';
 import { buildDiscountTranslationValues } from './discount';
 import { buildGeneratorNavItems } from './generator-nav-items';
+import { GrowthNotificationMenu } from './GrowthNotificationMenu';
+import { ImageNavFlyout } from './ImageNavFlyout';
 import { PublicAccountMenu } from './PublicAccountMenu';
 
 export type PublicGeneratorAppNavKind = 'home' | 'image' | 'video';
@@ -88,6 +90,7 @@ export function PublicGeneratorAppNav({
             : NAV_LABEL_FALLBACKS.new)
           : undefined;
     return {
+      key: item.key,
       label: navLabel(item.key),
       href: item.href,
       active: item.active,
@@ -117,64 +120,65 @@ export function PublicGeneratorAppNav({
               <BrandMark size={32} />
             </Link>
             <nav className="hide-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
-              {navItems.map((item) => (
-                <span key={`${item.href}-${item.label}`} className="contents">
-                  {item.disabled ? (
-                    <span
-                      aria-disabled="true"
-                      className={`group relative inline-flex shrink-0 cursor-not-allowed items-center gap-1 rounded-md font-semibold text-foreground/30 transition-all duration-300 ${linkSize}`}
-                    >
-                      {item.label}
-                      {item.badge ? (
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${item.badgeVariant === 'soon'
-                            ? 'bg-growth-accent/18 text-growth-accent'
-                            : 'bg-secondary text-foreground/40'
-                            }`}
-                        >
-                          {item.badge}
-                        </span>
-                      ) : null}
-                      <span
-                        role="tooltip"
-                        className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground/85 opacity-0 growth-tooltip-shadow transition group-hover:opacity-100 group-focus-within:opacity-100"
-                      >
-                        {item.badgeVariant === 'soon' ? item.badge : comingSoonLabel}
+              {navItems.map((item) => {
+                const linkNode = (
+                  <Link
+                    href={item.href}
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-md font-semibold transition-all duration-300 ${linkSize} ${item.active
+                      ? 'text-growth-accent'
+                      : 'text-[#737475] hover:bg-secondary hover:text-white'
+                      }`}
+                  >
+                    {item.label}
+                    {item.badge ? (
+                      <span className="rounded bg-growth-accent/18 px-1.5 py-0.5 text-[10px] font-bold text-growth-accent">
+                        {item.badge}
                       </span>
-                    </span>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      className={`inline-flex shrink-0 items-center gap-1 rounded-md font-semibold transition-all duration-300 ${linkSize} ${item.active
-                        ? 'text-growth-accent'
-                        : 'text-[#737475] hover:bg-secondary hover:text-white'
-                        }`}
-                    >
-                      {item.label}
-                      {item.badge ? (
-                        <span className="rounded bg-growth-accent/18 px-1.5 py-0.5 text-[10px] font-bold text-growth-accent">
-                          {item.badge}
+                    ) : null}
+                  </Link>
+                );
+                return (
+                  <span key={`${item.href}-${item.label}`} className="contents">
+                    {item.disabled ? (
+                      <span
+                        aria-disabled="true"
+                        className={`group relative inline-flex shrink-0 cursor-not-allowed items-center gap-1 rounded-md font-semibold text-foreground/30 transition-all duration-300 ${linkSize}`}
+                      >
+                        {item.label}
+                        {item.badge ? (
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${item.badgeVariant === 'soon'
+                              ? 'bg-growth-accent/18 text-growth-accent'
+                              : 'bg-secondary text-foreground/40'
+                              }`}
+                          >
+                            {item.badge}
+                          </span>
+                        ) : null}
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground/85 opacity-0 growth-tooltip-shadow transition group-hover:opacity-100 group-focus-within:opacity-100"
+                        >
+                          {item.badgeVariant === 'soon' ? item.badge : comingSoonLabel}
                         </span>
-                      ) : null}
-                    </Link>
-                  )}
-                  {item.separatorAfter ? (
-                    <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-border" />
-                  ) : null}
-                </span>
-              ))}
+                      </span>
+                    ) : item.key === 'image' ? (
+                      // Image 项：点击照常进入 /ai/image，悬浮弹出全部图像模型下拉（点击带 ?model= 跳转）
+                      <ImageNavFlyout>{linkNode}</ImageNavFlyout>
+                    ) : (
+                      linkNode
+                    )}
+                    {item.separatorAfter ? (
+                      <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-border" />
+                    ) : null}
+                  </span>
+                );
+              })}
             </nav>
           </div>
 
           <div className="hidden shrink-0 items-center gap-2 lg:flex">
-            <button
-              type="button"
-              aria-label={navLabel('search')}
-              className={`growth-nav-btn grid place-items-center text-[#737475] transition-all duration-300 hover:text-white ${compact ? 'size-7' : 'size-9'
-                }`}
-            >
-              <Search className="size-4" />
-            </button>
+            {/* 搜索功能未做，先隐藏入口（等做好搜索再放开） */}
             <Link
               href="/pricing"
               className={`growth-nav-btn relative inline-flex items-center gap-2 font-semibold text-[#737475] transition-all duration-300 hover:text-white ${pillSize}`}
@@ -195,6 +199,7 @@ export function PublicGeneratorAppNav({
               <Folder className="size-4 growth-assets-icon" />
               {navLabel('assets')}
             </Link>
+            <GrowthNotificationMenu compact={compact} />
             <PublicAccountMenu compact={compact} />
           </div>
         </div>

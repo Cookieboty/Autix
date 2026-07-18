@@ -34,7 +34,7 @@ export function PublicHomeView({ home }: { home?: PublicHomeData | null }) {
         <HomeGallerySection
           title={t('home.imageGalleryTitle')}
           subtitle={t('home.imageGallerySubtitle')}
-          viewAllHref="/gallery?kind=IMAGE"
+          viewAllHref="/ai/image?mode=gallery"
           source="image"
         />
 

@@ -446,6 +446,8 @@ export class AuthService {
       socialTiktok?: string | null;
       avatar?: string | null;
       avatarStorageKey?: string;
+      bannerImage?: string | null;
+      bannerStorageKey?: string;
     },
     lang: string = DEFAULT_LANGUAGE,
   ) {
@@ -463,12 +465,23 @@ export class AuthService {
     // 2) avatarStorageKey（reservation 路径）：走 consumeAvatarReservation 事务原子消费；
     //    消费 reservation 与头像清理 outbox 在同一事务完成
     // 3) 其余字段（nickname/description）在两条路径外单独 update
-    const { avatarStorageKey, avatar: _avatarField, ...restNonAvatar } = input;
+    const {
+      avatarStorageKey,
+      avatar: _avatarField,
+      bannerStorageKey,
+      bannerImage: _bannerField,
+      ...restNonAvatar
+    } = input;
     const hasAvatarField = Object.prototype.hasOwnProperty.call(input, 'avatar');
     const hasAvatarKey = typeof avatarStorageKey === 'string' && avatarStorageKey.length > 0;
+    const hasBannerField = Object.prototype.hasOwnProperty.call(input, 'bannerImage');
+    const hasBannerKey = typeof bannerStorageKey === 'string' && bannerStorageKey.length > 0;
     // DTO 已校验互斥，这里 defence-in-depth 再兜一次
     if (hasAvatarField && hasAvatarKey) {
       throw new BadRequestException('avatar 与 avatarStorageKey 不能同时提交');
+    }
+    if (hasBannerField && hasBannerKey) {
+      throw new BadRequestException('bannerImage 与 bannerStorageKey 不能同时提交');
     }
 
     // 先写非头像字段（若存在），保持事务粒度最小
@@ -485,13 +498,14 @@ export class AuthService {
     const providedSelfFields = SELF_FIELDS.filter((field) =>
       Object.prototype.hasOwnProperty.call(restNonAvatar, field),
     );
-    if (providedSelfFields.length > 0 || hasAvatarField) {
-      // 若同时提供了外链 avatar，与自助字段一起原子写；identityRepository.updateOwnProfile 内部已按白名单
+    if (providedSelfFields.length > 0 || hasAvatarField || hasBannerField) {
+      // 若同时提供了外链 avatar/bannerImage，与自助字段一起原子写；identityRepository.updateOwnProfile 内部已按白名单
       const payload: Parameters<typeof this.identityRepository.updateOwnProfile>[1] = {};
       for (const field of providedSelfFields) {
         payload[field] = restNonAvatar[field];
       }
       if (hasAvatarField) payload.avatar = _avatarField ?? null;
+      if (hasBannerField) payload.bannerImage = _bannerField ?? null;
       await this.identityRepository.updateOwnProfile(user.id, payload);
     }
 
@@ -499,7 +513,7 @@ export class AuthService {
     if (hasAvatarKey) {
       // T18: server-side 图像预处理 —— 下载原图 → resize 512×512 + strip metadata + WebP →
       // 上传到新 key。降级路径由 processor 自己收敛（processed=false 时 storageKey=原 key）。
-      const reservation = await this.identityRepository.assertPendingAvatarReservation(user.id, avatarStorageKey!);
+      const reservation = await this.identityRepository.assertPendingUploadReservation(user.id, avatarStorageKey!);
       const object = await this.r2.getObjectMetadata(avatarStorageKey!);
       const expectedContentType = reservation.contentType?.split(';')[0]?.trim().toLowerCase() ?? null;
       const actualContentType = object.contentType?.split(';')[0]?.trim().toLowerCase() ?? null;
@@ -531,6 +545,28 @@ export class AuthService {
         }
         throw error;
       }
+    }
+
+    // banner reservation：与头像同样先比对 R2 实际对象与凭据（防止 PUT 上来的对象与
+    // presign 时登记的 size/contentType 不符），但不做派生处理 —— banner 保留原图。
+    if (hasBannerKey) {
+      const reservation = await this.identityRepository.assertPendingUploadReservation(
+        user.id,
+        bannerStorageKey!,
+        'BANNER',
+      );
+      const object = await this.r2.getObjectMetadata(bannerStorageKey!);
+      const expectedContentType = reservation.contentType?.split(';')[0]?.trim().toLowerCase() ?? null;
+      const actualContentType = object.contentType?.split(';')[0]?.trim().toLowerCase() ?? null;
+      if (
+        !object.exists ||
+        (reservation.sizeBytes !== null && object.contentLength !== reservation.sizeBytes) ||
+        (expectedContentType !== null && actualContentType !== expectedContentType)
+      ) {
+        throw new BadRequestException('banner 对象不存在或与上传凭据不匹配');
+      }
+      const publicUrl = await this.r2.getPublicUrl(bannerStorageKey!);
+      await this.identityRepository.consumeBannerReservation(user.id, bannerStorageKey!, publicUrl);
     }
 
     // 重建 AuthProfile —— buildAuthProfile 内部会重读 DB 保证 nickname/avatar/description 立即刷新
@@ -583,13 +619,20 @@ export class AuthService {
       ? await this.identityRepository.findPermissionsBySystem(currentSystemId)
       : user.permissions;
 
-    // 重读 DB 覆盖旧 AuthUser 字段；`avatarStorageKey` 只用于服务端判断（如头像清理），不返回给前端
+    // 重读 DB 覆盖旧 AuthUser 字段；`avatarStorageKey` / `bannerStorageKey` 只用于服务端判断
+    // （如对象清理），不返回给前端
     const fresh = userWithSystems;
-    // 显式剥离：即便未来 JWT payload 扩展带上 avatarStorageKey，此处也不会泄漏
-    const { avatarStorageKey: _internalAvatarKey, ...safeUser } = user as AuthUser & {
+    // 显式剥离：即便未来 JWT payload 扩展带上这些内部 key，此处也不会泄漏
+    const {
+      avatarStorageKey: _internalAvatarKey,
+      bannerStorageKey: _internalBannerKey,
+      ...safeUser
+    } = user as AuthUser & {
       avatarStorageKey?: string | null;
+      bannerStorageKey?: string | null;
     };
     void _internalAvatarKey;
+    void _internalBannerKey;
 
     return {
       ...safeUser,
@@ -599,6 +642,7 @@ export class AuthService {
       status: fresh.status,
       nickname: fresh.nickname,
       avatar: fresh.avatar,
+      bannerImage: fresh.bannerImage,
       description: fresh.description,
       headline: fresh.headline,
       location: fresh.location,

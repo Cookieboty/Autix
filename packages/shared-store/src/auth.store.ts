@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { checkAdmin } from '@autix/domain';
-import type { AuthProfile, AuthProfileFeatures, AuthUser, AvatarPresignResult, Menu, SystemInfo, UpdateOwnProfileInput } from '@autix/domain';
+import type { AuthProfile, AuthProfileFeatures, AuthUser, AvatarPresignResult, BannerPresignResult, Menu, SystemInfo, UpdateOwnProfileInput } from '@autix/domain';
 import { getAuth, getNavigation } from '@autix/platform';
 import { storageApi, uploadToPresignedUrl, userApi, updateMyAutoPublish } from '@autix/sdk';
 
@@ -339,6 +339,26 @@ export const authActions = {
     await uploadToPresignedUrl(reservation.uploadUrl, file, { contentType: file.type });
     // Step 3: consume via PATCH profile
     return authActions.updateOwnProfile({ avatarStorageKey: reservation.storageKey });
+  },
+
+  /**
+   * Profile banner 上传三步流水，与 uploadAvatar 完全同构：
+   * 1. `POST /storage/banner-presign` 2. PUT → R2 3. `PATCH /auth/profile { bannerStorageKey }`。
+   * 返回消费后的 AuthProfile（`bannerImage` 已更新为 CDN publicUrl）。
+   */
+  uploadBanner: async (file: File): Promise<AuthProfile> => {
+    const { data: reservation }: { data: BannerPresignResult } = await storageApi.presignBannerUpload({
+      fileName: file.name,
+      contentType: file.type,
+      sizeBytes: file.size,
+    });
+    await uploadToPresignedUrl(reservation.uploadUrl, file, { contentType: file.type });
+    return authActions.updateOwnProfile({ bannerStorageKey: reservation.storageKey });
+  },
+
+  /** 清空 profile banner（bannerImage=null 触发后端 BANNER_CLEARED 清理）。 */
+  removeBanner: async (): Promise<AuthProfile> => {
+    return authActions.updateOwnProfile({ bannerImage: null });
   },
 
   /**

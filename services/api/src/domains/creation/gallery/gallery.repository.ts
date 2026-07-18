@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, GalleryKind, GallerySource, GalleryStatus, TemplateStatus } from '../../platform/prisma/generated';
+import { Prisma, GalleryKind, GallerySource, GalleryStatus, ResourceType, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
 /** gallery_posts / gallery_reports 的数据访问层。所有状态迁移由 service 层用 assertTransition 校验后再调用这里。 */
@@ -158,6 +158,66 @@ export class GalleryRepository {
     return {
       items,
       nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
+    };
+  }
+
+  /**
+   * 作者个人页 Generations feed：某作者的 PUBLISHED 作品，image+video 混排（不按 kind 分流），
+   * publishedAt 倒序，游标为上一页最后一条 id。命中 @@index([authorId])。
+   * author include 与 findPublishedFeed 完全一致，保证 presentFeedRows 能通用。
+   */
+  async findAuthorPublishedFeed(authorId: string, cursor: string | undefined, take: number) {
+    const rows = await this.prisma.gallery_posts.findMany({
+      where: { status: GalleryStatus.PUBLISHED, authorId },
+      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+      take: take + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      include: {
+        author: {
+          select: {
+            id: true,
+            status: true,
+            nickname: true,
+            realName: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+    const hasMore = rows.length > take;
+    const items = hasMore ? rows.slice(0, take) : rows;
+    return {
+      items,
+      nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
+    };
+  }
+
+  /**
+   * 作者个人页左侧统计：作品数 + 全部 PUBLISHED 作品的 view/like 之和。
+   *
+   * viewCount/likeCount 不在 gallery_posts 上，而在 resource_metrics（resourceType=GALLERY_POST）。
+   * 两步：先取作者 PUBLISHED 作品的 id 集，再对 resource_metrics 按这批 id 聚合求和。
+   * 作品数直接等于 id 集大小（无需再 count）。作者无作品时全部返回 0。
+   */
+  async aggregateAuthorMetrics(
+    authorId: string,
+  ): Promise<{ viewCount: number; likeCount: number; generationCount: number }> {
+    const posts = await this.prisma.gallery_posts.findMany({
+      where: { status: GalleryStatus.PUBLISHED, authorId },
+      select: { id: true },
+    });
+    const ids = posts.map((p) => p.id);
+    if (ids.length === 0) return { viewCount: 0, likeCount: 0, generationCount: 0 };
+
+    const agg = await this.prisma.resource_metrics.aggregate({
+      where: { resourceType: ResourceType.GALLERY_POST, resourceId: { in: ids } },
+      _sum: { viewCount: true, likeCount: true },
+    });
+    return {
+      viewCount: agg._sum.viewCount ?? 0,
+      likeCount: agg._sum.likeCount ?? 0,
+      generationCount: ids.length,
     };
   }
 
