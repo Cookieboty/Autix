@@ -117,16 +117,9 @@ RUN PRISMA_VERSION="$(node -p "require('/app/node_modules/@prisma/client/package
 ENV NODE_ENV=production
 ENV NODE_PATH=/app/node_modules
 
-# pnpm 11 在执行 `pnpm run` 前会校验 node_modules 与 lockfile 是否一致
-# （runDepsStatusCheck）。本镜像的 node_modules 是手工拼装的 —— 根目录来自
-# prod-deps 阶段的 `--prod --filter @autix/api...`，加上上面几条指向 dist 的
-# 软链 —— 与「完整 workspace 安装」的预期天然不符，于是 pnpm 判定需要清空重装，
-# 而容器里没有 TTY 可供确认，直接中止：
-#   [ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY]
-# 报错文案建议的 CI=true / confirmModulesPurge=false 都是「不再询问、直接删了重装」，
-# 会在容器启动时全量联网重装并毁掉上面的软链结构。这里改为跳过该校验。
-# CMD 里的 db:prepare-cutover 串了 6 个 pnpm run，每个都会触发，绕不开。
-ENV npm_config_verify_deps_before_run=false
+# 注：`pnpm run` 前的依赖一致性校验（runDepsStatusCheck）会因本镜像手工拼装的
+# node_modules 而中止启动，关闭它的设置在 pnpm-workspace.yaml 的
+# verifyDepsBeforeRun —— pnpm 11 只从那里读，环境变量不生效。
 WORKDIR /app/services/api
 RUN echo '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["./dist/*"]}}}' > tsconfig.json
 EXPOSE 4100
