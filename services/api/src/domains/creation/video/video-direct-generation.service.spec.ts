@@ -193,7 +193,8 @@ describe('VideoDirectGenerationService.generate', () => {
     expect(markDirectGenerationFailed).not.toHaveBeenCalled();
   });
 
-  it('提交失败（不确定：200-无-taskId，classification=upstream 且无 httpStatus）→ 保 hold，不退款也不标失败', async () => {
+  it('提交失败（无 task id：VideoUpstreamError 且无 httpStatus）→ 确定性失败 → 退款 + 标失败', async () => {
+    // 收到了上游响应但没给任务 id → 无 id 可轮询、不可能恢复，必须立即关闭（否则一直挂 pending）。
     const safeRefund = vi.fn();
     const markDirectGenerationFailed = vi.fn();
     const { service } = makeService({
@@ -212,8 +213,8 @@ describe('VideoDirectGenerationService.generate', () => {
       'upstream video submit returned no task id',
     );
 
-    expect(safeRefund).not.toHaveBeenCalled();
-    expect(markDirectGenerationFailed).not.toHaveBeenCalled();
+    expect(markDirectGenerationFailed).toHaveBeenCalled();
+    expect(safeRefund).toHaveBeenCalled();
   });
 
   it('提交成功 → 直连落库、返回 generationId + taskId，且不携带父 clip/project', async () => {

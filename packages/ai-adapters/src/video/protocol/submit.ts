@@ -80,11 +80,21 @@ export async function submitVideoTask(req: VideoCallRequest): Promise<{ provider
 
   const taskId = readPath(payload, preset.submit.taskIdPath);
   if (typeof taskId !== 'string' || !taskId) {
+    // 带上上游原始响应：多数「无 task id」其实是上游 200 返回了错误体（参数不合法/鉴权等），
+    // 不带响应体根本没法诊断。截断进日志，不进 UI。
+    const rawBody = (() => {
+      try {
+        return JSON.stringify(payload);
+      } catch {
+        return String(payload);
+      }
+    })().slice(0, UPSTREAM_BODY_LIMIT);
     throw new VideoUpstreamError({
-      message: 'upstream video submit returned no task id',
+      message: `upstream video submit returned no task id (taskIdPath=${JSON.stringify(preset.submit.taskIdPath)}); response=${rawBody}`,
       classification: 'upstream',
       retryable: false,
       endpoint: url,
+      upstreamBody: rawBody,
     });
   }
   return { providerTaskId: taskId };

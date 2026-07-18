@@ -164,7 +164,7 @@ export const poyoVeo: VideoProtocolPreset = {
  *
  * 全部翻译自 PoYo 官方文档（docs.poyo.ai · Wan 2.7 Video）。v1 纯轮询（不接回调）。
  */
-function makeWanPreset(config: {
+function makePoyoFlatPreset(config: {
   key: string;
   content: ContentBinding;
   hasAspectRatio: boolean;
@@ -202,14 +202,14 @@ function makeWanPreset(config: {
 }
 
 /** 文生视频：仅 prompt，无素材。 */
-export const poyoWanT2V = makeWanPreset({
+export const poyoWanT2V = makePoyoFlatPreset({
   key: 'poyo-wan-t2v@v1',
   content: { strategy: 'flat-media', promptPath: 'input.prompt' },
   hasAspectRatio: true,
 });
 
 /** 图生视频：首/末帧 → image_urls（[0]=起始、[1]=结束）；无 aspect_ratio（由图片决定）。 */
-export const poyoWanI2V = makeWanPreset({
+export const poyoWanI2V = makePoyoFlatPreset({
   key: 'poyo-wan-i2v@v1',
   content: {
     strategy: 'flat-media',
@@ -223,7 +223,7 @@ export const poyoWanI2V = makeWanPreset({
 });
 
 /** 参考生视频：参考图 → reference_image_urls，参考视频 → reference_video_urls。 */
-export const poyoWanRef = makeWanPreset({
+export const poyoWanRef = makePoyoFlatPreset({
   key: 'poyo-wan-ref@v1',
   content: {
     strategy: 'flat-media',
@@ -237,7 +237,7 @@ export const poyoWanRef = makeWanPreset({
 });
 
 /** 视频编辑：源视频（reference_video 角色）→ 单个 video_url；参考图 → 单个 reference_image_url。 */
-export const poyoWanEdit = makeWanPreset({
+export const poyoWanEdit = makePoyoFlatPreset({
   key: 'poyo-wan-edit@v1',
   content: {
     strategy: 'flat-media',
@@ -245,6 +245,58 @@ export const poyoWanEdit = makeWanPreset({
     mediaRolePaths: {
       reference_video: { path: 'input.video_url', mode: 'single' },
       reference_image: { path: 'input.reference_image_url', mode: 'single' },
+    },
+  },
+  hasAspectRatio: true,
+});
+
+/**
+ * PoYo Grok Imagine —— 第四家（同 PoYo 平台，套 makePoyoFlatPreset）。两个模型：
+ *   - grok-imagine：文/图生视频。aspect_ratio(文生) + duration(6/10)；素材 → image_urls（max 1）。
+ *     mode(fun/normal/spicy) v1 不下发（缺省由 PoYo 定 normal），后续加需扩 UI + 参数投影。
+ *   - grok-imagine-video-1.5：图生视频。resolution(480p/720p) + duration；无 aspect_ratio。
+ */
+export const poyoGrokImagine = makePoyoFlatPreset({
+  key: 'poyo-grok-imagine@v1',
+  content: { strategy: 'flat-media', promptPath: 'input.prompt', mediaUrlsPath: 'input.image_urls' },
+  hasAspectRatio: true,
+});
+
+export const poyoGrokV15 = makePoyoFlatPreset({
+  key: 'poyo-grok-v15@v1',
+  content: { strategy: 'flat-media', promptPath: 'input.prompt', mediaUrlsPath: 'input.image_urls' },
+  hasAspectRatio: false,
+});
+
+/**
+ * PoYo Happy Horse（阿里，同 PoYo 平台，套 makePoyoFlatPreset）。两个模型各一个 model id
+ * 覆盖多模式，模式由字段决定 → 用 flat-media 的 role 路由：
+ *   - first_frame     → input.image_urls（i2v，单图首帧）
+ *   - reference_image → input.reference_image_urls（ref，1-9 图）
+ * v1 只做 t2v/i2v/ref。happy-horse 的 video-edit（需源视频 + 2× 计价）暂不接：不路由
+ * reference_video，故 edit 不会被触发。aspect_ratio 仅 t2v/ref 有意义（i2v 由图片定，上游会忽略）。
+ */
+export const poyoHappyHorse = makePoyoFlatPreset({
+  key: 'poyo-happyhorse@v1',
+  content: {
+    strategy: 'flat-media',
+    promptPath: 'input.prompt',
+    mediaRolePaths: {
+      first_frame: { path: 'input.image_urls', mode: 'array' },
+      reference_image: { path: 'input.reference_image_urls', mode: 'array' },
+    },
+  },
+  hasAspectRatio: true,
+});
+
+export const poyoHappyHorse11 = makePoyoFlatPreset({
+  key: 'poyo-happyhorse-11@v1',
+  content: {
+    strategy: 'flat-media',
+    promptPath: 'input.prompt',
+    mediaRolePaths: {
+      first_frame: { path: 'input.image_urls', mode: 'array' },
+      reference_image: { path: 'input.reference_image_urls', mode: 'array' },
     },
   },
   hasAspectRatio: true,

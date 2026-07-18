@@ -19,6 +19,7 @@ import {
   assembleVideoRequest,
   resolveVideoPreset,
   submitVideoTask,
+  videoSubmitUrl,
   VideoUpstreamError,
   type VideoMaterialInput,
 } from '@autix/ai-adapters/video';
@@ -117,6 +118,17 @@ export class VideoDirectGenerationService {
     };
     const requestBody = assembleVideoRequest(callRequest);
 
+    // 诊断日志：打出实际发给上游的 endpoint + 完整请求体，方便核对参数是否符合上游要求。
+    this.logger.log(
+      `direct generation upstream submit: ${JSON.stringify({
+        generationId,
+        protocolKey: preset.key,
+        model: callRequest.model,
+        endpoint: videoSubmitUrl(preset, callRequest.baseUrl),
+        requestBody,
+      })}`,
+    );
+
     // 判空协议无关（同 generateClip 的注释）：prompt 在函数入口已强制非空
     // （见上方 `if (!prompt) throw`），故这里实际总是为真——保留只作为协议引擎
     // 未来放宽 prompt 必填时的安全网，不读 requestBody.content
@@ -183,10 +195,18 @@ export class VideoDirectGenerationService {
     try {
       ({ providerTaskId } = await submitVideoTask(callRequest));
     } catch (err) {
-      // 只有 4xx（收到并解析了响应、上游确定未受理）才算「明确拒绝」。
-      // classification==='upstream' 也可能是 200-无-taskId（可能已受理，见 submit.ts），
-      // 网络/超时同样不确定 —— 这两种都必须走 else（保 hold，交孤儿回收），不能退款。
-      if (err instanceof VideoUpstreamError && err.httpStatus != null && err.httpStatus >= 400 && err.httpStatus < 500) {
+      // 「明确拒绝」= 收到了上游响应、但任务根本没被创建 → 立即标失败 + 退款（否则会一直挂 pending）。
+      //   - 4xx：上游明确拒绝。
+      //   - VideoUpstreamError 且**无 httpStatus**：submit.ts 的「无 task id」——上游返回了 2xx 但
+      //     没给任务 id（多为 200 错误体）。既然拿不到 id，就永远轮询不到、不可能恢复，属确定性失败，
+      //     不能当「可能已受理」挂着。
+      //   仍走 else（保 hold、交孤儿回收）的只有真·不确定：5xx（可能已受理）、网络/超时
+      //   （不是 VideoUpstreamError，request 可能已到达上游）。
+      const definitiveReject =
+        err instanceof VideoUpstreamError &&
+        ((err.httpStatus != null && err.httpStatus >= 400 && err.httpStatus < 500) ||
+          err.httpStatus == null);
+      if (definitiveReject) {
         await this.repository.markDirectGenerationFailed(
           generationId,
           err instanceof Error ? err.message : String(err),

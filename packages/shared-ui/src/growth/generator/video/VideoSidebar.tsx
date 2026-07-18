@@ -184,18 +184,28 @@ export function VideoSidebar({
   const durationOptions = videoParams.durations;
   const ratioOptions = useMemo(
     () =>
-      videoParams.ratios.map((value) => ({
-        value,
-        // adaptive / auto 都是「自动」；其余按 i18n key。
-        label: value === 'adaptive' || value === 'auto' ? t('auto') : t(`videoRatios.${value}`),
-      })),
+      videoParams.ratios.map((value) => {
+        // adaptive / auto 都是「自动」——都渲染成 t('auto')。
+        if (value === 'adaptive' || value === 'auto') {
+          return { value, label: t('auto') };
+        }
+        // 其余 ratio 走 i18n key；但 videoParams.ratios 直接来自 pricing schema 的
+        // enum（见 VideoSidebar 上方 useMemo），可能包含 domain 的 VideoAspectRatio
+        // union 之外的值（如 2:3 / 3:2 / 4:5 / 1:4 …）。缺 key 时用 raw value 当 label：
+        // ratio 本身就是"x:y"这种数字对，天然可读，且不需要跨 locale 翻译（现有 JSON
+        // 里除了 adaptive 也都是 key === value 的 identity 映射）。
+        const key = `videoRatios.${value}`;
+        return { value, label: t.has(key) ? t(key) : value };
+      }),
     [t, videoParams.ratios],
   );
   const resolutionOptions = useMemo(
-    () => videoParams.resolutions.map((value) => ({
-      value,
-      label: t(`videoResolutions.${value}`),
-    })),
+    () => videoParams.resolutions.map((value) => {
+      // 与 ratioOptions 同理：resolutions 直接来自 pricing schema enum，
+      // 未来新模型可能出现未预置的档位（例如 2k/3k）——缺 key 时用 raw value。
+      const key = `videoResolutions.${value}`;
+      return { value, label: t.has(key) ? t(key) : value };
+    }),
     [t, videoParams.resolutions],
   );
   const ratioLabel = ratioOptions.find((option) => option.value === ratio)?.label ?? ratio;

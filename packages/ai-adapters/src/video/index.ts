@@ -11,5 +11,9 @@ export {
   poyoWanI2V,
   poyoWanRef,
   poyoWanEdit,
+  poyoGrokImagine,
+  poyoGrokV15,
+  poyoHappyHorse,
+  poyoHappyHorse11,
 } from './protocol/presets/vendors';
 export { validateVideoProtocolConfig, type ConfigViolation } from './protocol/validate-config';

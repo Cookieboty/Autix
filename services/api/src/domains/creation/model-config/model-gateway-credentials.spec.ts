@@ -4,7 +4,7 @@ import {
   resolveModelCredentials,
 } from './model-gateway-credentials';
 
-const ENV_KEYS = ['AMUX_API_KEY', 'AMUX_BASE_URL'] as const;
+const ENV_KEYS = ['AMUX_API_KEY', 'AMUX_BASE_URL', 'POYO_API_KEY', 'POYO_BASE_URL', 'MY_GW_API_KEY'] as const;
 const savedEnv: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -83,6 +83,36 @@ describe('resolveBaseUrl', () => {
 
   it('returns undefined when nothing is configured anywhere', () => {
     expect(resolveBaseUrl({ baseUrl: undefined, metadata: undefined })).toBeUndefined();
+  });
+});
+
+describe('通用网关：凭据 env 名由 metadata.gateway 派生（代码不硬编码渠道名）', () => {
+  it('metadata.gateway=poyo → 从 POYO_API_KEY 解析，不落到 AMUX', () => {
+    process.env.AMUX_API_KEY = 'amux-key';
+    process.env.POYO_API_KEY = 'gw-key';
+    expect(resolveApiKey({ apiKey: null, metadata: { gateway: 'poyo' } })).toBe('gw-key');
+  });
+
+  it('gateway id 安全化：非字母数字转 _（my-gw → MY_GW_API_KEY）', () => {
+    process.env.MY_GW_API_KEY = 'gw-key';
+    expect(resolveApiKey({ apiKey: null, metadata: { gateway: 'my-gw' } })).toBe('gw-key');
+  });
+
+  it('网关模型 DB apiKey 仍优先于 env', () => {
+    process.env.POYO_API_KEY = 'gw-key';
+    expect(resolveApiKey({ apiKey: 'db-key', metadata: { gateway: 'poyo' } })).toBe('db-key');
+  });
+
+  it('baseUrl 由 <GATEWAY>_BASE_URL 派生（无硬编码默认地址）', () => {
+    expect(resolveBaseUrl({ baseUrl: null, metadata: { gateway: 'poyo' } })).toBeUndefined();
+    process.env.POYO_BASE_URL = 'https://gw.example.test';
+    expect(resolveBaseUrl({ baseUrl: null, metadata: { gateway: 'poyo' } })).toBe('https://gw.example.test');
+  });
+
+  it('未设 gateway 的模型不受影响，仍走 AMUX', () => {
+    process.env.AMUX_API_KEY = 'amux-key';
+    process.env.POYO_API_KEY = 'gw-key';
+    expect(resolveApiKey({ apiKey: null, metadata: null })).toBe('amux-key');
   });
 });
 

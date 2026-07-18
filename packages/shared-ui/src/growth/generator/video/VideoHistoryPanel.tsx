@@ -100,16 +100,46 @@ export function VideoHistoryPanel({ items, loading, pending, onSelectItem, onDel
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {pending ? <PendingVideoCard pending={pending} /> : null}
+      {pending ? <ProcessingVideoCard title={pending.title} prompt={pending.prompt} model={pending.model} coverUrl={pending.coverUrl ?? null} /> : null}
       {items.map((item) => {
         const cover = getItemCover(item);
         const status = getItemStatus(item);
+        // 刷新页面后仍处于 pending/queued/running 的历史项：视觉与提交态一致，走"进行中"卡片，
+        // 上游 VideoGeneratorStudio 会对其发起轮询，命中终态后卡片会自然切换为 completed/failed。
+        if (status === 'processing') {
+          return (
+            <ProcessingVideoCard
+              key={item.id}
+              title={item.prompt}
+              prompt={item.prompt}
+              model={item.model}
+              coverUrl={cover}
+              onDelete={(event) => void handleDelete(event, item.id)}
+              deleting={deletingId === item.id}
+              deleteAriaLabel={t('ariaDelete')}
+            />
+          );
+        }
+        // 卡片外层刻意不是 <button>：内部还挂着"删除"这个真按钮，button 里嵌 button
+        // 是 HTML 规范禁止的互动嵌套，Next.js 会以 hydration error 打出。用 div + role
+        // 补齐语义，键盘可达性由 tabIndex + Enter/Space 兜底。
+        const handleActivate = () => onSelectItem(item);
         return (
-          <button
+          <div
             key={item.id}
-            type="button"
-            onClick={() => onSelectItem(item)}
-            className="growth-generator-video-card group relative overflow-hidden rounded-[14px] border border-border bg-background text-left transition duration-300 hover:-translate-y-0.5 hover:border-input"
+            role="button"
+            tabIndex={0}
+            onClick={handleActivate}
+            onKeyDown={(event) => {
+              // 只拦截"确实是本卡片被激活"的场景：焦点若已经落在删除按钮上，
+              // Enter/Space 应由那个按钮自己消费，不能被卡片重复触发一次预览。
+              if (event.target !== event.currentTarget) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleActivate();
+              }
+            }}
+            className="growth-generator-video-card group relative cursor-pointer overflow-hidden rounded-[14px] border border-border bg-background text-left transition duration-300 hover:-translate-y-0.5 hover:border-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
               {status === 'completed' && item.videoUrl ? (
@@ -172,27 +202,44 @@ export function VideoHistoryPanel({ items, loading, pending, onSelectItem, onDel
                 </div>
               </div>
             </div>
-          </button>
+          </div>
         );
       })}
     </div>
   );
 }
 
-function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) {
+function ProcessingVideoCard({
+  title,
+  prompt,
+  model,
+  coverUrl,
+  onDelete,
+  deleting,
+  deleteAriaLabel,
+}: {
+  title: string;
+  prompt: string;
+  model: string;
+  coverUrl?: string | null;
+  /** 仅历史卡片提供；提交态（pendingGeneration）不带删除入口，避免误伤刚下单的任务。 */
+  onDelete?: (event: React.MouseEvent) => void;
+  deleting?: boolean;
+  deleteAriaLabel?: string;
+}) {
   const t = useTranslations('publicGrowth.generator.studio');
 
   return (
     <article
-      className="growth-flow-border growth-generator-video-card relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-background text-left growth-history-card-shadow"
+      className="growth-flow-border growth-generator-video-card group relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-background text-left growth-history-card-shadow"
       aria-live="polite"
       aria-label={t('generating')}
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
-        {pending.coverUrl ? (
+        {coverUrl ? (
           <img
-            src={pending.coverUrl}
-            alt={pending.title}
+            src={coverUrl}
+            alt={title}
             className="h-full w-full object-cover opacity-40 blur-[1px] scale-[1.02]"
           />
         ) : null}
@@ -203,6 +250,17 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
           <Sparkles className="size-3 text-growth-accent" />
           {t('videoStatus.processing')}
         </div>
+        {onDelete ? (
+          <button
+            type="button"
+            aria-label={deleteAriaLabel ?? t('ariaDelete')}
+            onClick={onDelete}
+            disabled={deleting}
+            className="absolute right-3 top-3 z-20 grid size-8 place-items-center rounded-full bg-background/55 text-foreground opacity-0 backdrop-blur-md transition hover:bg-background/85 group-hover:opacity-100 disabled:cursor-wait disabled:opacity-60"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        ) : null}
         <div className="absolute inset-x-0 top-[34%] flex flex-col items-center px-5 text-center">
           <span className="relative grid size-14 place-items-center rounded-full border border-growth-accent/40 bg-growth-accent/10 text-growth-accent growth-history-icon-glow">
             <span className="absolute inset-2 rounded-full border border-growth-accent/35 border-t-transparent animate-spin" />
@@ -212,7 +270,7 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
             {t('generating')}
           </h2>
           <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-foreground/50">
-            {pending.prompt}
+            {prompt}
           </p>
         </div>
         <div className="absolute inset-x-0 bottom-0 p-3">
@@ -226,10 +284,10 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
             ))}
           </div>
           <h3 className="line-clamp-1 text-base font-black leading-tight text-foreground">
-            {pending.title}
+            {title}
           </h3>
           <div className="mt-1 truncate text-[11px] font-bold text-foreground/48">
-            {pending.model}
+            {model}
           </div>
         </div>
       </div>

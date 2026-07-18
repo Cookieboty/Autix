@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   hasChatCapability,
@@ -21,6 +21,8 @@ import type { PendingVideoGenerationCard } from './VideoHistoryPanel';
 
 /** 轮询终态：completed/failed/expired 都收敛为「结束」，非 completed 的按失败处理。 */
 const TERMINAL_VIDEO_STATUSES = new Set(['completed', 'failed', 'expired']);
+/** 直连生成的"进行中"三态；与 VideoHistoryPanel 的 PROCESSING_STATUSES 保持一致。 */
+const PROCESSING_VIDEO_STATUSES = new Set(['pending', 'queued', 'running']);
 /** 固定间隔轮询上限保护：3s * 120 = 6 分钟，对齐视频生成的常见耗时上界。 */
 const VIDEO_POLL_MAX_ATTEMPTS = 120;
 const VIDEO_POLL_INTERVAL_MS = 3000;
@@ -64,6 +66,17 @@ export function VideoGeneratorStudio({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
 
+  // 记录当前正在被轮询的历史项 id，避免同一条记录被并发轮询多次。
+  // 用 ref 承载以便在 effect / 回调之间共享，不参与渲染。
+  const pollingIdsRef = useRef<Set<string>>(new Set());
+  // 组件卸载标记：轮询 while 循环里用来提前退出，避免卸载后仍触发 setState。
+  const unmountedRef = useRef(false);
+  useEffect(() => {
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
+
   const reloadHistory = useCallback(async () => {
     if (!isAuthenticated) {
       setHistoryItems([]);
@@ -83,6 +96,48 @@ export function VideoGeneratorStudio({
   useEffect(() => {
     void reloadHistory();
   }, [reloadHistory]);
+
+  // 对刷新后仍处于 pending/queued/running 的历史记录启动独立轮询：
+  // 页面刷新时若有正在生成的任务，用户能立刻看到"进行中"卡片，并等待其自动转为 completed/failed。
+  // 每条记录只会有一个在飞的轮询循环（pollingIdsRef 去重），命中终态或达到上限后自动退出。
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const pendingIds = historyItems
+      .filter((item) => PROCESSING_VIDEO_STATUSES.has(item.status))
+      .map((item) => item.id)
+      .filter((id) => !pollingIdsRef.current.has(id));
+    if (pendingIds.length === 0) return;
+
+    for (const id of pendingIds) {
+      pollingIdsRef.current.add(id);
+      void (async () => {
+        try {
+          for (let attempt = 0; attempt < VIDEO_POLL_MAX_ATTEMPTS; attempt += 1) {
+            if (unmountedRef.current) return;
+            await new Promise((resolve) => setTimeout(resolve, VIDEO_POLL_INTERVAL_MS));
+            if (unmountedRef.current) return;
+            let latest: DirectVideoGenerationDto;
+            try {
+              latest = await publicGeneratorActions.getVideoGeneration(id);
+            } catch {
+              // 网络/鉴权抖动时继续等待，不打断循环；达到上限后自然退出。
+              continue;
+            }
+            if (unmountedRef.current) return;
+            // 就地替换该项，保持列表顺序与其他项不动。
+            setHistoryItems((prev) =>
+              prev.some((item) => item.id === id)
+                ? prev.map((item) => (item.id === id ? latest : item))
+                : prev,
+            );
+            if (TERMINAL_VIDEO_STATUSES.has(latest.status)) return;
+          }
+        } finally {
+          pollingIdsRef.current.delete(id);
+        }
+      })();
+    }
+  }, [historyItems, isAuthenticated]);
 
   const handleDeleteHistory = async (id: string) => {
     await publicGeneratorActions.deleteVideoHistory(id);

@@ -75,3 +75,25 @@ describe('Wan 2.7 计价 golden（所有模型同价：720p 30/s、1080p 45/s，
     }
   });
 });
+
+describe('Grok 计价 golden', () => {
+  it('grok-imagine 按整段：6s=75、10s=100（不随分辨率）', () => {
+    expect(price('grok-imagine', { duration: 6 })).toBe(75);
+    expect(price('grok-imagine', { duration: 10 })).toBe(100);
+  });
+  it('grok-imagine-video-1.5：每秒×分辨率 + 输入图 5', () => {
+    expect(price('grok-imagine-video-1.5', { resolution: '720p', duration: 6 })).toBe(380); // 62.5×6+5
+    expect(price('grok-imagine-video-1.5', { resolution: '480p', duration: 10 })).toBe(365); // 36×10+5
+  });
+});
+
+describe('Happy Horse 计价 golden（分辨率×时长）', () => {
+  it('happy-horse：720p 40/s、1080p 80/s', () => {
+    expect(price('happy-horse', { resolution: '720p', duration: 5 })).toBe(200); // 40×5
+    expect(price('happy-horse', { resolution: '1080p', duration: 10 })).toBe(800); // 80×10
+  });
+  it('happy-horse-1.1：720p 55/s、1080p 70/s', () => {
+    expect(price('happy-horse-1.1', { resolution: '720p', duration: 5 })).toBe(275); // 55×5
+    expect(price('happy-horse-1.1', { resolution: '1080p', duration: 10 })).toBe(700); // 70×10
+  });
+});

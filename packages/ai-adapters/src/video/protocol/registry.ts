@@ -5,6 +5,10 @@ import {
   poyoWanI2V,
   poyoWanRef,
   poyoWanEdit,
+  poyoGrokImagine,
+  poyoGrokV15,
+  poyoHappyHorse,
+  poyoHappyHorse11,
 } from './presets/vendors';
 import type { VideoProtocolPreset } from './types';
 
@@ -21,6 +25,10 @@ export const VIDEO_PROTOCOL_PRESETS: Record<string, VideoProtocolPreset> = {
   [poyoWanI2V.key]: poyoWanI2V,
   [poyoWanRef.key]: poyoWanRef,
   [poyoWanEdit.key]: poyoWanEdit,
+  [poyoGrokImagine.key]: poyoGrokImagine,
+  [poyoGrokV15.key]: poyoGrokV15,
+  [poyoHappyHorse.key]: poyoHappyHorse,
+  [poyoHappyHorse11.key]: poyoHappyHorse11,
 };
 
 /**
