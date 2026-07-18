@@ -8,6 +8,7 @@ import {
   galleryActions,
   galleryErrorMessage,
   publicGeneratorActions,
+  reportResourceView,
   useAuthStore,
 } from '@autix/shared-store';
 import type { PublicImageHistoryImage, PublicImageHistoryItem } from './public-image-generation';
@@ -62,6 +63,13 @@ export function PublicImageDetailDialog({
     if (!item) return;
     setActiveImage(item.images[0] ?? null);
   }, [item]);
+
+  // 浏览量上报：这条生成投过广场（且帖子还活着）时，打开详情等同于看了那篇作品，
+  // 与 GalleryDetailDialog 记一样的 scope='detail'。没投过稿的私有生成不计。
+  const postId = post?.id;
+  useEffect(() => {
+    if (postId) reportResourceView({ resourceType: 'GALLERY_POST', resourceId: postId, scope: 'detail' });
+  }, [postId]);
 
   /**
    * 帖级动作。四条出边对应后端状态机（gallery.helpers.ts TRANSITIONS）：
