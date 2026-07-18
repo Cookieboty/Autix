@@ -454,6 +454,83 @@ export class VideoGenerationRepository {
     });
   }
 
+  /**
+   * 直连终态写入器（三件套）—— 与 markGenerationCompletedAndConfirmHold /
+   * markGenerationFailedAndRefund / markGenerationExpiredWithoutRefund 的关键区别：
+   * 直连行没有父 clip/project，只 update generation 行本身，不做任何
+   * tx.video_clips.update —— 那个 where: { id: clipId } 在 clipId 为 null 时会抛。
+   */
+  async markDirectGenerationCompletedAndConfirmHold(
+    input: {
+      generationId: string;
+      externalStatus: string;
+      videoUrl: string;
+      lastFrameUrl: string | null;
+      durationSec: number | null;
+    },
+    confirmHold: (tx: Prisma.TransactionClient) => Promise<{ userId: string }>,
+  ): Promise<string | null> {
+    let confirmedUserId: string | null = null;
+    await this.prisma.$transaction(async (tx) => {
+      const confirmation = await confirmHold(tx);
+      confirmedUserId = confirmation.userId;
+
+      await tx.video_clip_generations.update({
+        where: { id: input.generationId },
+        data: {
+          status: VideoGenStatus.completed,
+          externalStatus: input.externalStatus,
+          videoUrl: input.videoUrl,
+          lastFrameUrl: input.lastFrameUrl,
+          durationSec: input.durationSec,
+          callbackReceivedAt: new Date(),
+          completedAt: new Date(),
+        },
+      });
+    });
+    return confirmedUserId;
+  }
+
+  async markDirectGenerationFailedAndRefund(
+    input: {
+      generationId: string;
+      status: VideoGenStatus;
+      externalStatus: string;
+      error: string;
+    },
+    refundHold: (tx: Prisma.TransactionClient) => Promise<unknown>,
+  ) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.video_clip_generations.update({
+        where: { id: input.generationId },
+        data: {
+          status: input.status,
+          externalStatus: input.externalStatus,
+          error: input.error,
+          callbackReceivedAt: new Date(),
+        },
+      });
+
+      await refundHold(tx);
+    });
+  }
+
+  markDirectGenerationExpiredWithoutRefund(input: {
+    generationId: string;
+    externalStatus: string;
+    error: string;
+  }) {
+    return this.prisma.video_clip_generations.update({
+      where: { id: input.generationId },
+      data: {
+        status: VideoGenStatus.expired,
+        externalStatus: input.externalStatus,
+        error: input.error,
+        callbackReceivedAt: new Date(),
+      },
+    });
+  }
+
   async findUserDirectGenerations(input: { userId: string; page: number; pageSize: number }) {
     const skip = (input.page - 1) * input.pageSize;
     const where: Prisma.video_clip_generationsWhereInput = { userId: input.userId, clipId: null };

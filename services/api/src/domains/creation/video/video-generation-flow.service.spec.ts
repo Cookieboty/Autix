@@ -1384,6 +1384,71 @@ describe('VideoGenerationFlowService callback routing', () => {
   });
 });
 
+// 直连（clipId=null, projectId=null）行的终态收敛：cron 轮询/回调都不 join clip，
+// 直连行会原样流进 applyTaskStatus/markExpired —— 这三个用例锁死"跳过 clip/project
+// 收敛，只写 generation 行本身"这条不变量。
+describe('VideoGenerationFlowService applyTaskStatus 直连（clipId=null）', () => {
+  it('直连成功不调 recalculateProjectStatus，且走 markDirectGenerationCompletedAndConfirmHold', async () => {
+    const { service, repository, projectStatusConvergence } = makeService();
+    const directSpy = vi.spyOn(
+      repository,
+      'markDirectGenerationCompletedAndConfirmHold',
+    );
+    const clipBoundSpy = vi.spyOn(repository, 'markGenerationCompletedAndConfirmHold');
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+    }) as never;
+
+    await service.applyTaskStatus(
+      {
+        id: 'gen-1',
+        clipId: null,
+        projectId: null,
+        userId: 'user-1',
+        status: VideoGenStatus.queued,
+        params: {},
+      } as never,
+      {
+        kind: 'succeeded',
+        externalStatus: 'succeeded',
+        sourceUrl: 'https://provider.test/video.mp4',
+        lastFrameUrl: null,
+        durationSec: 5,
+      },
+    );
+
+    expect(projectStatusConvergence.recalculateProjectStatus).not.toHaveBeenCalled();
+    expect(directSpy).toHaveBeenCalled();
+    expect(clipBoundSpy).not.toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('直连失败不调 convergeAfterClipFailure，且走 markDirectGenerationFailedAndRefund', async () => {
+    const { service, repository, projectStatusConvergence } = makeService();
+    const directSpy = vi.spyOn(repository, 'markDirectGenerationFailedAndRefund');
+    const clipBoundSpy = vi.spyOn(repository, 'markGenerationFailedAndRefund');
+
+    await service.applyTaskStatus(
+      {
+        id: 'gen-1',
+        clipId: null,
+        projectId: null,
+        userId: 'user-1',
+        status: VideoGenStatus.queued,
+        params: {},
+      } as never,
+      { kind: 'failed', externalStatus: 'failed', error: 'provider rejected' },
+    );
+
+    expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
+    expect(directSpy).toHaveBeenCalled();
+    expect(clipBoundSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('VideoGenerationFlowService markExpired (超时排水，不退款)', () => {
   it('标终态排出轮询队列，但不退款（退款交积分侧孤儿回收）', async () => {
     const { service, repository, holdReconciliation, terminalConvergence } =
@@ -1422,5 +1487,32 @@ describe('VideoGenerationFlowService markExpired (超时排水，不退款)', ()
     // 视频域不退款：退款是积分侧孤儿回收（PointsHoldReclaimCron，60min）的职责。
     expect(refundSpy).not.toHaveBeenCalled();
     expect(failedRefundSpy).not.toHaveBeenCalled();
+  });
+
+  it('直连行（clipId=null）不调 markGenerationExpiredWithoutRefund，走 direct 变体，且不做项目收敛', async () => {
+    const { service, repository, terminalConvergence, projectStatusConvergence } =
+      makeService();
+    const generation = {
+      id: 'gen-1',
+      clipId: null,
+      projectId: null,
+      status: VideoGenStatus.queued,
+    };
+    vi.spyOn(repository, 'findGenerationById').mockResolvedValue(
+      generation as never,
+    );
+    vi.spyOn(terminalConvergence, 'reconcileIfTerminal').mockResolvedValue(false);
+    const clipBoundSpy = vi.spyOn(repository, 'markGenerationExpiredWithoutRefund');
+    const directSpy = vi.spyOn(repository, 'markDirectGenerationExpiredWithoutRefund');
+
+    await service.markExpired('gen-1', 'cron: 直连行超过 30 分钟未完成');
+
+    expect(clipBoundSpy).not.toHaveBeenCalled();
+    expect(directSpy).toHaveBeenCalledWith({
+      generationId: 'gen-1',
+      externalStatus: 'expired',
+      error: 'cron: 直连行超过 30 分钟未完成',
+    });
+    expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
   });
 });
