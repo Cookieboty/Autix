@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { VideoUpstreamError } from '@autix/ai-adapters/video';
 import { VideoDirectGenerationService } from './video-direct-generation.service';
 
 // 同 video-generation-flow.service.spec.ts 的装配风格：只 mock submitVideoTask 本身，
@@ -153,12 +154,17 @@ describe('VideoDirectGenerationService.generate', () => {
     expect(markDirectGenerationFailed).not.toHaveBeenCalled();
   });
 
-  it('上游明确拒绝 → 退款 + 标失败', async () => {
+  it('上游明确拒绝（4xx httpStatus）→ 退款 + 标失败', async () => {
     const safeRefund = vi.fn();
     const markDirectGenerationFailed = vi.fn();
     const { service } = makeService({
       submitVideoTask: async () => {
-        throw Object.assign(new Error('rejected'), { upstreamRejected: true });
+        throw new VideoUpstreamError({
+          message: 'rejected',
+          classification: 'content-policy',
+          httpStatus: 422,
+          retryable: false,
+        });
       },
       repo: { markDirectGenerationFailed },
       hold: { safeRefund },
@@ -170,7 +176,7 @@ describe('VideoDirectGenerationService.generate', () => {
     expect(markDirectGenerationFailed).toHaveBeenCalled();
   });
 
-  it('提交失败（不确定）→ 保 hold，不退款也不标失败', async () => {
+  it('提交失败（不确定：网络/超时）→ 保 hold，不退款也不标失败', async () => {
     const safeRefund = vi.fn();
     const markDirectGenerationFailed = vi.fn();
     const { service } = makeService({
@@ -182,6 +188,29 @@ describe('VideoDirectGenerationService.generate', () => {
     });
 
     await expect(service.generate(validInput())).rejects.toThrow('network timeout');
+
+    expect(safeRefund).not.toHaveBeenCalled();
+    expect(markDirectGenerationFailed).not.toHaveBeenCalled();
+  });
+
+  it('提交失败（不确定：200-无-taskId，classification=upstream 且无 httpStatus）→ 保 hold，不退款也不标失败', async () => {
+    const safeRefund = vi.fn();
+    const markDirectGenerationFailed = vi.fn();
+    const { service } = makeService({
+      submitVideoTask: async () => {
+        throw new VideoUpstreamError({
+          message: 'upstream video submit returned no task id',
+          classification: 'upstream',
+          retryable: false,
+        });
+      },
+      repo: { markDirectGenerationFailed },
+      hold: { safeRefund },
+    });
+
+    await expect(service.generate(validInput())).rejects.toThrow(
+      'upstream video submit returned no task id',
+    );
 
     expect(safeRefund).not.toHaveBeenCalled();
     expect(markDirectGenerationFailed).not.toHaveBeenCalled();

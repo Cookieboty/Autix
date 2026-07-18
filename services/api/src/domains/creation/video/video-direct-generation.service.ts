@@ -19,6 +19,7 @@ import {
   assembleVideoRequest,
   resolveVideoPreset,
   submitVideoTask,
+  VideoUpstreamError,
   type VideoMaterialInput,
 } from '@autix/ai-adapters/video';
 import { readProtocolKey } from '@autix/domain/model';
@@ -182,7 +183,10 @@ export class VideoDirectGenerationService {
     try {
       ({ providerTaskId } = await submitVideoTask(callRequest));
     } catch (err) {
-      if ((err as { upstreamRejected?: boolean })?.upstreamRejected) {
+      // 只有 4xx（收到并解析了响应、上游确定未受理）才算「明确拒绝」。
+      // classification==='upstream' 也可能是 200-无-taskId（可能已受理，见 submit.ts），
+      // 网络/超时同样不确定 —— 这两种都必须走 else（保 hold，交孤儿回收），不能退款。
+      if (err instanceof VideoUpstreamError && err.httpStatus != null && err.httpStatus >= 400 && err.httpStatus < 500) {
         await this.repository.markDirectGenerationFailed(
           generationId,
           err instanceof Error ? err.message : String(err),
