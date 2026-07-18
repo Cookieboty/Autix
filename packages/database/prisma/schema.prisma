@@ -1842,8 +1842,8 @@ model video_clip_materials {
 
 model video_clip_generations {
   id                 String         @id @default(cuid())
-  clipId             String
-  projectId          String
+  clipId             String?
+  projectId          String?
   userId             String
   user               User           @relation("VideoClipGenerationUser", fields: [userId], references: [id], onDelete: Cascade)
   variantLabel       String?        @db.VarChar(50)
@@ -1866,7 +1866,7 @@ model video_clip_generations {
   createdAt          DateTime       @default(now())
   completedAt        DateTime?
 
-  clip video_clips @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  clip video_clips? @relation(fields: [clipId], references: [id], onDelete: Cascade)
 
   @@index([clipId])
   @@index([projectId])

@@ -183,6 +183,7 @@ export class VideoGenerationFlowService {
    * 该分支在确认零残余行后删除（见计划 1 的残余审计 SQL）。
    */
   private async resolveLegacyApiContext(g: video_clip_generations) {
+    if (!g.clipId) return null; // 直连行无 clip；且必带 modelConfigId，不进 legacy 回退
     const clip = await this.repository.findClipParams(g.clipId);
     const live = await this.modelResolver.resolveApiContextForClipParams(
       clip?.params ?? null,
@@ -516,7 +517,7 @@ export class VideoGenerationFlowService {
         await this.repository.markProjectGenerationCompletedAndConfirmHold(
           {
             generationId: completedInput.generationId,
-            projectId: generation.projectId,
+            projectId: generation.projectId!, // storyboard 行恒有 projectId（直连走 clipId===null 分支，不到这里）
             externalStatus: completedInput.externalStatus,
             videoUrl: completedInput.videoUrl,
             lastFrameUrl: completedInput.lastFrameUrl,
@@ -530,7 +531,8 @@ export class VideoGenerationFlowService {
         );
       } else {
         await this.repository.markGenerationCompletedAndConfirmHold(
-          completedInput,
+          // 非 storyboard 分支恒为单 clip 生成（clipId 恒非空；直连行走的是另一分支）
+          { ...completedInput, clipId: completedInput.clipId! },
           (tx) =>
             this.holdReconciliation.confirmGenerationHoldWithinTx(
               tx,
@@ -540,7 +542,7 @@ export class VideoGenerationFlowService {
       }
       if (!isStoryboardProjectGeneration) {
         await this.projectStatusConvergence.recalculateProjectStatus(
-          generation.projectId,
+          generation.projectId!, // 非 storyboard 分支恒为单 clip 生成，projectId 恒非空
         );
       }
     } else if (legacy.kind === 'failed') {
@@ -555,7 +557,7 @@ export class VideoGenerationFlowService {
         await this.repository.markProjectGenerationFailedAndRefund(
           {
             generationId: failedInput.generationId,
-            projectId: generation.projectId,
+            projectId: generation.projectId!, // storyboard 行恒有 projectId（直连走 clipId===null 分支，不到这里）
             status: failedInput.status,
             externalStatus: failedInput.externalStatus,
             error: failedInput.error,
@@ -571,7 +573,8 @@ export class VideoGenerationFlowService {
       }
 
       await this.repository.markGenerationFailedAndRefund(
-        failedInput,
+        // 非 storyboard 分支恒为单 clip 生成（clipId 恒非空；直连行走的是另一分支）
+        { ...failedInput, clipId: failedInput.clipId! },
         (tx) =>
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
@@ -580,8 +583,9 @@ export class VideoGenerationFlowService {
           ),
       );
       await this.projectStatusConvergence.convergeAfterClipFailure({
-        clipId: generation.clipId,
-        projectId: generation.projectId,
+        // Task 2 仅使编译通过；Task 4 会换成运行时 `if (generation.clipId && generation.projectId)` 守卫。
+        clipId: generation.clipId!,
+        projectId: generation.projectId!,
       });
     } else {
       await this.repository.updateGenerationExternalStatus(
@@ -717,12 +721,15 @@ export class VideoGenerationFlowService {
     // 队列（标终态），退款由积分侧的孤儿回收（PointsHoldReclaimCron，60min）兜底。
     // markExpired 是轮询队列（findActiveProviderGenerations: orderBy asc, take 50）的唯一
     // 排水口，故必须保留标终态 —— 删掉会让卡死任务永占队列前列、新任务饿死。
-    await this.repository.markGenerationExpiredWithoutRefund(
-      buildExpiredGenerationInput({ generation, reason }),
-    );
+    const expiredInput = buildExpiredGenerationInput({ generation, reason });
+    await this.repository.markGenerationExpiredWithoutRefund({
+      // 轮询队列当前恒为单 clip 生成（clipId 恒非空；直连行走的是另一分支，Task 4 加运行时守卫）
+      ...expiredInput,
+      clipId: expiredInput.clipId!,
+    });
     await this.projectStatusConvergence.convergeAfterClipFailure({
-      clipId: generation.clipId,
-      projectId: generation.projectId,
+      clipId: generation.clipId!,
+      projectId: generation.projectId!,
     });
 
     this.logger.warn(
@@ -914,12 +921,15 @@ export class VideoGenerationFlowService {
    * generation 视为失败，配套退款 + cascade/recalc，避免幽灵 completed 记录。
    */
   private async markGenerationFailed(
-    generation: { id: string; clipId: string; projectId: string },
+    generation: { id: string; clipId: string | null; projectId: string | null },
     reason: string,
     externalStatus: string,
   ) {
+    const failedInput = buildExplicitFailedGenerationInput({ generation, reason, externalStatus });
     await this.repository.markGenerationFailedAndRefund(
-      buildExplicitFailedGenerationInput({ generation, reason, externalStatus }),
+      // Task 2 仅使编译通过；调用方（succeeded 兜底）当前恒为单 clip 生成，clipId 恒非空。
+      // Task 4 会换成运行时 `if (generation.clipId && generation.projectId)` 守卫。
+      { ...failedInput, clipId: failedInput.clipId! },
       (tx) =>
         this.holdReconciliation.refundGenerationHoldWithinTx(
           tx,
@@ -928,8 +938,8 @@ export class VideoGenerationFlowService {
         ),
     );
     await this.projectStatusConvergence.convergeAfterClipFailure({
-      clipId: generation.clipId,
-      projectId: generation.projectId,
+      clipId: generation.clipId!,
+      projectId: generation.projectId!,
     });
   }
 

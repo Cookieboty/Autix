@@ -119,7 +119,7 @@ export interface PendingGenerationInput {
 
 export interface CompletedGenerationInput {
   generationId: string;
-  clipId: string;
+  clipId: string | null;
   externalStatus: string;
   videoUrl: string;
   lastFrameUrl: string | null;
@@ -132,7 +132,7 @@ export type SucceededGenerationVideoResolution =
 
 export interface FailedGenerationInput {
   generationId: string;
-  clipId: string;
+  clipId: string | null;
   status: VideoGenStatus;
   externalStatus: string;
   error: string;
@@ -523,7 +523,7 @@ export function buildCreateTaskFailureInput(input: {
   generationId: string;
   clipId: string;
   error: unknown;
-}): Pick<FailedGenerationInput, 'generationId' | 'clipId' | 'error'> {
+}): { generationId: string; clipId: string; error: string } {
   return {
     generationId: input.generationId,
     clipId: input.clipId,

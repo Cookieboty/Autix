@@ -69,6 +69,7 @@ export class VideoMaterialRepository {
       userId: input.userId,
       status: VideoGenStatus.completed,
       videoUrl: { not: null },
+      clipId: { not: null },
     };
 
     const [generations, total] = await Promise.all([
