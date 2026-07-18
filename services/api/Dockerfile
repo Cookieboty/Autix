@@ -106,7 +106,9 @@ RUN mkdir -p node_modules/@autix && \
 # configuration"）。容器里没有交互式 shell 配置，只能在这里声明。Bun 时代没有
 # 这一步，是 pnpm 迁移遗留。
 ENV PNPM_HOME=/usr/local/share/pnpm
-ENV PATH="${PNPM_HOME}:${PATH}"
+# 注意是 ${PNPM_HOME}/bin 而非 ${PNPM_HOME}：pnpm 11 的全局 bin 目录在 PNPM_HOME
+# 下面的 bin 子目录，报错信息里的路径就是这么给的。
+ENV PATH="${PNPM_HOME}/bin:${PATH}"
 RUN PRISMA_VERSION="$(node -p "require('/app/node_modules/@prisma/client/package.json').version")" && \
     TSX_VERSION="$(node -p "require('/app/package.json').devDependencies.tsx")" && \
     DOTENV_VERSION="$(node -p "require('/app/package.json').devDependencies['dotenv-cli']")" && \
