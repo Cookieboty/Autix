@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
-  createLocalVideoProject,
   hasChatCapability,
   isVideoModel,
   listAvailableModels,
   publicGeneratorActions,
   useAuthStore,
   useUiStore,
-  useVideoProjectStore,
+  type DirectVideoGenerationDto,
   type ModelConfigItem,
 } from '@autix/shared-store';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
@@ -18,6 +18,12 @@ import { VideoSidebar } from './VideoSidebar';
 import { VideoHowItWorks } from './VideoHowItWorks';
 import type { PublicVideoGenerationPayload } from './public-video-generation';
 import type { PendingVideoGenerationCard } from './VideoHistoryPanel';
+
+/** 轮询终态：completed/failed/expired 都收敛为「结束」，非 completed 的按失败处理。 */
+const TERMINAL_VIDEO_STATUSES = new Set(['completed', 'failed', 'expired']);
+/** 固定间隔轮询上限保护：3s * 120 = 6 分钟，对齐视频生成的常见耗时上界。 */
+const VIDEO_POLL_MAX_ATTEMPTS = 120;
+const VIDEO_POLL_INTERVAL_MS = 3000;
 
 export function VideoGeneratorStudio({
   items,
@@ -44,6 +50,7 @@ export function VideoGeneratorStudio({
   pricingContext: { multiplier: number; discountFactor: number };
   onModelChange: (modelId: string) => void;
 }) {
+  const t = useTranslations('publicGrowth.generator.studio');
   const [tab, setTab] = useState<'history' | 'howItWorks'>('howItWorks');
   const [generating, setGenerating] = useState(false);
   const [pendingGeneration, setPendingGeneration] = useState<PendingVideoGenerationCard | null>(null);
@@ -51,11 +58,36 @@ export function VideoGeneratorStudio({
   const [textModelsLoading, setTextModelsLoading] = useState(true);
   const [selectedTextModelId, setSelectedTextModelId] = useState<string | null>(null);
   const [optimizing, setOptimizing] = useState(false);
+  // 直连视频生成的扁平历史（不再走 video-project store 的多镜头项目模型）。
+  const [historyItems, setHistoryItems] = useState<DirectVideoGenerationDto[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
-  const replaceDraftProject = useVideoProjectStore((state) => state.replaceDraftProject);
-  const generateAll = useVideoProjectStore((state) => state.generateAll);
-  const loadProjects = useVideoProjectStore((state) => state.loadProjects);
+
+  const reloadHistory = useCallback(async () => {
+    if (!isAuthenticated) {
+      setHistoryItems([]);
+      setHistoryLoading(false);
+      return;
+    }
+    setHistoryLoading(true);
+    try {
+      setHistoryItems(await publicGeneratorActions.listVideoHistory({ page: 1, pageSize: 30 }));
+    } catch {
+      setHistoryItems([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    void reloadHistory();
+  }, [reloadHistory]);
+
+  const handleDeleteHistory = async (id: string) => {
+    await publicGeneratorActions.deleteVideoHistory(id);
+    await reloadHistory();
+  };
 
   useEffect(() => {
     // 优化模型列表用登录后的通用/对话模型（公开模型接口通常不含 chat 模型）；
@@ -122,47 +154,28 @@ export function VideoGeneratorStudio({
     setTab('history');
     setGenerating(true);
     try {
-      const project = createLocalVideoProject(
-        payload.title,
-        [
-          {
-            title: payload.title,
-            prompt: payload.prompt,
-            params: payload.params,
-            chainFromPrev: false,
-          },
-        ],
-        payload.materials[0]?.url ?? null,
-      );
-      const clipId = project.clips[0]?.id;
-      const projectWithMaterials = clipId
-        ? {
-            ...project,
-            clips: project.clips.map((clip) =>
-              clip.id === clipId
-                ? {
-                    ...clip,
-                    materials: payload.materials.map((material, index) => ({
-                      id: `public-video-material-${Date.now()}-${index}`,
-                      clipId,
-                      role: 'reference_image',
-                      sourceType: material.sourceType ?? 'upload',
-                      sourceId: material.sourceId ?? null,
-                      url: material.url,
-                      name: material.name ?? null,
-                      metadata: material.prompt ? { prompt: material.prompt } : null,
-                    })),
-                  }
-                : clip,
-            ),
+      const { generationId } = await publicGeneratorActions.generateVideoDirect({
+        prompt: payload.prompt,
+        params: payload.params,
+        materials: payload.materials.map((material) => ({
+          role: 'reference_image',
+          url: material.url,
+          sourceType: material.sourceType ?? 'upload',
+          name: material.name ?? undefined,
+        })),
+      });
+      // 简单固定间隔轮询到终态（对齐图片工作台的同步等待体验；上限保护见常量）。
+      for (let attempt = 0; attempt < VIDEO_POLL_MAX_ATTEMPTS; attempt += 1) {
+        const generation = await publicGeneratorActions.getVideoGeneration(generationId);
+        if (TERMINAL_VIDEO_STATUSES.has(generation.status)) {
+          if (generation.status !== 'completed') {
+            throw new Error(generation.error ?? t('generateFailed'));
           }
-        : project;
-      replaceDraftProject(projectWithMaterials);
-      setTab('history');
-      await generateAll();
-      const latestError = useVideoProjectStore.getState().lastError;
-      if (latestError) throw new Error(latestError);
-      await loadProjects();
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, VIDEO_POLL_INTERVAL_MS));
+      }
+      await reloadHistory();
     } finally {
       setGenerating(false);
       setPendingGeneration(null);
@@ -203,6 +216,9 @@ export function VideoGeneratorStudio({
           activeTab={tab}
           pendingGeneration={pendingGeneration}
           onTabChange={setTab}
+          historyItems={historyItems}
+          historyLoading={historyLoading}
+          onDeleteHistory={handleDeleteHistory}
         />
       </div>
     </div>

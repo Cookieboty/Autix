@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Box, Film, History, Upload, Video, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useAuthStore, useUiStore, type VideoProject } from '@autix/shared-store';
+import { useAuthStore, useUiStore, type DirectVideoGenerationDto } from '@autix/shared-store';
 import { SpotlightPanel } from '../../GrowthInteractions';
 import { MediaThumb } from '../../MediaBlocks';
 import type { PublicGrowthMediaItem } from '../../types';
@@ -11,34 +11,23 @@ import { OfferStrip } from '../parts';
 import { VideoHistoryPanel, type PendingVideoGenerationCard } from './VideoHistoryPanel';
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function findPreviewVideoUrl(project: VideoProject): string | null {
-  const generations = (project.clips ?? []).flatMap((clip) => clip.generations ?? []);
-  const completed = generations
-    .filter((g) => g.status === 'completed' && g.videoUrl)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  return completed[0]?.videoUrl ?? null;
-}
-
-// ---------------------------------------------------------------------------
 // Preview Dialog
 // ---------------------------------------------------------------------------
 
 function VideoPreviewDialog({
-  project,
+  item,
   onClose,
 }: {
-  project: VideoProject | null;
+  item: DirectVideoGenerationDto | null;
   onClose: () => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
 
-  if (!project) return null;
+  if (!item) return null;
 
-  const videoUrl = findPreviewVideoUrl(project);
-  const poster = project.coverImage ?? undefined;
+  const videoUrl = item.videoUrl;
+  const poster =
+    item.thumbnailUrl ?? item.lastFrameUrl ?? item.materials.find((material) => material.url)?.url ?? undefined;
 
   return (
     <div
@@ -58,7 +47,7 @@ function VideoPreviewDialog({
       <div className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="truncate text-sm font-semibold text-foreground">{project.title}</h2>
+          <h2 className="truncate text-sm font-semibold text-foreground">{item.prompt}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -79,12 +68,12 @@ function VideoPreviewDialog({
               controls
               autoPlay
               playsInline
-              aria-label={project.title}
+              aria-label={item.prompt}
             />
           ) : poster ? (
             <img
               src={poster}
-              alt={project.title}
+              alt={item.prompt}
               className="h-full w-full object-contain"
             />
           ) : (
@@ -107,17 +96,24 @@ export function VideoHowItWorks({
   activeTab,
   pendingGeneration,
   onTabChange,
+  historyItems,
+  historyLoading,
+  onDeleteHistory,
 }: {
+  /** "如何使用"介绍卡片的示例素材——与下方 historyItems（扁平生成历史）无关，勿混淆同名。 */
   items: PublicGrowthMediaItem[];
   activeTab: 'history' | 'howItWorks';
   pendingGeneration?: PendingVideoGenerationCard | null;
   onTabChange: (tab: 'history' | 'howItWorks') => void;
+  historyItems: DirectVideoGenerationDto[];
+  historyLoading?: boolean;
+  onDeleteHistory: (id: string) => Promise<void>;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const openAuthModal = useUiStore((s) => s.openAuthModal);
 
-  const [previewProject, setPreviewProject] = useState<VideoProject | null>(null);
+  const [previewItem, setPreviewItem] = useState<DirectVideoGenerationDto | null>(null);
 
   const cards = [
     {
@@ -194,8 +190,11 @@ export function VideoHowItWorks({
       {isAuthenticated && activeTab === 'history' ? (
         <div className="mt-2 rounded-[13px] border border-border bg-card p-4 shadow-xl md:p-4">
           <VideoHistoryPanel
+            items={historyItems}
+            loading={historyLoading}
             pending={pendingGeneration}
-            onSelectProject={setPreviewProject}
+            onSelectItem={setPreviewItem}
+            onDelete={onDeleteHistory}
           />
         </div>
       ) : (
@@ -242,8 +241,8 @@ export function VideoHowItWorks({
 
       {/* Preview dialog */}
       <VideoPreviewDialog
-        project={previewProject}
-        onClose={() => setPreviewProject(null)}
+        item={previewItem}
+        onClose={() => setPreviewItem(null)}
       />
     </main>
   );

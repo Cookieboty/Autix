@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Clock3, Film, Image as ImageIcon, Loader2, PlayCircle, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Clock3, Film, Image as ImageIcon, Loader2, PlayCircle, Sparkles, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
+import { toast } from 'sonner';
+import type { DirectVideoGenerationDto } from '@autix/shared-store';
 
 export type PendingVideoGenerationCard = {
   id: string;
@@ -14,50 +15,28 @@ export type PendingVideoGenerationCard = {
 };
 
 interface VideoHistoryPanelProps {
+  items: DirectVideoGenerationDto[];
+  loading?: boolean;
   pending?: PendingVideoGenerationCard | null;
-  onSelectProject: (project: VideoProject) => void;
+  onSelectItem: (item: DirectVideoGenerationDto) => void;
+  /** 删除一条直连生成记录；进行中的记录服务端会拒绝（409），由调用方 toast 展示原因。 */
+  onDelete: (id: string) => Promise<void>;
 }
 
-function getLatestGeneration(project: VideoProject) {
-  return (project.clips ?? [])
-    .flatMap((clip) => clip.generations ?? [])
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
+/** 直连生成状态机只有 pending/queued/completed/failed/expired 五态（见 VideoGenStatus）。 */
+const PROCESSING_STATUSES = new Set(['pending', 'queued']);
+
+type DisplayStatus = 'completed' | 'processing' | 'failed';
+
+function getItemStatus(item: DirectVideoGenerationDto): DisplayStatus {
+  if (item.status === 'completed' && item.videoUrl) return 'completed';
+  if (PROCESSING_STATUSES.has(item.status)) return 'processing';
+  // failed / expired（以及理论上不该出现的 completed-without-url）统一按失败展示。
+  return 'failed';
 }
 
-function getProjectCover(project: VideoProject) {
-  const latest = getLatestGeneration(project);
-  const firstMaterial = project.clips
-    .flatMap((clip) => clip.materials ?? [])
-    .find((material) => material.url);
-  return (
-    latest?.thumbnailUrl ??
-    latest?.lastFrameUrl ??
-    project.coverImage ??
-    firstMaterial?.url ??
-    null
-  );
-}
-
-function getProjectVideoUrl(project: VideoProject) {
-  return (project.clips ?? [])
-    .flatMap((clip) => clip.generations ?? [])
-    .filter((generation) => generation.status === 'completed' && generation.videoUrl)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-    ?.videoUrl ?? null;
-}
-
-function getProjectStatus(project: VideoProject) {
-  const generations = (project.clips ?? []).flatMap((clip) => clip.generations ?? []);
-  if (generations.some((generation) => generation.status === 'completed' && generation.videoUrl)) {
-    return 'completed';
-  }
-  if (generations.some((generation) => ['pending', 'queued', 'running', 'processing', 'generating'].includes(generation.status))) {
-    return 'processing';
-  }
-  if (generations.some((generation) => generation.status === 'failed')) {
-    return 'failed';
-  }
-  return project.status || 'draft';
+function getItemCover(item: DirectVideoGenerationDto) {
+  return item.thumbnailUrl ?? item.lastFrameUrl ?? item.materials.find((material) => material.url)?.url ?? null;
 }
 
 function formatDate(value: string) {
@@ -73,21 +52,25 @@ function formatDate(value: string) {
   }
 }
 
-export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPanelProps) {
+export function VideoHistoryPanel({ items, loading, pending, onSelectItem, onDelete }: VideoHistoryPanelProps) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const projects = useVideoProjectStore((s) => s.projects);
-  const loading = useVideoProjectStore((s) => s.loading);
-  const loadProjects = useVideoProjectStore((s) => s.loadProjects);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const loadedRef = useRef(false);
+  const handleDelete = async (event: React.MouseEvent, id: string) => {
+    event.stopPropagation();
+    if (deletingId) return;
+    setDeletingId(id);
+    try {
+      await onDelete(id);
+    } catch (err) {
+      // 进行中的记录服务端会返回 409（"任务进行中，无法删除"）——直接透传后端消息。
+      toast.error(err instanceof Error ? err.message : t('generateFailed'));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
-  useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-    void loadProjects();
-  }, [loadProjects]);
-
-  if (loading && projects.length === 0 && !pending) {
+  if (loading && items.length === 0 && !pending) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -95,7 +78,7 @@ export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPane
     );
   }
 
-  if (projects.length === 0 && !pending) {
+  if (items.length === 0 && !pending) {
     return (
       <div className="growth-flow-border relative overflow-hidden rounded-[14px] border border-dashed border-border bg-secondary p-8 text-center">
         <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-20" />
@@ -115,22 +98,20 @@ export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPane
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {pending ? <PendingVideoCard pending={pending} /> : null}
-      {projects.map((project) => {
-        const cover = getProjectCover(project);
-        const videoUrl = getProjectVideoUrl(project);
-        const status = getProjectStatus(project);
-        const clipCount = project.clips?.length ?? 0;
+      {items.map((item) => {
+        const cover = getItemCover(item);
+        const status = getItemStatus(item);
         return (
           <button
-            key={project.id}
+            key={item.id}
             type="button"
-            onClick={() => onSelectProject(project)}
+            onClick={() => onSelectItem(item)}
             className="growth-generator-video-card group relative overflow-hidden rounded-[14px] border border-border bg-background text-left transition duration-300 hover:-translate-y-0.5 hover:border-input"
           >
             <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
-              {videoUrl ? (
+              {status === 'completed' && item.videoUrl ? (
                 <video
-                  src={videoUrl}
+                  src={item.videoUrl}
                   poster={cover ?? undefined}
                   muted
                   loop
@@ -146,7 +127,7 @@ export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPane
               ) : cover ? (
                 <img
                   src={cover}
-                  alt={project.title}
+                  alt={item.prompt}
                   className="h-full w-full object-cover opacity-88 transition duration-700 group-hover:scale-[1.04]"
                 />
               ) : (
@@ -159,21 +140,31 @@ export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPane
                 <Sparkles className="size-3 text-growth-accent" />
                 {t(`videoStatus.${status}`)}
               </div>
-              <span className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-foreground/88 text-background opacity-0 shadow-lg transition group-hover:opacity-100">
-                <PlayCircle className="size-4" />
-              </span>
+              {status === 'completed' ? (
+                <span className="pointer-events-none absolute inset-0 grid place-items-center opacity-0 transition group-hover:opacity-100">
+                  <span className="grid size-10 place-items-center rounded-full bg-foreground/88 text-background shadow-lg">
+                    <PlayCircle className="size-5" />
+                  </span>
+                </span>
+              ) : null}
+              <button
+                type="button"
+                aria-label={t('ariaDelete')}
+                onClick={(event) => void handleDelete(event, item.id)}
+                disabled={deletingId === item.id}
+                className="absolute right-3 top-3 z-20 grid size-8 place-items-center rounded-full bg-background/55 text-foreground opacity-0 backdrop-blur-md transition hover:bg-background/85 group-hover:opacity-100 disabled:cursor-wait disabled:opacity-60"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
               <div className="absolute inset-x-0 bottom-0 p-3">
                 <h3 className="line-clamp-2 text-base font-black leading-tight text-foreground">
-                  {project.title}
+                  {item.prompt}
                 </h3>
                 <div className="mt-2 flex items-center justify-between gap-2 text-[11px] font-bold text-foreground/52">
-                  <span className="inline-flex items-center gap-1">
-                    <Film className="size-3" />
-                    {t('clipCount', { count: clipCount })}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
+                  <span className="truncate">{item.model}</span>
+                  <span className="inline-flex shrink-0 items-center gap-1">
                     <Clock3 className="size-3" />
-                    {formatDate(project.createdAt)}
+                    {formatDate(item.createdAt)}
                   </span>
                 </div>
               </div>
