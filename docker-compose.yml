@@ -1,43 +1,18 @@
 services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: autix-postgres
-    env_file:
-      - .env
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-autix}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: autix
-      PGDATA: /var/lib/postgresql/data/pgdata
-    ports:
-      - "5432:5432"
-    volumes:
-      - autix-postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autix}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   api:
-    image: ghcr.io/cookieboty/autix-api:latest
+    # IMAGE_TAG: 生产填 latest，测试填 test（由各自的 dokploy 应用注入）
+    image: ghcr.io/cookieboty/autix-api:${IMAGE_TAG:-latest}
     pull_policy: always
-    container_name: autix-api
-    ports:
-      - "4100:4100"
+    expose:
+      - "4100"
     env_file:
       - .env
     environment:
       TZ: Asia/Shanghai
       NODE_ENV: production
-      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/autix
+      # 数据库/缓存均为外部独立服务，只需注入连接串
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-}
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
@@ -47,9 +22,9 @@ services:
       SUPER_ADMIN_RESET_PASSWORD: ${SUPER_ADMIN_RESET_PASSWORD:-false}
       CORS_ORIGIN: ${CORS_ORIGIN}
       PORT: 4100
-    depends_on:
-      postgres:
-        condition: service_healthy
+    networks:
+      - internal
+      - dokploy-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4100/api/auth/health"]
@@ -64,17 +39,19 @@ services:
         max-file: "3"
 
   web:
-    image: ghcr.io/cookieboty/autix-web:latest
+    image: ghcr.io/cookieboty/autix-web:${IMAGE_TAG:-latest}
     pull_policy: always
-    container_name: autix-web
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       TZ: Asia/Shanghai
       NODE_ENV: production
       PORT: 3000
       API_URL: http://api:4100
-      NEXT_PUBLIC_SITE_URL: https://REPLACE_ME.example.com # TODO: 替换为实际生产域名
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    networks:
+      - internal
+      - dokploy-network
     depends_on:
       api:
         condition: service_healthy
@@ -91,6 +68,10 @@ services:
         max-size: "10m"
         max-file: "3"
 
-volumes:
-  autix-postgres-data:
-    driver: local
+networks:
+  # 本 stack 内部通信（web -> api 用 http://api:4100）
+  internal:
+    driver: bridge
+  # dokploy 共享网络：用于访问独立部署的 postgres / redis 容器，以及 traefik 反代
+  dokploy-network:
+    external: true

@@ -5,12 +5,14 @@ on:
     branches:
       - master
       - main
+      - test
     tags:
       - 'v*.*.*'
   pull_request:
     branches:
       - master
       - main
+      - test
 
 env:
   REGISTRY: ghcr.io
@@ -100,3 +102,45 @@ jobs:
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${{ env.REGISTRY }}/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/${{ matrix.image }}:latest" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # 两个镜像都推送成功后，再触发对应环境的 dokploy 重新部署。
+  # 独立 job 而非 build 内的 step：matrix 是并行的，写在 step 里会在 api
+  # 构建完就触发一次、web 构建完又触发一次，第一次拉到的是半新半旧的组合。
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' ||
+       github.ref == 'refs/heads/master' ||
+       github.ref == 'refs/heads/test')
+
+    steps:
+      - name: Trigger dokploy redeploy
+        env:
+          WEBHOOK_PROD: ${{ secrets.DOKPLOY_WEBHOOK_PROD }}
+          WEBHOOK_TEST: ${{ secrets.DOKPLOY_WEBHOOK_TEST }}
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/test" ]; then
+            ENV_NAME="测试"
+            WEBHOOK="$WEBHOOK_TEST"
+          else
+            ENV_NAME="生产"
+            WEBHOOK="$WEBHOOK_PROD"
+          fi
+
+          if [ -z "$WEBHOOK" ]; then
+            echo "::error::${ENV_NAME}环境的 dokploy webhook secret 未配置，跳过部署"
+            exit 1
+          fi
+
+          # dokploy 的 deploy webhook 是 POST，成功返回 2xx
+          HTTP_CODE=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -X POST "$WEBHOOK")
+          echo "dokploy 响应 ${HTTP_CODE}: $(cat /tmp/resp.txt)"
+
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::触发${ENV_NAME}环境部署失败 (HTTP ${HTTP_CODE})"
+            exit 1
+          fi
+
+          echo "## 🚀 已触发${ENV_NAME}环境部署" >> $GITHUB_STEP_SUMMARY
