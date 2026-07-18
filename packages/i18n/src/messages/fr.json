@@ -3242,7 +3242,12 @@
     "packagesHeading": "Packs de points",
     "plansHeading": "Plans d'abonnement",
     "currentLevel": "Formule actuelle",
-    "levelFree": "Gratuit"
+    "levelFree": "Gratuit",
+    "unlockGeneric": "Débloquez plus de générations",
+    "unlockFeature": "Débloquer {name}",
+    "unlockFeatureDesc": "Passez à un forfait supérieur ou rechargez vos crédits pour continuer avec {name}",
+    "shortfallSummary": "Cette action nécessite {required} crédits. Vous en avez {available}, il en manque {shortfall}.",
+    "footnote": "Les prix excluent la TVA et les taxes locales, calculées au paiement. Les packs de crédits se cumulent avec votre forfait mais n'incluent pas les avantages réservés aux membres."
   },
   "landing": {
     "brand": "Amux Studio",
@@ -4067,24 +4072,6 @@
         "0": "Parcourir et collecter l'inspiration",
         "1": "Brouillons privés et publication basique",
         "2": "Idéal pour les essais occasionnels"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "Pack Découverte",
-          "description": "Complément de crédits léger pour des projets ponctuels"
-        },
-        "standard": {
-          "name": "Pack Standard",
-          "description": "Complétez vos crédits en tant que créateur actif"
-        },
-        "pro": {
-          "name": "Pack Pro",
-          "description": "Recharge haute fréquence, réservée aux membres actifs"
-        },
-        "team": {
-          "name": "Pack Équipe",
-          "description": "Complément d'équipe avec droits commerciaux selon le niveau d'abonnement"
-        }
       },
       "creditsMo": "{count} crédits/mois",
       "fixedCredits": "Montant fixe de {count} crédits/mois",

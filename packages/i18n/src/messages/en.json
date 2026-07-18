@@ -1450,7 +1450,12 @@
     "packagesHeading": "Points packs",
     "plansHeading": "Membership plans",
     "currentLevel": "Current plan",
-    "levelFree": "Free"
+    "levelFree": "Free",
+    "unlockGeneric": "Unlock more generations",
+    "unlockFeature": "Unlock {name}",
+    "unlockFeatureDesc": "Upgrade your plan or top up credits to keep generating with {name}",
+    "shortfallSummary": "This action needs {required} credits. You have {available}, short by {shortfall}.",
+    "footnote": "Prices exclude VAT and local taxes, calculated at checkout. Credit packs stack with your plan but do not include member-only benefits."
   },
   "login": {
     "console": "Admin Console",
@@ -4067,24 +4072,6 @@
         "0": "Browse and collect inspiration",
         "1": "Private drafts and basic publishing",
         "2": "Best for light testing"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "Trial Pack",
-          "description": "Lightweight credit supplement for one-off projects"
-        },
-        "standard": {
-          "name": "Standard Pack",
-          "description": "Supplement credits for active creators"
-        },
-        "pro": {
-          "name": "Pro Pack",
-          "description": "High-frequency supplement, requires active membership"
-        },
-        "team": {
-          "name": "Team Pack",
-          "description": "Team credit supplement with commercial rights per membership tier"
-        }
       },
       "creditsMo": "{count} credits/mo.",
       "fixedCredits": "Fixed amount of {count} credits/mo",

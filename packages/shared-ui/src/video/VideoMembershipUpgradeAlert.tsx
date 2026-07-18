@@ -15,6 +15,14 @@ import {
 } from '../ui/dialog';
 import { MembershipUpgradeView } from '../membership/MembershipUpgradeView';
 import { cn } from '../ui/utils';
+import {
+  GROWTH_CTA_FOCUS,
+  GROWTH_DIALOG_CONTENT,
+  GROWTH_DIALOG_DESCRIPTION,
+  GROWTH_DIALOG_FOOTER,
+  GROWTH_DIALOG_HEADER,
+  GROWTH_DIALOG_TITLE,
+} from '../growth/dialog-styles';
 
 const VIDEO_MEMBERSHIP_ERROR_CODES = new Set([
   'VIDEO_MEMBERSHIP_REQUIRED',
@@ -45,16 +53,17 @@ export function VideoMembershipUpgradeAlert({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn(
-          'flex max-h-[86vh] flex-col gap-0 overflow-hidden border-border bg-popover p-0 text-popover-foreground',
+          GROWTH_DIALOG_CONTENT,
+          'max-h-[86vh]',
           view === 'notice' ? 'sm:max-w-[560px]' : 'sm:max-w-[980px]',
         )}
       >
-        <DialogHeader className="shrink-0 border-b border-border px-5 py-4">
-          <DialogTitle className="flex items-center gap-2">
-            <Crown className="size-4 text-primary" />
+        <DialogHeader className={GROWTH_DIALOG_HEADER}>
+          <DialogTitle className={GROWTH_DIALOG_TITLE}>
+            <Crown className="size-4 text-growth-accent" />
             {view === 'notice' ? t('title') : t('dialogTitle')}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className={GROWTH_DIALOG_DESCRIPTION}>
             {view === 'notice' ? t('description') : t('dialogDescription')}
           </DialogDescription>
         </DialogHeader>
@@ -62,20 +71,24 @@ export function VideoMembershipUpgradeAlert({
         {view === 'notice' ? (
           <>
             <DialogBody className="space-y-4 px-5 py-5">
-              <div className="rounded-lg border border-border bg-card p-4 text-card-foreground">
-                <p className="text-sm leading-6 text-muted-foreground">
+              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                <p className="text-sm leading-6 text-foreground/60">
                   {message || t('description')}
                 </p>
               </div>
             </DialogBody>
-            <DialogFooter className="border-t border-border px-5 py-4">
+            <DialogFooter className={GROWTH_DIALOG_FOOTER}>
               <Button variant="ghost" onClick={() => handleOpenChange(false)}>
                 {t('dismissAction')}
               </Button>
-              <Button className="gap-1.5" onClick={() => setView('plans')}>
+              <button
+                type="button"
+                className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-growth-accent px-5 text-sm font-bold text-background transition hover:bg-growth-accent-hover ${GROWTH_CTA_FOCUS}`}
+                onClick={() => setView('plans')}
+              >
                 <Crown className="size-3.5" />
                 {t('upgradeAction')}
-              </Button>
+              </button>
             </DialogFooter>
           </>
         ) : (

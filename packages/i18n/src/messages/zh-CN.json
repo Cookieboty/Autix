@@ -1450,7 +1450,12 @@
     "packagesHeading": "积分包",
     "plansHeading": "会员套餐",
     "currentLevel": "当前会员",
-    "levelFree": "免费用户"
+    "levelFree": "免费用户",
+    "unlockGeneric": "解锁更多创作额度",
+    "unlockFeature": "解锁 {name}",
+    "unlockFeatureDesc": "升级会员或补充积分，即可继续使用 {name} 生成",
+    "shortfallSummary": "本次需要 {required} 积分，当前余额 {available}，还差 {shortfall}",
+    "footnote": "价格不含增值税及当地税费，将在结算时计算。会员权益与积分包可叠加使用，积分包不含会员专属权益。"
   },
   "login": {
     "console": "管理控制台",
@@ -4067,24 +4072,6 @@
         "0": "公开浏览和收藏灵感",
         "1": "私有草稿与基础发布",
         "2": "适合低频试用"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "试用包",
-          "description": "适合一次性项目的轻量积分补充"
-        },
-        "standard": {
-          "name": "标准包",
-          "description": "为活跃创作者补充积分"
-        },
-        "pro": {
-          "name": "专业包",
-          "description": "高频补充，需保持有效会员资格"
-        },
-        "team": {
-          "name": "团队包",
-          "description": "团队积分补充，商业授权随会员等级适用"
-        }
       },
       "creditsMo": "{count} 积分/月",
       "fixedCredits": "每月固定 {count} 积分",

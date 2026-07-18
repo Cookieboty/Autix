@@ -3229,7 +3229,12 @@
     "packagesHeading": "Gói điểm",
     "plansHeading": "Gói thành viên",
     "currentLevel": "Gói hiện tại",
-    "levelFree": "Miễn phí"
+    "levelFree": "Miễn phí",
+    "unlockGeneric": "Mở khóa thêm lượt tạo",
+    "unlockFeature": "Mở khóa {name}",
+    "unlockFeatureDesc": "Nâng cấp gói hoặc nạp thêm tín dụng để tiếp tục tạo với {name}",
+    "shortfallSummary": "Thao tác này cần {required} tín dụng. Bạn có {available}, còn thiếu {shortfall}.",
+    "footnote": "Giá chưa bao gồm VAT và thuế địa phương, sẽ được tính khi thanh toán. Gói tín dụng cộng dồn với gói thành viên nhưng không bao gồm quyền lợi riêng của thành viên."
   },
   "publicGrowth": {
     "nav": {
@@ -3731,24 +3736,6 @@
         "0": "Duyệt và lưu cảm hứng",
         "1": "Bản nháp riêng tư và xuất bản cơ bản",
         "2": "Phù hợp cho dùng thử nhẹ"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "Gói Dùng Thử",
-          "description": "Bổ sung tín dụng nhẹ cho các dự án một lần"
-        },
-        "standard": {
-          "name": "Gói Tiêu Chuẩn",
-          "description": "Bổ sung tín dụng cho các nhà sáng tạo tích cực"
-        },
-        "pro": {
-          "name": "Gói Pro",
-          "description": "Bổ sung tần suất cao, yêu cầu thành viên đang hoạt động"
-        },
-        "team": {
-          "name": "Gói Nhóm",
-          "description": "Bổ sung tín dụng nhóm với quyền thương mại theo cấp thành viên"
-        }
       },
       "creditsMo": "{count} tín dụng/tháng",
       "fixedCredits": "Cố định {count} tín dụng/tháng",

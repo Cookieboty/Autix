@@ -91,13 +91,15 @@ describe('public pricing helpers', () => {
     expect(plan?.hasYearlyDiscount).toBe(true);
   });
 
-  test('falls back to configured demo plans when the server has no levels', () => {
-    const plans = buildPricingPlans([], 'MONTHLY');
+  test('returns nothing when the server has no levels — never invents prices', () => {
+    expect(buildPricingPlans([], 'MONTHLY')).toEqual([]);
+    expect(buildPricingPlans(null, 'MONTHLY')).toEqual([]);
+    expect(buildPricingPlans(undefined, 'YEARLY')).toEqual([]);
+  });
 
-    expect(plans).toHaveLength(3);
-    expect(plans[0]?.isFree).toBe(true);
-    expect(plans[1]?.recommended).toBe(true);
-    expect(plans[1]?.featureItems.some((f) => f.kind === 'watermark')).toBe(true);
+  test('returns no top-up packages when the server has none', () => {
+    expect(normalizePointsPackages([])).toEqual([]);
+    expect(normalizePointsPackages(null)).toEqual([]);
   });
 
   test('adds free tier when server levels only include paid plans', () => {
@@ -107,14 +109,6 @@ describe('public pricing helpers', () => {
     expect(plans[0]?.serverName).toBe('Free');
     expect(plans[0]?.planId).toBeNull();
     expect(plans[0]?.comparison.videoSpec).toBeNull();
-  });
-
-  test('marks fallback paid tiers with yearly discount', () => {
-    const plans = buildPricingPlans([], 'YEARLY');
-
-    expect(plans[0]?.hasYearlyDiscount).toBe(false);
-    expect(plans[1]?.hasYearlyDiscount).toBe(true);
-    expect(plans[2]?.hasYearlyDiscount).toBe(true);
   });
 
   test('filters and sorts active top-up packages', () => {
@@ -131,7 +125,6 @@ describe('public pricing helpers', () => {
   test('buildPricingPlans returns no CJK characters or copy strings', () => {
     const allPlans = [
       ...buildPricingPlans([level()], 'MONTHLY'),
-      ...buildPricingPlans([], 'MONTHLY'),
       ...buildPricingPlans([level()], 'YEARLY'),
     ];
     const json = JSON.stringify(allPlans);

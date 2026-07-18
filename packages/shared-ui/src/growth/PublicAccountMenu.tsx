@@ -26,6 +26,13 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { MembershipUpgradeView } from '../membership/MembershipUpgradeView';
+import { cn } from '../ui/utils';
+import {
+  GROWTH_DIALOG_CONTENT,
+  GROWTH_DIALOG_DESCRIPTION,
+  GROWTH_DIALOG_HEADER,
+  GROWTH_DIALOG_TITLE,
+} from './dialog-styles';
 
 function displayName(user: ReturnType<typeof useAuthStore.getState>['user']) {
   return user?.realName || user?.username || user?.email || 'Amux';
@@ -341,13 +348,13 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
         </div>
       </DropdownMenuContent>
       <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-        <DialogContent className="flex max-h-[86vh] flex-col gap-0 overflow-hidden border-border bg-popover p-0 text-popover-foreground sm:max-w-[980px]">
-          <DialogHeader className="shrink-0 border-b border-border px-5 py-4">
-            <DialogTitle className="flex items-center gap-2">
-              <Crown className="h-4 w-4 text-primary" />
+        <DialogContent className={cn(GROWTH_DIALOG_CONTENT, 'max-h-[86vh] sm:max-w-[980px]')}>
+          <DialogHeader className={GROWTH_DIALOG_HEADER}>
+            <DialogTitle className={GROWTH_DIALOG_TITLE}>
+              <Crown className="size-4 text-growth-accent" />
               {tMembership('upgradeMembership')}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className={GROWTH_DIALOG_DESCRIPTION}>
               {tMembership('choosePlan')}
             </DialogDescription>
           </DialogHeader>

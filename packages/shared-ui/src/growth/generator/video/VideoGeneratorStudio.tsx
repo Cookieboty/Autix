@@ -7,6 +7,7 @@ import {
   isVideoModel,
   listAvailableModels,
   publicGeneratorActions,
+  setBillingGateContext,
   useAuthStore,
   useUiStore,
   type DirectVideoGenerationDto,
@@ -208,6 +209,10 @@ export function VideoGeneratorStudio({
     });
     setTab('history');
     setGenerating(true);
+    // 同上：让拦截弹框能显示「解锁 XXX」
+    setBillingGateContext({
+      featureName: selectedModel?.name ?? String(payload.params.model ?? selectedModelValue ?? ''),
+    });
     try {
       const { generationId } = await publicGeneratorActions.generateVideoDirect({
         prompt: payload.prompt,

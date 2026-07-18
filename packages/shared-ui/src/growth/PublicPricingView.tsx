@@ -97,28 +97,33 @@ export function PublicPricingView({
               />
             </div>
 
-            <div className={planGridClass}>
-              {plans.map((plan, index) => (
-                <PlanCard
-                  key={plan.id}
-                  plan={plan}
-                  tagline={index < 3 ? t(`taglines.${index}`) : undefined}
-                  showYearlyHint={cycle === 'YEARLY'}
-                  purchasing={
-                    checkoutMutation.isPending &&
-                    Boolean(plan.planId) &&
-                    checkoutMutation.variables?.productId === plan.planId
-                  }
-                  onPurchase={() => handlePurchase(plan)}
-                  t={t}
-                />
-              ))}
-            </div>
+            {plans.length ? (
+              <div className={planGridClass}>
+                {plans.map((plan, index) => (
+                  <PlanCard
+                    key={plan.id}
+                    plan={plan}
+                    tagline={index < 3 ? t(`taglines.${index}`) : undefined}
+                    showYearlyHint={cycle === 'YEARLY'}
+                    purchasing={
+                      checkoutMutation.isPending &&
+                      Boolean(plan.planId) &&
+                      checkoutMutation.variables?.productId === plan.planId
+                    }
+                    onPurchase={() => handlePurchase(plan)}
+                    t={t}
+                  />
+                ))}
+              </div>
+            ) : (
+              // 兜底演示套餐已移除：拿不到真实档位时宁可空着，也不展示编造的价格
+              <p className="py-16 text-center text-sm text-foreground/45">{tCommon('noData')}</p>
+            )}
           </div>
         </section>
 
         <ComparisonTable plans={allPlans} />
-        <TopUpSection packages={packages} />
+        {packages.length ? <TopUpSection packages={packages} /> : null}
       </main>
     </PublicGrowthShell>
   );

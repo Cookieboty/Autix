@@ -57,6 +57,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <LocaleRoutingProvider value={identity}>
           <IntlProvider>
             {children}
+            {/* Providers 在 HashRouter 之外，这里拿不到 useNavigate；
+                桌面端不传导航回调，弹框底部只出「积分包/套餐」切换。 */}
             <InsufficientPointsGate />
             <Toaster />
           </IntlProvider>
