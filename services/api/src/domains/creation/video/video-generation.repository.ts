@@ -413,6 +413,67 @@ export class VideoGenerationRepository {
     });
   }
 
+  async createDirectPendingGeneration(input: {
+    generationId: string;
+    userId: string;
+    model: string;
+    resolvedPrompt: string;
+    params: Prisma.InputJsonValue;
+    protocolKey: string;
+    modelConfigId: string;
+  }) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.video_clip_generations.create({
+        data: {
+          id: input.generationId,
+          clipId: null,
+          projectId: null,
+          userId: input.userId,
+          model: input.model,
+          resolvedPrompt: input.resolvedPrompt,
+          params: input.params,
+          status: VideoGenStatus.pending,
+          protocolKey: input.protocolKey,
+          modelConfigId: input.modelConfigId,
+        },
+      });
+      // 直连无父 clip/project——不做任何父行 update（与 createPendingGenerationAndMarkRunning 的关键区别）
+    });
+  }
+
+  async findUserDirectGenerations(input: { userId: string; page: number; pageSize: number }) {
+    const skip = (input.page - 1) * input.pageSize;
+    const where: Prisma.video_clip_generationsWhereInput = { userId: input.userId, clipId: null };
+    const [generations, total] = await Promise.all([
+      this.prisma.video_clip_generations.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip,
+        take: input.pageSize,
+      }),
+      this.prisma.video_clip_generations.count({ where }),
+    ]);
+    return { generations, total };
+  }
+
+  findOwnedDirectGeneration(input: { id: string; userId: string }) {
+    return this.prisma.video_clip_generations.findFirst({
+      where: { id: input.id, userId: input.userId, clipId: null },
+    });
+  }
+
+  async deleteOwnedDirectGeneration(input: { id: string; userId: string }): Promise<'deleted' | 'not_found' | 'not_terminal'> {
+    const row = await this.prisma.video_clip_generations.findFirst({
+      where: { id: input.id, userId: input.userId, clipId: null },
+      select: { id: true, status: true },
+    });
+    if (!row) return 'not_found';
+    const terminal: VideoGenStatus[] = [VideoGenStatus.completed, VideoGenStatus.failed, VideoGenStatus.expired];
+    if (!terminal.includes(row.status)) return 'not_terminal';
+    await this.prisma.video_clip_generations.delete({ where: { id: input.id } });
+    return 'deleted';
+  }
+
   createVideoResultMessage(input: {
     conversationId: string;
     generationId: string;

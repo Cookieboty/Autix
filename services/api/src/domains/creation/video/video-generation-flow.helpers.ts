@@ -466,8 +466,8 @@ export function buildVideoHoldInput(input: {
   generationId: string;
   estimatedCost: number;
   pricingSnapshot: unknown;
-  projectId: string;
-  clipId: string;
+  projectId: string | null;
+  clipId: string | null;
   modelConfigId: string;
   // 计划 4：调用方现在传入引擎 assembleVideoRequest 的输出（Ark 请求体快照），
   // 不再是 SeedanceApiService.buildTaskRequest 的返回值 —— 两者字段形状经 golden
@@ -630,4 +630,18 @@ export function presentGenerateAllClipResults(
       taskId: result.taskId,
       clipId: result.clipId,
     }));
+}
+
+export function buildDirectGenerationParamsSnapshot(input: {
+  options: { resolution?: string; ratio?: string; duration?: number; generateAudio?: boolean };
+  materials: Array<{ role: string; url: string; sourceType?: string; name?: string | null }>;
+  providerRequest: Record<string, unknown>;
+}): Prisma.InputJsonValue {
+  return toPrismaInputJson({
+    schemaVersion: 1,
+    mode: 'direct',
+    options: input.options,
+    materials: input.materials,
+    providerRequest: input.providerRequest,
+  });
 }
