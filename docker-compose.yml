@@ -31,7 +31,11 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      # 容器的 CMD 是先跑完 db:prepare-cutover（flat-migrate → migrate deploy →
+      # db push → seed → init-membership → seed:pricing）再启动 HTTP 服务，健康
+      # 端点在那之前根本不存在。首次部署要建全套表并灌种子数据，30s 的宽限期
+      # 远远不够，会在迁移还在跑时就被判定 unhealthy，进而拖垮 web 的 depends_on。
+      start_period: 180s
     logging:
       driver: "json-file"
       options:
