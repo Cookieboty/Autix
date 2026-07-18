@@ -26,6 +26,8 @@ import { VideoMaterialController } from './video-material.controller';
 import { VideoCallbackController } from './video-callback.controller';
 import { VideoWorkflowTemplatesController } from './video-workflow-templates.controller';
 import { VideoWorkflowTemplateRepository } from './video-workflow-template.repository';
+import { VideoDirectGenerationService } from './video-direct-generation.service';
+import { VideoGenController } from './video-gen.controller';
 
 @Module({
   imports: [
@@ -42,6 +44,7 @@ import { VideoWorkflowTemplateRepository } from './video-workflow-template.repos
     VideoMaterialController,
     VideoCallbackController,
     VideoWorkflowTemplatesController,
+    VideoGenController,
   ],
   providers: [
     VideoAssetPersistenceService,
@@ -60,6 +63,7 @@ import { VideoWorkflowTemplateRepository } from './video-workflow-template.repos
     VideoChatService,
     VideoWorkflowTemplatesService,
     VideoWorkflowTemplateRepository,
+    VideoDirectGenerationService,
   ],
   exports: [
     VideoChatService,
