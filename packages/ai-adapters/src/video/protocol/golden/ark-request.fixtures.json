@@ -1,0 +1,163 @@
+[
+  {
+    "name": "text-to-video",
+    "input": {
+      "model": "doubao-seedance-2.0-fast",
+      "prompt": "a cat in the rain",
+      "materials": [],
+      "params": { "resolution": "720p", "ratio": "16:9", "duration": 5, "generate_audio": true }
+    },
+    "expected": {
+      "model": "doubao-seedance-2.0-fast",
+      "content": [{ "type": "text", "text": "a cat in the rain" }],
+      "generate_audio": true,
+      "resolution": "720p",
+      "ratio": "16:9",
+      "duration": 5
+    }
+  },
+  {
+    "name": "image-to-video-first-frame",
+    "input": {
+      "model": "doubao-seedance-2.0-fast",
+      "prompt": "zoom in",
+      "materials": [{ "role": "first_frame", "url": "https://x/start.jpg" }],
+      "params": { "resolution": "720p", "ratio": "16:9", "duration": 5 }
+    },
+    "expected": {
+      "model": "doubao-seedance-2.0-fast",
+      "content": [
+        { "type": "text", "text": "zoom in" },
+        { "type": "image_url", "image_url": { "url": "https://x/start.jpg" }, "role": "first_frame" }
+      ],
+      "resolution": "720p",
+      "ratio": "16:9",
+      "duration": 5
+    }
+  },
+  {
+    "name": "first-and-last-frame",
+    "input": {
+      "model": "doubao-seedance-2.0-fast",
+      "prompt": "pan across",
+      "materials": [
+        { "role": "first_frame", "url": "https://x/a.jpg" },
+        { "role": "last_frame", "url": "https://x/b.jpg" }
+      ],
+      "params": { "ratio": "16:9", "duration": 5 }
+    },
+    "expected": {
+      "model": "doubao-seedance-2.0-fast",
+      "content": [
+        { "type": "text", "text": "pan across" },
+        { "type": "image_url", "image_url": { "url": "https://x/a.jpg" }, "role": "first_frame" },
+        { "type": "image_url", "image_url": { "url": "https://x/b.jpg" }, "role": "last_frame" }
+      ],
+      "ratio": "16:9",
+      "duration": 5
+    }
+  },
+  {
+    "name": "multimodal-all-five-roles",
+    "input": {
+      "model": "doubao-seedance-2.0-fast",
+      "prompt": "@image1 meets @image2",
+      "materials": [
+        { "role": "reference_image", "url": "https://x/1.jpg" },
+        { "role": "reference_image", "url": "https://x/2.jpg" },
+        { "role": "reference_video", "url": "https://x/c.mp4" },
+        { "role": "reference_audio", "url": "https://x/v.mp3" },
+        { "role": "first_frame", "url": "https://x/f.jpg" },
+        { "role": "last_frame", "url": "https://x/l.jpg" }
+      ],
+      "params": { "ratio": "16:9" }
+    },
+    "expected": {
+      "model": "doubao-seedance-2.0-fast",
+      "content": [
+        { "type": "text", "text": "@image1 meets @image2" },
+        { "type": "image_url", "image_url": { "url": "https://x/1.jpg" }, "role": "reference_image" },
+        { "type": "image_url", "image_url": { "url": "https://x/2.jpg" }, "role": "reference_image" },
+        { "type": "video_url", "video_url": { "url": "https://x/c.mp4" }, "role": "reference_video" },
+        { "type": "audio_url", "audio_url": { "url": "https://x/v.mp3" }, "role": "reference_audio" },
+        { "type": "image_url", "image_url": { "url": "https://x/f.jpg" }, "role": "first_frame" },
+        { "type": "image_url", "image_url": { "url": "https://x/l.jpg" }, "role": "last_frame" }
+      ],
+      "ratio": "16:9"
+    }
+  },
+  {
+    "name": "generate-audio-explicit-false-must-be-sent",
+    "input": {
+      "model": "m",
+      "prompt": "p",
+      "materials": [],
+      "params": { "generate_audio": false }
+    },
+    "expected": {
+      "model": "m",
+      "content": [{ "type": "text", "text": "p" }],
+      "generate_audio": false
+    }
+  },
+  {
+    "name": "zero-seconds-must-be-sent",
+    "input": { "model": "m", "prompt": "p", "materials": [], "params": { "duration": 0 } },
+    "expected": { "model": "m", "content": [{ "type": "text", "text": "p" }], "duration": 0 }
+  },
+  {
+    "name": "seed-sentinel-minus-one-must-be-omitted",
+    "input": { "model": "m", "prompt": "p", "materials": [], "params": { "seed": -1 } },
+    "expected": { "model": "m", "content": [{ "type": "text", "text": "p" }] }
+  },
+  {
+    "name": "seed-zero-must-be-sent",
+    "input": { "model": "m", "prompt": "p", "materials": [], "params": { "seed": 0 } },
+    "expected": { "model": "m", "content": [{ "type": "text", "text": "p" }], "seed": 0 }
+  },
+  {
+    "name": "watermark-and-return-last-frame-false-must-be-omitted",
+    "input": {
+      "model": "m",
+      "prompt": "p",
+      "materials": [],
+      "params": { "watermark": false, "return_last_frame": false }
+    },
+    "expected": { "model": "m", "content": [{ "type": "text", "text": "p" }] }
+  },
+  {
+    "name": "watermark-and-return-last-frame-true",
+    "input": {
+      "model": "m",
+      "prompt": "p",
+      "materials": [],
+      "params": { "watermark": true, "return_last_frame": true }
+    },
+    "expected": {
+      "model": "m",
+      "content": [{ "type": "text", "text": "p" }],
+      "return_last_frame": true,
+      "watermark": true
+    }
+  },
+  {
+    "name": "with-callback-url",
+    "input": {
+      "model": "m",
+      "prompt": "p",
+      "materials": [],
+      "params": {},
+      "callbackUrl": "https://app.example.com/api/video/callback/ark-video%40v3?token=s3cret"
+    },
+    "expected": {
+      "model": "m",
+      "content": [{ "type": "text", "text": "p" }],
+      "callback_url": "https://app.example.com/api/video/callback/ark-video%40v3?token=s3cret"
+    }
+  },
+  {
+    "name": "empty-prompt-emits-no-text-item",
+    "input": { "model": "m", "prompt": "", "materials": [], "params": {} },
+    "expected": { "model": "m", "content": [] }
+  }
+]

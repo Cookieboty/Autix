@@ -10,11 +10,41 @@ import { VideoGenerationHoldReconciliationService } from './video-generation-hol
 import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 
+// 计划 4 · Task 2：提交路径切到协议引擎，不再经 SeedanceApiService.buildContent/
+// buildTaskRequest/createTask（切换后它们不再被调用，见下方
+// "submits through the protocol engine" 用例）。只 mock submitVideoTask 本身
+// ——resolveVideoPreset/assembleVideoRequest 仍跑真实实现，断言的是引擎真正收到
+// 的入参，而不是一个手写 mock 对协议的复述。vi.mock 会被提升到本文件顶部，
+// 工厂不能直接闭包外层 const，故用 vi.hoisted 提升这个 mock 本身。
+//
+// 计划 4 · Task 3：轮询/回调也切到引擎，同理只 mock queryVideoTask 本身
+// ——resolveVideoPreset/normalizeVideoOutcome 仍跑真实实现。
+const { submitVideoTaskMock, queryVideoTaskMock } = vi.hoisted(() => ({
+  submitVideoTaskMock: vi.fn(async () => ({ providerTaskId: 'seedance-task-1' })),
+  queryVideoTaskMock: vi.fn(async () => ({ kind: 'active', externalStatus: 'queued' })),
+}));
+
+vi.mock('@autix/ai-adapters/video', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@autix/ai-adapters/video')>();
+  return {
+    ...actual,
+    submitVideoTask: submitVideoTaskMock,
+    queryVideoTask: queryVideoTaskMock,
+  };
+});
+
 function makeService(options: {
   clip?: Record<string, any>;
   projectClips?: Array<Record<string, any>>;
   modelConfig?: Record<string, any>;
 } = {}) {
+  // 每个测试独立的 submitVideoTask/queryVideoTask 调用记录/默认实现——mock 本身是
+  // 模块级共享的（vi.mock 提升所致），每个 makeService() 调用都要清空上一个用例留下的痕迹。
+  submitVideoTaskMock.mockClear();
+  submitVideoTaskMock.mockImplementation(async () => ({ providerTaskId: 'seedance-task-1' }));
+  queryVideoTaskMock.mockClear();
+  queryVideoTaskMock.mockImplementation(async () => ({ kind: 'active', externalStatus: 'queued' }));
+
   const baseClip = {
     id: 'clip-1',
     projectId: 'project-1',
@@ -90,6 +120,7 @@ function makeService(options: {
       update: vi.fn(),
       findFirst: vi.fn(),
       findUnique: vi.fn(),
+      findMany: vi.fn(async (): Promise<any[]> => []),
     },
     point_holds: {
       findFirst: vi.fn(async () => ({
@@ -143,6 +174,10 @@ function makeService(options: {
       id: 'model-config-1',
       name: 'Seedance',
       model: options.modelConfig?.model ?? 'seedance-pro',
+      // 引擎切换后 preset 从 modelConfig.metadata.protocolKey 路由（resolveVideoPreset
+      // 对缺失/未注册的 key fail-loud）——所有生产视频模型都配了它，这里的默认值
+      // 镜像现网唯一协议 'ark-video@v3'。
+      metadata: { protocolKey: 'ark-video@v3' },
       ...options.modelConfig,
     })),
     getConfigForOrchestrator: vi.fn(async (id: string) => ({
@@ -150,26 +185,9 @@ function makeService(options: {
       model: 'seedance-pro',
       baseUrl: null,
       apiKey: 'video-key',
+      metadata: { protocolKey: 'ark-video@v3' },
       ...options.modelConfig,
     })),
-  };
-  const seedanceApi = {
-    buildContent: vi.fn((materials: any[], prompt: string) => [
-      { type: 'text', text: prompt },
-      ...materials.map((material) => ({
-        type: 'image_url',
-        image_url: { url: material.url },
-      })),
-    ]),
-    buildTaskRequest: vi.fn((opts: any) => ({
-      model: opts.model,
-      content: opts.content,
-      resolution: opts.resolution,
-      ratio: opts.ratio,
-      duration: opts.duration,
-    })),
-    createTask: vi.fn(async () => ({ id: 'seedance-task-1' })),
-    queryTask: vi.fn(),
   };
   const modelResolver = {
     resolveForGeneration: vi.fn(async () => {
@@ -206,6 +224,19 @@ function makeService(options: {
     resolveApiContextForClipParams: vi.fn(async (params: any) => {
       const modelConfigId = params?.modelConfigId;
       if (!modelConfigId) return null;
+      const modelConfig =
+        await modelConfigService.getConfigForOrchestrator(modelConfigId);
+      if (!modelConfig.apiKey) return null;
+      return {
+        apiKey: modelConfig.apiKey,
+        baseUrl: modelConfig.baseUrl,
+        modelConfigId,
+        model: modelConfig.model,
+        metadata: modelConfig.metadata,
+      };
+    }),
+    // 计划 4 · Task 3：轮询/回调/手动刷新按提交时快照的 modelConfigId 直接解析凭证。
+    resolveApiContextByModelConfigId: vi.fn(async (modelConfigId: string) => {
       const modelConfig =
         await modelConfigService.getConfigForOrchestrator(modelConfigId);
       if (!modelConfig.apiKey) return null;
@@ -279,7 +310,6 @@ function makeService(options: {
     repository,
     pointsService as never,
     modelResolver as never,
-    seedanceApi as never,
     callbackUrlBuilder as never,
     videoAssets as never,
     membershipService as never,
@@ -291,23 +321,27 @@ function makeService(options: {
 
   return {
     service,
+    repository,
     prisma,
     pointsService,
     r2Service,
     modelConfigService,
     modelResolver,
-    seedanceApi,
     callbackUrlBuilder,
     videoAssets,
     membershipService,
     riskService,
     projectStatusConvergence,
+    holdReconciliation,
+    terminalConvergence,
+    submitVideoTaskMock,
+    queryVideoTaskMock,
   };
 }
 
 describe('VideoGenerationFlowService billing', () => {
   it('freezes configurable Seedance points before creating the generation and provider task', async () => {
-    const { service, prisma, pointsService, seedanceApi } = makeService();
+    const { service, prisma, pointsService, submitVideoTaskMock } = makeService();
     const order: string[] = [];
     pointsService.createHold.mockImplementation(async () => {
       order.push('hold');
@@ -323,9 +357,9 @@ describe('VideoGenerationFlowService billing', () => {
         status: VideoGenStatus.pending,
       };
     });
-    seedanceApi.createTask.mockImplementation(async () => {
+    submitVideoTaskMock.mockImplementation(async () => {
       order.push('provider');
-      return { id: 'seedance-task-1' };
+      return { providerTaskId: 'seedance-task-1' };
     });
 
     const result = await service.generateClip({
@@ -335,16 +369,16 @@ describe('VideoGenerationFlowService billing', () => {
     });
 
     // Exact shape (not objectContaining): pins the new task/params contract —
-    // resolution/seconds/ratio live under `params`, modelConfigId is present
+    // resolution/duration/ratio live under `params`, modelConfigId is present
     // because generateClip always has one in scope by this point, and there is
     // no referenceImages/hasVideoInput/hasAudioInput (not part of the `video`
-    // pricing preset's paramsSchema) and no top-level resolution/seconds.
+    // pricing preset's paramsSchema) and no top-level resolution/duration.
     expect(pointsService.estimateCost).toHaveBeenCalledWith({
       taskType: 'video_generation',
       modelConfigId: 'model-config-1',
       params: {
         resolution: '720p',
-        seconds: 5,
+        duration: 5,
         ratio: '16:9',
       },
       membershipLevel: 3,
@@ -371,8 +405,28 @@ describe('VideoGenerationFlowService billing', () => {
     });
   });
 
+  it('persists the protocol/model snapshot when creating a generation', async () => {
+    // repository 是真实实例（见本文件 :276），不是 mock —— 用 spyOn 并让它继续调用真实实现，
+    // 这样断言的是 flow 真正传下去的入参，而不是一个替身的记录。
+    const { service, repository } = makeService();
+    const createSpy = vi.spyOn(repository, 'createPendingGenerationAndMarkRunning');
+
+    await service.generateClip({
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+    });
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        protocolKey: 'ark-video@v3',
+        modelConfigId: 'model-config-1',
+      }),
+    );
+  });
+
   it('combines storyboard prompt and clip prompt for storyboard generation', async () => {
-    const { service, prisma, seedanceApi } = makeService({
+    const { service, prisma, submitVideoTaskMock } = makeService({
       clip: {
         prompt: '产品从左侧滑入，镜头缓慢推进',
         params: {
@@ -390,9 +444,8 @@ describe('VideoGenerationFlowService billing', () => {
 
     const resolvedPrompt =
       '整片提示词：高端科技广告，冷色光线，节奏干净\n\n当前分镜提示词：产品从左侧滑入，镜头缓慢推进';
-    expect(seedanceApi.buildContent).toHaveBeenCalledWith(
-      expect.any(Array),
-      resolvedPrompt,
+    expect(submitVideoTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: resolvedPrompt }),
     );
     expect(prisma.video_clip_generations.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -442,7 +495,7 @@ describe('VideoGenerationFlowService billing', () => {
         materials: [],
       },
     ];
-    const { service, prisma, seedanceApi, pointsService } = makeService({
+    const { service, prisma, submitVideoTaskMock, pointsService } = makeService({
       projectClips,
     });
     prisma.video_projects.findUnique.mockResolvedValue({
@@ -452,18 +505,15 @@ describe('VideoGenerationFlowService billing', () => {
 
     await service.generateAllClips('project-1', 'user-1');
 
-    expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
-    const createTaskCalls = seedanceApi.createTask.mock.calls as unknown as Array<
-      [string, { duration: number; content: Array<{ text?: string }> }]
+    expect(submitVideoTaskMock).toHaveBeenCalledTimes(1);
+    const submitCalls = submitVideoTaskMock.mock.calls as unknown as Array<
+      [{ params: { duration?: number }; prompt?: string | null }]
     >;
-    const taskRequest = createTaskCalls.at(-1)?.[1] as {
-      duration: number;
-      content: Array<{ text?: string }>;
-    };
-    expect(taskRequest.duration).toBe(5);
-    expect(taskRequest.content[0].text).toContain('完整分镜脚本');
-    expect(taskRequest.content[0].text).toContain('分镜 1「开场」：赛博朋克城市远景');
-    expect(taskRequest.content[0].text).toContain('分镜 2「特写」：红衣少女半身近景');
+    const callRequest = submitCalls.at(-1)?.[0];
+    expect(callRequest?.params.duration).toBe(5);
+    expect(callRequest?.prompt).toContain('完整分镜脚本');
+    expect(callRequest?.prompt).toContain('分镜 1「开场」：赛博朋克城市远景');
+    expect(callRequest?.prompt).toContain('分镜 2「特写」：红衣少女半身近景');
     // Exact shape: the second (storyboard) estimateCost call site also uses the
     // task/params contract, with the modelConfigId resolved for the storyboard.
     expect(pointsService.estimateCost).toHaveBeenCalledWith({
@@ -471,7 +521,7 @@ describe('VideoGenerationFlowService billing', () => {
       modelConfigId: 'model-config-1',
       params: {
         resolution: '720p',
-        seconds: 5,
+        duration: 5,
         ratio: '16:9',
       },
       membershipLevel: 3,
@@ -481,6 +531,52 @@ describe('VideoGenerationFlowService billing', () => {
       expect.objectContaining({
         where: { projectId: 'project-1' },
         data: { status: VideoClipStatus.generating },
+      }),
+    );
+  });
+
+  it('persists the protocol/model snapshot for storyboard project generations', async () => {
+    // Same legacy-row gap as generateClip, but for the storyboard branch: it calls
+    // a *different* repository method (createPendingProjectGenerationAndMarkRunning,
+    // not createPendingGenerationAndMarkRunning), which grepping for the latter alone
+    // would miss. repository is a real instance (see makeService) — spyOn keeps the
+    // real implementation so the assertion is on what the flow actually passes down.
+    const projectClips = [
+      {
+        id: 'clip-1',
+        projectId: 'project-1',
+        order: 1,
+        title: '开场',
+        prompt: '赛博朋克城市远景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '720p',
+          duration: 2,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: false,
+        materials: [],
+      },
+    ];
+    const { service, repository, prisma } = makeService({ projectClips });
+    prisma.video_projects.findUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+    });
+    const createProjectSpy = vi.spyOn(
+      repository,
+      'createPendingProjectGenerationAndMarkRunning',
+    );
+
+    await service.generateAllClips('project-1', 'user-1');
+
+    expect(createProjectSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        protocolKey: 'ark-video@v3',
+        modelConfigId: 'model-config-1',
       }),
     );
   });
@@ -570,7 +666,7 @@ describe('VideoGenerationFlowService billing', () => {
         ],
       },
     ];
-    const { service, prisma, seedanceApi } = makeService({ projectClips });
+    const { service, prisma, submitVideoTaskMock } = makeService({ projectClips });
     prisma.video_projects.findUnique.mockResolvedValue({
       id: 'project-1',
       userId: 'user-1',
@@ -578,26 +674,20 @@ describe('VideoGenerationFlowService billing', () => {
 
     await service.generateAllClips('project-1', 'user-1');
 
-    expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
-    expect(seedanceApi.buildContent).toHaveBeenCalledWith(
-      [
-        expect.objectContaining({ role: 'first_frame', url: 'https://img.test/a.png' }),
-        expect.objectContaining({ role: 'last_frame', url: 'https://img.test/b.png' }),
-        expect.objectContaining({ role: 'first_frame', url: 'https://img.test/b.png' }),
-        expect.objectContaining({ role: 'last_frame', url: 'https://img.test/c.png' }),
-      ],
-      expect.stringContaining('完整分镜脚本'),
-    );
-    const createTaskCalls = seedanceApi.createTask.mock.calls as unknown as Array<
-      [string, { content: Array<{ type: string; image_url?: { url: string } }> }]
+    expect(submitVideoTaskMock).toHaveBeenCalledTimes(1);
+    const submitCalls = submitVideoTaskMock.mock.calls as unknown as Array<
+      [{ materials: Array<{ role: string; url: string }>; prompt?: string | null }]
     >;
-    const taskRequest = createTaskCalls.at(-1)?.[1];
-    expect(taskRequest?.content.filter((item) => item.type === 'image_url').map((item) => item.image_url?.url)).toEqual([
-      'https://img.test/a.png',
-      'https://img.test/b.png',
-      'https://img.test/b.png',
-      'https://img.test/c.png',
+    const callRequest = submitCalls.at(-1)?.[0];
+    // 引擎的 VideoMaterialInput 只认 { role, url }——素材现在直接传（不再经
+    // seedanceApi.buildContent 转 content item），故断言的是引擎实际收到的素材数组。
+    expect(callRequest?.materials).toEqual([
+      expect.objectContaining({ role: 'first_frame', url: 'https://img.test/a.png' }),
+      expect.objectContaining({ role: 'last_frame', url: 'https://img.test/b.png' }),
+      expect.objectContaining({ role: 'first_frame', url: 'https://img.test/b.png' }),
+      expect.objectContaining({ role: 'last_frame', url: 'https://img.test/c.png' }),
     ]);
+    expect(callRequest?.prompt).toContain('完整分镜脚本');
   });
 
   it('uses the total duration of all storyboard clips for entitlement, risk, billing, and provider request', async () => {
@@ -657,7 +747,7 @@ describe('VideoGenerationFlowService billing', () => {
     const {
       service,
       prisma,
-      seedanceApi,
+      submitVideoTaskMock,
       pointsService,
       membershipService,
       riskService,
@@ -688,26 +778,25 @@ describe('VideoGenerationFlowService billing', () => {
       expect.objectContaining({
         params: expect.objectContaining({
           resolution: '1080p',
-          seconds: 7,
+          duration: 7,
         }),
       }),
     );
-    expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
-    const createTaskCalls = seedanceApi.createTask.mock.calls as unknown as Array<
-      [string, { duration: number; content: Array<{ text?: string }> }]
+    expect(submitVideoTaskMock).toHaveBeenCalledTimes(1);
+    const submitCalls = submitVideoTaskMock.mock.calls as unknown as Array<
+      [{ params: { duration?: number }; prompt?: string | null }]
     >;
-    const taskRequest = createTaskCalls.at(-1)?.[1];
-    expect(taskRequest).toBeDefined();
-    if (!taskRequest) throw new Error('expected Seedance task request');
-    expect(taskRequest.duration).toBe(7);
-    expect(taskRequest.content).toHaveLength(1);
-    expect(taskRequest.content[0].text).toContain('分镜 1「开场」：雨夜城市远景');
-    expect(taskRequest.content[0].text).toContain('分镜 2「推进」：镜头推向少女');
-    expect(taskRequest.content[0].text).toContain('分镜 3「收束」：摩托驶离路口');
+    const callRequest = submitCalls.at(-1)?.[0];
+    expect(callRequest).toBeDefined();
+    if (!callRequest) throw new Error('expected submitVideoTask call');
+    expect(callRequest.params.duration).toBe(7);
+    expect(callRequest.prompt).toContain('分镜 1「开场」：雨夜城市远景');
+    expect(callRequest.prompt).toContain('分镜 2「推进」：镜头推向少女');
+    expect(callRequest.prompt).toContain('分镜 3「收束」：摩托驶离路口');
   });
 
   it('clamps unsupported Seedance fast resolutions before entitlement, billing, and provider request', async () => {
-    const { service, membershipService, riskService, pointsService, seedanceApi } = makeService({
+    const { service, membershipService, riskService, pointsService, submitVideoTaskMock } = makeService({
       clip: {
         params: {
           modelConfigId: 'model-config-1',
@@ -755,10 +844,15 @@ describe('VideoGenerationFlowService billing', () => {
         }),
       }),
     );
-    expect(seedanceApi.createTask).toHaveBeenCalledWith(
-      'video-key',
-      expect.objectContaining({ resolution: '720p' }),
-      null,
+    // baseUrl 未配置（modelConfig.baseUrl = null）——旧路径里这条兜底藏在
+    // seedanceApi 内部的 resolveSeedanceBaseUrl，切引擎后由调用方
+    // resolveEngineBaseUrl 显式兜底到 Ark 的公有默认 host，逐字节保持一致。
+    expect(submitVideoTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: 'video-key',
+        baseUrl: 'https://ark.cn-beijing.volces.com',
+        params: expect.objectContaining({ resolution: '720p' }),
+      }),
     );
   });
 
@@ -780,7 +874,7 @@ describe('VideoGenerationFlowService billing', () => {
       status: VideoClipStatus.pending,
       chainFromPrev: index > 0,
     }));
-    const { service, prisma, seedanceApi, pointsService } = makeService({
+    const { service, prisma, submitVideoTaskMock, pointsService } = makeService({
       projectClips,
     });
     prisma.video_projects.findUnique.mockResolvedValue({
@@ -790,34 +884,30 @@ describe('VideoGenerationFlowService billing', () => {
 
     await service.generateAllClips('project-1', 'user-1');
 
-    expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
-    const createTaskCalls = seedanceApi.createTask.mock.calls as unknown as Array<
-      [string, { duration: number; content: Array<{ type: string; text?: string }> }]
+    expect(submitVideoTaskMock).toHaveBeenCalledTimes(1);
+    const submitCalls = submitVideoTaskMock.mock.calls as unknown as Array<
+      [{ materials: unknown[]; params: { duration?: number }; prompt?: string | null }]
     >;
-    const taskRequest = createTaskCalls.at(-1)?.[1];
-    expect(taskRequest).toBeDefined();
-    if (!taskRequest) throw new Error('expected Seedance task request');
-    expect(taskRequest.duration).toBe(10);
-    expect(taskRequest.content).toEqual([
-      {
-        type: 'text',
-        text: expect.stringContaining('完整分镜脚本'),
-      },
-    ]);
+    const callRequest = submitCalls.at(-1)?.[0];
+    expect(callRequest).toBeDefined();
+    if (!callRequest) throw new Error('expected submitVideoTask call');
+    expect(callRequest.params.duration).toBe(10);
+    // 五个分镜都没有 materials，故素材数组为空——一条纯文本 content item，不是五个。
+    expect(callRequest.materials).toEqual([]);
     for (let index = 1; index <= 5; index += 1) {
-      expect(taskRequest.content[0].text).toContain(
+      expect(callRequest.prompt).toContain(
         `分镜 ${index}「镜头${index}」：第 ${index} 个分镜内容`,
       );
     }
     expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
     expect(pointsService.estimateCost).toHaveBeenCalledWith(
-      expect.objectContaining({ params: expect.objectContaining({ seconds: 10 }) }),
+      expect.objectContaining({ params: expect.objectContaining({ duration: 10 }) }),
     );
     expect(prisma.video_clip_generations.create).toHaveBeenCalledTimes(1);
   });
 
   it('refunds the hold when local generation creation fails after freezing points', async () => {
-    const { service, prisma, pointsService, seedanceApi } = makeService();
+    const { service, prisma, pointsService, submitVideoTaskMock } = makeService();
     prisma.video_clip_generations.create.mockRejectedValue(
       new Error('generation create failed'),
     );
@@ -844,13 +934,13 @@ describe('VideoGenerationFlowService billing', () => {
       'hold-1',
       'video generation creation failed',
     );
-    expect(seedanceApi.createTask).not.toHaveBeenCalled();
+    expect(submitVideoTaskMock).not.toHaveBeenCalled();
   });
 
   it('refunds the frozen points when provider task creation fails', async () => {
-    const { service, prisma, pointsService, seedanceApi, projectStatusConvergence } =
+    const { service, prisma, pointsService, submitVideoTaskMock, projectStatusConvergence } =
       makeService();
-    seedanceApi.createTask.mockRejectedValue(new Error('Seedance unavailable'));
+    submitVideoTaskMock.mockRejectedValue(new Error('Seedance unavailable'));
 
     await expect(
       service.generateClip({
@@ -899,9 +989,11 @@ describe('VideoGenerationFlowService billing', () => {
         status: VideoGenStatus.queued,
       } as never,
       {
-        status: 'succeeded',
-        video_url: 'https://provider.test/video.mp4',
-        duration: 5,
+        kind: 'succeeded',
+        externalStatus: 'succeeded',
+        sourceUrl: 'https://provider.test/video.mp4',
+        lastFrameUrl: null,
+        durationSec: 5,
       },
     );
 
@@ -939,9 +1031,11 @@ describe('VideoGenerationFlowService billing', () => {
           status: VideoGenStatus.queued,
         } as never,
         {
-          status: 'succeeded',
-          video_url: 'https://provider.test/video.mp4',
-          duration: 5,
+          kind: 'succeeded',
+          externalStatus: 'succeeded',
+          sourceUrl: 'https://provider.test/video.mp4',
+          lastFrameUrl: null,
+          durationSec: 5,
         },
       ),
     ).rejects.toThrow('ledger confirm failed');
@@ -967,8 +1061,9 @@ describe('VideoGenerationFlowService billing', () => {
         status: VideoGenStatus.queued,
       } as never,
       {
-        status: 'failed',
-        error: { message: 'provider rejected' },
+        kind: 'failed',
+        externalStatus: 'failed',
+        error: 'provider rejected',
       },
     );
 
@@ -997,7 +1092,7 @@ describe('VideoGenerationFlowService billing', () => {
         userId: 'user-1',
         status: VideoGenStatus.completed,
       } as never,
-      { status: 'succeeded' },
+      { kind: 'succeeded', externalStatus: 'succeeded', lastFrameUrl: null, durationSec: null },
     );
 
     expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
@@ -1015,7 +1110,7 @@ describe('VideoGenerationFlowService billing', () => {
         userId: 'user-1',
         status: VideoGenStatus.failed,
       } as never,
-      { status: 'failed' },
+      { kind: 'failed', externalStatus: 'failed', error: 'n/a' },
     );
 
     expect(pointsService.refundHold).toHaveBeenCalledWith(
@@ -1040,7 +1135,7 @@ describe('VideoGenerationFlowService billing', () => {
   });
 
   it('rejects generation when membership entitlement gate blocks the request', async () => {
-    const { service, membershipService, pointsService, seedanceApi } =
+    const { service, membershipService, pointsService, submitVideoTaskMock } =
       makeService();
     membershipService.assertVideoEntitlement.mockImplementation(() => {
       throw new Error('当前会员等级不支持该视频生成参数');
@@ -1058,11 +1153,11 @@ describe('VideoGenerationFlowService billing', () => {
       'user-1',
     );
     expect(pointsService.createHold).not.toHaveBeenCalled();
-    expect(seedanceApi.createTask).not.toHaveBeenCalled();
+    expect(submitVideoTaskMock).not.toHaveBeenCalled();
   });
 
   it('propagates estimateCost failures on the clip path without a fallback price (no hold, no provider task)', async () => {
-    const { service, pointsService, seedanceApi } = makeService();
+    const { service, pointsService, submitVideoTaskMock } = makeService();
     pointsService.estimateCost.mockRejectedValueOnce(
       new Error('任务未配置: video_generation'),
     );
@@ -1078,7 +1173,7 @@ describe('VideoGenerationFlowService billing', () => {
     // No fallback on a charging path: a thrown estimate must never be caught
     // and substituted with a hold/price computed another way.
     expect(pointsService.createHold).not.toHaveBeenCalled();
-    expect(seedanceApi.createTask).not.toHaveBeenCalled();
+    expect(submitVideoTaskMock).not.toHaveBeenCalled();
   });
 
   it('propagates estimateCost failures on the storyboard project path without a fallback price', async () => {
@@ -1102,7 +1197,7 @@ describe('VideoGenerationFlowService billing', () => {
         materials: [],
       },
     ];
-    const { service, prisma, pointsService, seedanceApi } = makeService({
+    const { service, prisma, pointsService, submitVideoTaskMock } = makeService({
       projectClips,
     });
     prisma.video_projects.findUnique.mockResolvedValue({
@@ -1118,7 +1213,306 @@ describe('VideoGenerationFlowService billing', () => {
     ).rejects.toThrow('模型未找到: model-config-1');
 
     expect(pointsService.createHold).not.toHaveBeenCalled();
-    expect(seedanceApi.createTask).not.toHaveBeenCalled();
+    expect(submitVideoTaskMock).not.toHaveBeenCalled();
   });
 
+  it('sends the server-resolved model, never params.model', async () => {
+    // 安全不变量（原 buildSeedanceTaskRequestOptions 记着这笔账，Task 4 删除后
+    // 由 toUnifiedVideoParams 天然维持——它不投影 model）：防「选便宜模型过鉴权、
+    // 用 params.model 偷换成贵模型」→ 跑贵付便宜。
+    const { service, submitVideoTaskMock } = makeService({
+      clip: {
+        params: { model: 'some-expensive-model' },
+      },
+      modelConfig: { model: 'doubao-seedance-2.0-fast' },
+    });
+
+    await service.generateClip({
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+    });
+
+    expect(submitVideoTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'doubao-seedance-2.0-fast' }),
+    );
+    const receivedModel = (
+      submitVideoTaskMock.mock.calls as unknown as Array<[{ model: string }]>
+    ).at(-1)?.[0].model;
+    expect(receivedModel).not.toBe('some-expensive-model');
+  });
+
+});
+
+// 计划 4 · Task 3：轮询切到引擎 + 用提交时的快照凭证，而非实时 clip params。
+describe('VideoGenerationFlowService polling', () => {
+  function makePollableGeneration(overrides: Record<string, any> = {}) {
+    return {
+      id: 'gen-1',
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      model: 'seedance-pro',
+      protocolKey: 'ark-video@v3',
+      modelConfigId: 'model-config-1',
+      providerTaskId: 'seedance-task-1',
+      status: VideoGenStatus.queued,
+      createdAt: new Date(),
+      params: {},
+      ...overrides,
+    };
+  }
+
+  // 快照优先：用户中途改 clip 模型不能影响 in-flight 任务的查询凭证
+  // （clip params 生成后仍可改，video-project.store.ts 的 updateClipParams）。
+  it('polls using the submitted-time snapshot, not live clip params', async () => {
+    const { service, prisma, modelResolver, queryVideoTaskMock } = makeService({
+      // 实时 params 指向另一个模型 —— 若实现读它，resolveApiContextByModelConfigId
+      // 就不会被以 'model-config-1' 调用，这条会红。
+      clip: { params: { modelConfigId: 'model-config-2', model: 'some-other-model' } },
+    });
+    const generation = makePollableGeneration();
+    prisma.video_clip_generations.findMany.mockResolvedValue([generation]);
+
+    await service.pollPendingGenerations();
+
+    expect(modelResolver.resolveApiContextByModelConfigId).toHaveBeenCalledWith(
+      'model-config-1',
+    );
+    expect(queryVideoTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: 'seedance-task-1' }),
+    );
+  });
+
+  // 受限回退：legacy 行（无快照）且实时配置已漂移 → 拒绝查询，交给超时收敛。
+  // 宁可慢，不可拿另一家的凭证去查旧任务。
+  it('refuses to query a legacy row whose live config drifted away from Ark', async () => {
+    const { service, prisma, modelResolver, queryVideoTaskMock } = makeService();
+    const generation = makePollableGeneration({
+      protocolKey: null,
+      modelConfigId: null,
+    });
+    prisma.video_clip_generations.findMany.mockResolvedValue([generation]);
+    modelResolver.resolveApiContextForClipParams.mockResolvedValue({
+      apiKey: 'k',
+      baseUrl: 'https://other',
+      modelConfigId: 'm2',
+      model: 'seedance-pro',
+      metadata: { protocolKey: 'kling-video@v1' }, // 漂移到别家
+    } as any);
+    const errorSpy = vi
+      .spyOn((service as unknown as { logger: { error(m: string): void } }).logger, 'error')
+      .mockImplementation(() => undefined);
+
+    await service.pollPendingGenerations();
+
+    expect(queryVideoTaskMock).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('cross-channel'));
+  });
+
+  // 残余 legacy 行未漂移（实时配置仍是 Ark 且模型一致）——受限回退放行，正常轮询。
+  it('allows a legacy row to poll when the live config has not drifted', async () => {
+    const { service, prisma, modelResolver, queryVideoTaskMock } = makeService();
+    const generation = makePollableGeneration({
+      protocolKey: null,
+      modelConfigId: null,
+      model: 'seedance-pro',
+    });
+    prisma.video_clip_generations.findMany.mockResolvedValue([generation]);
+    modelResolver.resolveApiContextForClipParams.mockResolvedValue({
+      apiKey: 'video-key',
+      baseUrl: null,
+      modelConfigId: 'model-config-1',
+      model: 'seedance-pro',
+      metadata: { protocolKey: 'ark-video@v3' },
+    });
+
+    await service.pollPendingGenerations();
+
+    expect(queryVideoTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: 'seedance-task-1', apiKey: 'video-key' }),
+    );
+  });
+});
+
+// 计划 4 · Task 3：回调切到 (protocolKey, taskId) 两列定位 + 引擎解析。
+describe('VideoGenerationFlowService callback routing', () => {
+  it('resolves the generation by (protocolKey, taskId) and applies the parsed outcome', async () => {
+    const { service, prisma, pointsService } = makeService();
+    prisma.video_clip_generations.findFirst.mockResolvedValue({
+      id: 'gen-1',
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      model: 'seedance-pro',
+      protocolKey: 'ark-video@v3',
+      modelConfigId: 'model-config-1',
+      status: VideoGenStatus.queued,
+      params: {},
+    });
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+    }) as never;
+
+    await service.handleCallback('ark-video@v3', 'seedance-task-1', {
+      id: 'seedance-task-1',
+      status: 'succeeded',
+      video_url: 'https://provider.test/video.mp4',
+      duration: 5,
+    });
+
+    expect(prisma.video_clip_generations.findFirst).toHaveBeenCalledWith({
+      where: { protocolKey: 'ark-video@v3', providerTaskId: 'seedance-task-1' },
+    });
+    expect(pointsService.confirmHoldWithinTx).toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('warns and no-ops when the callback references an unknown task', async () => {
+    const { service, prisma, pointsService } = makeService();
+    prisma.video_clip_generations.findFirst.mockResolvedValue(null);
+
+    await service.handleCallback('ark-video@v3', 'unknown-task', {
+      id: 'unknown-task',
+      status: 'succeeded',
+    });
+
+    expect(pointsService.confirmHoldWithinTx).not.toHaveBeenCalled();
+  });
+});
+
+// 直连（clipId=null, projectId=null）行的终态收敛：cron 轮询/回调都不 join clip，
+// 直连行会原样流进 applyTaskStatus/markExpired —— 这三个用例锁死"跳过 clip/project
+// 收敛，只写 generation 行本身"这条不变量。
+describe('VideoGenerationFlowService applyTaskStatus 直连（clipId=null）', () => {
+  it('直连成功不调 recalculateProjectStatus，且走 markDirectGenerationCompletedAndConfirmHold', async () => {
+    const { service, repository, projectStatusConvergence } = makeService();
+    const directSpy = vi.spyOn(
+      repository,
+      'markDirectGenerationCompletedAndConfirmHold',
+    );
+    const clipBoundSpy = vi.spyOn(repository, 'markGenerationCompletedAndConfirmHold');
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+    }) as never;
+
+    await service.applyTaskStatus(
+      {
+        id: 'gen-1',
+        clipId: null,
+        projectId: null,
+        userId: 'user-1',
+        status: VideoGenStatus.queued,
+        params: {},
+      } as never,
+      {
+        kind: 'succeeded',
+        externalStatus: 'succeeded',
+        sourceUrl: 'https://provider.test/video.mp4',
+        lastFrameUrl: null,
+        durationSec: 5,
+      },
+    );
+
+    expect(projectStatusConvergence.recalculateProjectStatus).not.toHaveBeenCalled();
+    expect(directSpy).toHaveBeenCalled();
+    expect(clipBoundSpy).not.toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('直连失败不调 convergeAfterClipFailure，且走 markDirectGenerationFailedAndRefund', async () => {
+    const { service, repository, projectStatusConvergence } = makeService();
+    const directSpy = vi.spyOn(repository, 'markDirectGenerationFailedAndRefund');
+    const clipBoundSpy = vi.spyOn(repository, 'markGenerationFailedAndRefund');
+
+    await service.applyTaskStatus(
+      {
+        id: 'gen-1',
+        clipId: null,
+        projectId: null,
+        userId: 'user-1',
+        status: VideoGenStatus.queued,
+        params: {},
+      } as never,
+      { kind: 'failed', externalStatus: 'failed', error: 'provider rejected' },
+    );
+
+    expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
+    expect(directSpy).toHaveBeenCalled();
+    expect(clipBoundSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('VideoGenerationFlowService markExpired (超时排水，不退款)', () => {
+  it('标终态排出轮询队列，但不退款（退款交积分侧孤儿回收）', async () => {
+    const { service, repository, holdReconciliation, terminalConvergence } =
+      makeService();
+    const generation = {
+      id: 'gen-1',
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      status: VideoGenStatus.queued,
+    };
+    vi.spyOn(repository, 'findGenerationById').mockResolvedValue(
+      generation as never,
+    );
+    vi.spyOn(terminalConvergence, 'reconcileIfTerminal').mockResolvedValue(false);
+    const expiredSpy = vi
+      .spyOn(repository, 'markGenerationExpiredWithoutRefund')
+      .mockResolvedValue(undefined);
+    const refundSpy = vi.spyOn(
+      holdReconciliation,
+      'refundGenerationHoldWithinTx',
+    );
+    const failedRefundSpy = vi.spyOn(
+      repository,
+      'markGenerationFailedAndRefund',
+    );
+
+    await service.markExpired('gen-1', 'cron: queued 超过 65 分钟未完成');
+
+    // 排水口保留：generation 被标终态 —— 否则卡死任务会永占轮询队列前 50 名，新任务饿死。
+    expect(expiredSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        generationId: 'gen-1',
+        status: VideoGenStatus.expired,
+      }),
+    );
+    // 视频域不退款：退款是积分侧孤儿回收（PointsHoldReclaimCron，60min）的职责。
+    expect(refundSpy).not.toHaveBeenCalled();
+    expect(failedRefundSpy).not.toHaveBeenCalled();
+  });
+
+  it('直连行（clipId=null）不调 markGenerationExpiredWithoutRefund，走 direct 变体，且不做项目收敛', async () => {
+    const { service, repository, terminalConvergence, projectStatusConvergence } =
+      makeService();
+    const generation = {
+      id: 'gen-1',
+      clipId: null,
+      projectId: null,
+      status: VideoGenStatus.queued,
+    };
+    vi.spyOn(repository, 'findGenerationById').mockResolvedValue(
+      generation as never,
+    );
+    vi.spyOn(terminalConvergence, 'reconcileIfTerminal').mockResolvedValue(false);
+    const clipBoundSpy = vi.spyOn(repository, 'markGenerationExpiredWithoutRefund');
+    const directSpy = vi.spyOn(repository, 'markDirectGenerationExpiredWithoutRefund');
+
+    await service.markExpired('gen-1', 'cron: 直连行超过 30 分钟未完成');
+
+    expect(clipBoundSpy).not.toHaveBeenCalled();
+    expect(directSpy).toHaveBeenCalledWith({
+      generationId: 'gen-1',
+      externalStatus: 'expired',
+      error: 'cron: 直连行超过 30 分钟未完成',
+    });
+    expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
+  });
 });

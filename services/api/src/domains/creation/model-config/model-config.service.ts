@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ModelType, ModelVisibility, Prisma } from '../../platform/prisma/generated';
@@ -17,11 +18,13 @@ import {
   type SchemaViolation,
 } from '@autix/domain/pricing';
 import {
-  readImageModelMetadata,
+  readProtocolKey,
   validateDescription,
   type LocalizedText,
 } from '@autix/domain/model';
-import { PROTOCOL_PRESETS, validateModelProtocolConfig } from '@autix/ai-adapters/image';
+import { validateModelProtocolConfig } from '@autix/ai-adapters/image';
+import { tryResolveAnyPreset } from '@autix/ai-adapters';
+import { validateVideoProtocolConfig } from '@autix/ai-adapters/video';
 
 export interface CreateModelConfigDto {
   name: string;
@@ -155,6 +158,8 @@ export function toClientModelConfig(record: object): Record<string, unknown> {
 
 @Injectable()
 export class ModelConfigService {
+  private readonly logger = new Logger(ModelConfigService.name);
+
   constructor(
     private readonly modelConfigRepository: ModelConfigRepository,
     private readonly membershipService: MembershipService,
@@ -422,22 +427,53 @@ export class ModelConfigService {
    *
    * 前两层各自只看一份配置：结构校验只看 schema 自己，ajv 只看 schema 能不能编译。
    * 一个 role: 'wire' 的参数在 preset 里没有绑定（上游永远收不到它，用户以为调了参数、
-   * 其实被静默丢弃），或 protocolKey 指向一个不存在的 preset（下单时 resolveImagePreset
-   * 抛未捕获异常 → 500），两层都放行。
+   * 其实被静默丢弃），或 protocolKey 指向一个不存在的 preset（下单时 resolve 抛未捕获
+   * 异常 → 500），两层都放行。
    *
    * **任一层失败即拒绝保存**，不做「警告但允许保存」—— 两份配置一旦分叉就是线上的静默失败。
    *
-   * 非图片模型（没声明 protocolKey）不适用：直接放行。
+   * 媒体分派由 protocolKey **自描述**：resolve 出来的 entry 自带 media，不依赖
+   * type/capabilities（已核实：图片与文本模型的 type 同为 general，两者都是可被误配的
+   * 自由字段，用它们做协议分派是把正确性押在数据卫生上）。
+   *
+   * 没声明 protocolKey 的模型（如纯文本模型）不适用：直接放行。
    */
   private assertProtocolConfigIsClosed(paramsSchema: ParamsSchema, metadata: unknown): void {
-    const meta = readImageModelMetadata(metadata);
-    if (!meta.protocolKey) return;
+    const protocolKey = readProtocolKey(metadata);
+    if (!protocolKey) return;
 
-    const violations = validateModelProtocolConfig({
-      paramsSchema,
-      metadata,
-      preset: PROTOCOL_PRESETS[meta.protocolKey],
-    });
+    // 保存期用 tryResolveAnyPreset：它对未知 key 返回 undefined，让我们产出一条
+    // violation（400）。resolveAnyPreset 抛的是普通 Error，会绕过下面的 violation
+    // 流程、把用户的配置错误变成 500 —— 保存期绝不能用它。
+    const entry = tryResolveAnyPreset(protocolKey);
+    if (!entry) {
+      throw new BadRequestException({
+        message: '模型协议配置与参数 schema 不闭合',
+        violations: [
+          {
+            code: 'UNKNOWN_PROTOCOL_KEY',
+            message: `unknown protocolKey "${protocolKey}"`,
+          },
+        ],
+      });
+    }
+
+    if (entry.media === 'video') {
+      const meta = metadata as { videoModelKind?: unknown } | null;
+      if (!meta?.videoModelKind) {
+        // 不硬失败：现网可能已有依赖该 fallback 的模型记录，硬失败会中断线上生成。
+        // 告警足以暴露配置缺失。
+        this.logger.warn(
+          `video model config has no explicit metadata.videoModelKind — falling back to 'compatible' capabilities, which drives paramsSchema and therefore pricing`,
+        );
+      }
+    }
+
+    const violations =
+      entry.media === 'video'
+        ? validateVideoProtocolConfig({ paramsSchema, preset: entry.preset })
+        : validateModelProtocolConfig({ paramsSchema, metadata, preset: entry.preset });
+
     if (violations.length > 0) {
       throw new BadRequestException({
         message: '模型协议配置与参数 schema 不闭合',

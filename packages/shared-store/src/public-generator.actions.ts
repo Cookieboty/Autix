@@ -3,6 +3,7 @@ import {
   pointsApi,
   publicImageGeneratorApi,
   videoProjectApi,
+  videoGenApi,
   type TaskEstimateInput,
   type TaskEstimateResult,
   type ImageTemplate,
@@ -10,6 +11,7 @@ import {
   type PublicImageGenerateResult,
   type PublicImageHistoryItem,
   type ImageGenerationGalleryPost,
+  type DirectVideoGenerationDto,
 } from '@autix/sdk';
 
 export type {
@@ -23,6 +25,7 @@ export type {
   PublicImageGenerateResult,
   PublicImageHistoryItem,
   ImageGenerationGalleryPost,
+  DirectVideoGenerationDto,
 };
 
 export const publicGeneratorActions = {
@@ -63,5 +66,27 @@ export const publicGeneratorActions = {
   ): Promise<string> => {
     const res = await videoProjectApi.optimizePrompt(input);
     return res.data.optimizedPrompt;
+  },
+  generateVideoDirect: async (input: {
+    prompt: string;
+    params?: Record<string, unknown>;
+    materials?: Array<{ role: string; url: string; sourceType?: string; name?: string }>;
+  }): Promise<{ generationId: string; taskId: string }> => {
+    const res = await videoGenApi.generate(input);
+    return res.data;
+  },
+  getVideoGeneration: async (id: string): Promise<DirectVideoGenerationDto> => {
+    const res = await videoGenApi.get(id);
+    return res.data;
+  },
+  listVideoHistory: async (params?: {
+    page?: number;
+    pageSize?: number;
+  }): Promise<DirectVideoGenerationDto[]> => {
+    const res = await videoGenApi.history(params);
+    return res.data.items ?? [];
+  },
+  deleteVideoHistory: async (id: string): Promise<void> => {
+    await videoGenApi.deleteHistory(id);
   },
 };

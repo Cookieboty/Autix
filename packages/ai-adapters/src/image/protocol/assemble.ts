@@ -1,5 +1,5 @@
 import { buildEndpoint } from '../../core/http';
-import { setPath } from './bind';
+import { setPath } from '../../core/bind';
 import { TRANSFORMS } from './transforms';
 import type {
   BindingSpec, ImageCallRequest, ParamStrategy, ProtocolPreset,

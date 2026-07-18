@@ -7,6 +7,7 @@ export type VideoResolution = '480p' | '720p' | '1080p' | '4k';
 
 export type VideoAspectRatio =
   | 'adaptive'
+  | 'auto'
   | '16:9'
   | '9:16'
   | '4:3'
@@ -21,6 +22,9 @@ export type VideoModelKind =
   | 'seedance-1.5-pro'
   | 'seedance-1.0-pro'
   | 'seedance-1.0-pro-fast'
+  | 'veo3.1-fast'
+  | 'veo3.1-lite'
+  | 'veo3.1-quality'
   | 'compatible';
 
 export interface VideoModelHint {
@@ -136,6 +140,40 @@ const VIDEO_MODEL_CAPABILITY_BASES: Record<VideoModelKind, VideoModelCapabilityB
     defaultResolution: '1080p',
   },
 
+  // PoYo VEO 3.1 官方系列：aspect_ratio 只有 auto/16:9/9:16，duration 4/6/8。
+  // fast/quality 支持 4K，lite 不支持 4K。defaultRatio 用 16:9（auto 仅图生视频/首尾帧可用，
+  // 文生视频用 auto 会被 PoYo 拒）。
+  'veo3.1-fast': {
+    kind: 'veo3.1-fast',
+    displayName: 'VEO 3.1 Fast',
+    resolutions: ['720p', '1080p', '4k'],
+    defaultResolution: '720p',
+    durations: [4, 6, 8],
+    defaultDuration: 8,
+    ratios: ['16:9', '9:16', 'auto'],
+    defaultRatio: '16:9',
+  },
+  'veo3.1-lite': {
+    kind: 'veo3.1-lite',
+    displayName: 'VEO 3.1 Lite',
+    resolutions: ['720p', '1080p'],
+    defaultResolution: '720p',
+    durations: [4, 6, 8],
+    defaultDuration: 8,
+    ratios: ['16:9', '9:16', 'auto'],
+    defaultRatio: '16:9',
+  },
+  'veo3.1-quality': {
+    kind: 'veo3.1-quality',
+    displayName: 'VEO 3.1 Quality',
+    resolutions: ['720p', '1080p', '4k'],
+    defaultResolution: '720p',
+    durations: [4, 6, 8],
+    defaultDuration: 8,
+    ratios: ['16:9', '9:16', 'auto'],
+    defaultRatio: '16:9',
+  },
+
   // Generic compatible video providers cannot assume 4K support.
   compatible: {
     kind: 'compatible',
@@ -171,6 +209,9 @@ function configuredVideoModelKind(value: unknown): VideoModelKind | null {
     value === 'seedance-1.5-pro' ||
     value === 'seedance-1.0-pro' ||
     value === 'seedance-1.0-pro-fast' ||
+    value === 'veo3.1-fast' ||
+    value === 'veo3.1-lite' ||
+    value === 'veo3.1-quality' ||
     value === 'compatible'
   ) {
     return value;
@@ -192,6 +233,14 @@ export function detectVideoModelKind(hint?: VideoModelHint | null): VideoModelKi
   if (configured) return configured;
 
   const id = `${hint?.provider ?? ''} ${hint?.model ?? ''}`.toLowerCase();
+
+  // PoYo VEO 3.1：按 model-id 里的档位词判定（veo3.1-fast/lite/quality-official）。
+  if (id.includes('veo')) {
+    if (id.includes('lite')) return 'veo3.1-lite';
+    if (id.includes('quality')) return 'veo3.1-quality';
+    return 'veo3.1-fast';
+  }
+
   const isSeedance = id.includes('seedance') || id.includes('doubao-seedance');
   if (!isSeedance) return 'compatible';
 

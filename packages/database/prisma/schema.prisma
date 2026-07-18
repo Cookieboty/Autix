@@ -1844,15 +1844,19 @@ model video_clip_materials {
 
 model video_clip_generations {
   id                 String         @id @default(cuid())
-  clipId             String
-  projectId          String
+  clipId             String?
+  projectId          String?
   userId             String
   user               User           @relation("VideoClipGenerationUser", fields: [userId], references: [id], onDelete: Cascade)
   variantLabel       String?        @db.VarChar(50)
   model              String         @db.VarChar(100)
   resolvedPrompt     String
   params             Json
-  seedanceTaskId     String?        @db.VarChar(200)
+  providerTaskId     String?        @db.VarChar(200)
+  /// 提交时的协议快照（不可变）。轮询/回调据此解析 preset，避免用户中途改模型导致串渠道。
+  protocolKey        String?        @db.VarChar(64)
+  /// 提交时的模型配置 identity（不可变）。用于解析 apiKey/baseUrl。
+  modelConfigId      String?
   status             VideoGenStatus @default(pending)
   videoUrl           String?
   lastFrameUrl       String?
@@ -1864,12 +1868,12 @@ model video_clip_generations {
   createdAt          DateTime       @default(now())
   completedAt        DateTime?
 
-  clip video_clips @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  clip video_clips? @relation(fields: [clipId], references: [id], onDelete: Cascade)
 
   @@index([clipId])
   @@index([projectId])
   @@index([userId, createdAt])
-  @@index([seedanceTaskId])
+  @@index([protocolKey, providerTaskId])
 }
 
 enum MaterialLibrarySource {

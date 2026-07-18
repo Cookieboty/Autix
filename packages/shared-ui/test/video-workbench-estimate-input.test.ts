@@ -5,7 +5,7 @@ import {
 import type { ModelConfigItem, VideoClip } from '@autix/shared-store';
 
 describe('buildVideoEstimateInput', () => {
-  test('wraps resolution/seconds/referenceImages/hasVideoInput/hasAudioInput into params, modelConfigId at top level', () => {
+  test('wraps resolution/duration/referenceImages/hasVideoInput/hasAudioInput into params, modelConfigId at top level', () => {
     const clip = {
       params: { resolution: '720p', duration: 5, modelConfigId: 'model-1' },
       materials: [
@@ -22,7 +22,7 @@ describe('buildVideoEstimateInput', () => {
       modelConfigId: 'model-1',
       params: {
         resolution: '720p',
-        seconds: 5,
+        duration: 5,
         referenceImages: 1,
         hasVideoInput: true,
         hasAudioInput: false,
@@ -57,7 +57,7 @@ describe('buildVideoEstimateInput', () => {
 });
 
 describe('buildVideoBatchEstimateInput', () => {
-  test('accumulates seconds/referenceImages inside params across clips, keeps taskType/modelConfigId at top level', () => {
+  test('accumulates duration/referenceImages inside params across clips, keeps taskType/modelConfigId at top level', () => {
     const clips = [
       {
         id: 'clip-1',
@@ -81,7 +81,7 @@ describe('buildVideoBatchEstimateInput', () => {
       modelConfigId: 'model-1',
       params: {
         resolution: '720p',
-        seconds: 9,
+        duration: 9,
         referenceImages: 1,
         hasVideoInput: true,
         hasAudioInput: false,

@@ -91,7 +91,8 @@ export class VideoMaterialService {
       videoUrl: gen.videoUrl!,
       lastFrameUrl: gen.lastFrameUrl,
       prompt: gen.resolvedPrompt,
-      projectTitle: gen.clip.project.title,
+      // findCompletedVideoGenerations 的 where 已过滤 clipId: { not: null }，故 clip 恒非空。
+      projectTitle: gen.clip!.project.title,
       createdAt: gen.createdAt,
     }));
 

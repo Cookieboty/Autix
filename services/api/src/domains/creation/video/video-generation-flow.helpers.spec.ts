@@ -16,14 +16,13 @@ import {
   buildPendingGenerationInput,
   buildQueuedGenerationPollWindow,
   buildSeedanceCostEstimateInput,
-  buildSeedanceTaskRequestOptions,
   buildVideoHoldInput,
   getFirstPendingClip,
   getPendingHeadClips,
-  normalizeSeedanceTaskOutcome,
   normalizeVideoDuration,
   normalizeVideoResolution,
   presentGenerateAllClipResults,
+  redactProviderRequest,
   resolveClipPrompt,
   resolveVideoPricingTaskType,
   resolveGenerateAllClipPlan,
@@ -137,6 +136,27 @@ describe('video generation flow helpers', () => {
     );
   });
 
+  it('sends a single clip prompt verbatim — no 分镜脚本 scaffolding even under forced storyboard mode', () => {
+    // generateAllClips 对单条 clip 也会强制 generationMode='storyboard'；这条锁死：
+    // 单条 + 无整片提示词时，原样透传用户 prompt，绝不包成「完整分镜脚本 / 分镜 1「x」：x」。
+    expect(
+      resolveStoryboardVideoPrompt({
+        params: { generationMode: 'storyboard' },
+        clips: [{ order: 1, title: '骑摩托的妹子', prompt: '骑摩托的妹子' }],
+      }),
+    ).toBe('骑摩托的妹子');
+  });
+
+  it('keeps the 整片提示词 when a single clip has a global storyboard prompt', () => {
+    // 单条但有整片提示词：仍需带上整片风格，不能只发 clip prompt。
+    expect(
+      resolveStoryboardVideoPrompt({
+        params: { generationMode: 'storyboard', storyboardPrompt: '雨夜霓虹' },
+        clips: [{ order: 1, title: '开场', prompt: '城市远景' }],
+      }),
+    ).toBe('整片提示词：雨夜霓虹\n\n完整分镜脚本：\n分镜 1「开场」：城市远景');
+  });
+
   it('resolves generate_audio params with existing precedence', () => {
     expect(
       resolveVideoGenerateAudio({
@@ -155,61 +175,28 @@ describe('video generation flow helpers', () => {
     expect(resolveVideoPricingTaskType({ resolution: '720p' }, 'seedance-pro')).toBe('video_generation');
   });
 
-  it('builds Seedance task request options from clip params without provider side effects', () => {
-    const content = [{ type: 'text' as const, text: 'prompt' }];
-
-    expect(
-      buildSeedanceTaskRequestOptions({
-        params: {
-          model: 'seedance-fast',
-          resolution: '480p',
-          ratio: '9:16',
-          duration: 6,
-          seed: 123,
-          generate_audio: true,
-          watermark: true,
-        },
-        model: 'seedance-pro',
-        content,
-        callbackUrl: 'https://api.test/callback',
-        returnLastFrame: true,
-      }),
-    ).toEqual({
-      // FIX-3: 始终使用服务端解析的 model（seedance-pro），忽略客户端 params.model（seedance-fast）。
-      model: 'seedance-pro',
-      content,
-      callbackUrl: 'https://api.test/callback',
-      returnLastFrame: true,
-      generateAudio: true,
-      resolution: '480p',
-      ratio: '9:16',
-      duration: 6,
-      seed: 123,
-      watermark: true,
-    });
-  });
-
   it('builds queued generation poll windows and splits queued generations', () => {
-    const now = new Date('2026-01-01T00:40:00.000Z');
+    // 排水窗口 65min（晚于积分侧孤儿回收的 60min 退款）：now=02:05 → expireBefore=01:00。
+    const now = new Date('2026-01-01T02:05:00.000Z');
     const window = buildQueuedGenerationPollWindow(now);
     expect(window).toEqual({
-      expireBefore: new Date('2026-01-01T00:10:00.000Z'),
+      expireBefore: new Date('2026-01-01T01:00:00.000Z'),
     });
 
     const expired = {
       id: 'gen-expired',
-      createdAt: new Date('2026-01-01T00:09:59.999Z'),
-      seedanceTaskId: 'task-expired',
+      createdAt: new Date('2026-01-01T00:59:59.999Z'),
+      providerTaskId: 'task-expired',
     };
     const pollable = {
       id: 'gen-pollable',
-      createdAt: new Date('2026-01-01T00:10:00.000Z'),
-      seedanceTaskId: 'task-pollable',
+      createdAt: new Date('2026-01-01T01:00:00.000Z'),
+      providerTaskId: 'task-pollable',
     };
     const missingTask = {
       id: 'gen-missing-task',
-      createdAt: new Date('2026-01-01T00:20:00.000Z'),
-      seedanceTaskId: null,
+      createdAt: new Date('2026-01-01T01:20:00.000Z'),
+      providerTaskId: null,
     };
 
     expect(
@@ -240,7 +227,7 @@ describe('video generation flow helpers', () => {
   });
 
   describe('buildSeedanceCostEstimateInput', () => {
-    it('packs resolution/seconds/ratio into params under the task/params contract, with modelConfigId when known', () => {
+    it('packs resolution/duration/ratio into params under the task/params contract, with modelConfigId when known', () => {
       expect(
         buildSeedanceCostEstimateInput({
           params: { resolution: '1080P', duration: 5.2, ratio: '9:16', sourceTemplateId: 'tpl-1' },
@@ -252,7 +239,7 @@ describe('video generation flow helpers', () => {
         modelConfigId: 'model-config-1',
         params: {
           resolution: '1080p',
-          seconds: 6,
+          duration: 6,
           ratio: '9:16',
         },
         membershipLevel: 3,
@@ -268,14 +255,14 @@ describe('video generation flow helpers', () => {
         taskType: 'video_generation',
         params: {
           resolution: '720p',
-          seconds: 5,
+          duration: 5,
         },
       });
       expect(result).not.toHaveProperty('modelConfigId');
       expect(result).not.toHaveProperty('membershipLevel');
       expect(result.params).not.toHaveProperty('ratio');
       // video params are only what the `video` pricing preset declares
-      // (resolution/seconds/ratio) — no referenceImages/hasVideoInput/hasAudioInput,
+      // (resolution/duration/ratio) — no referenceImages/hasVideoInput/hasAudioInput,
       // those never appear in the video preset's paramsSchema.
       expect(result.params).not.toHaveProperty('referenceImages');
       expect(result.params).not.toHaveProperty('hasVideoInput');
@@ -579,51 +566,6 @@ describe('video generation flow helpers', () => {
     });
   });
 
-  it('normalizes Seedance task outcome for callback and refresh convergence', () => {
-    expect(normalizeSeedanceTaskOutcome({})).toEqual({
-      kind: 'missing_status',
-    });
-    expect(
-      normalizeSeedanceTaskOutcome({
-        status: 'succeeded',
-        content: {
-          video_url: 'https://provider.test/video.mp4',
-          last_frame_url: 'https://provider.test/last.png',
-        },
-        duration: 5,
-      }),
-    ).toEqual({
-      kind: 'succeeded',
-      externalStatus: 'succeeded',
-      sourceUrl: 'https://provider.test/video.mp4',
-      lastFrameUrl: 'https://provider.test/last.png',
-      durationSec: 5,
-    });
-    expect(
-      normalizeSeedanceTaskOutcome({
-        status: 'failed',
-        error: { message: 'provider rejected' },
-      }),
-    ).toEqual({
-      kind: 'failed',
-      externalStatus: 'failed',
-      generationStatus: VideoGenStatus.failed,
-      error: 'provider rejected',
-      refundReason: '视频生成失败: provider rejected',
-    });
-    expect(normalizeSeedanceTaskOutcome({ status: 'expired' })).toEqual({
-      kind: 'failed',
-      externalStatus: 'expired',
-      generationStatus: VideoGenStatus.expired,
-      error: 'expired',
-      refundReason: '视频生成超时',
-    });
-    expect(normalizeSeedanceTaskOutcome({ status: 'running' })).toEqual({
-      kind: 'active',
-      externalStatus: 'running',
-    });
-  });
-
   it('selects generate-all candidates and presents successful results', () => {
     const clips = [
       {
@@ -662,5 +604,22 @@ describe('video generation flow helpers', () => {
         null,
       ]),
     ).toEqual([{ generationId: '123', taskId: 'task-1', clipId: 'clip-1' }]);
+  });
+});
+
+describe('redactProviderRequest', () => {
+  it('masks callback_url (含 VIDEO_CALLBACK_SECRET) 但不改其他字段', () => {
+    const body = { model: 'ark', content: [{ type: 'text' }], callback_url: 'https://cb/x?token=secret' };
+    const redacted = redactProviderRequest(body);
+    expect(redacted.callback_url).toBe('[REDACTED]');
+    expect(redacted.model).toBe('ark');
+    expect(redacted.content).toBe(body.content);
+    // 返回浅拷贝，不改原对象（原对象仍带真实 token 发给上游）。
+    expect(body.callback_url).toBe('https://cb/x?token=secret');
+  });
+
+  it('无 callback_url 时原样返回', () => {
+    const body = { model: 'poyo', input: { prompt: 'x' } };
+    expect(redactProviderRequest(body)).toBe(body);
   });
 });

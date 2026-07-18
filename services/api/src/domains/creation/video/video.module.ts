@@ -6,7 +6,6 @@ import { ModelConfigModule } from '../model-config/model-config.module';
 import { AuthModule } from '../../identity/auth/auth.module';
 import { MembershipModule } from '../../billing/membership/membership.module';
 import { RiskModule } from '../risk/risk.module';
-import { SeedanceApiService } from './seedance-api.service';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
 import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
 import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
@@ -27,6 +26,8 @@ import { VideoMaterialController } from './video-material.controller';
 import { VideoCallbackController } from './video-callback.controller';
 import { VideoWorkflowTemplatesController } from './video-workflow-templates.controller';
 import { VideoWorkflowTemplateRepository } from './video-workflow-template.repository';
+import { VideoDirectGenerationService } from './video-direct-generation.service';
+import { VideoGenController } from './video-gen.controller';
 
 @Module({
   imports: [
@@ -43,9 +44,9 @@ import { VideoWorkflowTemplateRepository } from './video-workflow-template.repos
     VideoMaterialController,
     VideoCallbackController,
     VideoWorkflowTemplatesController,
+    VideoGenController,
   ],
   providers: [
-    SeedanceApiService,
     VideoAssetPersistenceService,
     VideoCallbackUrlBuilder,
     VideoChainTriggerDispatcherService,
@@ -62,6 +63,7 @@ import { VideoWorkflowTemplateRepository } from './video-workflow-template.repos
     VideoChatService,
     VideoWorkflowTemplatesService,
     VideoWorkflowTemplateRepository,
+    VideoDirectGenerationService,
   ],
   exports: [
     VideoChatService,

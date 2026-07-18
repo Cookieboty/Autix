@@ -1,13 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { createHash, timingSafeEqual } from 'node:crypto';
-
-// 常量时间比较（先 sha256 等长化，避免长度侧信道），任一为空即失败。
-function secretsMatch(provided: string | undefined, expected: string): boolean {
-  if (!provided) return false;
-  const a = createHash('sha256').update(provided).digest();
-  const b = createHash('sha256').update(expected).digest();
-  return timingSafeEqual(a, b);
-}
+import { parseVideoCallback, resolveVideoPreset, verifyVideoCallback } from '@autix/ai-adapters/video';
 
 type LoggerLike = {
   log(message: string): void;
@@ -20,40 +12,57 @@ type ConfigLike = {
 };
 
 type GenerationFlowLike = {
-  handleCallback(taskId: string, body: Record<string, unknown>): Promise<void>;
+  handleCallback(
+    protocolKey: string,
+    taskId: string,
+    body: Record<string, unknown>,
+  ): Promise<void>;
 };
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * 回调入口的共用处理逻辑，供新路由（`:protocolKey`）与旧路由（固定 arkVideoV3）复用。
+ *
+ * 验签与解析都经协议引擎（Task 1）：`verifyVideoCallback` 保留了现网的 fail-closed
+ * 契约 —— 密钥未配置（`secretRef` 指向的环境变量缺失）时**拒绝**，而不是放行。
+ */
 export async function handleVideoCallbackRequest(args: {
+  protocolKey: string;
   token?: string;
   body: Record<string, unknown>;
   config: ConfigLike;
   generationFlow: GenerationFlowLike;
   logger: LoggerLike;
 }) {
-  const secret = args.config.get<string>('VIDEO_CALLBACK_SECRET');
-  // fail-closed：未配置密钥时拒绝，避免任何人伪造回调驱动状态机/计费。
-  if (!secret) {
-    args.logger.error('Rejected video callback: VIDEO_CALLBACK_SECRET not configured');
-    throw new UnauthorizedException();
-  }
-  if (!secretsMatch(args.token, secret)) {
-    args.logger.warn('Rejected video callback: invalid or missing token');
+  const preset = resolveVideoPreset(args.protocolKey);
+  const secretRef = preset.webhook?.verification.secretRef;
+  const secret = secretRef ? args.config.get<string>(secretRef) : undefined;
+
+  try {
+    verifyVideoCallback({ preset, token: args.token, secret });
+  } catch (err) {
+    args.logger.warn(`Rejected video callback: ${errorMessage(err)}`);
     throw new UnauthorizedException();
   }
 
-  const taskId = args.body.id as string | undefined;
-  if (!taskId) {
+  const { providerTaskId } = parseVideoCallback({ preset, body: args.body });
+  if (!providerTaskId) {
     args.logger.warn('Callback received without task id');
     return { received: true };
   }
 
-  args.logger.log(`Seedance callback received: taskId=${taskId} status=${args.body.status}`);
+  args.logger.log(
+    `Video callback received: protocolKey=${args.protocolKey} taskId=${providerTaskId} status=${args.body.status}`,
+  );
 
   try {
-    await args.generationFlow.handleCallback(taskId, args.body);
+    await args.generationFlow.handleCallback(args.protocolKey, providerTaskId, args.body);
   } catch (err) {
     args.logger.error(
-      `Callback processing failed: taskId=${taskId} ${String(err instanceof Error ? err.message : err)}`,
+      `Callback processing failed: protocolKey=${args.protocolKey} taskId=${providerTaskId} ${errorMessage(err)}`,
     );
   }
 

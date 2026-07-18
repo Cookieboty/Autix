@@ -17,11 +17,23 @@ export class PricingConfigAdminRepository {
     return value === null ? Prisma.JsonNull : value;
   }
 
-  /** Backs `GET /admin/models/:id`: the full description locale map plus the raw schemas, for an operator to edit. */
+  /**
+   * Backs `GET /admin/models/:id`: the full description locale map plus the raw schemas, for an
+   * operator to edit. Also backs assertModelIsPriceable and assertBindingMediaMatches
+   * (pricing-config-admin.service.ts) — `metadata` is selected so the latter can read
+   * `metadata.protocolKey` via readProtocolKey without a second query.
+   */
   async findModelConfig(modelConfigId: string) {
     return this.prisma.model_configs.findUnique({
       where: { id: modelConfigId },
-      select: { id: true, description: true, paramsSchema: true, pricingSchema: true, schemaVersion: true },
+      select: {
+        id: true,
+        description: true,
+        metadata: true,
+        paramsSchema: true,
+        pricingSchema: true,
+        schemaVersion: true,
+      },
     });
   }
 
@@ -75,6 +87,10 @@ export class PricingConfigAdminRepository {
 
   async listTaskDefinitions() {
     return this.prisma.task_definitions.findMany({ orderBy: { sort: 'asc' } });
+  }
+
+  async findTaskDefinition(taskType: string) {
+    return this.prisma.task_definitions.findUnique({ where: { taskType } });
   }
 
   /** taskType is @unique — a duplicate raises P2002; the service translates it to 409. */

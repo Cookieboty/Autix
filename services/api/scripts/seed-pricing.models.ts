@@ -54,7 +54,6 @@ export const SEED_MODELS: SeedModelRow[] = [
   { name: 'DeepSeek V4 Flash', provider: 'amux', model: 'deepseek-v4-flash', type: 'general', capabilities: ['text'], isDefault: false, metadata: {}, description: { en: 'DeepSeek fast model', 'zh-CN': 'DeepSeek 快速模型' } },
   // 智谱 GLM 5.2 / 5.1
   { name: 'GLM-5.2', provider: 'amux', model: 'glm-5.2', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'Zhipu GLM flagship model', 'zh-CN': '智谱 GLM 旗舰模型' } },
-  // glm-5.1 已移除：线上作为 private 删除，且有 public GLM-5.2 覆盖同系列，seed 无需再建。
   // Google Gemini 3.5
   { name: 'Gemini 3.5 Pro', provider: 'amux', model: 'gemini-3.5-pro', type: 'general', capabilities: ['text', 'vision', 'reasoning'], isDefault: false, metadata: {}, description: { en: 'Google Gemini flagship model', 'zh-CN': 'Google Gemini 旗舰模型' } },
   { name: 'Gemini 3.5 Flash', provider: 'amux', model: 'gemini-3.5-flash', type: 'general', capabilities: ['text', 'vision'], isDefault: false, metadata: {}, description: { en: 'Google Gemini fast model', 'zh-CN': 'Google Gemini 快速模型' } },
@@ -80,9 +79,32 @@ export const SEED_MODELS: SeedModelRow[] = [
   { name: 'Seedream 5.0 Lite', provider: 'amux', model: 'doubao-seedream-5-0-lite', type: 'general', capabilities: ['image'], isDefault: false, metadata: { limits: { maxCount: 15 }, operations: ['generate'], modelFamily: 'seedream', protocolKey: 'doubao-images@v1' }, description: { en: 'ByteDance Seedream lite model', 'zh-CN': '字节 Seedream 轻量模型' } },
 
   // —— 视频（video preset）—— metadata.videoModelKind 定档
-  // doubao-seedance-2.0 已移除：线上作为 private 删除，video 能力由 public 的 Fast 变体覆盖，
-  // video 默认改由 Fast 承担（isDefault:true）。
-  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0-fast' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
+  // doubao-seedance-2.0 恢复：与 Fast 变体一并提供。Fast 仍是 video 默认（isDefault:true），
+  // 2.0 为非默认可选项。两者 paramsSchema 由 buildVideoParamsSchema 按各自能力表生成
+  // （2.0 含 1080p/4k、Fast 到 720p），pricingSchema 走 MODEL_PRICING 的逐模型档位。
+  { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance video model', 'zh-CN': 'Seedance 视频模型' } },
+  { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0-fast', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
+
+  // —— PoYo VEO 3.1（第二家视频渠道，protocolKey=poyo-veo@v1）——
+  // baseUrl(https://api.poyo.ai)/apiKey 由运营在 admin 补；schema/pricing 从 VIDEO_MODEL_CONFIGS 写全量。
+  { name: 'VEO 3.1 Fast', provider: 'poyo', model: 'veo3.1-fast-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-fast', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 fast official', 'zh-CN': 'PoYo VEO 3.1 快速官方版' } },
+  { name: 'VEO 3.1 Lite', provider: 'poyo', model: 'veo3.1-lite-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-lite', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 lite official', 'zh-CN': 'PoYo VEO 3.1 轻量官方版' } },
+  { name: 'VEO 3.1 Quality', provider: 'poyo', model: 'veo3.1-quality-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-quality', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 quality official', 'zh-CN': 'PoYo VEO 3.1 高质量官方版' } },
+
+  // —— PoYo Wan 2.7（第三家视频渠道，同 PoYo 平台）—— 四个模型各一个 protocolKey（请求体不同）。
+  // 不设 videoModelKind（detectVideoModelKind 回落 compatible，仅用于分辨率兜底）；表单从 paramsSchema 渲染。
+  { name: 'Wan 2.7 文生视频', provider: 'poyo', model: 'wan2.7-text-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-wan-t2v@v1' }, description: { en: 'PoYo Wan 2.7 text-to-video', 'zh-CN': 'PoYo Wan 2.7 文生视频' } },
+  { name: 'Wan 2.7 图生视频', provider: 'poyo', model: 'wan2.7-image-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-wan-i2v@v1' }, description: { en: 'PoYo Wan 2.7 image-to-video', 'zh-CN': 'PoYo Wan 2.7 图生视频' } },
+  { name: 'Wan 2.7 参考生视频', provider: 'poyo', model: 'wan2.7-reference-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-wan-ref@v1' }, description: { en: 'PoYo Wan 2.7 reference-to-video', 'zh-CN': 'PoYo Wan 2.7 参考生视频' } },
+  { name: 'Wan 2.7 视频编辑', provider: 'poyo', model: 'wan2.7-edit-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-wan-edit@v1' }, description: { en: 'PoYo Wan 2.7 edit-video', 'zh-CN': 'PoYo Wan 2.7 视频编辑' } },
+
+  // —— PoYo Grok Imagine（第四家，同 PoYo 平台）——
+  { name: 'Grok Imagine', provider: 'poyo', model: 'grok-imagine', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-grok-imagine@v1' }, description: { en: 'PoYo Grok Imagine (text/image-to-video)', 'zh-CN': 'PoYo Grok Imagine 文/图生视频' } },
+  { name: 'Grok Imagine Video 1.5', provider: 'poyo', model: 'grok-imagine-video-1.5', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-grok-v15@v1' }, description: { en: 'PoYo Grok Imagine Video 1.5 (image-to-video)', 'zh-CN': 'PoYo Grok Imagine Video 1.5 图生视频' } },
+
+  // —— PoYo Happy Horse（阿里，同 PoYo 平台）—— v1 只做 t2v/i2v/ref（edit 暂不接）。
+  { name: 'Happy Horse', provider: 'poyo', model: 'happy-horse', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-happyhorse@v1' }, description: { en: 'PoYo Happy Horse (t2v/i2v/ref)', 'zh-CN': 'PoYo Happy Horse 文/图/参考生视频' } },
+  { name: 'Happy Horse 1.1', provider: 'poyo', model: 'happy-horse-1.1', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-happyhorse-11@v1' }, description: { en: 'PoYo Happy Horse 1.1 (t2v/i2v/ref)', 'zh-CN': 'PoYo Happy Horse 1.1 文/图/参考生视频' } },
 ];
 
 /**
@@ -297,4 +319,167 @@ export const IMAGE_MODEL_CONFIGS: Record<
       ],
     } as PricingSchema,
   },
+};
+
+const JSON_SCHEMA_DRAFT_VIDEO = 'https://json-schema.org/draft/2020-12/schema';
+
+/**
+ * VEO 的 per-model paramsSchema。**每个模型按自己的 schema 渲染**（不复用
+ * buildVideoParamsSchema / 全局 VIDEO_ASPECT_RATIO_VALUES）：aspect_ratio 只有
+ * 16:9/9:16/auto，duration 只有 4/6/8，sound(generate_audio) 作计价+wire 参数。
+ * resolution 逐模型不同（lite 无 4K）。
+ */
+function veoParamsSchema(resolutions: string[]): ParamsSchema {
+  return {
+    $schema: JSON_SCHEMA_DRAFT_VIDEO,
+    type: 'object',
+    required: ['resolution', 'duration'],
+    properties: {
+      resolution: { type: 'string', enum: resolutions, default: '720p', 'x-ui': { role: 'both', control: 'chips', order: 10, labelKey: 'pricing.params.resolution' } },
+      ratio: { type: 'string', enum: ['16:9', '9:16', 'auto'], default: '16:9', 'x-ui': { role: 'wire', control: 'chips', order: 20, labelKey: 'pricing.params.ratio' } },
+      duration: { type: 'integer', enum: [4, 6, 8], default: 8, 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+      generate_audio: { type: 'boolean', default: true, 'x-ui': { role: 'both', control: 'switch', order: 40, labelKey: 'pricing.params.generateAudio' } },
+    },
+  } as ParamsSchema;
+}
+
+/**
+ * VEO 每秒积分（1 美元 = 500 积分，PoYo 官方每秒价 × 500）。计价维度是「分辨率 × 是否出声」——
+ * 用**互斥的 when 谓词**切换每秒单价，只有一条命中 → unitCost × duration。
+ * 无声用 `generate_audio ne true`（false / 未设都算无声），有声用 `eq true`。
+ */
+function veoGroupedPricing(sdNoAudio: number, sdAudio: number, k4NoAudio: number, k4Audio: number): PricingSchema {
+  return {
+    terms: [
+      // 首项必须是 const（校验器 FIRST_TERM_MUST_BE_CONST）：所有条件项跳过时兜底 0。
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'sd-noaudio', op: 'add', perUnit: { param: 'duration', unitCost: sdNoAudio }, when: { all: [{ param: 'resolution', op: 'in', value: ['720p', '1080p'] }, { param: 'generate_audio', op: 'ne', value: true }] } },
+      { id: 'sd-audio', op: 'add', perUnit: { param: 'duration', unitCost: sdAudio }, when: { all: [{ param: 'resolution', op: 'in', value: ['720p', '1080p'] }, { param: 'generate_audio', op: 'eq', value: true }] } },
+      { id: 'k4-noaudio', op: 'add', perUnit: { param: 'duration', unitCost: k4NoAudio }, when: { all: [{ param: 'resolution', op: 'eq', value: '4k' }, { param: 'generate_audio', op: 'ne', value: true }] } },
+      { id: 'k4-audio', op: 'add', perUnit: { param: 'duration', unitCost: k4Audio }, when: { all: [{ param: 'resolution', op: 'eq', value: '4k' }, { param: 'generate_audio', op: 'eq', value: true }] } },
+    ],
+  } as PricingSchema;
+}
+
+// lite 无 4K，且 720p 与 1080p 单价不同，故逐档写。
+const veoLitePricing: PricingSchema = {
+  terms: [
+    { id: 'base', op: 'add', const: 0 },
+    { id: 'r720-noaudio', op: 'add', perUnit: { param: 'duration', unitCost: 9 }, when: { all: [{ param: 'resolution', op: 'eq', value: '720p' }, { param: 'generate_audio', op: 'ne', value: true }] } },
+    { id: 'r720-audio', op: 'add', perUnit: { param: 'duration', unitCost: 15 }, when: { all: [{ param: 'resolution', op: 'eq', value: '720p' }, { param: 'generate_audio', op: 'eq', value: true }] } },
+    { id: 'r1080-noaudio', op: 'add', perUnit: { param: 'duration', unitCost: 15 }, when: { all: [{ param: 'resolution', op: 'eq', value: '1080p' }, { param: 'generate_audio', op: 'ne', value: true }] } },
+    { id: 'r1080-audio', op: 'add', perUnit: { param: 'duration', unitCost: 24 }, when: { all: [{ param: 'resolution', op: 'eq', value: '1080p' }, { param: 'generate_audio', op: 'eq', value: true }] } },
+  ],
+} as PricingSchema;
+
+/**
+ * 视频模型的 per-model paramsSchema + pricingSchema（按 model-id 索引，同 IMAGE_MODEL_CONFIGS）。
+ * seedModelSchemas() 里视频模型优先查这里；命中就写全量，不命中的（seedance）仍走
+ * buildVideoParamsSchema + MODEL_PRICING 的既有路径。
+ */
+/**
+ * Wan 2.7 的 per-model paramsSchema。resolution 只 720p/1080p，比例 16:9/9:16/1:1/4:3/3:4
+ * （i2v 无比例，由图片决定）。duration 逐模型不同（t2v 5/10/15、ref/edit 2-10 取 5/10）。
+ * Wan 无 generate_audio 布尔（音频经 audio_url），故不含 sound 参数。
+ */
+function wanParamsSchema(durations: number[], hasRatio: boolean): ParamsSchema {
+  const properties: Record<string, unknown> = {
+    resolution: { type: 'string', enum: ['720p', '1080p'], default: '720p', 'x-ui': { role: 'both', control: 'chips', order: 10, labelKey: 'pricing.params.resolution' } },
+    duration: { type: 'integer', enum: durations, default: durations[0], 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+  };
+  if (hasRatio) {
+    properties.ratio = { type: 'string', enum: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9', 'x-ui': { role: 'wire', control: 'chips', order: 20, labelKey: 'pricing.params.ratio' } };
+  }
+  return { $schema: JSON_SCHEMA_DRAFT_VIDEO, type: 'object', required: ['resolution', 'duration'], properties } as ParamsSchema;
+}
+
+// Wan 计价：所有模型同价，仅按 分辨率×时长。720p $0.06/s=30、1080p $0.09/s=45（×500）。
+const wanPricing: PricingSchema = {
+  terms: [
+    { id: 'base', op: 'add', const: 0 },
+    { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '720p': 30, '1080p': 45 } } },
+    { id: 'duration', op: 'mul', perUnit: { param: 'duration', unitCost: 1 } },
+  ],
+} as PricingSchema;
+
+// Grok Imagine：文/图生视频，aspect_ratio(5 档，含 2:3/3:2) + duration(6/10)，无 resolution。
+// 计价按整段视频（非每秒）：6s=$0.15=75、10s=$0.20=100（×500）。mode(fun/normal/spicy) v1 不下发。
+const grokImagineParamsSchema: ParamsSchema = {
+  $schema: JSON_SCHEMA_DRAFT_VIDEO,
+  type: 'object',
+  required: ['duration'],
+  properties: {
+    ratio: { type: 'string', enum: ['1:1', '2:3', '3:2', '16:9', '9:16'], default: '16:9', 'x-ui': { role: 'wire', control: 'chips', order: 20, labelKey: 'pricing.params.ratio' } },
+    duration: { type: 'integer', enum: [6, 10], default: 6, 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+  },
+} as ParamsSchema;
+const grokImaginePricing: PricingSchema = {
+  terms: [
+    { id: 'base', op: 'add', const: 0 },
+    { id: 'video', op: 'add', table: { param: 'duration', values: { '6': 75, '10': 100 } } },
+  ],
+} as PricingSchema;
+
+// Grok Imagine Video 1.5：图生视频，resolution(480p/720p) + duration，无 aspect_ratio。
+// 计价：分辨率每秒 × 时长 + 输入图 $0.01=5（1.5 必带一张源图）。480p $0.072/s=36、720p $0.125/s=62.5。
+const grokV15ParamsSchema: ParamsSchema = {
+  $schema: JSON_SCHEMA_DRAFT_VIDEO,
+  type: 'object',
+  required: ['resolution', 'duration'],
+  properties: {
+    resolution: { type: 'string', enum: ['480p', '720p'], default: '720p', 'x-ui': { role: 'both', control: 'chips', order: 10, labelKey: 'pricing.params.resolution' } },
+    duration: { type: 'integer', enum: [6, 10], default: 6, 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+  },
+} as ParamsSchema;
+const grokV15Pricing: PricingSchema = {
+  terms: [
+    { id: 'base', op: 'add', const: 0 },
+    { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '480p': 36, '720p': 62.5 } } },
+    { id: 'duration', op: 'mul', perUnit: { param: 'duration', unitCost: 1 } },
+    { id: 'input-image', op: 'add', const: 5 }, // 输入源图固定 +5（在 ×duration 之后，不随时长放大）
+  ],
+} as PricingSchema;
+
+// Happy Horse：resolution 720p/1080p（默认 1080p）、duration 3-15（UI 取 5/10/15）、aspect 逐版本不同。
+// 计价按 分辨率×时长（1.0: 720p 40/1080p 80；1.1: 720p 55/1080p 70）。v1 不含 edit（2× 档）。
+function happyHorseParamsSchema(ratios: string[]): ParamsSchema {
+  return {
+    $schema: JSON_SCHEMA_DRAFT_VIDEO,
+    type: 'object',
+    required: ['resolution', 'duration'],
+    properties: {
+      resolution: { type: 'string', enum: ['720p', '1080p'], default: '1080p', 'x-ui': { role: 'both', control: 'chips', order: 10, labelKey: 'pricing.params.resolution' } },
+      ratio: { type: 'string', enum: ratios, default: '16:9', 'x-ui': { role: 'wire', control: 'chips', order: 20, labelKey: 'pricing.params.ratio' } },
+      duration: { type: 'integer', enum: [5, 10, 15], default: 5, 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+    },
+  } as ParamsSchema;
+}
+function happyHorsePricing(r720: number, r1080: number): PricingSchema {
+  return {
+    terms: [
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '720p': r720, '1080p': r1080 } } },
+      { id: 'duration', op: 'mul', perUnit: { param: 'duration', unitCost: 1 } },
+    ],
+  } as PricingSchema;
+}
+
+export const VIDEO_MODEL_CONFIGS: Record<
+  string,
+  { paramsSchema: ParamsSchema; pricingSchema: PricingSchema }
+> = {
+  'veo3.1-fast-official': { paramsSchema: veoParamsSchema(['720p', '1080p', '4k']), pricingSchema: veoGroupedPricing(25, 37.5, 75, 87.5) },
+  'veo3.1-lite-official': { paramsSchema: veoParamsSchema(['720p', '1080p']), pricingSchema: veoLitePricing },
+  'veo3.1-quality-official': { paramsSchema: veoParamsSchema(['720p', '1080p', '4k']), pricingSchema: veoGroupedPricing(60, 120, 120, 180) },
+  // Wan 2.7：t2v 5/10/15 有比例；i2v 无比例；ref/edit 5/10 有比例。
+  'wan2.7-text-to-video': { paramsSchema: wanParamsSchema([5, 10, 15], true), pricingSchema: wanPricing },
+  'wan2.7-image-to-video': { paramsSchema: wanParamsSchema([5, 10, 15], false), pricingSchema: wanPricing },
+  'wan2.7-reference-to-video': { paramsSchema: wanParamsSchema([5, 10], true), pricingSchema: wanPricing },
+  'wan2.7-edit-video': { paramsSchema: wanParamsSchema([5, 10], true), pricingSchema: wanPricing },
+  // Grok Imagine（整段计价）+ Grok Imagine Video 1.5（每秒×分辨率 + 输入图）。
+  'grok-imagine': { paramsSchema: grokImagineParamsSchema, pricingSchema: grokImaginePricing },
+  'grok-imagine-video-1.5': { paramsSchema: grokV15ParamsSchema, pricingSchema: grokV15Pricing },
+  // Happy Horse（1.0 aspect 5 档；1.1 aspect 9 档）。
+  'happy-horse': { paramsSchema: happyHorseParamsSchema(['16:9', '9:16', '1:1', '4:3', '3:4']), pricingSchema: happyHorsePricing(40, 80) },
+  'happy-horse-1.1': { paramsSchema: happyHorseParamsSchema(['21:9', '16:9', '4:3', '1:1', '3:4', '4:5', '5:4', '9:16', '9:21']), pricingSchema: happyHorsePricing(55, 70) },
 };

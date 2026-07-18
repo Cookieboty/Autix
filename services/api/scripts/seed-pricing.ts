@@ -9,7 +9,7 @@ import {
   type PricingSchema,
 } from '@autix/domain/pricing';
 import { buildVideoParamsSchema } from './seed-pricing.schemas';
-import { SEED_MODELS, DEFAULT_MULTIPLIER, IMAGE_MODEL_CONFIGS } from './seed-pricing.models';
+import { SEED_MODELS, DEFAULT_MULTIPLIER, IMAGE_MODEL_CONFIGS, VIDEO_MODEL_CONFIGS } from './seed-pricing.models';
 import { createPrismaClient } from './db';
 
 
@@ -58,23 +58,47 @@ const FORCE_MODEL_SCHEMAS = process.env.SEED_FORCE_MODEL_SCHEMAS === '1';
 
 /**
  * 创建起步模型（不含 apiKey / baseUrl，运营手动补）。幂等：以 (provider, model) 为
- * 逻辑主键——已存在只刷新可安全重播的字段（name/type/capabilities/metadata/description），
- * **绝不覆盖运营已配的 apiKey / baseUrl / isDefault / isActive / priority**。
+ * 逻辑主键——库里还没有的才 create；已存在的行**严格只增不改**，唯一例外是补齐
+ * **缺失的视频 metadata 键**（见下）。**绝不覆盖运营已配的 apiKey / baseUrl / isDefault /
+ * isActive / priority / 及任何已有的 metadata 值**。
  * schema 不在这里写，交给紧随其后的 seedModelSchemas() 按 preset 统一填。
  */
 async function seedModels() {
   let created = 0;
   const skipped: string[] = [];
+  const backfilled: string[] = [];
   for (const m of SEED_MODELS) {
-    // 严格「只增不改」：以 model-id 去重（不限 provider）。已存在同 model-id 的行一律**跳过**，
-    // 绝不覆盖运营配过的 name/capabilities/apiKey/baseUrl/metadata/description/isDefault。
-    // 起步模型只负责补齐「库里还没有的」，让运营已有配置完全不受影响。
+    // 以 model-id 去重（不限 provider）。
     const existing = await prisma.model_configs.findFirst({
       where: { model: m.model },
-      select: { id: true },
+      select: { id: true, type: true, capabilities: true, metadata: true },
     });
     if (existing) {
-      skipped.push(m.model);
+      // 既存行默认整行不动。唯一例外：**视频模型补齐缺失的 metadata 键**。
+      // 早于「模型声明 protocolKey」建的视频行 metadata 可能是 null / 缺 protocolKey /
+      // 缺 videoModelKind —— 缺 protocolKey 会让 resolveVideoPreset 直接抛错、根本没法生成
+      // （线上就这么漏过 doubao-seedance-2.0-fast）。这里只补 SEED_MODELS 声明里、既存行
+      // **确实缺失**的键；已有键一律保留（{ ...seed, ...existing } → existing 覆盖 seed），
+      // 绝不改运营手改过的值。仅限视频：image/text 各有独立路由，不在本次修复范围。
+      const isVideo =
+        existing.type === 'video' ||
+        m.type === 'video' ||
+        (existing.capabilities as string[]).includes('video') ||
+        m.capabilities.includes('video');
+      const seedMeta = (m.metadata ?? {}) as Record<string, unknown>;
+      const existingMeta = (existing.metadata ?? {}) as Record<string, unknown>;
+      const missingKeys = isVideo
+        ? Object.keys(seedMeta).filter((k) => existingMeta[k] === undefined)
+        : [];
+      if (missingKeys.length > 0) {
+        await prisma.model_configs.update({
+          where: { id: existing.id },
+          data: { metadata: toInputJson({ ...seedMeta, ...existingMeta }) },
+        });
+        backfilled.push(`${m.model} (+${missingKeys.join('/')})`);
+      } else {
+        skipped.push(m.model);
+      }
       continue;
     }
     await prisma.model_configs.create({
@@ -96,6 +120,9 @@ async function seedModels() {
     created += 1;
   }
   console.log(`models: created ${created} new, skipped ${skipped.length} existing (untouched): ${skipped.join(', ')}`);
+  if (backfilled.length > 0) {
+    console.log(`  backfilled missing video metadata on ${backfilled.length}: ${backfilled.join(', ')}`);
+  }
 }
 
 async function seedTasks() {
@@ -123,26 +150,27 @@ async function seedTasks() {
 /**
  * 各图像/视频模型按官方定价折算的 pricingSchema（1 美元 = 500 积分，向上取整，2026-07 官网核对）。
  * 图像：**单张**积分(quality 或 resolution 查表)——生成张数(quantity)已从图像计价里移除，
- * 由业务逻辑在下单时按张数自行乘算，schema 只算一张的价；视频：每秒积分(resolution 查表) × seconds。
+ * 由业务逻辑在下单时按张数自行乘算，schema 只算一张的价；视频：每秒积分(resolution 查表) × duration。
  * 未列出的模型沿用 MODEL_PRESETS 的通用 pricingSchema。
  */
 const MODEL_PRICING: Record<string, PricingSchema> = {
   // 图片模型的 pricingSchema **不在这里**——它和 paramsSchema / metadata 一样，
   // 由运营在 admin 模型配置页填、存 DB。每个模型的计价参数都不同（有的按分辨率档位
   // 查表、有的按质量、有的按张固定价），seed 写死一份只会覆盖运营配好的价。
-  // —— 视频：每秒积分 × seconds ——
+  // —— 视频：每秒积分 × duration（原生化后计时参数即火山原生名 duration，非 seconds；
+  //    若仍写 seconds，perUnit 取不到值 → 每秒费静默归零 → 整条视频少收费）——
   'doubao-seedance-2.0': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
       { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '480p': 46, '720p': 100, '1080p': 255, '4k': 510 } } },
-      { id: 'seconds', op: 'mul', perUnit: { param: 'seconds', unitCost: 1 } },
+      { id: 'duration', op: 'mul', perUnit: { param: 'duration', unitCost: 1 } },
     ],
   },
   'doubao-seedance-2.0-fast': {
     terms: [
       { id: 'base', op: 'add', const: 0 },
       { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '480p': 37, '720p': 81, '1080p': 205, '4k': 410 } } },
-      { id: 'seconds', op: 'mul', perUnit: { param: 'seconds', unitCost: 1 } },
+      { id: 'duration', op: 'mul', perUnit: { param: 'duration', unitCost: 1 } },
     ],
   },
 };
@@ -211,6 +239,24 @@ async function seedModelSchemas() {
         },
       });
       console.log(`${model.name} -> image [${alreadyConfigured ? 'force-refreshed schema' : 'filled empty schema'}]`);
+      continue;
+    }
+
+    // 视频模型：优先用 VIDEO_MODEL_CONFIGS 的 per-model 全量（VEO 等 —— 每模型按自己的
+    // schema 写，不复用通用 buildVideoParamsSchema）。命中即写；不命中的（seedance）落到
+    // 下面通用路径（buildVideoParamsSchema + MODEL_PRICING）。
+    if (key === 'video' && VIDEO_MODEL_CONFIGS[model.model]) {
+      const cfg = VIDEO_MODEL_CONFIGS[model.model];
+      const alreadyConfigured = model.paramsSchema !== null && model.pricingSchema !== null;
+      if (alreadyConfigured && !FORCE_MODEL_SCHEMAS) continue;
+      await prisma.model_configs.update({
+        where: { id: model.id },
+        data: {
+          paramsSchema: toInputJson(cfg.paramsSchema),
+          pricingSchema: toInputJson(cfg.pricingSchema),
+        },
+      });
+      console.log(`${model.name} -> video [per-model config] [${alreadyConfigured ? 'force-refreshed schema' : 'filled empty schema'}]`);
       continue;
     }
 

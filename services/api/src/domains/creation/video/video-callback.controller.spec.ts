@@ -1,4 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
+import { VideoCallbackController } from './video-callback.controller';
 import { handleVideoCallbackRequest } from './video-callback.handler';
 
 function make(secret?: string) {
@@ -12,12 +13,13 @@ function make(secret?: string) {
   return { config, flow, logger };
 }
 
-describe('VideoCallbackController auth', () => {
+describe('handleVideoCallbackRequest auth', () => {
   it('rejects a callback with an invalid token', async () => {
     const { config, flow, logger } = make('secret-123');
 
     await expect(
       handleVideoCallbackRequest({
+        protocolKey: 'ark-video@v3',
         token: 'wrong',
         body: { id: 't1' },
         config,
@@ -32,6 +34,7 @@ describe('VideoCallbackController auth', () => {
     const { config, flow, logger } = make('secret-123');
 
     const res = await handleVideoCallbackRequest({
+      protocolKey: 'ark-video@v3',
       token: 'secret-123',
       body: {
         id: 't1',
@@ -43,17 +46,21 @@ describe('VideoCallbackController auth', () => {
     });
 
     expect(flow.handleCallback).toHaveBeenCalledWith(
+      'ark-video@v3',
       't1',
       expect.objectContaining({ id: 't1' }),
     );
     expect(res).toEqual({ received: true });
   });
 
+  // fail-closed：密钥未配置必须 401，绝不放行。继承自现网行为，不可降级
+  // （video-callback.handler.ts 的历史实现即如此，verifyVideoCallback 保留了这条契约）。
   it('fails closed (rejects) when no secret is configured', async () => {
     const { config, flow, logger } = make(undefined);
 
     await expect(
       handleVideoCallbackRequest({
+        protocolKey: 'ark-video@v3',
         token: undefined,
         body: { id: 't2' },
         config,
@@ -61,6 +68,35 @@ describe('VideoCallbackController auth', () => {
         logger,
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(flow.handleCallback).not.toHaveBeenCalled();
+  });
+});
+
+describe('VideoCallbackController', () => {
+  it('routes the callback by protocolKey from the path', async () => {
+    const { config, flow } = make('s3cret');
+    const controller = new VideoCallbackController(flow as never, config as never);
+
+    await controller.handleCallback('ark-video@v3', 's3cret', {
+      id: 'task_1',
+      status: 'succeeded',
+    });
+
+    expect(flow.handleCallback).toHaveBeenCalledWith(
+      'ark-video@v3',
+      'task_1',
+      expect.anything(),
+    );
+  });
+
+  // fail-closed：密钥未配置必须 401，绝不放行。
+  it('rejects when VIDEO_CALLBACK_SECRET is not configured', async () => {
+    const { config, flow } = make(undefined);
+    const controller = new VideoCallbackController(flow as never, config as never);
+
+    await expect(
+      controller.handleCallback('ark-video@v3', 'anything', {}),
+    ).rejects.toThrow(UnauthorizedException);
     expect(flow.handleCallback).not.toHaveBeenCalled();
   });
 });

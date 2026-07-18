@@ -109,11 +109,54 @@ export function VideoSidebar({
     () => resolveVideoCapabilityFromModelConfig(selectedModel, initialModel),
     [initialModel, selectedModel],
   );
+  // 表单选项**从模型自己的 paramsSchema 出**（enum + default）——每个模型按自己的 schema
+  // 渲染，不写死、不用全局共享的比例/分辨率集。paramsSchema 缺失（未配置）时才回退到能力表。
+  const videoParams = useMemo(() => {
+    const props = paramsSchema?.properties as
+      | Record<string, { enum?: unknown[]; default?: unknown }>
+      | undefined;
+    // schema 存在即**权威**：可选集/默认值完全由该模型自己的 schema 决定，schema 里没有的
+    // 属性 = 该模型不支持，**不逐字段回退到能力表**（否则会给 Grok Imagine 这种无 resolution
+    // 的模型硬塞一个档位、再发给上游）。仅当模型完全没配 paramsSchema 时才回退能力表。
+    if (props) {
+      const nums = (v: unknown[] | undefined) =>
+        Array.isArray(v) && v.every((x) => typeof x === 'number') ? (v as number[]) : [];
+      const strs = (v: unknown[] | undefined) =>
+        Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : [];
+      const durations = nums(props.duration?.enum);
+      const ratios = strs(props.ratio?.enum);
+      const resolutions = strs(props.resolution?.enum);
+      return {
+        durations,
+        ratios,
+        resolutions,
+        supportsAudio: 'generate_audio' in props,
+        defaultDuration:
+          typeof props.duration?.default === 'number' ? (props.duration.default as number) : durations[0],
+        defaultResolution:
+          typeof props.resolution?.default === 'string' ? (props.resolution.default as string) : resolutions[0],
+        defaultRatio:
+          typeof props.ratio?.default === 'string' ? (props.ratio.default as string) : ratios[0],
+        defaultAudio:
+          typeof props.generate_audio?.default === 'boolean' ? (props.generate_audio.default as boolean) : false,
+      };
+    }
+    return {
+      durations: videoCapability.durations,
+      ratios: videoCapability.ratios as string[],
+      resolutions: videoCapability.resolutions,
+      supportsAudio: videoCapability.audio,
+      defaultDuration: videoCapability.defaultDuration,
+      defaultResolution: videoCapability.defaultResolution,
+      defaultRatio: videoCapability.defaultRatio,
+      defaultAudio: videoCapability.audio,
+    };
+  }, [paramsSchema, videoCapability]);
   const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(videoCapability.defaultDuration);
-  const [resolution, setResolution] = useState(videoCapability.defaultResolution);
-  const [ratio, setRatio] = useState<string>(videoCapability.defaultRatio);
-  const [generateAudio, setGenerateAudio] = useState(videoCapability.audio);
+  const [duration, setDuration] = useState(videoParams.defaultDuration);
+  const [resolution, setResolution] = useState(videoParams.defaultResolution);
+  const [ratio, setRatio] = useState<string>(videoParams.defaultRatio);
+  const [generateAudio, setGenerateAudio] = useState(videoParams.defaultAudio);
   const [selectedVideoRefs, setSelectedVideoRefs] = useState<PublicVideoReference[]>([]);
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
@@ -147,41 +190,49 @@ export function VideoSidebar({
   const modelLabel = selectedModel?.name ?? videoCapability.displayName;
   const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
   const hasVideoRefs = selectedVideoRefs.length > 0;
-  const durationOptions = videoCapability.durations;
+  const durationOptions = videoParams.durations;
   const ratioOptions = useMemo(
     () =>
-      videoCapability.ratios.map((value) => ({
-        value,
-        label: value === 'adaptive' ? t('auto') : t(`videoRatios.${value}`),
-      })),
-    [t, videoCapability.ratios],
+      videoParams.ratios.map((value) => {
+        // adaptive / auto 都是「自动」——都渲染成 t('auto')。
+        if (value === 'adaptive' || value === 'auto') {
+          return { value, label: t('auto') };
+        }
+        // 其余 ratio 走 i18n key；但 videoParams.ratios 直接来自 pricing schema 的
+        // enum（见 VideoSidebar 上方 useMemo），可能包含 domain 的 VideoAspectRatio
+        // union 之外的值（如 2:3 / 3:2 / 4:5 / 1:4 …）。缺 key 时用 raw value 当 label：
+        // ratio 本身就是"x:y"这种数字对，天然可读，且不需要跨 locale 翻译（现有 JSON
+        // 里除了 adaptive 也都是 key === value 的 identity 映射）。
+        const key = `videoRatios.${value}`;
+        return { value, label: t.has(key) ? t(key) : value };
+      }),
+    [t, videoParams.ratios],
   );
   const resolutionOptions = useMemo(
-    () => videoCapability.resolutions.map((value) => ({
-      value,
-      label: t(`videoResolutions.${value}`),
-    })),
-    [t, videoCapability.resolutions],
+    () => videoParams.resolutions.map((value) => {
+      // 与 ratioOptions 同理：resolutions 直接来自 pricing schema enum，
+      // 未来新模型可能出现未预置的档位（例如 2k/3k）——缺 key 时用 raw value。
+      const key = `videoResolutions.${value}`;
+      return { value, label: t.has(key) ? t(key) : value };
+    }),
+    [t, videoParams.resolutions],
   );
   const ratioLabel = ratioOptions.find((option) => option.value === ratio)?.label ?? ratio;
   const durationLabel = `${duration}s`;
 
+  // 切模型时按新模型 schema 的可选集/默认值收敛当前选择（旧选择不在新集合里就回默认）。
   useEffect(() => {
     setResolution((current) =>
-      videoCapability.resolutions.includes(current)
-        ? current
-        : videoCapability.defaultResolution,
+      videoParams.resolutions.includes(current) ? current : videoParams.defaultResolution,
     );
     setDuration((current) =>
-      videoCapability.durations.includes(current) ? current : videoCapability.defaultDuration,
+      videoParams.durations.includes(current) ? current : videoParams.defaultDuration,
     );
     setRatio((current) =>
-      (videoCapability.ratios as string[]).includes(current)
-        ? current
-        : videoCapability.defaultRatio,
+      videoParams.ratios.includes(current) ? current : videoParams.defaultRatio,
     );
-    setGenerateAudio((current) => (videoCapability.audio ? current : false));
-  }, [videoCapability]);
+    setGenerateAudio((current) => (videoParams.supportsAudio ? current : false));
+  }, [videoParams]);
 
   useEffect(() => {
     setSelectedVideoRefs((current) => limitPublicVideoReferences(current, uploadLimit));
@@ -338,7 +389,10 @@ export function VideoSidebar({
         }),
       );
     } catch (err) {
-      setGenerateError(err instanceof Error ? err.message : t('generateFailed'));
+      // 注意：SDK 拦截器把后端 msg 挂在 error.msg 上，不是 error.message
+      // （error.message 只是 axios 的通用 "Request failed with status code 4xx"）。
+      const message = (err as { msg?: string })?.msg ?? (err instanceof Error ? err.message : t('generateFailed'));
+      setGenerateError(message);
     }
   };
 
@@ -573,35 +627,43 @@ export function VideoSidebar({
             fallbackLabel={videoCapability.displayName}
           />
           <div className="grid grid-cols-2 gap-2">
-            <VideoSliderParamMenu
-              icon={<Clock3 className="size-4" />}
-              label={durationLabel}
-              title={t('durationLabel')}
-              options={durationOptions}
-              value={duration}
-              onChange={(value) => setDuration(value)}
-            />
-            <VideoOptionParamMenu
-              icon={<Crop className="size-4" />}
-              label={ratioLabel}
-              title={t('aspectRatio')}
-              options={ratioOptions}
-              value={ratio}
-              onChange={setRatio}
-            />
-            <VideoOptionParamMenu
-              icon={<Diamond className="size-4" />}
-              label={resolution}
-              title={t('selectResolution')}
-              options={resolutionOptions}
-              value={resolution}
-              onChange={(value) => {
-                if (videoCapability.resolutions.includes(value as typeof resolution)) {
-                  setResolution(value as typeof resolution);
-                }
-              }}
-            />
-            {videoCapability.audio ? (
+            {/* 每个控件只在该模型 schema 声明了对应属性（options 非空）时渲染 —— schema 没有
+                的属性表示不支持，不显示、也不下发（例如 Grok Imagine 无 resolution）。 */}
+            {durationOptions.length > 0 ? (
+              <VideoSliderParamMenu
+                icon={<Clock3 className="size-4" />}
+                label={durationLabel}
+                title={t('durationLabel')}
+                options={durationOptions}
+                value={duration}
+                onChange={(value) => setDuration(value)}
+              />
+            ) : null}
+            {ratioOptions.length > 0 ? (
+              <VideoOptionParamMenu
+                icon={<Crop className="size-4" />}
+                label={ratioLabel}
+                title={t('aspectRatio')}
+                options={ratioOptions}
+                value={ratio}
+                onChange={setRatio}
+              />
+            ) : null}
+            {resolutionOptions.length > 0 ? (
+              <VideoOptionParamMenu
+                icon={<Diamond className="size-4" />}
+                label={resolution}
+                title={t('selectResolution')}
+                options={resolutionOptions}
+                value={resolution}
+                onChange={(value) => {
+                  if ((videoParams.resolutions as string[]).includes(value)) {
+                    setResolution(value as typeof resolution);
+                  }
+                }}
+              />
+            ) : null}
+            {videoParams.supportsAudio ? (
               <button
                 type="button"
                 onClick={() => setGenerateAudio((prev) => !prev)}

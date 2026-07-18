@@ -90,10 +90,16 @@ export function buildPublicVideoEstimateInput({
         resolution,
         modelConfig ?? { model: model || undefined },
       ),
-      seconds: Math.max(1, Math.ceil(Number(duration) || 1)),
+      // 原生化后计价参数即火山原生名 duration（非 seconds）；computeTaskEstimate 评估的
+      // pricingSchema 也 perUnit duration。若仍写 seconds → perUnit 取不到值 → 本地预估
+      // 少算每秒费，破坏「展示 == 扣费」。
+      duration: Math.max(1, Math.ceil(Number(duration) || 1)),
       referenceImages: Math.max(0, Math.floor(Number(referenceImages) || 0)),
       hasVideoInput: false,
       hasAudioInput: generateAudio,
+      // PoYo VEO 按「分辨率 × 是否出声」定每秒单价，pricingSchema 的 when 读 generate_audio。
+      // 本地预估必须带上它，否则展示价按无声算、与服务端扣费分裂（seedance 不读它，无害）。
+      generate_audio: generateAudio,
     },
   };
 }

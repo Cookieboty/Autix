@@ -1,0 +1,71 @@
+[
+  {
+    "name": "text-to-video: prompt + params into input.*, no image_urls",
+    "input": {
+      "model": "veo3.1-fast-official",
+      "prompt": "骑摩托的妹子",
+      "materials": [],
+      "params": { "duration": 6, "resolution": "1080p", "ratio": "16:9", "generate_audio": true }
+    },
+    "expected": {
+      "model": "veo3.1-fast-official",
+      "input": { "prompt": "骑摩托的妹子", "duration": 6, "resolution": "1080p", "aspect_ratio": "16:9", "sound": true }
+    }
+  },
+  {
+    "name": "image-to-video: single material URL into input.image_urls; sound=false is sent",
+    "input": {
+      "model": "veo3.1-lite-official",
+      "prompt": "The product rotates slowly",
+      "materials": [{ "role": "first_frame", "url": "https://cdn.example.com/a.jpg" }],
+      "params": { "duration": 8, "resolution": "720p", "ratio": "auto", "generate_audio": false }
+    },
+    "expected": {
+      "model": "veo3.1-lite-official",
+      "input": {
+        "prompt": "The product rotates slowly",
+        "image_urls": ["https://cdn.example.com/a.jpg"],
+        "duration": 8,
+        "resolution": "720p",
+        "aspect_ratio": "auto",
+        "sound": false
+      }
+    }
+  },
+  {
+    "name": "first/last-frame: two material URLs preserved in order",
+    "input": {
+      "model": "veo3.1-quality-official",
+      "prompt": "runner start to finish",
+      "materials": [
+        { "role": "first_frame", "url": "https://cdn.example.com/first.jpg" },
+        { "role": "last_frame", "url": "https://cdn.example.com/last.jpg" }
+      ],
+      "params": { "duration": 8, "resolution": "4k", "ratio": "9:16", "generate_audio": true }
+    },
+    "expected": {
+      "model": "veo3.1-quality-official",
+      "input": {
+        "prompt": "runner start to finish",
+        "image_urls": ["https://cdn.example.com/first.jpg", "https://cdn.example.com/last.jpg"],
+        "duration": 8,
+        "resolution": "4k",
+        "aspect_ratio": "9:16",
+        "sound": true
+      }
+    }
+  },
+  {
+    "name": "omits absent params (falsy resolution/ratio, undefined sound) and image_urls when no materials",
+    "input": {
+      "model": "veo3.1-fast-official",
+      "prompt": "x",
+      "materials": [],
+      "params": { "duration": 4 }
+    },
+    "expected": {
+      "model": "veo3.1-fast-official",
+      "input": { "prompt": "x", "duration": 4 }
+    }
+  }
+]

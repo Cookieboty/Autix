@@ -1,6 +1,6 @@
 import { fetchUrlAsBlob, fetchUrlAsBase64 } from '../../core/http';
 import { assembleImageRequest, type AssembledRequest } from './assemble';
-import { setPath } from './bind';
+import { setPath } from '../../core/bind';
 import { extractArtifacts } from './response';
 import { ImageUpstreamError } from './types';
 import type { ErrorClassification, ImageArtifact, ImageCallRequest, ImageCallResult, ProtocolPreset } from './types';

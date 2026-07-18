@@ -22,6 +22,7 @@ function buildRepo() {
     updateModelSchemas: vi.fn(),
     updateModelDescription: vi.fn(),
     listTaskDefinitions: vi.fn(),
+    findTaskDefinition: vi.fn(),
     createTaskDefinition: vi.fn(),
     updateTaskDefinition: vi.fn(),
     deactivateTaskDefinition: vi.fn(),
@@ -461,6 +462,81 @@ describe('PricingConfigAdminService.createTaskModelBinding', () => {
     await expect(
       service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'model-2', isDefault: true }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects binding a video-protocol model to an image task', async () => {
+    const repo = buildRepo();
+    repo.findTaskDefinition.mockResolvedValue({ taskType: 'image_generation', category: 'image' });
+    repo.findModelConfig.mockResolvedValue({
+      id: 'm1',
+      metadata: { protocolKey: 'ark-video@v3' },
+      paramsSchema: {},
+      pricingSchema: {},
+    });
+    const service = new PricingConfigAdminService(repo as never);
+
+    // 改造前：保存成功，直到运行时图片 flow 调 resolveImagePreset('ark-video@v3') 才 500。
+    await expect(
+      service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'm1' }),
+    ).rejects.toThrow(/媒体不匹配/);
+  });
+
+  it('accepts binding a video-protocol model to a video task', async () => {
+    const repo = buildRepo();
+    repo.findTaskDefinition.mockResolvedValue({ taskType: 'video_generation', category: 'video' });
+    repo.findModelConfig.mockResolvedValue({
+      id: 'm1',
+      metadata: { protocolKey: 'ark-video@v3' },
+      paramsSchema: {},
+      pricingSchema: {},
+    });
+    repo.createTaskModelBinding.mockResolvedValue({ taskType: 'video_generation', modelConfigId: 'm1' });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'video_generation', modelConfigId: 'm1' }),
+    ).resolves.toBeDefined();
+  });
+
+  it('requires a protocolKey for image/video tasks', async () => {
+    const repo = buildRepo();
+    repo.findTaskDefinition.mockResolvedValue({ taskType: 'video_generation', category: 'video' });
+    repo.findModelConfig.mockResolvedValue({ id: 'm1', metadata: {}, paramsSchema: {}, pricingSchema: {} });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'video_generation', modelConfigId: 'm1' }),
+    ).rejects.toThrow(/protocolKey/);
+  });
+
+  // chat / prompt 任务没有协议概念，不该被这道校验拦住。
+  it('skips the media check for non-media tasks', async () => {
+    const repo = buildRepo();
+    repo.findTaskDefinition.mockResolvedValue({ taskType: 'chat_message_standard', category: 'chat' });
+    repo.findModelConfig.mockResolvedValue({ id: 'm1', metadata: {}, paramsSchema: {}, pricingSchema: {} });
+    repo.createTaskModelBinding.mockResolvedValue({ taskType: 'chat_message_standard', modelConfigId: 'm1' });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'chat_message_standard', modelConfigId: 'm1' }),
+    ).resolves.toBeDefined();
+  });
+
+  // 事实源是 DB 而非静态 TASK_PRESETS：后台可动态建任意 category 的任务类型。
+  it('uses the DB task definition category, not the static presets', async () => {
+    const repo = buildRepo();
+    repo.findTaskDefinition.mockResolvedValue({ taskType: 'my_custom_video_task', category: 'video' });
+    repo.findModelConfig.mockResolvedValue({
+      id: 'm1',
+      metadata: { protocolKey: 'openai-images@v1' },
+      paramsSchema: {},
+      pricingSchema: {},
+    });
+    const service = new PricingConfigAdminService(repo as never);
+
+    await expect(
+      service.createTaskModelBinding({ taskType: 'my_custom_video_task', modelConfigId: 'm1' }),
+    ).rejects.toThrow(/媒体不匹配/);
   });
 });
 

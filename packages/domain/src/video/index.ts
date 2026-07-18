@@ -1,4 +1,6 @@
+export * from './material-role';
 export * from './capabilities';
+export * from './params';
 
 export interface VideoWorkflowClipDefinition {
   order: number;
@@ -54,7 +56,7 @@ export interface VideoGenerationRecord {
   projectId: string;
   userId: string;
   status: string;
-  seedanceTaskId?: string | null;
+  providerTaskId?: string | null;
   videoUrl?: string | null;
   lastFrameUrl?: string | null;
   thumbnailUrl?: string | null;

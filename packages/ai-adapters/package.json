@@ -17,6 +17,11 @@
       "types": "./dist/core/index.d.ts",
       "import": "./src/core/index.ts",
       "require": "./dist/core/index.js"
+    },
+    "./video": {
+      "types": "./dist/video/index.d.ts",
+      "import": "./src/video/index.ts",
+      "require": "./dist/video/index.js"
     }
   },
   "main": "./dist/index.js",
@@ -28,6 +33,9 @@
       ],
       "core": [
         "./dist/core/index.d.ts"
+      ],
+      "video": [
+        "./dist/video/index.d.ts"
       ]
     }
   },

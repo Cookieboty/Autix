@@ -21,7 +21,7 @@ export interface VideoClipGeneration {
   model: string;
   resolvedPrompt: string;
   params: Record<string, unknown>;
-  seedanceTaskId?: string | null;
+  providerTaskId?: string | null;
   status: string;
   videoUrl?: string | null;
   lastFrameUrl?: string | null;

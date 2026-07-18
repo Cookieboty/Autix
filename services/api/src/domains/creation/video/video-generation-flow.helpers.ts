@@ -7,39 +7,26 @@ import {
   type video_clip_generations,
   type video_clip_materials,
 } from '../../platform/prisma/generated';
-import type {
-  SeedanceContentItem,
-  SeedanceTaskRequest,
-} from './seedance-api.service';
 import {
   normalizeVideoResolution as normalizeDomainVideoResolution,
   normalizeVideoResolutionForModel,
+  toUnifiedVideoParams,
+  type VideoGenerationClipParams,
   type VideoModelHint,
   type VideoResolution,
 } from '@autix/domain/video';
-import {
-  getSeedanceDuration,
-  getSeedanceErrorMessage,
-  getSeedanceLastFrameUrl,
-  getSeedanceStatus,
-  getSeedanceVideoUrl,
-  type SeedanceTaskPayload,
-} from './seedance-task-payload';
 
-export interface VideoGenerationClipParams {
-  model?: string;
-  resolution?: string;
-  ratio?: string;
-  duration?: number;
-  seed?: number;
-  generateAudio?: boolean;
-  generate_audio?: boolean;
-  watermark?: boolean;
-  modelConfigId?: string;
-  generationMode?: string;
-  storyboardPrompt?: string;
-  sourceTemplateId?: string;
-  sourceTemplateKind?: 'video_template' | 'video_workflow_template';
+export type { VideoGenerationClipParams };
+
+// 计划 4 Task 4：类型原定义于已删除的 seedance-api.service.ts。仍被
+// summarizeSeedanceContent 使用（该函数不在本次删除范围内），故就地保留定义。
+export interface SeedanceContentItem {
+  type: 'text' | 'image_url' | 'video_url' | 'audio_url';
+  text?: string;
+  image_url?: { url: string };
+  video_url?: { url: string };
+  audio_url?: { url: string };
+  role?: string;
 }
 
 export interface StoryboardVideoPromptClip {
@@ -64,31 +51,21 @@ export interface SeedanceContentSummary {
 /**
  * Shape consumed directly as `TaskEstimateInput` (Task 3/4). Video params are all
  * order-time `params` sourced from the `video` pricing preset's paramsSchema
- * (resolution/seconds/ratio — see packages/domain/src/pricing/presets.ts) — video
- * has no token/usage-source pricing, so there is no `usage` field here.
+ * (resolution/duration/ratio — 火山原生名，见 packages/domain/src/pricing/presets.ts)
+ * — video has no token/usage-source pricing, so there is no `usage` field here.
  */
 export interface SeedanceCostEstimateInput {
   taskType: string;
   modelConfigId?: string;
   params: {
     resolution: NormalizedVideoResolution;
-    seconds: number;
+    duration: number;
     ratio?: string;
+    // 计价维度：部分渠道（PoYo VEO）按「分辨率 × 是否出声」定每秒单价，pricingSchema 的
+    // `when` 谓词读 generate_audio。缺了它 → 音频维度静默按无声计价 → 少收费。
+    generate_audio?: boolean;
   };
   membershipLevel?: number;
-}
-
-export interface SeedanceTaskRequestOptions {
-  model: string;
-  content: SeedanceContentItem[];
-  callbackUrl?: string;
-  returnLastFrame: boolean;
-  generateAudio?: boolean;
-  resolution?: string;
-  ratio?: string;
-  duration?: number;
-  seed?: number;
-  watermark?: boolean;
 }
 
 export interface VideoHoldInput {
@@ -142,7 +119,7 @@ export interface PendingGenerationInput {
 
 export interface CompletedGenerationInput {
   generationId: string;
-  clipId: string;
+  clipId: string | null;
   externalStatus: string;
   videoUrl: string;
   lastFrameUrl: string | null;
@@ -155,7 +132,7 @@ export type SucceededGenerationVideoResolution =
 
 export interface FailedGenerationInput {
   generationId: string;
-  clipId: string;
+  clipId: string | null;
   status: VideoGenStatus;
   externalStatus: string;
   error: string;
@@ -240,14 +217,23 @@ export function resolveStoryboardVideoPrompt(input: {
   clips: StoryboardVideoPromptClip[];
   params: Pick<VideoGenerationClipParams, 'generationMode' | 'storyboardPrompt'>;
 }): string {
-  if (input.params.generationMode !== 'storyboard') {
-    return resolveClipPrompt(input.clips[0]?.prompt ?? null, input.params);
-  }
-
   const storyboardPrompt =
     typeof input.params.storyboardPrompt === 'string'
       ? input.params.storyboardPrompt.trim()
       : '';
+
+  // 单条 clip 且无整片提示词：直接发用户原始 prompt，**不套「完整分镜脚本 / 分镜 N」脚手架**。
+  // generateAllClips 会对整个项目（哪怕只有 1 条 clip）强制 generationMode='storyboard'，
+  // 于是原本一句「骑摩托的妹子」会被包成「完整分镜脚本：\n分镜 1「骑摩托的妹子」：骑摩托的妹子」。
+  // 分镜脚手架只对真正的多分镜项目有意义；单条生成必须原样透传。
+  if (input.clips.length <= 1 && !storyboardPrompt) {
+    return input.clips[0]?.prompt?.trim() ?? '';
+  }
+
+  if (input.params.generationMode !== 'storyboard') {
+    return resolveClipPrompt(input.clips[0]?.prompt ?? null, input.params);
+  }
+
   const storyboardLines = [...input.clips]
     .sort((a, b) => a.order - b.order)
     .map((clip) => {
@@ -330,40 +316,19 @@ export function resolveVideoPricingTaskType(
   return VIDEO_GENERATION_TASK_TYPE;
 }
 
-export function buildSeedanceTaskRequestOptions(input: {
-  params: VideoGenerationClipParams;
-  model: string;
-  content: SeedanceContentItem[];
-  callbackUrl?: string;
-  returnLastFrame: boolean;
-}): SeedanceTaskRequestOptions {
-  return {
-    // FIX-3: 始终使用服务端解析/鉴权过的模型，忽略客户端传入的 params.model，
-    // 防止"选便宜模型过鉴权、用 params.model 偷换为贵模型"导致跑贵付便宜。
-    model: input.model,
-    content: input.content,
-    callbackUrl: input.callbackUrl,
-    returnLastFrame: input.returnLastFrame,
-    generateAudio: resolveVideoGenerateAudio(input.params),
-    resolution: input.params.resolution,
-    ratio: input.params.ratio,
-    duration: input.params.duration,
-    seed: input.params.seed,
-    watermark: input.params.watermark,
-  };
-}
-
 export function buildQueuedGenerationPollWindow(
   now = new Date(),
 ): QueuedGenerationPollWindow {
   const nowMs = now.getTime();
   return {
-    expireBefore: new Date(nowMs - 30 * 60 * 1000),
+    // 65min：晚于积分侧孤儿回收的 60min 退款窗口。排水只负责把无人认领的任务排出轮询
+    // 队列（防队列被卡死任务占满），退款是积分域的职责（PointsHoldReclaimCron）。
+    expireBefore: new Date(nowMs - 65 * 60 * 1000),
   };
 }
 
 export function splitQueuedGenerationsForPolling<
-  T extends Pick<video_clip_generations, 'createdAt' | 'seedanceTaskId'>,
+  T extends Pick<video_clip_generations, 'createdAt' | 'providerTaskId'>,
 >(
   generations: T[],
   window: Pick<QueuedGenerationPollWindow, 'expireBefore'>,
@@ -375,7 +340,7 @@ export function splitQueuedGenerationsForPolling<
     toPoll: generations.filter(
       (generation) =>
         generation.createdAt >= window.expireBefore &&
-        Boolean(generation.seedanceTaskId),
+        Boolean(generation.providerTaskId),
     ),
   };
 }
@@ -465,18 +430,28 @@ export function summarizeSeedanceContent(
 export function buildSeedanceCostEstimateInput(input: {
   params: Pick<
     VideoGenerationClipParams,
-    'resolution' | 'duration' | 'ratio' | 'sourceTemplateId' | 'sourceTemplateKind'
+    | 'resolution'
+    | 'duration'
+    | 'ratio'
+    | 'generateAudio'
+    | 'generate_audio'
+    | 'sourceTemplateId'
+    | 'sourceTemplateKind'
   >;
   modelConfigId?: string;
   membershipLevel?: number;
 }): SeedanceCostEstimateInput {
+  // 先经唯一投影拿到火山原生参数（duration 直接透传），再套计价自己的归一化。
+  // 归一化必须留在这里：上游请求体发的是原值，投影若归一化会改变实际生成参数。
+  const native = toUnifiedVideoParams(input.params);
   return {
     taskType: VIDEO_GENERATION_TASK_TYPE,
     ...(input.modelConfigId !== undefined ? { modelConfigId: input.modelConfigId } : {}),
     params: {
-      resolution: normalizeVideoResolution(input.params.resolution),
-      seconds: normalizeVideoDuration(input.params.duration),
-      ...(input.params.ratio !== undefined ? { ratio: input.params.ratio } : {}),
+      resolution: normalizeVideoResolution(native.resolution),
+      duration: normalizeVideoDuration(native.duration),
+      ...(native.ratio !== undefined ? { ratio: native.ratio } : {}),
+      ...(native.generate_audio !== undefined ? { generate_audio: native.generate_audio } : {}),
     },
     ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
   };
@@ -486,15 +461,30 @@ export function toPrismaInputJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
 }
 
+/**
+ * 脱敏 provider 请求体里的 `callback_url` —— 它带 `?token=<VIDEO_CALLBACK_SECRET>`，
+ * 任何拿到日志或 DB 只读权限的人凭它就能伪造回调、驱动状态与扣费。请求体本身仍带真实
+ * callback_url 发给上游；**只有落日志/落库前**用本函数换成占位。返回浅拷贝，不改原对象。
+ */
+export function redactProviderRequest(
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!body || typeof body !== 'object' || !('callback_url' in body)) return body;
+  return { ...body, callback_url: '[REDACTED]' };
+}
+
 export function buildVideoHoldInput(input: {
   billingTaskType: string;
   generationId: string;
   estimatedCost: number;
   pricingSnapshot: unknown;
-  projectId: string;
-  clipId: string;
+  projectId: string | null;
+  clipId: string | null;
   modelConfigId: string;
-  taskRequest: SeedanceTaskRequest;
+  // 计划 4：调用方现在传入引擎 assembleVideoRequest 的输出（Ark 请求体快照），
+  // 不再是 SeedanceApiService.buildTaskRequest 的返回值 —— 两者字段形状经 golden
+  // 测试锁定等价，但类型上不再是同一个具名接口，故放宽为 JSON 快照类型。
+  taskRequest: Record<string, unknown>;
 }): VideoHoldInput {
   return {
     taskType: input.billingTaskType,
@@ -508,7 +498,8 @@ export function buildVideoHoldInput(input: {
       projectId: input.projectId,
       clipId: input.clipId,
       modelConfigId: input.modelConfigId,
-      seedanceTaskRequest: input.taskRequest,
+      // 快照排除 callback token（含 VIDEO_CALLBACK_SECRET），DB 只读泄露也不能伪造回调。
+      seedanceTaskRequest: redactProviderRequest(input.taskRequest),
     }),
     remark: input.billingTaskType === VIDEO_GENERATION_TASK_TYPE
       ? 'video-generation'
@@ -525,7 +516,8 @@ export function buildPendingGenerationInput(input: {
   params: Pick<VideoGenerationClipParams, 'model'>;
   fallbackModel: string;
   resolvedPrompt: string;
-  taskRequest: SeedanceTaskRequest;
+  // 计划 4：见 buildVideoHoldInput 同名字段注释。
+  taskRequest: Record<string, unknown>;
 }): PendingGenerationInput {
   return {
     generationId: input.generationId,
@@ -544,7 +536,7 @@ export function buildCreateTaskFailureInput(input: {
   generationId: string;
   clipId: string;
   error: unknown;
-}): Pick<FailedGenerationInput, 'generationId' | 'clipId' | 'error'> {
+}): { generationId: string; clipId: string; error: string } {
   return {
     generationId: input.generationId,
     clipId: input.clipId,
@@ -610,38 +602,6 @@ export function buildExpiredGenerationInput(input: {
   };
 }
 
-export function normalizeSeedanceTaskOutcome(
-  payload: SeedanceTaskPayload,
-): NormalizedSeedanceTaskOutcome {
-  const status = getSeedanceStatus(payload);
-  if (!status) return { kind: 'missing_status' };
-
-  if (status === 'succeeded') {
-    return {
-      kind: 'succeeded',
-      externalStatus: status,
-      sourceUrl: getSeedanceVideoUrl(payload),
-      lastFrameUrl: getSeedanceLastFrameUrl(payload) ?? null,
-      durationSec: getSeedanceDuration(payload),
-    };
-  }
-
-  if (status === 'failed' || status === 'expired') {
-    const error = getSeedanceErrorMessage(payload, status);
-    return {
-      kind: 'failed',
-      externalStatus: status,
-      generationStatus:
-        status === 'expired' ? VideoGenStatus.expired : VideoGenStatus.failed,
-      error,
-      refundReason:
-        status === 'expired' ? '视频生成超时' : `视频生成失败: ${error}`,
-    };
-  }
-
-  return { kind: 'active', externalStatus: status };
-}
-
 export function getPendingHeadClips<T extends GenerateAllClipCandidate>(
   clips: T[],
 ): T[] {
@@ -683,4 +643,19 @@ export function presentGenerateAllClipResults(
       taskId: result.taskId,
       clipId: result.clipId,
     }));
+}
+
+export function buildDirectGenerationParamsSnapshot(input: {
+  options: { resolution?: string; ratio?: string; duration?: number; generateAudio?: boolean };
+  materials: Array<{ role: string; url: string; sourceType?: string; name?: string | null }>;
+  providerRequest: Record<string, unknown>;
+}): Prisma.InputJsonValue {
+  return toPrismaInputJson({
+    schemaVersion: 1,
+    mode: 'direct',
+    options: input.options,
+    materials: input.materials,
+    // 快照排除 callback token（含 VIDEO_CALLBACK_SECRET）。
+    providerRequest: redactProviderRequest(input.providerRequest),
+  });
 }

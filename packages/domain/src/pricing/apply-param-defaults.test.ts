@@ -109,18 +109,18 @@ describe('applyParamDefaults', () => {
   });
 
   describe('against the real video preset', () => {
-    it('fills the required resolution/seconds, and the base default seconds (5) satisfies the 4k-narrowed maximum (8)', () => {
+    it('fills the required resolution/duration, and the base default duration (5) satisfies the 4k-narrowed maximum (8)', () => {
       const filled = applyParamDefaults(MODEL_PRESETS.video.paramsSchema, {});
       expect(filled.resolution).toBe('720p');
-      expect(filled.seconds).toBe(5);
+      expect(filled.duration).toBe(5);
       expect(validateParams(MODEL_PRESETS.video.paramsSchema, filled)).toEqual([]);
 
       // Even when the caller pins the narrowing branch (resolution: '4k') and lets
-      // seconds default, the base default (5) still satisfies the narrowed
+      // duration default, the base default (5) still satisfies the narrowed
       // maximum (8) for every preset in this repo today — verified here rather
       // than assumed.
       const filled4k = applyParamDefaults(MODEL_PRESETS.video.paramsSchema, { resolution: '4k' });
-      expect(filled4k.seconds).toBe(5);
+      expect(filled4k.duration).toBe(5);
       expect(validateParams(MODEL_PRESETS.video.paramsSchema, filled4k)).toEqual([]);
     });
   });

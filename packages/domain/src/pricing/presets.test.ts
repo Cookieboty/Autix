@@ -137,7 +137,7 @@ describe('presets — golden prices (image, single-image; quantity removed)', ()
 
 describe('presets — golden prices (video, unchanged)', () => {
   it('prices per second by resolution', () => {
-    const at = (resolution: string, seconds: number) => quote('video', { resolution, seconds });
+    const at = (resolution: string, duration: number) => quote('video', { resolution, duration });
     expect(at('480p', 5)).toBe(800);
     expect(at('720p', 5)).toBe(1600);
     expect(at('1080p', 5)).toBe(4000);
@@ -145,7 +145,7 @@ describe('presets — golden prices (video, unchanged)', () => {
   });
 
   it('scales linearly with duration', () => {
-    expect(quote('video', { resolution: '720p', seconds: 10 })).toBe(3200);
+    expect(quote('video', { resolution: '720p', duration: 10 })).toBe(3200);
   });
 });
 

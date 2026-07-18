@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Clock3, Film, Image as ImageIcon, Loader2, PlayCircle, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Clock3, Film, Image as ImageIcon, Loader2, PlayCircle, Sparkles, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
+import { toast } from 'sonner';
+import type { DirectVideoGenerationDto } from '@autix/shared-store';
 
 export type PendingVideoGenerationCard = {
   id: string;
@@ -14,50 +15,28 @@ export type PendingVideoGenerationCard = {
 };
 
 interface VideoHistoryPanelProps {
+  items: DirectVideoGenerationDto[];
+  loading?: boolean;
   pending?: PendingVideoGenerationCard | null;
-  onSelectProject: (project: VideoProject) => void;
+  onSelectItem: (item: DirectVideoGenerationDto) => void;
+  /** 删除一条直连生成记录；进行中的记录服务端会拒绝（409），由调用方 toast 展示原因。 */
+  onDelete: (id: string) => Promise<void>;
 }
 
-function getLatestGeneration(project: VideoProject) {
-  return (project.clips ?? [])
-    .flatMap((clip) => clip.generations ?? [])
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
+/** 直连生成状态机共六态：pending/queued/running/completed/failed/expired（见 VideoGenStatus）。 */
+const PROCESSING_STATUSES = new Set(['pending', 'queued', 'running']);
+
+type DisplayStatus = 'completed' | 'processing' | 'failed';
+
+function getItemStatus(item: DirectVideoGenerationDto): DisplayStatus {
+  if (item.status === 'completed' && item.videoUrl) return 'completed';
+  if (PROCESSING_STATUSES.has(item.status)) return 'processing';
+  // failed / expired（以及理论上不该出现的 completed-without-url）统一按失败展示。
+  return 'failed';
 }
 
-function getProjectCover(project: VideoProject) {
-  const latest = getLatestGeneration(project);
-  const firstMaterial = project.clips
-    .flatMap((clip) => clip.materials ?? [])
-    .find((material) => material.url);
-  return (
-    latest?.thumbnailUrl ??
-    latest?.lastFrameUrl ??
-    project.coverImage ??
-    firstMaterial?.url ??
-    null
-  );
-}
-
-function getProjectVideoUrl(project: VideoProject) {
-  return (project.clips ?? [])
-    .flatMap((clip) => clip.generations ?? [])
-    .filter((generation) => generation.status === 'completed' && generation.videoUrl)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-    ?.videoUrl ?? null;
-}
-
-function getProjectStatus(project: VideoProject) {
-  const generations = (project.clips ?? []).flatMap((clip) => clip.generations ?? []);
-  if (generations.some((generation) => generation.status === 'completed' && generation.videoUrl)) {
-    return 'completed';
-  }
-  if (generations.some((generation) => ['pending', 'queued', 'running', 'processing', 'generating'].includes(generation.status))) {
-    return 'processing';
-  }
-  if (generations.some((generation) => generation.status === 'failed')) {
-    return 'failed';
-  }
-  return project.status || 'draft';
+function getItemCover(item: DirectVideoGenerationDto) {
+  return item.thumbnailUrl ?? item.lastFrameUrl ?? item.materials.find((material) => material.url)?.url ?? null;
 }
 
 function formatDate(value: string) {
@@ -73,21 +52,28 @@ function formatDate(value: string) {
   }
 }
 
-export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPanelProps) {
+export function VideoHistoryPanel({ items, loading, pending, onSelectItem, onDelete }: VideoHistoryPanelProps) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const projects = useVideoProjectStore((s) => s.projects);
-  const loading = useVideoProjectStore((s) => s.loading);
-  const loadProjects = useVideoProjectStore((s) => s.loadProjects);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const loadedRef = useRef(false);
+  const handleDelete = async (event: React.MouseEvent, id: string) => {
+    event.stopPropagation();
+    if (deletingId) return;
+    setDeletingId(id);
+    try {
+      await onDelete(id);
+    } catch (err) {
+      // 进行中的记录服务端会返回 409（"任务进行中，无法删除"）——直接透传后端消息。
+      // 注意：SDK 拦截器把后端 msg 挂在 error.msg 上，不是 error.message
+      // （error.message 只是 axios 的通用 "Request failed with status code 409"）。
+      const message = (err as { msg?: string })?.msg ?? (err instanceof Error ? err.message : t('generateFailed'));
+      toast.error(message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
-  useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-    void loadProjects();
-  }, [loadProjects]);
-
-  if (loading && projects.length === 0 && !pending) {
+  if (loading && items.length === 0 && !pending) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -95,7 +81,7 @@ export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPane
     );
   }
 
-  if (projects.length === 0 && !pending) {
+  if (items.length === 0 && !pending) {
     return (
       <div className="growth-flow-border relative overflow-hidden rounded-[14px] border border-dashed border-border bg-secondary p-8 text-center">
         <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-20" />
@@ -114,23 +100,51 @@ export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPane
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {pending ? <PendingVideoCard pending={pending} /> : null}
-      {projects.map((project) => {
-        const cover = getProjectCover(project);
-        const videoUrl = getProjectVideoUrl(project);
-        const status = getProjectStatus(project);
-        const clipCount = project.clips?.length ?? 0;
+      {pending ? <ProcessingVideoCard title={pending.title} prompt={pending.prompt} model={pending.model} coverUrl={pending.coverUrl ?? null} /> : null}
+      {items.map((item) => {
+        const cover = getItemCover(item);
+        const status = getItemStatus(item);
+        // 刷新页面后仍处于 pending/queued/running 的历史项：视觉与提交态一致，走"进行中"卡片，
+        // 上游 VideoGeneratorStudio 会对其发起轮询，命中终态后卡片会自然切换为 completed/failed。
+        if (status === 'processing') {
+          return (
+            <ProcessingVideoCard
+              key={item.id}
+              title={item.prompt}
+              prompt={item.prompt}
+              model={item.model}
+              coverUrl={cover}
+              onDelete={(event) => void handleDelete(event, item.id)}
+              deleting={deletingId === item.id}
+              deleteAriaLabel={t('ariaDelete')}
+            />
+          );
+        }
+        // 卡片外层刻意不是 <button>：内部还挂着"删除"这个真按钮，button 里嵌 button
+        // 是 HTML 规范禁止的互动嵌套，Next.js 会以 hydration error 打出。用 div + role
+        // 补齐语义，键盘可达性由 tabIndex + Enter/Space 兜底。
+        const handleActivate = () => onSelectItem(item);
         return (
-          <button
-            key={project.id}
-            type="button"
-            onClick={() => onSelectProject(project)}
-            className="growth-generator-video-card group relative overflow-hidden rounded-[14px] border border-border bg-background text-left transition duration-300 hover:-translate-y-0.5 hover:border-input"
+          <div
+            key={item.id}
+            role="button"
+            tabIndex={0}
+            onClick={handleActivate}
+            onKeyDown={(event) => {
+              // 只拦截"确实是本卡片被激活"的场景：焦点若已经落在删除按钮上，
+              // Enter/Space 应由那个按钮自己消费，不能被卡片重复触发一次预览。
+              if (event.target !== event.currentTarget) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleActivate();
+              }
+            }}
+            className="growth-generator-video-card group relative cursor-pointer overflow-hidden rounded-[14px] border border-border bg-background text-left transition duration-300 hover:-translate-y-0.5 hover:border-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
-              {videoUrl ? (
+              {status === 'completed' && item.videoUrl ? (
                 <video
-                  src={videoUrl}
+                  src={item.videoUrl}
                   poster={cover ?? undefined}
                   muted
                   loop
@@ -146,7 +160,7 @@ export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPane
               ) : cover ? (
                 <img
                   src={cover}
-                  alt={project.title}
+                  alt={item.prompt}
                   className="h-full w-full object-cover opacity-88 transition duration-700 group-hover:scale-[1.04]"
                 />
               ) : (
@@ -159,46 +173,73 @@ export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPane
                 <Sparkles className="size-3 text-growth-accent" />
                 {t(`videoStatus.${status}`)}
               </div>
-              <span className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-foreground/88 text-background opacity-0 shadow-lg transition group-hover:opacity-100">
-                <PlayCircle className="size-4" />
-              </span>
+              {status === 'completed' ? (
+                <span className="pointer-events-none absolute inset-0 grid place-items-center opacity-0 transition group-hover:opacity-100">
+                  <span className="grid size-10 place-items-center rounded-full bg-foreground/88 text-background shadow-lg">
+                    <PlayCircle className="size-5" />
+                  </span>
+                </span>
+              ) : null}
+              <button
+                type="button"
+                aria-label={t('ariaDelete')}
+                onClick={(event) => void handleDelete(event, item.id)}
+                disabled={deletingId === item.id}
+                className="absolute right-3 top-3 z-20 grid size-8 place-items-center rounded-full bg-background/55 text-foreground opacity-0 backdrop-blur-md transition hover:bg-background/85 group-hover:opacity-100 disabled:cursor-wait disabled:opacity-60"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
               <div className="absolute inset-x-0 bottom-0 p-3">
                 <h3 className="line-clamp-2 text-base font-black leading-tight text-foreground">
-                  {project.title}
+                  {item.prompt}
                 </h3>
                 <div className="mt-2 flex items-center justify-between gap-2 text-[11px] font-bold text-foreground/52">
-                  <span className="inline-flex items-center gap-1">
-                    <Film className="size-3" />
-                    {t('clipCount', { count: clipCount })}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
+                  <span className="truncate">{item.model}</span>
+                  <span className="inline-flex shrink-0 items-center gap-1">
                     <Clock3 className="size-3" />
-                    {formatDate(project.createdAt)}
+                    {formatDate(item.createdAt)}
                   </span>
                 </div>
               </div>
             </div>
-          </button>
+          </div>
         );
       })}
     </div>
   );
 }
 
-function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) {
+function ProcessingVideoCard({
+  title,
+  prompt,
+  model,
+  coverUrl,
+  onDelete,
+  deleting,
+  deleteAriaLabel,
+}: {
+  title: string;
+  prompt: string;
+  model: string;
+  coverUrl?: string | null;
+  /** 仅历史卡片提供；提交态（pendingGeneration）不带删除入口，避免误伤刚下单的任务。 */
+  onDelete?: (event: React.MouseEvent) => void;
+  deleting?: boolean;
+  deleteAriaLabel?: string;
+}) {
   const t = useTranslations('publicGrowth.generator.studio');
 
   return (
     <article
-      className="growth-flow-border growth-generator-video-card relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-background text-left growth-history-card-shadow"
+      className="growth-flow-border growth-generator-video-card group relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-background text-left growth-history-card-shadow"
       aria-live="polite"
       aria-label={t('generating')}
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
-        {pending.coverUrl ? (
+        {coverUrl ? (
           <img
-            src={pending.coverUrl}
-            alt={pending.title}
+            src={coverUrl}
+            alt={title}
             className="h-full w-full object-cover opacity-40 blur-[1px] scale-[1.02]"
           />
         ) : null}
@@ -209,6 +250,17 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
           <Sparkles className="size-3 text-growth-accent" />
           {t('videoStatus.processing')}
         </div>
+        {onDelete ? (
+          <button
+            type="button"
+            aria-label={deleteAriaLabel ?? t('ariaDelete')}
+            onClick={onDelete}
+            disabled={deleting}
+            className="absolute right-3 top-3 z-20 grid size-8 place-items-center rounded-full bg-background/55 text-foreground opacity-0 backdrop-blur-md transition hover:bg-background/85 group-hover:opacity-100 disabled:cursor-wait disabled:opacity-60"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        ) : null}
         <div className="absolute inset-x-0 top-[34%] flex flex-col items-center px-5 text-center">
           <span className="relative grid size-14 place-items-center rounded-full border border-growth-accent/40 bg-growth-accent/10 text-growth-accent growth-history-icon-glow">
             <span className="absolute inset-2 rounded-full border border-growth-accent/35 border-t-transparent animate-spin" />
@@ -218,7 +270,7 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
             {t('generating')}
           </h2>
           <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-foreground/50">
-            {pending.prompt}
+            {prompt}
           </p>
         </div>
         <div className="absolute inset-x-0 bottom-0 p-3">
@@ -232,10 +284,10 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
             ))}
           </div>
           <h3 className="line-clamp-1 text-base font-black leading-tight text-foreground">
-            {pending.title}
+            {title}
           </h3>
           <div className="mt-1 truncate text-[11px] font-bold text-foreground/48">
-            {pending.model}
+            {model}
           </div>
         </div>
       </div>

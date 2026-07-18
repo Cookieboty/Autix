@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Logger,
+  Param,
   Post,
   Query,
 } from '@nestjs/common';
@@ -18,12 +19,18 @@ export class VideoCallbackController {
     private readonly config: ConfigService,
   ) {}
 
-  @Post()
+  /**
+   * 新形态：protocolKey 编进路径，解决「要解析回调体得先知道 preset，
+   * 要查 preset 得先解析回调体」的先有鸡先有蛋 —— 提交时我们已知 preset。
+   */
+  @Post(':protocolKey')
   async handleCallback(
+    @Param('protocolKey') protocolKey: string,
     @Query('token') token: string | undefined,
     @Body() body: Record<string, unknown>,
   ) {
     return handleVideoCallbackRequest({
+      protocolKey,
       token,
       body,
       config: this.config,

@@ -60,6 +60,30 @@ export class VideoGenerationModelResolverService {
       baseUrl: resolveBaseUrl(modelConfig),
       modelConfigId,
       model: modelConfig.model,
+      // 受限回退（video-generation-flow.service.ts 的 resolveLegacyApiContext）需要
+      // 靠 metadata.protocolKey 校验实时配置未漂移。⚠ 只读 metadata 的 protocolKey
+      // （公开路由信息），凭据仍只走 resolveApiKey/resolveBaseUrl —— metadata 绝不
+      // 兼作凭据来源（model-gateway-credentials.ts:56-58）。
+      metadata: modelConfig.metadata,
+    };
+  }
+
+  /**
+   * 按提交时快照的 modelConfigId 直接解析凭证 —— 供轮询/回调/手动刷新使用，
+   * 不经过 clip 的实时 params（clip params 生成后仍可改，见 resolveLegacyApiContext
+   * 的文档）。返回 null（而非 throw）以便调用方在批量轮询里安静跳过。
+   */
+  async resolveApiContextByModelConfigId(modelConfigId: string) {
+    const modelConfig =
+      await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
+    const apiKey = resolveApiKey(modelConfig);
+    if (!apiKey) return null;
+
+    return {
+      apiKey,
+      baseUrl: resolveBaseUrl(modelConfig),
+      modelConfigId,
+      model: modelConfig.model,
     };
   }
 
