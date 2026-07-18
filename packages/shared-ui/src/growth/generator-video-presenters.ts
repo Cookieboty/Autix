@@ -50,13 +50,20 @@ export function findVideoModelByHint(
 ) {
   const normalizedHint = normalizeModelHint(hint);
   if (!normalizedHint) return null;
+  const fields = (model: ModelConfigItem) => [
+    model.id,
+    model.name,
+    model.model,
+    `${model.provider ?? ''} ${model.model ?? ''}`,
+  ];
+  // 先精确匹配（与 image 同理，消除子串/顺序歧义，让模型名跳转稳定选中自身）
+  const exact = models.find((model) =>
+    fields(model).some((candidate) => normalizeModelHint(candidate) === normalizedHint),
+  );
+  if (exact) return exact;
+  // 回退：子串 + 多 token 全命中的模糊匹配
   return models.find((model) =>
-    [
-      model.id,
-      model.name,
-      model.model,
-      `${model.provider ?? ''} ${model.model ?? ''}`,
-    ].some((candidate) => modelHintMatches(candidate, hint)),
+    fields(model).some((candidate) => modelHintMatches(candidate, hint)),
   ) ?? null;
 }
 

@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { AvatarPresignService } from './avatar-presign.service';
+import { ProfileMediaPresignService } from './profile-media-presign.service';
 import { StorageCleanupService } from './storage-cleanup.service';
 import { AuthIdentityRepository } from '../../identity/auth/auth-identity.repository';
 
@@ -7,7 +7,7 @@ import { AuthIdentityRepository } from '../../identity/auth/auth-identity.reposi
  * T17: 头像上传 reservation-then-consume 全链路 integration spec。
  *
  * 遵循仓库既有约定（见 pricing-cutover.integration.spec.ts）：
- * - real classes wired together：AvatarPresignService + AuthIdentityRepository.consumeAvatarReservation
+ * - real classes wired together：ProfileMediaPresignService + AuthIdentityRepository.consumeAvatarReservation
  *   + StorageCleanupService.expirePendingReservations/enqueue
  * - 只 mock Prisma（in-memory pending_uploads / user / storage_cleanup_tasks 三张表的最小语义）
  *   和 R2（只回本地假 uploadUrl，不发真实 HTTP）
@@ -191,7 +191,7 @@ describe('T17: avatar upload reservation-then-consume integration', () => {
     const { prisma, pending } = createStubPrisma(users);
     const r2 = createStubR2();
 
-    const avatarPresign = new AvatarPresignService(prisma, r2);
+    const avatarPresign = new ProfileMediaPresignService(prisma, r2);
     const identityRepo = new AuthIdentityRepository(prisma);
 
     // Step 1: presign —— 端点应写入 pending_uploads PENDING
@@ -231,7 +231,7 @@ describe('T17: avatar upload reservation-then-consume integration', () => {
     const { prisma, pending, cleanup } = createStubPrisma(users);
     const r2 = createStubR2();
 
-    const avatarPresign = new AvatarPresignService(prisma, r2);
+    const avatarPresign = new ProfileMediaPresignService(prisma, r2);
     const storageCleanup = new StorageCleanupService(prisma, r2);
 
     // Step 1: presign
@@ -265,7 +265,7 @@ describe('T17: avatar upload reservation-then-consume integration', () => {
     const { prisma, pending } = createStubPrisma(users);
     const r2 = createStubR2();
 
-    const avatarPresign = new AvatarPresignService(prisma, r2);
+    const avatarPresign = new ProfileMediaPresignService(prisma, r2);
     const identityRepo = new AuthIdentityRepository(prisma);
 
     // 用户 A 拿到自己的 reservation

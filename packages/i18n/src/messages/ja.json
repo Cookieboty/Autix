@@ -3239,6 +3239,11 @@
       "image": "Image",
       "me": "Me"
     },
+    "notifications": {
+      "title": "お知らせ",
+      "close": "閉じる",
+      "empty": "お知らせはありません"
+    },
     "accountMenu": {
       "accountMenu": "Account menu",
       "signIn": "Sign in",
@@ -3282,7 +3287,9 @@
         "editImage": "画像編集",
         "imageUpscale": "画像アップスケール",
         "createVideo": "動画を作成",
-        "membership": "メンバーシップ"
+        "membership": "メンバーシップ",
+        "profile": "プロフィール",
+        "assets": "アセット"
       },
       "headline": "画像・動画クリエイターのためのオールインワン AI スタジオ",
       "copyright": "© {year} Amux Studio. 無断複写・転載を禁じます。",
@@ -3742,6 +3749,20 @@
           "name": "チームパック",
           "description": "メンバーシップランクに応じた商用権付きチームクレジット補充"
         }
+      },
+      "creditsMo": "{count} クレジット/月",
+      "fixedCredits": "毎月 {count} クレジット固定",
+      "perMonthLabel": "月額",
+      "billedAnnually": "月額（年払い）",
+      "saveVsMonthly": "月払いより {amount} お得",
+      "noDiffVsMonthly": "月払いと同額",
+      "bestValue": "ベストバリュー",
+      "getPlan": "{plan} を購入",
+      "parallelGenerations": "並列生成：最大 {videos} 本の動画、{images} 枚の画像",
+      "taglines": {
+        "0": "AI制作をはじめる方に",
+        "1": "日常的に安定して制作する方に",
+        "2": "AIプロジェクトを構築する上級者に"
       }
     },
     "metadata": {
@@ -4086,6 +4107,35 @@
         "reset": "Reset to default",
         "failed": "Could not update icon"
       }
+    },
+    "publicProfile": {
+      "creator": "クリエイター",
+      "editProfile": "プロフィールを編集",
+      "generations": "作品",
+      "views": "閲覧数",
+      "likes": "いいね",
+      "works": "作品",
+      "addCover": "カバーを追加",
+      "changeCover": "カバーを変更",
+      "removeCover": "カバーを削除",
+      "changeAvatar": "アバターを変更",
+      "emptyTitle": "まだ作品がありません",
+      "emptyOwnerSubtitle": "公開した作品はここに表示されます。",
+      "emptyVisitorSubtitle": "このクリエイターはまだ何も公開していません。",
+      "notFoundTitle": "ユーザーが見つかりません",
+      "notFoundSubtitle": "このプロフィールは存在しないか、利用できません。",
+      "coverError": "カバーの更新に失敗しました。もう一度お試しください。"
+    },
+    "imageNavFlyout": {
+      "models": "モデル",
+      "loading": "モデルを読み込み中…",
+      "features": "機能",
+      "createImage": "画像を作成",
+      "createImageDesc": "AI画像を生成",
+      "editImage": "画像を編集",
+      "editImageDesc": "画像を修正・調整",
+      "gallery": "ギャラリー",
+      "galleryDesc": "コミュニティの作品を見る"
     }
   },
   "videoShare": {

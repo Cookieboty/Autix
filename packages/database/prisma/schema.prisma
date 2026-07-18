@@ -91,6 +91,8 @@ model User {
   socialTiktok                   String?                      @db.VarChar(200)
   avatar                         String?
   avatarStorageKey               String?
+  bannerImage                    String?
+  bannerStorageKey               String?
   phone                          String?
   language                       String?                      @default("zh-CN")
   autoPublish                    Boolean                      @default(false)
@@ -2378,6 +2380,7 @@ model step_up_proofs {
 
 enum PendingUploadPurpose {
   AVATAR
+  BANNER
   GENERIC
 }
 
@@ -2425,6 +2428,8 @@ enum StorageCleanupReason {
   AVATAR_REPLACED
   AVATAR_CLEARED
   AVATAR_ORIGINAL_REPLACED
+  BANNER_REPLACED
+  BANNER_CLEARED
   USER_DELETED
   ACCOUNT_DELETED
   ADMIN_AVATAR_REPLACED

@@ -1,10 +1,40 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { ArrowRight, Check, Crown } from 'lucide-react';
-import { buildDiscountTranslationValues } from '../discount';
-import { formatCount, type BillingCycle, type PricingPlan } from '../public-pricing-helpers';
-import { renderFeatureItem, type TFunc } from './pricing-parts';
+import { Check, X } from 'lucide-react';
+import {
+  formatCount,
+  type BillingCycle,
+  type PlanComparison,
+  type PlanTone,
+  type PricingPlan,
+} from '../public-pricing-helpers';
+import type { TFunc } from './pricing-parts';
+
+/** 每档色调：neutral=白 CTA / brand=品牌绿 / top=品红。控制卡片微渐变、CTA 底色与文字对比色 */
+const TONE_STYLE: Record<
+  PlanTone,
+  { accent: string; ctaText: string; tinted: boolean; badgeText: string }
+> = {
+  neutral: {
+    accent: 'var(--color-foreground)',
+    ctaText: 'var(--color-background)',
+    tinted: false,
+    badgeText: 'var(--color-background)',
+  },
+  brand: {
+    accent: 'var(--growth-accent)',
+    ctaText: 'var(--color-background)',
+    tinted: true,
+    badgeText: 'var(--color-background)',
+  },
+  top: {
+    accent: '#ff2f87',
+    ctaText: '#ffffff',
+    tinted: true,
+    badgeText: '#ffffff',
+  },
+};
 
 export function BillingCycleSwitch({
   cycle,
@@ -38,110 +68,162 @@ export function BillingCycleSwitch({
   );
 }
 
+type FeatureRow = { label: string; ok: boolean };
+
+/** 由结构化对比数据生成 ✓/✗ 权益清单（全部来自真实会员等级 features） */
+function buildFeatureRows(c: PlanComparison, t: TFunc): FeatureRow[] {
+  const rows: FeatureRow[] = [];
+  if (c.imageConcurrency || c.videoConcurrency) {
+    rows.push({
+      label: t('parallelGenerations', {
+        videos: c.videoConcurrency ?? 0,
+        images: c.imageConcurrency ?? 0,
+      }),
+      ok: true,
+    });
+  }
+  rows.push({
+    label: c.videoSpec ? t('features.video', { spec: c.videoSpec }) : t('compare.videoCapability'),
+    ok: Boolean(c.videoSpec),
+  });
+  rows.push({ label: t('features.watermark'), ok: c.removeWatermark });
+  rows.push({ label: t('features.commercial'), ok: c.commercialLicense });
+  rows.push({
+    label: t('features.batch', {
+      level: t(`batchGeneration.${c.batchGeneration === 'disabled' ? 'limited' : c.batchGeneration}`),
+    }),
+    ok: c.batchGeneration !== 'disabled',
+  });
+  rows.push({
+    label: t('features.queue', { priority: t(`queuePriority.${c.queuePriority}`) }),
+    ok: true,
+  });
+  if (c.historyDays) {
+    rows.push({ label: t('features.history', { days: c.historyDays }), ok: true });
+  }
+  rows.push({ label: t('compare.creditCarryover'), ok: Boolean(c.carryoverCycles) });
+  rows.push({ label: t('compare.teamWorkspace'), ok: c.teamSpace });
+  rows.push({ label: t('compare.invoiceContract'), ok: Boolean(c.invoiceStatus) });
+  return rows;
+}
+
 export function PlanCard({
   plan,
   showYearlyHint,
   purchasing,
   onPurchase,
   t,
+  tagline,
 }: {
   plan: PricingPlan;
   showYearlyHint: boolean;
   purchasing: boolean;
   onPurchase: () => void;
   t: TFunc;
+  tagline?: string;
 }) {
-  const creditUnit = t('creditUnit');
+  const style = TONE_STYLE[plan.tone];
   const planName = plan.isFree ? t('freePlanName') : plan.serverName;
-  const badgeLabel =
-    plan.badgeKey === 'popular'
-      ? t('popular')
-      : plan.badgeKey === 'free'
-        ? t('freeBadge')
-        : plan.badgeKey ?? null;
-  const unit =
-    plan.isFree || plan.billingCycle === 'MONTHLY' ? t('perMonth') : t('perYear');
-  const ctaLabel = plan.isFree ? t('freeCta') : t('choosePlan');
+  const rows = buildFeatureRows(plan.comparison, t);
+  const priceUnit = showYearlyHint && !plan.isFree ? t('billedAnnually') : t('perMonthLabel');
+  const ctaLabel = plan.isFree ? t('freeCta') : t('getPlan', { plan: planName });
+
+  const cardStyle: CSSProperties = style.tinted
+    ? {
+        borderColor: `color-mix(in srgb, ${style.accent} 42%, transparent)`,
+        backgroundImage: `linear-gradient(157deg, color-mix(in srgb, ${style.accent} 17%, transparent) 0%, color-mix(in srgb, ${style.accent} 5%, transparent) 42%, rgba(255,255,255,0.02) 100%)`,
+        boxShadow: `0 24px 80px color-mix(in srgb, ${style.accent} 12%, transparent)`,
+      }
+    : {};
 
   return (
     <div
-      className={`growth-tilt-card group relative flex min-h-[460px] flex-col rounded-2xl border bg-foreground/[0.045] p-5 text-left transition duration-300 hover:bg-foreground/[0.07] xl:min-h-[430px] ${plan.recommended ? 'growth-plan-card-featured' : 'growth-plan-card'}`}
-      style={{ '--plan-accent': plan.accent } as CSSProperties}
+      className={`group relative flex flex-col overflow-hidden rounded-2xl border p-5 text-left transition duration-300 ${
+        style.tinted ? '' : 'border-white/10 bg-white/[0.025] hover:bg-white/[0.05]'
+      }`}
+      style={cardStyle}
     >
-      <div className="mb-5">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div
-            className="flex size-11 items-center justify-center rounded-full border bg-foreground/[0.06] growth-plan-badge"
-            style={{ color: plan.accent }}
-          >
-            <Crown className="size-5" />
-          </div>
-          <div className="flex min-w-0 flex-col items-end gap-2">
-            {badgeLabel ? (
-              <span
-                className="max-w-full truncate rounded-md px-2 py-1 text-[11px] font-black uppercase italic text-background"
-                style={{ backgroundColor: plan.accent }}
-              >
-                {badgeLabel}
-              </span>
-            ) : null}
-          </div>
-        </div>
-        <div className="flex min-h-8 flex-wrap items-center gap-2">
-          <h3 className="text-2xl font-semibold text-foreground">{planName}</h3>
+      {/* Header：名称 + 徽章 + tagline */}
+      <div className="mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-xl font-black uppercase tracking-tight text-foreground">{planName}</h3>
           {plan.hasYearlyDiscount ? (
-            <span className="growth-discount-badge rounded-md px-2.5 py-1 text-xs font-black italic uppercase leading-none text-foreground">
-              {t('yearlyDiscountBadge', buildDiscountTranslationValues())}
+            <span className="growth-discount-badge rounded px-1.5 py-0.5 text-[10px] font-black uppercase italic leading-none text-foreground">
+              {t('yearlyDiscountBadge', { percent: 20 })}
+            </span>
+          ) : null}
+          {plan.recommended ? (
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-black uppercase italic"
+              style={{ backgroundColor: style.accent, color: style.badgeText }}
+            >
+              {t('bestValue')}
             </span>
           ) : null}
         </div>
+        {tagline ? <p className="mt-1 text-xs text-foreground/50">{tagline}</p> : null}
       </div>
 
-      <div className="border-y border-foreground/10 py-5">
-        <div className="flex flex-wrap items-end gap-x-2 gap-y-3">
-          <span className="text-4xl font-semibold text-foreground 2xl:text-5xl">{plan.price}</span>
-          <span className="pb-2 text-sm text-foreground/46">{unit}</span>
+      {/* 积分/额度盒子 */}
+      <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+        <div className="text-lg font-bold text-foreground">
+          {t('creditsMo', { count: formatCount(plan.points) })}
         </div>
-        {plan.originalPrice ? (
-          <p className="mt-2 text-xs text-foreground/38 line-through">{plan.originalPrice}</p>
-        ) : null}
-        <p className="mt-3 text-sm font-semibold text-foreground/72">
-          {formatCount(plan.points)} {creditUnit}
-        </p>
-        {showYearlyHint && !plan.isFree ? (
-          <p className="mt-2 text-xs text-foreground/46">
-            {plan.hasYearlyDiscount
-              ? `${t('yearlyDiscountCaption')} · ${t('yearlyHint')}`
-              : t('yearlyHint')}
+        {plan.comparison.videoSpec ? (
+          <p className="mt-1 text-xs text-foreground/55">
+            {t('features.video', { spec: plan.comparison.videoSpec })}
           </p>
         ) : null}
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-white/[0.05] px-3 py-2 text-xs font-medium text-foreground/70">
+          <Check className="size-3.5 shrink-0" style={{ color: style.accent }} />
+          {t('fixedCredits', { count: formatCount(plan.points) })}
+        </div>
       </div>
 
-      <div className="mt-5 grid gap-3">
-        {plan.featureItems.map((item, idx) => {
-          const label = renderFeatureItem(item, t, creditUnit);
-          return (
-            <div
-              key={`${item.kind}-${idx}`}
-              className="flex items-start gap-2 text-sm leading-6 text-foreground/66"
-            >
-              <Check className="mt-1 size-4 shrink-0" style={{ color: plan.accent }} />
-              <span>{label}</span>
-            </div>
-          );
-        })}
+      {/* 价格 */}
+      <div className="mt-5 flex flex-wrap items-end gap-x-2">
+        {plan.originalPrice ? (
+          <span className="pb-1 text-lg font-bold text-[#ff4f82] line-through">
+            {plan.originalPrice}
+          </span>
+        ) : null}
+        <span className="text-3xl font-black text-foreground">{plan.pricePerMonth}</span>
+        <span className="pb-1 text-xs text-foreground/50">{priceUnit}</span>
       </div>
 
-      <div className="mt-auto pt-6">
-        <button
-          type="button"
-          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-semibold transition disabled:cursor-not-allowed growth-plan-cta"
-          disabled={purchasing}
-          onClick={onPurchase}
-        >
-          {purchasing ? '...' : ctaLabel}
-          <ArrowRight className="size-4" />
-        </button>
+      {/* CTA */}
+      <button
+        type="button"
+        className="mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg text-sm font-bold transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        style={{ backgroundColor: style.accent, color: style.ctaText }}
+        disabled={purchasing}
+        onClick={onPurchase}
+      >
+        {purchasing ? '...' : ctaLabel}
+      </button>
+
+      {/* 年付节省提示 */}
+      {showYearlyHint && !plan.isFree ? (
+        <p className="mt-2 text-center text-xs text-foreground/45">
+          {plan.annualSavings ? t('saveVsMonthly', { amount: plan.annualSavings }) : t('noDiffVsMonthly')}
+        </p>
+      ) : null}
+
+      {/* 权益清单 */}
+      <div className="mt-5 flex flex-col gap-2.5 border-t border-white/10 pt-5">
+        {rows.map((row, idx) => (
+          <div
+            key={idx}
+            className={`flex items-start gap-2 text-[13px] leading-5 ${row.ok ? 'text-foreground/80' : 'text-foreground/35'}`}
+          >
+            {row.ok ? (
+              <Check className="mt-0.5 size-4 shrink-0 text-foreground/70" />
+            ) : (
+              <X className="mt-0.5 size-4 shrink-0 text-foreground/25" />
+            )}
+            <span>{row.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

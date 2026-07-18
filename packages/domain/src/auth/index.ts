@@ -25,6 +25,8 @@ export interface AuthUser {
   socialYoutube?: string | null;
   socialTiktok?: string | null;
   avatar?: string | null;
+  /** Profile 顶部 banner 的 CDN URL；内部的 bannerStorageKey 不会下发到前端。 */
+  bannerImage?: string | null;
   language?: string | null;
   /** 个人中心「Auto-publish」开关；/ai/image 隐私按钮的默认可见性来源。走 PATCH users/me/auto-publish。 */
   autoPublish?: boolean;
@@ -106,6 +108,13 @@ export interface UpdateOwnProfileInput {
    *    → 事务后 enqueue storage_cleanup_tasks(reason=AVATAR_REPLACED) 删旧 key
    */
   avatarStorageKey?: string;
+  /**
+   * Profile 顶部 banner。与 `avatarStorageKey` 同一套 reservation-then-consume 语义，
+   * 只是 purpose=BANNER、清理 reason=BANNER_REPLACED。
+   */
+  bannerStorageKey?: string;
+  /** 置 null 即清空 banner（旧对象走 BANNER_CLEARED 清理）。与 bannerStorageKey 互斥。 */
+  bannerImage?: string | null;
 }
 
 /** T11: 白名单字段的长度上限（domain 常量，服务端和前端共用校验规则） */
@@ -116,6 +125,7 @@ export const OWN_PROFILE_LIMITS = {
   locationMaxLength: 80,
   socialMaxLength: 200,
   avatarUrlMaxLength: 2048,
+  bannerUrlMaxLength: 2048,
 } as const;
 
 /**
@@ -173,6 +183,24 @@ export const AVATAR_UPLOAD_LIMITS = {
     'image/avif',
   ] as const,
 } as const;
+
+/**
+ * Profile banner 上传：与头像共用 reservation-then-consume 流水，仅三处不同——
+ * presign 端点是 `POST /storage/banner-presign`、对象前缀是 `banners/`、
+ * 消费字段是 `PATCH /auth/profile { bannerStorageKey }`。
+ *
+ * 体积上限比头像宽（banner 是大图横幅，5MB 会逼用户在浏览器里压图）；
+ * MIME 白名单与头像**保持一致**（同样排除 image/svg+xml —— 存储型 XSS）。
+ */
+export const BANNER_UPLOAD_LIMITS = {
+  reservationTtlSeconds: 600,
+  maxSizeBytes: 10 * 1024 * 1024,
+  allowedContentTypes: AVATAR_UPLOAD_LIMITS.allowedContentTypes,
+} as const;
+
+/** Banner presign 的入参/结果与头像完全同构，直接复用类型（避免两份等价接口漂移）。 */
+export type BannerPresignInput = AvatarPresignInput;
+export type BannerPresignResult = AvatarPresignResult;
 
 export type StepUpPurpose =
   | 'change-password'

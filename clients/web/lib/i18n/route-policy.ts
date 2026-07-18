@@ -37,6 +37,10 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   '/docs': DOCS,
   '/docs/[...slug]': DOCS,
 
+  // 公开个人页 `/@username`（proxy rewrite 到 /u/[handle]）：内容客户端拉取，
+  // 暂不做 per-user SEO/alternates，先 noindex（与 gallery/[id] 详情同策略）。
+  '/u/[handle]': NOINDEX,
+
   // UGC：壳已译，正文未译
   '/marketplace/[type]': NEUTRAL,
   '/marketplace/[type]/[id]': NEUTRAL,

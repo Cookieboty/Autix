@@ -2,25 +2,26 @@ import { IsOptional, IsString, IsUrl, MaxLength, ValidateIf, registerDecorator, 
 import { OWN_PROFILE_LIMITS, type UpdateOwnProfileInput } from '@autix/domain';
 
 /**
- * T16: `avatar` 与 `avatarStorageKey` 互斥校验器。
+ * T16: 「外链 URL 字段」与「reservation key 字段」互斥校验器。
  * 两个字段都是可选，但同时出现视为不合法（前端不应该"既贴外链又消费 reservation"）。
+ * 头像与 banner 各用一次，故参数化字段名。
  */
-function AvatarExclusive(validationOptions?: ValidationOptions) {
+function UrlKeyExclusive(urlField: string, keyField: string, validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: 'AvatarExclusive',
+      name: 'UrlKeyExclusive',
       target: object.constructor,
       propertyName,
       options: {
-        message: 'avatar 与 avatarStorageKey 不能同时提交',
+        message: `${urlField} 与 ${keyField} 不能同时提交`,
         ...validationOptions,
       },
       validator: {
         validate(_value: unknown, args) {
-          const obj = (args?.object ?? {}) as UpdateOwnProfileDto;
-          const hasAvatar = Object.prototype.hasOwnProperty.call(obj, 'avatar') && obj.avatar !== undefined;
-          const hasKey = Object.prototype.hasOwnProperty.call(obj, 'avatarStorageKey') && obj.avatarStorageKey !== undefined;
-          return !(hasAvatar && hasKey);
+          const obj = (args?.object ?? {}) as Record<string, unknown>;
+          const has = (f: string) =>
+            Object.prototype.hasOwnProperty.call(obj, f) && obj[f] !== undefined;
+          return !(has(urlField) && has(keyField));
         },
       },
     });
@@ -112,11 +113,26 @@ export class UpdateOwnProfileDto implements UpdateOwnProfileInput {
   @MaxLength(OWN_PROFILE_LIMITS.avatarUrlMaxLength, {
     message: `avatar URL 长度不能超过 ${OWN_PROFILE_LIMITS.avatarUrlMaxLength}`,
   })
-  @AvatarExclusive()
+  @UrlKeyExclusive('avatar', 'avatarStorageKey')
   avatar?: string | null;
 
   @IsOptional()
   @IsString({ message: 'avatarStorageKey 必须为字符串' })
   @MaxLength(512, { message: 'avatarStorageKey 长度不能超过 512' })
   avatarStorageKey?: string;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString({ message: 'bannerImage 必须为字符串或 null' })
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { message: 'bannerImage 必须是有效的 HTTP(S) URL' })
+  @MaxLength(OWN_PROFILE_LIMITS.bannerUrlMaxLength, {
+    message: `bannerImage URL 长度不能超过 ${OWN_PROFILE_LIMITS.bannerUrlMaxLength}`,
+  })
+  @UrlKeyExclusive('bannerImage', 'bannerStorageKey')
+  bannerImage?: string | null;
+
+  @IsOptional()
+  @IsString({ message: 'bannerStorageKey 必须为字符串' })
+  @MaxLength(512, { message: 'bannerStorageKey 长度不能超过 512' })
+  bannerStorageKey?: string;
 }

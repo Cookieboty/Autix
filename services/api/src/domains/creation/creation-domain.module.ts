@@ -9,6 +9,7 @@ import { LlmModule } from './llm/llm.module';
 import { MaterialsModule } from './materials/materials.module';
 import { MessageModule } from './message/message.module';
 import { ModelConfigModule } from './model-config/model-config.module';
+import { PublicProfileModule } from './profile/public-profile.module';
 import { RiskModule } from './risk/risk.module';
 import { VideoModule } from './video/video.module';
 
@@ -25,6 +26,7 @@ import { VideoModule } from './video/video.module';
     VideoModule,
     MaterialsModule,
     ModelConfigModule,
+    PublicProfileModule,
     RiskModule,
   ],
   exports: [

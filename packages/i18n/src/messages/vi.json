@@ -3239,6 +3239,11 @@
       "image": "Image",
       "me": "Me"
     },
+    "notifications": {
+      "title": "Thông báo",
+      "close": "Đóng",
+      "empty": "Bạn chưa có thông báo nào"
+    },
     "accountMenu": {
       "accountMenu": "Account menu",
       "signIn": "Sign in",
@@ -3282,7 +3287,9 @@
         "editImage": "Chỉnh sửa ảnh",
         "imageUpscale": "Nâng cấp ảnh",
         "createVideo": "Tạo video",
-        "membership": "Thành viên"
+        "membership": "Thành viên",
+        "profile": "Hồ sơ",
+        "assets": "Tài nguyên"
       },
       "headline": "Studio AI tất cả trong một cho nhà sáng tạo ảnh và video",
       "copyright": "© {year} Amux Studio. Bảo lưu mọi quyền.",
@@ -3742,6 +3749,20 @@
           "name": "Gói Nhóm",
           "description": "Bổ sung tín dụng nhóm với quyền thương mại theo cấp thành viên"
         }
+      },
+      "creditsMo": "{count} tín dụng/tháng",
+      "fixedCredits": "Cố định {count} tín dụng/tháng",
+      "perMonthLabel": "mỗi tháng",
+      "billedAnnually": "mỗi tháng, thanh toán theo năm",
+      "saveVsMonthly": "Tiết kiệm {amount} so với theo tháng",
+      "noDiffVsMonthly": "Không chênh lệch so với theo tháng",
+      "bestValue": "Giá trị nhất",
+      "getPlan": "Chọn {plan}",
+      "parallelGenerations": "Tạo song song: tối đa {videos} video, {images} ảnh",
+      "taglines": {
+        "0": "Dành cho người mới bắt đầu sáng tạo AI",
+        "1": "Dành cho sáng tạo AI đều đặn hằng ngày",
+        "2": "Dành cho người dùng nâng cao và dự án AI"
       }
     },
     "metadata": {
@@ -4086,6 +4107,35 @@
         "reset": "Reset to default",
         "failed": "Could not update icon"
       }
+    },
+    "publicProfile": {
+      "creator": "Người sáng tạo",
+      "editProfile": "Chỉnh sửa hồ sơ",
+      "generations": "Tác phẩm",
+      "views": "Lượt xem",
+      "likes": "Lượt thích",
+      "works": "Tác phẩm",
+      "addCover": "Thêm ảnh bìa",
+      "changeCover": "Đổi ảnh bìa",
+      "removeCover": "Gỡ ảnh bìa",
+      "changeAvatar": "Đổi ảnh đại diện",
+      "emptyTitle": "Chưa có tác phẩm nào",
+      "emptyOwnerSubtitle": "Các tác phẩm đã đăng của bạn sẽ hiển thị ở đây.",
+      "emptyVisitorSubtitle": "Người sáng tạo này chưa đăng gì cả.",
+      "notFoundTitle": "Không tìm thấy người dùng",
+      "notFoundSubtitle": "Hồ sơ này không tồn tại hoặc không còn khả dụng.",
+      "coverError": "Cập nhật ảnh bìa thất bại. Vui lòng thử lại."
+    },
+    "imageNavFlyout": {
+      "models": "Mô hình",
+      "loading": "Đang tải mô hình…",
+      "features": "Tính năng",
+      "createImage": "Tạo ảnh",
+      "createImageDesc": "Tạo ảnh bằng AI",
+      "editImage": "Chỉnh sửa ảnh",
+      "editImageDesc": "Sửa và tinh chỉnh ảnh",
+      "gallery": "Thư viện",
+      "galleryDesc": "Khám phá tác phẩm cộng đồng"
     }
   },
   "videoShare": {
