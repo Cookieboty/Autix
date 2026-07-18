@@ -15,6 +15,7 @@
     "db:migrate": "dotenv -e ../../.env -- prisma migrate dev --schema prisma/schema.prisma",
     "db:deploy": "dotenv -e ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
     "db:push": "dotenv -e ../../.env -- prisma db push --schema prisma/schema.prisma",
+    "db:reset": "dotenv -e ../../.env -- prisma migrate reset --schema prisma/schema.prisma",
     "db:baseline:check": "dotenv -e ../../.env -- tsx scripts/check-migration-readiness.ts",
     "db:flat-migrate": "tsx scripts/flat-migrate.ts",
     "db:init-membership": "tsx scripts/init-membership-data.ts",

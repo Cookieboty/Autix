@@ -18,6 +18,7 @@
     "db:migrate": "dotenv -e .env -- pnpm --filter @autix/database run db:migrate",
     "db:deploy": "dotenv -e .env -- pnpm --filter @autix/database run db:deploy",
     "db:push": "dotenv -e .env -- pnpm --filter @autix/database run db:push",
+    "db:reset": "dotenv -e .env -- pnpm --filter @autix/database run db:reset",
     "db:flat-migrate": "dotenv -e .env -- pnpm --filter @autix/database run db:flat-migrate",
     "db:init-membership": "dotenv -e .env -- pnpm --filter @autix/database run db:init-membership",
     "db:prepare-cutover": "dotenv -e .env -- pnpm --filter @autix/database run db:prepare-cutover",
