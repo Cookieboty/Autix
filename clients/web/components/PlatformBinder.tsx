@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { hydrateStores } from '@autix/shared-store';
 import { bindRouter } from '@/lib/platform';
@@ -32,11 +33,15 @@ function RouterBinder() {
  * 这样避免整站硬刷新时用全屏 "Loading…" 覆盖掉已 SSR 出来的内容。
  */
 export function PlatformBinder({ children }: { children: React.ReactNode }) {
+  // URL 激活的 locale 是语言收敛的最高优先级来源，必须传给 hydrate——否则
+  // localStorage 里的旧值会覆盖 URL/cookie，产生「页面英文、选择器中文」的错位。
+  const locale = useLocale();
+
   useEffect(() => {
-    hydrateStores().catch((error) => {
+    hydrateStores(locale).catch((error) => {
       console.error('hydrate stores failed:', error);
     });
-  }, []);
+  }, [locale]);
 
   return (
     <>

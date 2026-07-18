@@ -22,4 +22,13 @@ describe('routing 配置', () => {
     expect(routing.localeDetection).toBe(false);
     expect(routing.alternateLinks).toBe(false);
   });
+
+  it('必须关闭 next-intl 的自动 NEXT_LOCALE 写入', () => {
+    // 打开的话 next-intl 会在每个响应上写 NEXT_LOCALE，把「用户从未选过语言」
+    // 伪造成「用户选了英文」：首访裸路径立刻得到 NEXT_LOCALE=en，代理的 cookie
+    // 兜底与 resolveLanguage 的优先级链都被这个假信号压死，localStorage 里真实的
+    // 中文偏好永远赢不了（实测症状：中文用户首访裸路径恒定落英文）。
+    // NEXT_LOCALE 必须只由语言切换器和代理的显式英文出口写入。
+    expect(routing.localeCookie).toBe(false);
+  });
 });

@@ -87,9 +87,9 @@ import { useLanguageStore } from './language.store';
  *
  * 调用前提：必须先调用 @autix/platform 的 registerPlatform()。
  */
-export async function hydrateStores(): Promise<void> {
+export async function hydrateStores(urlLocale?: string): Promise<void> {
   await Promise.all([
     useAuthStore.getState().hydrate(),
-    useLanguageStore.getState().hydrate(),
+    useLanguageStore.getState().hydrate(urlLocale),
   ]);
 }

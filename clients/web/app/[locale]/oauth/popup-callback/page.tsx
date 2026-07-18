@@ -54,7 +54,10 @@ export default function OAuthPopupCallbackPage() {
       return;
     }
 
-    // 兜底(无 BroadcastChannel 且无 opener,极旧环境):本窗退化为现有 /oauth/callback
+    // 兜底(无 BroadcastChannel 且无 opener,极旧环境):本窗退化为现有 /oauth/callback。
+    // 刻意保持裸路径:/oauth/* 是 locale 中立端点(见 lib/proxy-handler.ts 的
+    // LOCALE_NEUTRAL_PREFIXES),回调页必须在默认 locale 下渲染,其 intl router 才是
+    // passthrough,带前缀的 returnTo 才不会被二次加前缀。加前缀会重新引入双前缀 404。
     window.location.replace(`/oauth/callback${window.location.search}`);
   }, [params]);
 

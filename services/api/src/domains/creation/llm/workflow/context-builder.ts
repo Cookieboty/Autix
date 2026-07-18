@@ -60,7 +60,6 @@ export async function buildStepContext(
   const { repository, searchService, libraryEnabled = true } = deps;
   const { conversationId, userId, promptTemplate, inputArtifactKeys, runId } = opts;
 
-  // 1. 获取上游 step artifacts
   const upstreamArtifacts: Record<string, string> = {};
   if (inputArtifactKeys.length > 0) {
     const artifacts = await repository.findLatestWorkflowStepArtifacts(runId, inputArtifactKeys);
@@ -69,7 +68,6 @@ export async function buildStepContext(
     }
   }
 
-  // 2. 渲染 prompt template
   let rendered = promptTemplate
     .replace(/\{\{userInput\}\}/g, opts.userInput);
 
@@ -80,7 +78,6 @@ export async function buildStepContext(
   // 清理未替换的 artifact 占位符
   rendered = rendered.replace(/\{\{artifact:\w+\}\}/g, '（该阶段产物不可用）');
 
-  // 3. 获取会话激活的资源
   const links = await repository.findConversationResources(conversationId);
 
   const skillIds = links.filter((l) => l.resourceType === ResourceType.SKILL).map((l) => l.resourceId);
@@ -103,7 +100,6 @@ export async function buildStepContext(
       : Promise.resolve([] as McpContextRow[]),
   ]);
 
-  // 4. 组装 tools
   const tools: StructuredToolInterface[] = [];
   if (libraryEnabled) {
     tools.push(createSearchDocumentsTool(searchService, userId));
@@ -114,13 +110,11 @@ export async function buildStepContext(
     .map((m) => ({ id: m.id, serverName: m.serverName, transport: m.transport }));
   tools.push(...createMcpBridgeTools(cloudMcps));
 
-  // 5. 组装 subagents
   const subagents: SubAgent[] = [
     ...skills.map((s) => skillAsSubagent(s as SkillRecord)),
     ...agents.map((a) => agentAsSubagent(a as AgentRecord)),
   ];
 
-  // 6. 追加资源信息到 prompt
   const resourceSections: string[] = [];
   for (const s of skills) {
     resourceSections.push(`## 可用 Skill: ${s.title}\n${s.instructions}`);

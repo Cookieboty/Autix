@@ -16,6 +16,8 @@ type NextRouter = {
 let _initialized = false;
 let _router: NextRouter | null = null;
 let _pathname: string = '/';
+/** router 绑定前发生的 switchLocale，绑定后补跑，避免静默丢弃。 */
+let _pendingLocale: string | null = null;
 let _search: string = typeof window !== 'undefined' ? window.location.search : '';
 const _navigationListeners = new Set<() => void>();
 
@@ -27,6 +29,13 @@ export function bindRouter(router: NextRouter, pathname: string, search = ''): v
   _pathname = pathname;
   _search = nextSearch;
   if (changed) notifyNavigationListeners();
+
+  // 绑定前发生的语言切换在此补跑（见 navigation.switchLocale 的说明）。
+  if (_pendingLocale !== null) {
+    const locale = _pendingLocale;
+    _pendingLocale = null;
+    router.replace(_pathname, { locale });
+  }
 }
 
 function notifyNavigationListeners(): void {
@@ -139,7 +148,16 @@ function initPlatform(): void {
     switchLocale: (locale: string) => {
       // next-intl 的 router.replace(pathname, { locale }) 会把已剥离前缀的
       // _pathname 重新按目标 locale 组装 URL（as-needed：默认 locale 走裸路径）。
-      if (_router) _router.replace(_pathname, { locale });
+      //
+      // router 尚未绑定时**不能静默丢弃**：PlatformBinder 的 useEffect 在 <Suspense>
+      // 内，commit 晚于 hydrateStores()，而 hydrate 的 URL 收敛和用户首屏点语言切换
+      // 都可能落在这个窗口里。丢掉的后果是 store/cookie 已改成中文、页面却停在英文。
+      // 暂存后由 bindRouter 补跑。
+      if (_router) {
+        _router.replace(_pathname, { locale });
+        return;
+      }
+      _pendingLocale = locale;
     },
     getSearch: () => _search,
     getOrigin: () => window.location.origin,

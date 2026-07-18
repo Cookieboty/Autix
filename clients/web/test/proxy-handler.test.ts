@@ -28,8 +28,20 @@ describe('resolveProxyAction', () => {
     });
   });
 
-  it('默认 locale 前缀的 @handle 需 301 去前缀', () => {
+  // `/en/*` 统一是显式英文出口：去前缀之外还要把 cookie 钉成 en，否则客户端
+  // hydrate 会回落到 localStorage 里的旧偏好，把用户拽回中文。cookie 已是 en 时
+  // 才退化为可缓存的 301。详见 test/locale-stickiness.test.ts。
+  it('默认 locale 前缀的 @handle 去前缀并钉住英文', () => {
     expect(resolveProxyAction('/en/@alice', '', API)).toEqual({
+      type: 'redirect',
+      url: '/@alice',
+      status: 302,
+      setLocaleCookie: 'en',
+    });
+  });
+
+  it('默认 locale 前缀的 @handle + cookie en → 301 纯规范化', () => {
+    expect(resolveProxyAction('/en/@alice', '', API, 'en')).toEqual({
       type: 'redirect',
       url: '/@alice',
       status: 301,
@@ -73,11 +85,12 @@ describe('resolveProxyAction', () => {
     });
   });
 
-  it('默认 locale 前缀 @handle 含点号需 301 去前缀', () => {
+  it('默认 locale 前缀 @handle 含点号同样去前缀并钉住英文', () => {
     expect(resolveProxyAction('/en/@john.doe', '', API)).toEqual({
       type: 'redirect',
       url: '/@john.doe',
-      status: 301,
+      status: 302,
+      setLocaleCookie: 'en',
     });
   });
 
@@ -136,8 +149,15 @@ describe('resolveProxyAction — 根路径按 NEXT_LOCALE cookie 自动跳转', 
     expect(resolveProxyAction('/', '', API, 'xx-garbage')).toEqual({ type: 'intl' });
   });
 
-  it('/pricing + cookie zh-CN → 不跳转（裸深链接需保持可分享）', () => {
-    expect(resolveProxyAction('/pricing', '', API, 'zh-CN')).toEqual({ type: 'intl' });
+  // 契约已变更：裸深链接不再"保持裸路径"，而是按接收者的 cookie 跳到他自己的语言。
+  // 链接依然可分享（各人看各自语言），换来的是 locale 粘性可以在边缘被强制。
+  // 完整不变量见 test/locale-stickiness.test.ts。
+  it('/pricing + cookie zh-CN → 302 捞回中文（locale 粘性优先于裸路径）', () => {
+    expect(resolveProxyAction('/pricing', '', API, 'zh-CN')).toEqual({
+      type: 'redirect',
+      url: '/zh-CN/pricing',
+      status: 302,
+    });
   });
 
   it('/zh-CN + cookie zh-CN → 不跳转（不形成循环）', () => {

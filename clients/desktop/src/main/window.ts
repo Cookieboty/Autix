@@ -138,7 +138,6 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     if (_mainWindow === win) _mainWindow = null;
   });
 
-  // 加载渲染进程
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
     await win.loadURL(process.env.ELECTRON_RENDERER_URL);
     win.webContents.openDevTools({ mode: 'detach' });

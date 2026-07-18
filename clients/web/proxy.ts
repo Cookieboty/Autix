@@ -33,15 +33,31 @@ export default function proxy(req: NextRequest) {
   const action = resolveProxyAction(pathname, search, getApiOrigin(), localeCookie);
 
   switch (action.type) {
-    case 'rewrite':
-      return withRobotsHeader(req, NextResponse.rewrite(new URL(action.url, req.url)));
+    case 'rewrite': {
+      const res = NextResponse.rewrite(new URL(action.url, req.url));
+      // 按 cookie 选语言的 rewrite（裸 @handle）URL 不变但响应体随 cookie 变化，
+      // 共享缓存必须禁存，否则一个中文用户的 profile 页会被发给下一个访客。
+      if (action.cookieDependent) {
+        res.headers.set('Cache-Control', 'private, no-store');
+      }
+      return withRobotsHeader(req, res);
+    }
     case 'redirect': {
       const res = NextResponse.redirect(new URL(action.url, req.url), action.status);
-      // 302（根路径按 cookie 跳转）的决策依赖请求 cookie，绝不能被共享缓存存储——
-      // 否则下一个无 cookie 的访客（Googlebot 等）会拿到被缓存的跳转。301（@handle
-      // 去默认 locale 前缀）是纯路径规范化，与 cookie 无关，无需此头。
+      // 302（按 cookie 跳转）的决策依赖请求 cookie，绝不能被共享缓存存储——
+      // 否则下一个无 cookie 的访客（Googlebot 等）会拿到被缓存的跳转。301（去默认
+      // locale 前缀的纯路径规范化）与 cookie 无关，无需此头。
       if (action.status === 302) {
         res.headers.set('Cache-Control', 'private, no-store');
+      }
+      // 显式英文出口 `/en/*`：URL 意图必须覆盖已存的语言偏好，否则用户被旧 cookie
+      // 锁死，跳到裸路径后又被兜底捞回中文。cookie 属性与 language.store.ts 保持一致。
+      if (action.setLocaleCookie) {
+        res.cookies.set('NEXT_LOCALE', action.setLocaleCookie, {
+          path: '/',
+          sameSite: 'lax',
+          maxAge: 365 * 24 * 60 * 60,
+        });
       }
       return withRobotsHeader(req, res);
     }
