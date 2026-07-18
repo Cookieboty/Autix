@@ -16,15 +16,12 @@ export function OAuthButtons(props: {
   providers: OAuthProviderId[];
   loadingProvider?: OAuthProviderId | null;
   onSelect: (p: OAuthProviderId) => void;
-  comingSoonProviders?: OAuthProviderId[];
   className?: string;
   buttonClassName?: string;
   showDivider?: boolean;
 }) {
   const t = useTranslations('auth');
-  const hasFunctional = props.providers.length > 0;
-  const hasComingSoon = (props.comingSoonProviders?.length ?? 0) > 0;
-  if (!hasFunctional && !hasComingSoon) return null;
+  if (props.providers.length === 0) return null;
   return (
     <div className={cn('flex flex-col gap-2', props.className)}>
       {props.showDivider !== false && (
@@ -44,25 +41,6 @@ export function OAuthButtons(props: {
           >
             <OAuthProviderIcon provider={p} className="size-5" />
             {props.loadingProvider === p ? t('oauthRedirecting') : t(labelKey)}
-          </Button>
-        );
-      })}
-      {props.comingSoonProviders?.map((p) => {
-        const labelKey = LABEL_KEY[p];
-        if (!labelKey) return null;
-        return (
-          <Button
-            key={`coming-soon-${p}`}
-            type="button"
-            variant="outline"
-            disabled
-            className={cn(
-              'relative cursor-not-allowed gap-3 text-muted-foreground opacity-50',
-              props.buttonClassName,
-            )}
-          >
-            <OAuthProviderIcon provider={p} className="size-5" />
-            {t(labelKey)} · {t('oauthComingSoon')}
           </Button>
         );
       })}

@@ -12,14 +12,12 @@ export function LoginPage() {
   const navigate = useNavigate();
   const t = useTranslations('auth');
   const [providers, setProviders] = useState<OAuthProviderId[]>([]);
-  const [comingSoon, setComingSoon] = useState<OAuthProviderId[]>([]);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProviderId | null>(null);
   const [oauthError, setOAuthError] = useState('');
 
   useEffect(() => {
-    authActions.fetchOAuthProviders().then(({ providers: list, comingSoon: cs }) => {
+    authActions.fetchOAuthProviders().then(({ providers: list }) => {
       setProviders(list as OAuthProviderId[]);
-      setComingSoon(cs as OAuthProviderId[]);
     }).catch(() => {});
   }, []);
 
@@ -48,7 +46,6 @@ export function LoginPage() {
       onForgotPassword={() => navigate('/forgot-password')}
       onRegister={() => navigate('/register')}
       oauthProviders={providers}
-      oauthComingSoon={comingSoon}
       onOAuthLogin={onOAuthLogin}
       oauthLoadingProvider={loadingProvider}
       oauthError={oauthError}

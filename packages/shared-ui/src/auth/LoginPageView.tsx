@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Gift, Mail } from 'lucide-react';
+import { ArrowLeft, Gift } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeLogo } from '../brand';
 import { Button } from '../ui';
@@ -35,7 +35,6 @@ export function LoginFormPanel({
   onForgotPassword,
   onRegister,
   oauthProviders,
-  oauthComingSoon,
   onOAuthLogin,
   oauthLoadingProvider,
   oauthError,
@@ -77,11 +76,10 @@ export function LoginFormPanel({
   };
 
   const socialProviders = oauthProviders ?? [];
-  const comingSoonProviders = oauthComingSoon ?? [];
-  const hasSocialProviders = socialProviders.length > 0 || comingSoonProviders.length > 0;
+  const hasSocialProviders = socialProviders.length > 0;
 
   return (
-    <div className={cn('space-y-5 text-white', className)}>
+    <div className={cn('space-y-4 text-white', className)}>
       {emailMode && (
         <button
           type="button"
@@ -94,14 +92,14 @@ export function LoginFormPanel({
       )}
 
       <div className="flex justify-center">
-        <ThemeLogo alt="Amux Studio" size={compact ? 40 : 46} variant="dark" priority />
+        <ThemeLogo alt="Amux Studio" size={compact ? 36 : 42} variant="dark" priority />
       </div>
 
-      <div className="space-y-2 text-center">
-        <h1 className={cn('font-bold leading-tight tracking-normal text-white', compact ? 'text-3xl' : 'text-4xl')}>
+      <div className="space-y-1.5 pb-2 text-center">
+        <h1 className={cn('font-bold leading-tight tracking-tight text-white', compact ? 'text-[26px]' : 'text-[32px]')}>
           {emailMode ? t('loginEmailTitle') : t('modalWelcome')}
         </h1>
-        <p className="text-base font-medium text-white/40">
+        <p className="text-sm font-medium text-white/45">
           {emailMode ? t('modalEmailSubtitle') : t('modalSubtitle')}
         </p>
       </div>
@@ -110,9 +108,9 @@ export function LoginFormPanel({
         <button
           type="button"
           onClick={onRegister}
-          className="flex min-h-13 w-full items-center justify-center gap-3 rounded-md bg-[#263018] px-4 text-base font-bold text-[#c9ff00] transition hover:bg-[#314013]"
+          className="flex h-13 w-full items-center justify-center gap-2.5 rounded-lg bg-[#26310f] px-4 text-[15px] font-semibold text-[#c9ff00] transition hover:bg-[#2f3c13]"
         >
-          <Gift className="size-5" />
+          <Gift className="size-[18px]" />
           {t('signupDiscount')}
         </button>
       )}
@@ -122,20 +120,17 @@ export function LoginFormPanel({
           providers={socialProviders}
           loadingProvider={oauthLoadingProvider}
           onSelect={(provider) => onOAuthLogin?.(provider)}
-          comingSoonProviders={comingSoonProviders}
           showDivider={false}
           className="gap-3"
-          buttonClassName="min-h-14 rounded-md border-white/12 bg-transparent text-base font-bold text-white hover:bg-white/[0.07] hover:text-white"
+          buttonClassName="h-13 rounded-lg border border-white/8 bg-[#1a1c1e] text-[15px] font-semibold text-white hover:bg-[#232628] hover:text-white"
         />
       ) : null}
 
       {oauthError ? <AuthErrorAlert>{oauthError}</AuthErrorAlert> : null}
 
       {!emailMode && (
-        <div className="flex items-center gap-4 text-xs font-semibold uppercase text-white/35">
-          <span className="h-px flex-1 bg-white/10" />
+        <div className="py-1 text-center text-xs font-medium uppercase text-white/35">
           {t('or')}
-          <span className="h-px flex-1 bg-white/10" />
         </div>
       )}
 
@@ -148,7 +143,7 @@ export function LoginFormPanel({
             placeholder={t('accountPlaceholder')}
             autoComplete="username"
             error={errors.username?.message}
-            className="h-14 rounded-md border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20"
+            className="h-14 rounded-lg border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20"
           />
 
           <div>
@@ -163,7 +158,7 @@ export function LoginFormPanel({
               placeholder={t('passwordPlaceholder')}
               autoComplete="current-password"
               error={errors.password?.message}
-              className="h-14 rounded-md border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20"
+              className="h-14 rounded-lg border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20"
             />
             <div className="mt-3 flex items-center justify-between gap-3 text-sm text-white/45">
               <button
@@ -188,7 +183,7 @@ export function LoginFormPanel({
           <Button
             type="submit"
             disabled={loading}
-            className="min-h-14 w-full cursor-pointer rounded-md bg-[#23262f] text-base font-bold text-white hover:bg-[#2c303d]"
+            className="min-h-14 w-full cursor-pointer rounded-lg bg-[#23262f] text-base font-bold text-white hover:bg-[#2c303d]"
             size="lg"
           >
             {loading ? t('loggingIn') : t('login')}
@@ -198,25 +193,14 @@ export function LoginFormPanel({
         <button
           type="button"
           onClick={() => setEmailMode(true)}
-          className="flex min-h-14 w-full items-center justify-center gap-3 rounded-md border border-white/12 bg-transparent px-4 text-base font-bold text-white transition hover:bg-white/[0.07]"
+          className="flex h-13 w-full items-center justify-center gap-2.5 rounded-lg border border-white/8 bg-[#1a1c1e] px-4 text-[15px] font-semibold text-white transition hover:bg-[#232628]"
         >
-          <EmailProviderIcon className="size-5" />
+          <EmailProviderIcon className="size-[18px]" />
           {t('oauthContinueEmail')}
         </button>
       )}
 
-      {!emailMode && (
-        <button
-          type="button"
-          onClick={() => setEmailMode(true)}
-          className="mx-auto flex items-center gap-2 text-sm font-medium text-white/45 transition hover:text-white"
-        >
-          <Mail className="size-4" />
-          {t('loginWithPassword')}
-        </button>
-      )}
-
-      <p className="text-center text-xs leading-5 text-white/28">
+      <p className="pt-6 text-center text-xs leading-5 text-white/30">
         {t.rich('modalTerms', {
           privacy: (chunks) => (
             <Link href="/docs/privacy" className="underline underline-offset-4 hover:text-white">

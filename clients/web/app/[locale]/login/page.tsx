@@ -48,14 +48,12 @@ export default function ChatLoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [providers, setProviders] = useState<OAuthProviderId[]>([]);
-  const [comingSoon, setComingSoon] = useState<OAuthProviderId[]>([]);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProviderId | null>(null);
   const [oauthError, setOAuthError] = useState('');
 
   useEffect(() => {
-    authActions.fetchOAuthProviders().then(({ providers: list, comingSoon: cs }) => {
+    authActions.fetchOAuthProviders().then(({ providers: list }) => {
       setProviders(list as OAuthProviderId[]);
-      setComingSoon(cs as OAuthProviderId[]);
     }).catch(() => { });
   }, []);
 
@@ -86,7 +84,6 @@ export default function ChatLoginPage() {
       onForgotPassword={() => router.push('/forgot-password')}
       onRegister={() => router.push('/register')}
       oauthProviders={providers}
-      oauthComingSoon={comingSoon}
       onOAuthLogin={onOAuthLogin}
       oauthLoadingProvider={loadingProvider}
       oauthError={oauthError}

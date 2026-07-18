@@ -41,7 +41,6 @@ export function AuthModalHost() {
   const closeAuthModal = useUiStore((state) => state.closeAuthModal);
   const setAuthModalMode = useUiStore((state) => state.setAuthModalMode);
   const [providers, setProviders] = useState<OAuthProviderId[]>([]);
-  const [comingSoon, setComingSoon] = useState<OAuthProviderId[]>([]);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProviderId | null>(null);
   const [oauthError, setOAuthError] = useState('');
 
@@ -49,9 +48,8 @@ export function AuthModalHost() {
     if (!open) return;
     authActions
       .fetchOAuthProviders()
-      .then(({ providers: list, comingSoon: cs }) => {
+      .then(({ providers: list }) => {
         setProviders(list as OAuthProviderId[]);
-        setComingSoon(cs as OAuthProviderId[]);
       })
       .catch(() => {});
   }, [open]);
@@ -121,7 +119,6 @@ export function AuthModalHost() {
       }}
       onSendResetEmail={(email) => authActions.sendForgotPasswordEmail(email)}
       oauthProviders={providers}
-      oauthComingSoon={comingSoon}
       onOAuthLogin={onOAuthLogin}
       oauthLoadingProvider={loadingProvider}
       oauthError={oauthError}

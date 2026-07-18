@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { AudioLines, BadgeCheck, Gem, Layers3, Sparkles, Video } from 'lucide-react';
+import { AudioLines, Gem, Sparkles, Video } from 'lucide-react';
 import { ThemeLogo } from '../brand';
 import { cn } from '../ui/utils';
 
@@ -185,80 +185,102 @@ export function AuthPageHeader({
 }
 
 export type AuthPromoSlide = {
+  /** 大标题，按设计稿全大写展示 */
   title: string;
   description: string;
+  /** 底部进度条下方的短标签 */
   label: string;
   badge: string;
   imageUrl?: string;
-  accentClassName: string;
+  /** 视频背景，优先级高于 imageUrl */
+  videoUrl?: string;
   icon: LucideIcon;
 };
 
+/**
+ * 轮播展示的 4 个主推模型。媒体地址与首页 hero rail
+ * （growth/home/FeaturedModelsShowcase.tsx 的 FEATURED_MODELS）保持一致，
+ * 换素材时两处一起改。
+ */
 export function useDefaultAuthPromoSlides(): AuthPromoSlide[] {
   return [
     {
-      title: 'NANO BANANA PRO 4K',
-      description: 'Best price for premium image generations and studio-grade upscaling.',
-      label: 'Nano Banana Pro',
-      badge: '4K Resolution',
-      accentClassName: 'from-lime-300/35 via-cyan-300/20 to-fuchsia-400/28',
-      icon: Gem,
+      title: 'SEEDANCE 2.0',
+      description: 'Cinematic AI video generation — standard and lightning-fast variants.',
+      label: 'Seedance 2.0',
+      badge: 'Cinematic Video',
+      videoUrl: 'https://cdn.amux.ai/playground/video/video/demo/short-film-mini.mp4',
+      icon: Video,
     },
     {
-      title: 'KLING 3.0',
-      description: 'Cinematic video creation with sharp motion, timing, and scene control.',
-      label: 'Kling 3.0',
-      badge: 'With Audio',
-      accentClassName: 'from-orange-300/28 via-sky-300/18 to-lime-200/18',
+      title: 'GEMINI OMNI FLASH',
+      description: 'Generate and edit video from any input, in a single flash.',
+      label: 'Gemini Omni Flash',
+      badge: 'Omni Input',
+      videoUrl: 'https://cdn.amux.ai/background/gemini-omni__page-cover__hero.webm',
       icon: AudioLines,
     },
     {
-      title: 'HIGGSFIELD SOUL',
-      description: 'Turn references into expressive campaign visuals and repeatable styles.',
-      label: 'Higgsfield Soul',
-      badge: 'Style Lock',
-      accentClassName: 'from-rose-300/28 via-violet-300/20 to-emerald-300/20',
+      title: 'GPT IMAGE 2',
+      description: 'Prompt-driven image creation with sharp fidelity.',
+      label: 'GPT Image 2',
+      badge: 'Sharp Fidelity',
+      imageUrl: 'https://cdn.amux.ai/background/16-9-6.webp',
       icon: Sparkles,
     },
     {
-      title: 'CINEMATIC APP',
-      description: 'Plan shots, build storyboards, and publish reusable creative workflows.',
-      label: 'Cinematic App',
-      badge: 'Storyboard',
-      accentClassName: 'from-blue-300/28 via-slate-100/12 to-amber-300/22',
-      icon: Video,
+      title: 'NANO BANANA PRO',
+      description: 'Studio-grade image generation and precise editing.',
+      label: 'Nano Banana Pro',
+      badge: '4K Resolution',
+      imageUrl: 'https://cdn.amux.ai/background/123.webp',
+      icon: Gem,
     },
   ];
 }
 
-function AuthPromoArtwork({ slide }: { slide: AuthPromoSlide }) {
-  if (slide.imageUrl) {
-    return (
-      <img
-        src={slide.imageUrl}
-        alt=""
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-    );
-  }
+function AuthPromoArtwork({ slide, active }: { slide: AuthPromoSlide; active: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // 不能用 autoPlay：它只在元素挂载那一刻生效，后续 active 由 false 变 true 时
+  // 浏览器不会响应，非首张的视频会永远停在第一帧。只能显式 play/pause。
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (active) {
+      void video.play().catch(() => {
+        /* 自动播放被拦截时保持首帧即可 */
+      });
+    } else {
+      video.pause();
+      video.currentTime = 0;
+    }
+  }, [active]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      <div className={cn('absolute inset-0 bg-gradient-to-br', slide.accentClassName)} />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_34%_16%,rgba(255,255,255,0.56),transparent_22%),radial-gradient(circle_at_82%_38%,rgba(255,255,255,0.22),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.12),rgba(0,0,0,0.72))]" />
-      <div className="absolute left-[13%] top-[13%] h-[52%] w-[32%] rounded-[48%] bg-black/42 blur-sm" />
-      <div className="absolute left-[19%] top-[20%] h-[22%] w-[26%] rounded-full border border-white/28 bg-white/18 shadow-[0_0_70px_rgba(255,255,255,0.24)]" />
-      <div className="absolute left-[35%] top-[20%] h-[10%] w-[46%] -skew-x-12 rounded-full bg-white/32 blur-[2px]" />
-      <div className="absolute bottom-[13%] right-[10%] h-[45%] w-[58%] -skew-x-12 rounded-[42px] bg-black/54 shadow-[0_30px_120px_rgba(0,0,0,0.58)]" />
-      <div className="absolute bottom-[28%] right-[3%] h-[18%] w-[72%] rotate-[-8deg] rounded-full bg-white/18 blur-sm" />
-      <div className="absolute bottom-[8%] left-[5%] h-[38%] w-[74%] rounded-[48%] bg-black/46 blur-xl" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_34%,rgba(0,0,0,0.68)_78%,rgba(0,0,0,0.95)_100%)]" />
-      <div className="absolute right-8 top-24 grid size-14 place-items-center rounded-md border border-white/18 bg-white/14 text-white/90 backdrop-blur-md">
-        <Layers3 className="size-7" />
-      </div>
+    <div className="absolute inset-0 overflow-hidden bg-[#0b0c0d]">
+      {slide.videoUrl ? (
+        <video
+          ref={videoRef}
+          src={slide.videoUrl}
+          // 仅当前帧播放，切走即暂停，避免 4 个视频同时解码
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : slide.imageUrl ? (
+        <img src={slide.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      ) : null}
+      {/* 底部压暗，保证标题/描述可读 */}
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_38%,rgba(0,0,0,0.55)_68%,rgba(0,0,0,0.9)_100%)]" />
     </div>
   );
 }
+
+/** 单张停留时长，同时也是底部进度条走满一格的时长 */
+const SLIDE_DURATION_MS = 4200;
 
 export function AuthPromoCarousel({
   className,
@@ -269,83 +291,114 @@ export function AuthPromoCarousel({
 }) {
   const defaultSlides = useDefaultAuthPromoSlides();
   const promoSlides = slides?.length ? slides : defaultSlides;
+  const total = promoSlides.length;
   const [activeIndex, setActiveIndex] = useState(0);
-  const activeSlide = promoSlides[activeIndex] ?? promoSlides[0];
+  // 进度条填充：切片后先归零，再在下一帧展开到 100%，靠 CSS transition 走满，
+  // 免去 rAF 逐帧 setState。
+  const [progressFilled, setProgressFilled] = useState(false);
+
+  // 用 timeout + activeIndex 依赖而非固定 interval：手动点某一格时计时重新开始，
+  // 进度条不会走到一半就被切走。
+  useEffect(() => {
+    if (total <= 1) return undefined;
+    const timer = window.setTimeout(() => {
+      setActiveIndex((index) => (index + 1) % total);
+    }, SLIDE_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [total, activeIndex]);
 
   useEffect(() => {
-    if (promoSlides.length <= 1) return undefined;
-    const timer = window.setInterval(() => {
-      setActiveIndex((index) => (index + 1) % promoSlides.length);
-    }, 5200);
-    return () => window.clearInterval(timer);
-  }, [promoSlides.length]);
+    setProgressFilled(false);
+    // 双 rAF：确保「宽度归零」这一帧先真正落到 DOM，否则浏览器会合并成一次样式计算，
+    // transition 不触发，进度条会直接停在满格。
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setProgressFilled(true));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [activeIndex]);
 
   const progressItems = useMemo(
     () => promoSlides.map((slide, index) => ({ ...slide, index })),
     [promoSlides],
   );
 
-  if (!activeSlide) return null;
-  const BadgeIcon = activeSlide.icon;
+  if (total === 0) return null;
 
   return (
     <section
       className={cn(
-        'relative hidden min-h-[500px] overflow-hidden rounded-md bg-black text-white lg:block',
+        'relative hidden min-h-[500px] overflow-hidden rounded-2xl bg-black text-white lg:block',
         className,
       )}
       aria-label="Creative highlights"
     >
-      {promoSlides.map((slide, index) => (
-        <div
-          key={slide.label}
-          className={cn(
-            'absolute inset-0 transition-opacity duration-700',
-            index === activeIndex ? 'opacity-100' : 'opacity-0',
-          )}
-          aria-hidden={index !== activeIndex}
-        >
-          <AuthPromoArtwork slide={slide} />
-        </div>
-      ))}
+      {/* 图文整块淡入淡出 */}
+      {promoSlides.map((slide, index) => {
+        const BadgeIcon = slide.icon;
+        const isActive = index === activeIndex;
+        return (
+          <div
+            key={slide.label}
+            className={cn(
+              'absolute inset-0 transition-opacity duration-700',
+              isActive ? 'opacity-100' : 'opacity-0',
+            )}
+            aria-hidden={!isActive}
+          >
+            <AuthPromoArtwork slide={slide} active={isActive} />
+            {/* pb 给底部固定的进度条导航让位 */}
+            <div className="absolute inset-x-0 bottom-0 z-10 p-6 pb-[104px]">
+              <div className="mb-4 inline-flex items-center gap-1.5 rounded-md bg-black/45 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+                <BadgeIcon className="size-3.5" />
+                {slide.badge}
+              </div>
+              <h2 className="max-w-[640px] text-[34px] font-black uppercase leading-[0.98] tracking-tight text-white xl:text-[40px]">
+                {slide.title}
+              </h2>
+              <p className="mt-3 max-w-xl text-sm font-medium leading-6 text-white/70">
+                {slide.description}
+              </p>
+            </div>
+          </div>
+        );
+      })}
 
-      <div className="absolute inset-x-0 bottom-0 z-10 p-5">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-white/16 px-3 py-1.5 text-sm font-semibold text-white shadow-[0_12px_40px_rgba(0,0,0,0.32)] backdrop-blur-md">
-          <BadgeIcon className="size-4" />
-          {activeSlide.badge}
-        </div>
-        <h2 className="max-w-[640px] text-4xl font-black uppercase leading-[0.96] tracking-normal text-white xl:text-5xl">
-          {activeSlide.title}
-        </h2>
-        <p className="mt-3 max-w-xl text-sm font-medium leading-6 text-white/62">
-          {activeSlide.description}
-        </p>
-        <div className="mt-6 grid grid-cols-4 gap-2">
-          {progressItems.map((slide) => (
+      <div className="absolute inset-x-0 bottom-0 z-20 grid grid-cols-4 gap-3 p-6">
+        {progressItems.map((slide) => {
+          const isActive = slide.index === activeIndex;
+          return (
             <button
               key={slide.label}
               type="button"
               onClick={() => setActiveIndex(slide.index)}
               className="min-w-0 text-left"
-              aria-current={slide.index === activeIndex}
+              aria-current={isActive}
             >
+              {/* 斜切的棱角进度条：外层做倾斜，内层填充跟着切成菱形 */}
+              <span className="mb-3 block h-1 -skew-x-[30deg] overflow-hidden bg-white/25">
+                <span
+                  className="block h-full bg-white transition-[width] ease-linear"
+                  style={{
+                    width: isActive ? (progressFilled ? '100%' : '0%') : '0%',
+                    transitionDuration: isActive && progressFilled ? `${SLIDE_DURATION_MS}ms` : '0ms',
+                  }}
+                />
+              </span>
               <span
                 className={cn(
-                  'mb-2.5 block h-1.5 rounded-full bg-white/18 transition-colors',
-                  slide.index === activeIndex && 'bg-white',
-                )}
-              />
-              <span
-                className={cn(
-                  'block truncate text-xs font-semibold text-white/38 transition-colors',
-                  slide.index === activeIndex && 'text-white',
+                  'block truncate text-xs font-medium text-white/45 transition-colors',
+                  isActive && 'font-semibold text-white',
                 )}
               >
                 {slide.label}
               </span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -367,42 +420,35 @@ export function AuthExperienceShell({
   return (
     <div
       className={cn(
-        'grid min-h-svh bg-[#101214] text-white lg:grid-cols-[minmax(360px,0.9fr)_minmax(500px,1.1fr)]',
+        // 表单在左、媒体在右；lg 以下只保留表单
+        'relative grid min-h-svh bg-[#0e0f11] text-white lg:grid-cols-[minmax(440px,1fr)_minmax(440px,1fr)]',
         modal &&
-          'h-[calc(100svh-3rem)] min-h-0 max-h-[680px] overflow-hidden rounded-md border border-white/10 bg-[#111315] shadow-[0_28px_120px_rgba(0,0,0,0.58)]',
+          // 与导航 Image 下拉（ImageNavFlyout）同一套毛玻璃底色
+          'h-[calc(100svh-3rem)] min-h-0 max-h-[720px] overflow-hidden rounded-[28px] border border-white/10 bg-[rgba(28,30,32,0.86)] backdrop-blur-[32px] shadow-[0_28px_120px_rgba(0,0,0,0.58)]',
       )}
     >
       <div
         className={cn(
-          'relative flex min-h-svh flex-col items-center justify-center px-5 py-7 sm:px-8 lg:px-10',
-          modal && 'min-h-0 overflow-y-auto lg:h-full',
+          'relative flex min-h-svh flex-col items-center justify-center px-5 py-10 sm:px-8 lg:px-10',
+          modal && 'min-h-0 overflow-y-auto py-8 lg:h-full',
         )}
       >
-        <div className={cn('w-full max-w-[430px]', modal && 'max-w-[390px]')}>
+        <div className={cn('w-full max-w-[430px]', modal && 'max-w-[384px]')}>
           {children}
         </div>
       </div>
-      <div className={cn('relative p-4 pl-0', modal && 'hidden lg:block')}>
+      <div className={cn('relative p-3 pl-0', modal && 'hidden lg:block')}>
         <AuthPromoCarousel className="h-full min-h-full" />
-        {showClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={closeLabel}
-            className="absolute right-8 top-8 z-20 grid size-11 place-items-center rounded-full bg-white/78 text-black/58 shadow-[0_12px_40px_rgba(0,0,0,0.24)] transition hover:bg-white hover:text-black"
-          >
-            <span className="text-3xl leading-none">&times;</span>
-          </button>
-        )}
       </div>
       {showClose && (
         <button
           type="button"
           onClick={onClose}
           aria-label={closeLabel}
-          className="absolute right-4 top-4 z-20 grid size-10 place-items-center rounded-full bg-white/10 text-white/80 transition hover:bg-white/18 lg:hidden"
+          // 压在右侧图片上，用暗底毛玻璃保证任何画面下都看得清
+          className="absolute right-5 top-5 z-20 grid size-8 place-items-center rounded-full bg-black/45 text-white/80 backdrop-blur-md transition hover:bg-black/70 hover:text-white"
         >
-          <span className="text-2xl leading-none">&times;</span>
+          <span className="text-lg leading-none">&times;</span>
         </button>
       )}
     </div>

@@ -72,7 +72,7 @@ export function RegisterFormPanel({
   };
 
   const inputClassName =
-    'h-12 rounded-md border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20';
+    'h-12 rounded-lg border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20';
 
   return (
     <div className={cn('space-y-5 text-white', className)}>
@@ -96,7 +96,7 @@ export function RegisterFormPanel({
         <p className="text-sm font-medium text-white/40">{t('modalRegisterSubtitle')}</p>
       </div>
 
-      <div className="flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#263018] px-3 text-sm font-bold text-[#c9ff00]">
+      <div className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#26310f] px-3 text-sm font-bold text-[#c9ff00]">
         <Gift className="size-4" />
         {t('signupDiscount')}
       </div>
@@ -177,7 +177,7 @@ export function RegisterFormPanel({
         <Button
           type="submit"
           disabled={loading}
-          className="min-h-13 w-full cursor-pointer rounded-md bg-white text-base font-bold text-black hover:bg-[#c9ff00]"
+          className="min-h-13 w-full cursor-pointer rounded-lg bg-white text-base font-bold text-black hover:bg-[#c9ff00]"
           size="lg"
         >
           {loading ? t('registering') : t('registerButton')}
