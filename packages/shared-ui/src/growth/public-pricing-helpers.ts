@@ -9,7 +9,7 @@ export type PlanTone = 'neutral' | 'brand' | 'top';
 export const TONE_ACCENT: Record<PlanTone, string> = {
   neutral: 'var(--color-foreground)',
   brand: 'var(--growth-accent)',
-  top: '#ff2f87',
+  top: 'var(--growth-plan-top)',
 };
 
 export type QueuePriority = 'standard' | 'high' | 'highest';

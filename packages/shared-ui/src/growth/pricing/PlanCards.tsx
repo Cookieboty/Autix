@@ -9,6 +9,7 @@ import {
   type PlanTone,
   type PricingPlan,
 } from '../public-pricing-helpers';
+import { buildDiscountTranslationValues } from '../discount';
 import type { TFunc } from './pricing-parts';
 
 /** 每档色调：neutral=白 CTA / brand=品牌绿 / top=品红。控制卡片微渐变、CTA 底色与文字对比色 */
@@ -29,7 +30,7 @@ const TONE_STYLE: Record<
     badgeText: 'var(--color-background)',
   },
   top: {
-    accent: '#ff2f87',
+    accent: 'var(--growth-plan-top)',
     ctaText: '#ffffff',
     tinted: true,
     badgeText: '#ffffff',
@@ -130,17 +131,16 @@ export function PlanCard({
 
   const cardStyle: CSSProperties = style.tinted
     ? {
-        borderColor: `color-mix(in srgb, ${style.accent} 42%, transparent)`,
-        backgroundImage: `linear-gradient(157deg, color-mix(in srgb, ${style.accent} 17%, transparent) 0%, color-mix(in srgb, ${style.accent} 5%, transparent) 42%, rgba(255,255,255,0.02) 100%)`,
-        boxShadow: `0 24px 80px color-mix(in srgb, ${style.accent} 12%, transparent)`,
-      }
+      borderColor: `color-mix(in srgb, ${style.accent} 42%, transparent)`,
+      backgroundImage: `linear-gradient(157deg, color-mix(in srgb, ${style.accent} 17%, transparent) 0%, color-mix(in srgb, ${style.accent} 5%, transparent) 42%, rgba(255,255,255,0.02) 100%)`,
+      boxShadow: `0 24px 80px color-mix(in srgb, ${style.accent} 12%, transparent)`,
+    }
     : {};
 
   return (
     <div
-      className={`group relative flex flex-col overflow-hidden rounded-2xl border p-5 text-left transition duration-300 ${
-        style.tinted ? '' : 'border-white/10 bg-white/[0.025] hover:bg-white/[0.05]'
-      }`}
+      className={`group relative flex flex-col overflow-hidden rounded-2xl border p-5 text-left transition duration-300 ${style.tinted ? '' : 'border-white/10 bg-white/[0.025] hover:bg-white/[0.05]'
+        }`}
       style={cardStyle}
     >
       {/* Header：名称 + 徽章 + tagline */}
@@ -149,7 +149,7 @@ export function PlanCard({
           <h3 className="text-xl font-black uppercase tracking-tight text-foreground">{planName}</h3>
           {plan.hasYearlyDiscount ? (
             <span className="growth-discount-badge rounded px-1.5 py-0.5 text-[10px] font-black uppercase italic leading-none text-foreground">
-              {t('yearlyDiscountBadge', { percent: 20 })}
+              {t('yearlyDiscountBadge', buildDiscountTranslationValues())}
             </span>
           ) : null}
           {plan.recommended ? (

@@ -84,6 +84,7 @@
   --growth-plan-2: #fca5a5;       /* rose: decorative third accent */
   --growth-plan-3: #fbbf24;       /* amber: warm fourth accent */
   --growth-plan-free: #a8b3c7;    /* muted neutral for free tier */
+  --growth-plan-top: #ff2f87;     /* magenta: highest tier accent */
   --link: var(--info);
   --hot: var(--warning);
   --muted-soft: color-mix(in srgb, var(--muted-foreground) 16%, transparent);
@@ -188,6 +189,7 @@
   --growth-plan-2: #fca5a5;
   --growth-plan-3: #fbbf24;
   --growth-plan-free: #a8b3c7;
+  --growth-plan-top: #ff2f87;
   --link: var(--info);
   --hot: var(--warning);
   --muted-soft: color-mix(in srgb, var(--muted-foreground) 16%, transparent);
