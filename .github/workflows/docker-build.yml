@@ -20,6 +20,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # 站点域名在 web 镜像里是构建期烤死的（见 clients/web/Dockerfile 的 ARG 注释），
+      # 所以按分支取值：test 分支出测试域名的镜像，其余出生产域名的镜像。
+      SITE_URL: ${{ github.ref == 'refs/heads/test' && vars.SITE_URL_TEST || vars.SITE_URL_PROD }}
     permissions:
       contents: read
       packages: write
@@ -70,6 +74,9 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
+          # api 的 Dockerfile 没声明这个 ARG，Docker 只会 warn，不影响构建
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ env.SITE_URL }}
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
