@@ -143,8 +143,13 @@ jobs:
             exit 1
           fi
 
-          # dokploy 的 deploy webhook 是 POST，成功返回 2xx
-          HTTP_CODE=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -X POST "$WEBHOOK")
+          # dokploy 会解析请求体里的 ref 来判断分支是否与应用配置的分支一致，
+          # 裸 POST 取不到分支会被判为 "Branch Not Match"。这里发一个 GitHub
+          # 风格的 push 载荷，ref 直接用当前分支。
+          HTTP_CODE=$(curl -s -o /tmp/resp.txt -w '%{http_code}' -X POST "$WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            -H 'X-GitHub-Event: push' \
+            -d "{\"ref\":\"${{ github.ref }}\"}")
           echo "dokploy 响应 ${HTTP_CODE}: $(cat /tmp/resp.txt)"
 
           if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
