@@ -23,8 +23,8 @@ interface VideoHistoryPanelProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-/** 直连生成状态机只有 pending/queued/completed/failed/expired 五态（见 VideoGenStatus）。 */
-const PROCESSING_STATUSES = new Set(['pending', 'queued']);
+/** 直连生成状态机共六态：pending/queued/running/completed/failed/expired（见 VideoGenStatus）。 */
+const PROCESSING_STATUSES = new Set(['pending', 'queued', 'running']);
 
 type DisplayStatus = 'completed' | 'processing' | 'failed';
 
@@ -64,7 +64,10 @@ export function VideoHistoryPanel({ items, loading, pending, onSelectItem, onDel
       await onDelete(id);
     } catch (err) {
       // 进行中的记录服务端会返回 409（"任务进行中，无法删除"）——直接透传后端消息。
-      toast.error(err instanceof Error ? err.message : t('generateFailed'));
+      // 注意：SDK 拦截器把后端 msg 挂在 error.msg 上，不是 error.message
+      // （error.message 只是 axios 的通用 "Request failed with status code 409"）。
+      const message = (err as { msg?: string })?.msg ?? (err instanceof Error ? err.message : t('generateFailed'));
+      toast.error(message);
     } finally {
       setDeletingId(null);
     }
