@@ -127,11 +127,13 @@ pnpm run dev:desktop
 生产镜像已发布到 GHCR（`ghcr.io/cookieboty/autix-{api,web}:latest`）。
 
 ```bash
-cp .env.example .env   # 填好 JWT_SECRET / POSTGRES_PASSWORD / SUPER_ADMIN_*
+cp .env.example .env   # 填好 DATABASE_URL / JWT_SECRET / SUPER_ADMIN_*
 docker compose up -d
 ```
 
-启动顺序：`postgres` → `api` → `web`，全部带 healthcheck 自动等待。
+PostgreSQL（以及后续的 Redis）为独立部署的容器，不在本 compose 内；
+只需把连接串通过 `DATABASE_URL` / `REDIS_URL` 注入即可。
+本 stack 的启动顺序：`api` → `web`，带 healthcheck 自动等待。
 
 旧 split DB 切流到单库时，必须只在一次性迁移窗口设置：
 
