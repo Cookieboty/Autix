@@ -441,6 +441,19 @@ export class VideoGenerationRepository {
     });
   }
 
+  /**
+   * 直连生成提交失败（上游明确拒绝）时标记终态。只 update generation 行本身——
+   * 与 markGenerationCreateTaskFailedAndRefund 的关键区别：直连行没有父 clip，
+   * 不做任何父行 update，也不在这里退款（退款由调用方经 holdReconciliation.safeRefund
+   * 单独完成，两者不共享事务，任一失败不影响另一个）。
+   */
+  markDirectGenerationFailed(generationId: string, error: string) {
+    return this.prisma.video_clip_generations.update({
+      where: { id: generationId },
+      data: { status: VideoGenStatus.failed, error },
+    });
+  }
+
   async findUserDirectGenerations(input: { userId: string; page: number; pageSize: number }) {
     const skip = (input.page - 1) * input.pageSize;
     const where: Prisma.video_clip_generationsWhereInput = { userId: input.userId, clipId: null };
