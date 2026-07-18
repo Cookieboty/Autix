@@ -22,6 +22,7 @@ import {
   normalizeVideoDuration,
   normalizeVideoResolution,
   presentGenerateAllClipResults,
+  redactProviderRequest,
   resolveClipPrompt,
   resolveVideoPricingTaskType,
   resolveGenerateAllClipPlan,
@@ -603,5 +604,22 @@ describe('video generation flow helpers', () => {
         null,
       ]),
     ).toEqual([{ generationId: '123', taskId: 'task-1', clipId: 'clip-1' }]);
+  });
+});
+
+describe('redactProviderRequest', () => {
+  it('masks callback_url (含 VIDEO_CALLBACK_SECRET) 但不改其他字段', () => {
+    const body = { model: 'ark', content: [{ type: 'text' }], callback_url: 'https://cb/x?token=secret' };
+    const redacted = redactProviderRequest(body);
+    expect(redacted.callback_url).toBe('[REDACTED]');
+    expect(redacted.model).toBe('ark');
+    expect(redacted.content).toBe(body.content);
+    // 返回浅拷贝，不改原对象（原对象仍带真实 token 发给上游）。
+    expect(body.callback_url).toBe('https://cb/x?token=secret');
+  });
+
+  it('无 callback_url 时原样返回', () => {
+    const body = { model: 'poyo', input: { prompt: 'x' } };
+    expect(redactProviderRequest(body)).toBe(body);
   });
 });

@@ -112,35 +112,44 @@ export function VideoSidebar({
   // 表单选项**从模型自己的 paramsSchema 出**（enum + default）——每个模型按自己的 schema
   // 渲染，不写死、不用全局共享的比例/分辨率集。paramsSchema 缺失（未配置）时才回退到能力表。
   const videoParams = useMemo(() => {
-    const props = (paramsSchema?.properties ?? {}) as Record<
-      string,
-      { enum?: unknown[]; default?: unknown }
-    >;
-    const nums = (v: unknown[] | undefined, fb: number[]) =>
-      Array.isArray(v) && v.every((x) => typeof x === 'number') ? (v as number[]) : fb;
-    const strs = (v: unknown[] | undefined, fb: string[]) =>
-      Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : fb;
+    const props = paramsSchema?.properties as
+      | Record<string, { enum?: unknown[]; default?: unknown }>
+      | undefined;
+    // schema 存在即**权威**：可选集/默认值完全由该模型自己的 schema 决定，schema 里没有的
+    // 属性 = 该模型不支持，**不逐字段回退到能力表**（否则会给 Grok Imagine 这种无 resolution
+    // 的模型硬塞一个档位、再发给上游）。仅当模型完全没配 paramsSchema 时才回退能力表。
+    if (props) {
+      const nums = (v: unknown[] | undefined) =>
+        Array.isArray(v) && v.every((x) => typeof x === 'number') ? (v as number[]) : [];
+      const strs = (v: unknown[] | undefined) =>
+        Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : [];
+      const durations = nums(props.duration?.enum);
+      const ratios = strs(props.ratio?.enum);
+      const resolutions = strs(props.resolution?.enum);
+      return {
+        durations,
+        ratios,
+        resolutions,
+        supportsAudio: 'generate_audio' in props,
+        defaultDuration:
+          typeof props.duration?.default === 'number' ? (props.duration.default as number) : durations[0],
+        defaultResolution:
+          typeof props.resolution?.default === 'string' ? (props.resolution.default as string) : resolutions[0],
+        defaultRatio:
+          typeof props.ratio?.default === 'string' ? (props.ratio.default as string) : ratios[0],
+        defaultAudio:
+          typeof props.generate_audio?.default === 'boolean' ? (props.generate_audio.default as boolean) : false,
+      };
+    }
     return {
-      durations: nums(props.duration?.enum, videoCapability.durations),
-      ratios: strs(props.ratio?.enum, videoCapability.ratios as string[]),
-      resolutions: strs(props.resolution?.enum, videoCapability.resolutions),
-      supportsAudio: 'generate_audio' in props ? true : videoCapability.audio,
-      defaultDuration:
-        typeof props.duration?.default === 'number'
-          ? (props.duration.default as number)
-          : videoCapability.defaultDuration,
-      defaultResolution:
-        typeof props.resolution?.default === 'string'
-          ? (props.resolution.default as string)
-          : videoCapability.defaultResolution,
-      defaultRatio:
-        typeof props.ratio?.default === 'string'
-          ? (props.ratio.default as string)
-          : videoCapability.defaultRatio,
-      defaultAudio:
-        typeof props.generate_audio?.default === 'boolean'
-          ? (props.generate_audio.default as boolean)
-          : videoCapability.audio,
+      durations: videoCapability.durations,
+      ratios: videoCapability.ratios as string[],
+      resolutions: videoCapability.resolutions,
+      supportsAudio: videoCapability.audio,
+      defaultDuration: videoCapability.defaultDuration,
+      defaultResolution: videoCapability.defaultResolution,
+      defaultRatio: videoCapability.defaultRatio,
+      defaultAudio: videoCapability.audio,
     };
   }, [paramsSchema, videoCapability]);
   const [prompt, setPrompt] = useState('');
@@ -618,34 +627,42 @@ export function VideoSidebar({
             fallbackLabel={videoCapability.displayName}
           />
           <div className="grid grid-cols-2 gap-2">
-            <VideoSliderParamMenu
-              icon={<Clock3 className="size-4" />}
-              label={durationLabel}
-              title={t('durationLabel')}
-              options={durationOptions}
-              value={duration}
-              onChange={(value) => setDuration(value)}
-            />
-            <VideoOptionParamMenu
-              icon={<Crop className="size-4" />}
-              label={ratioLabel}
-              title={t('aspectRatio')}
-              options={ratioOptions}
-              value={ratio}
-              onChange={setRatio}
-            />
-            <VideoOptionParamMenu
-              icon={<Diamond className="size-4" />}
-              label={resolution}
-              title={t('selectResolution')}
-              options={resolutionOptions}
-              value={resolution}
-              onChange={(value) => {
-                if ((videoParams.resolutions as string[]).includes(value)) {
-                  setResolution(value as typeof resolution);
-                }
-              }}
-            />
+            {/* 每个控件只在该模型 schema 声明了对应属性（options 非空）时渲染 —— schema 没有
+                的属性表示不支持，不显示、也不下发（例如 Grok Imagine 无 resolution）。 */}
+            {durationOptions.length > 0 ? (
+              <VideoSliderParamMenu
+                icon={<Clock3 className="size-4" />}
+                label={durationLabel}
+                title={t('durationLabel')}
+                options={durationOptions}
+                value={duration}
+                onChange={(value) => setDuration(value)}
+              />
+            ) : null}
+            {ratioOptions.length > 0 ? (
+              <VideoOptionParamMenu
+                icon={<Crop className="size-4" />}
+                label={ratioLabel}
+                title={t('aspectRatio')}
+                options={ratioOptions}
+                value={ratio}
+                onChange={setRatio}
+              />
+            ) : null}
+            {resolutionOptions.length > 0 ? (
+              <VideoOptionParamMenu
+                icon={<Diamond className="size-4" />}
+                label={resolution}
+                title={t('selectResolution')}
+                options={resolutionOptions}
+                value={resolution}
+                onChange={(value) => {
+                  if ((videoParams.resolutions as string[]).includes(value)) {
+                    setResolution(value as typeof resolution);
+                  }
+                }}
+              />
+            ) : null}
             {videoParams.supportsAudio ? (
               <button
                 type="button"

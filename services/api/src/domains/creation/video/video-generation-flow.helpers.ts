@@ -461,6 +461,18 @@ export function toPrismaInputJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
 }
 
+/**
+ * 脱敏 provider 请求体里的 `callback_url` —— 它带 `?token=<VIDEO_CALLBACK_SECRET>`，
+ * 任何拿到日志或 DB 只读权限的人凭它就能伪造回调、驱动状态与扣费。请求体本身仍带真实
+ * callback_url 发给上游；**只有落日志/落库前**用本函数换成占位。返回浅拷贝，不改原对象。
+ */
+export function redactProviderRequest(
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!body || typeof body !== 'object' || !('callback_url' in body)) return body;
+  return { ...body, callback_url: '[REDACTED]' };
+}
+
 export function buildVideoHoldInput(input: {
   billingTaskType: string;
   generationId: string;
@@ -486,7 +498,8 @@ export function buildVideoHoldInput(input: {
       projectId: input.projectId,
       clipId: input.clipId,
       modelConfigId: input.modelConfigId,
-      seedanceTaskRequest: input.taskRequest,
+      // 快照排除 callback token（含 VIDEO_CALLBACK_SECRET），DB 只读泄露也不能伪造回调。
+      seedanceTaskRequest: redactProviderRequest(input.taskRequest),
     }),
     remark: input.billingTaskType === VIDEO_GENERATION_TASK_TYPE
       ? 'video-generation'
@@ -642,6 +655,7 @@ export function buildDirectGenerationParamsSnapshot(input: {
     mode: 'direct',
     options: input.options,
     materials: input.materials,
-    providerRequest: input.providerRequest,
+    // 快照排除 callback token（含 VIDEO_CALLBACK_SECRET）。
+    providerRequest: redactProviderRequest(input.providerRequest),
   });
 }

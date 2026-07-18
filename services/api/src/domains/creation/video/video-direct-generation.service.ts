@@ -12,6 +12,7 @@ import {
   buildVideoHoldInput,
   buildDirectGenerationParamsSnapshot,
   normalizeVideoGenerationClipParamsForModel,
+  redactProviderRequest,
   resolveVideoGenerationRequestLimits,
   type VideoGenerationClipParams as ClipParams,
 } from './video-generation-flow.helpers';
@@ -125,7 +126,8 @@ export class VideoDirectGenerationService {
         protocolKey: preset.key,
         model: callRequest.model,
         endpoint: videoSubmitUrl(preset, callRequest.baseUrl),
-        requestBody,
+        // 脱敏 callback token（含 VIDEO_CALLBACK_SECRET），不进日志。
+        requestBody: redactProviderRequest(requestBody),
       })}`,
     );
 
