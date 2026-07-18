@@ -61,6 +61,9 @@ export interface SeedanceCostEstimateInput {
     resolution: NormalizedVideoResolution;
     duration: number;
     ratio?: string;
+    // 计价维度：部分渠道（PoYo VEO）按「分辨率 × 是否出声」定每秒单价，pricingSchema 的
+    // `when` 谓词读 generate_audio。缺了它 → 音频维度静默按无声计价 → 少收费。
+    generate_audio?: boolean;
   };
   membershipLevel?: number;
 }
@@ -427,7 +430,13 @@ export function summarizeSeedanceContent(
 export function buildSeedanceCostEstimateInput(input: {
   params: Pick<
     VideoGenerationClipParams,
-    'resolution' | 'duration' | 'ratio' | 'sourceTemplateId' | 'sourceTemplateKind'
+    | 'resolution'
+    | 'duration'
+    | 'ratio'
+    | 'generateAudio'
+    | 'generate_audio'
+    | 'sourceTemplateId'
+    | 'sourceTemplateKind'
   >;
   modelConfigId?: string;
   membershipLevel?: number;
@@ -442,6 +451,7 @@ export function buildSeedanceCostEstimateInput(input: {
       resolution: normalizeVideoResolution(native.resolution),
       duration: normalizeVideoDuration(native.duration),
       ...(native.ratio !== undefined ? { ratio: native.ratio } : {}),
+      ...(native.generate_audio !== undefined ? { generate_audio: native.generate_audio } : {}),
     },
     ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
   };

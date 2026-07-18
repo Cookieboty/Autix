@@ -72,17 +72,40 @@ export interface RoleItemSpec {
  * 第二个成员等第二家渠道的真实文档到手再加 —— 那是增量改动。
  * 凭空加投机成员等于把猜测固化进类型。
  */
-export type ContentBinding = {
-  strategy: 'typed-content-items';
-  /** content 数组写入的 path，如 'content'。 */
-  path: string;
-  /** prompt 的 item 形态。prompt 为空时**不写入**（对齐 buildContent 的 `if (prompt)`）。 */
-  textItem: { type: string; field: string };
-  /** 每个素材角色的 wire 形态。必须覆盖 VideoMaterialRole 的全部取值。 */
-  roleItems: Record<VideoMaterialRole, RoleItemSpec>;
-  /** 角色字段名，如 'role'。 */
-  roleField: string;
-};
+export type ContentBinding =
+  | {
+      strategy: 'typed-content-items';
+      /** content 数组写入的 path，如 'content'。 */
+      path: string;
+      /** prompt 的 item 形态。prompt 为空时**不写入**（对齐 buildContent 的 `if (prompt)`）。 */
+      textItem: { type: string; field: string };
+      /** 每个素材角色的 wire 形态。必须覆盖 VideoMaterialRole 的全部取值。 */
+      roleItems: Record<VideoMaterialRole, RoleItemSpec>;
+      /** 角色字段名，如 'role'。 */
+      roleField: string;
+    }
+  | {
+      /**
+       * 扁平布局（设计 §4.3 预留的第二个成员，PoYo VEO/Wan 落地）：prompt 作**纯字符串**、
+       * 素材作**纯 URL 字符串**，写入各自 path。用于 `input: { prompt, image_urls: [...] }`
+       * 这类形状 —— 没有 typed content 数组、没有 per-item type/role 包裹。
+       */
+      strategy: 'flat-media';
+      /** prompt（纯字符串）写入位置；prompt 为空则不写（对齐既有 `if (prompt)`）。 */
+      promptPath: string;
+      /**
+       * 所有素材 URL 进**单一**数组路径（VEO：`input.image_urls`）。无素材则不写该字段。
+       * 与 mediaRolePaths 二选一。
+       */
+      mediaUrlsPath?: string;
+      /**
+       * 按素材 **role** 路由到不同字段（Wan：i2v→image_urls、ref→reference_image_urls /
+       * reference_video_urls、edit→单个 video_url / reference_image_url）。
+       * mode 'array' 把该 role 的 URL 追加进数组；'single' 写单个 URL（取第一个）。
+       * 认不出的 role 抛错（不静默丢素材）。与 mediaUrlsPath 二选一。
+       */
+      mediaRolePaths?: Partial<Record<VideoMaterialRole, { path: string; mode: 'array' | 'single' }>>;
+    };
 
 export interface SubmitSpec {
   endpoint: { method: 'POST'; path: string };

@@ -1,4 +1,11 @@
-import { arkVideoV3 } from './presets/vendors';
+import {
+  arkVideoV3,
+  poyoVeo,
+  poyoWanT2V,
+  poyoWanI2V,
+  poyoWanRef,
+  poyoWanEdit,
+} from './presets/vendors';
 import type { VideoProtocolPreset } from './types';
 
 /**
@@ -9,6 +16,11 @@ import type { VideoProtocolPreset } from './types';
  */
 export const VIDEO_PROTOCOL_PRESETS: Record<string, VideoProtocolPreset> = {
   [arkVideoV3.key]: arkVideoV3,
+  [poyoVeo.key]: poyoVeo,
+  [poyoWanT2V.key]: poyoWanT2V,
+  [poyoWanI2V.key]: poyoWanI2V,
+  [poyoWanRef.key]: poyoWanRef,
+  [poyoWanEdit.key]: poyoWanEdit,
 };
 
 /**

@@ -29,6 +29,24 @@ export function useLocalizePath(): (path: string) => string {
 }
 
 /**
+ * SSR-safe pathname context。
+ *
+ * 存在原因：`usePathname()` 默认走 `getNavigation()` 单例，SSR 期间该 adapter
+ * 未注册，会 catch 到 `'/'`；客户端首帧却能从模块单例里读到真实路径，导致
+ * 依赖 `pathname` 的组件（如 [AssetSidebar](../growth/asset/AssetSidebar.tsx)
+ * 里的 active 高亮）在 hydrate 时样式翻转，触发 React hydration mismatch。
+ *
+ * 由 client（Next.js / Electron 渲染进程）在能拿到真实路径的地方向下注入，
+ * `usePathname` 优先读它；context 未提供时回退到旧的 adapter + subscribe 路径，
+ * 保持向后兼容。
+ *
+ * 特别注意：`null` 表示"未由外部注入"，与"路径就是 `/`" 语义不同——
+ * 后者仍应通过 provider 显式传入。
+ */
+const PathnameCtx = React.createContext<string | null>(null);
+export const PathnameProvider = PathnameCtx.Provider;
+
+/**
  * `handleClick` 的最小事件形状——足以覆盖修饰键 / 按钮判定和
  * `preventDefault()` 读取，无需依赖真实 DOM MouseEvent。
  */
@@ -125,7 +143,12 @@ export function useRouter() {
 
 /** 与 next/navigation 的 usePathname 兼容 */
 export function usePathname(): string {
+  // 优先读 PathnameProvider 注入的值：由外层（Next.js / Electron 渲染进程）
+  // 通过它注入的 pathname 才是 SSR/CSR 一致的真值，能规避 hydration mismatch。
+  const injected = React.useContext(PathnameCtx);
+
   const [pathname, setPathname] = React.useState<string>(() => {
+    if (injected !== null) return injected;
     try {
       return getNavigation().getPathname();
     } catch {
@@ -134,6 +157,13 @@ export function usePathname(): string {
   });
 
   React.useEffect(() => {
+    // 有外部注入时，命令期变更由注入方（如 next-intl 的 usePathname）驱动，
+    // 我们只需在 injected 变化时把值同步进来；不再订阅 adapter，避免两路信号
+    // 交叉导致抖动。
+    if (injected !== null) {
+      setPathname(injected);
+      return;
+    }
     const handler = () => {
       try {
         setPathname(getNavigation().getPathname());
@@ -154,7 +184,7 @@ export function usePathname(): string {
       unsubscribe?.();
       window.removeEventListener('popstate', handler);
     };
-  }, []);
+  }, [injected]);
 
   return pathname;
 }

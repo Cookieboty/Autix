@@ -4,5 +4,12 @@ export { assembleVideoRequest } from './protocol/assemble';
 export { normalizeVideoOutcome } from './protocol/result';
 export { submitVideoTask, queryVideoTask, videoSubmitUrl, videoQueryUrl } from './protocol/submit';
 export { parseVideoCallback, verifyVideoCallback } from './protocol/callback';
-export { arkVideoV3 } from './protocol/presets/vendors';
+export {
+  arkVideoV3,
+  poyoVeo,
+  poyoWanT2V,
+  poyoWanI2V,
+  poyoWanRef,
+  poyoWanEdit,
+} from './protocol/presets/vendors';
 export { validateVideoProtocolConfig, type ConfigViolation } from './protocol/validate-config';

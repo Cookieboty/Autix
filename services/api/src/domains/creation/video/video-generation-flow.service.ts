@@ -302,7 +302,9 @@ export class VideoGenerationFlowService {
       })}`,
     );
 
-    if (requestContent.length === 0)
+    // 判空必须协议无关：flat-media（PoYo VEO）请求体没有 content 数组（prompt 在 input.prompt），
+    // 查 requestBody.content 会永远判空。按「解析后 prompt 为空且无素材」判定，两种协议都对。
+    if (resolvedPrompt.trim().length === 0 && materials.length === 0)
       throw new BadRequestException('Clip 缺少素材或 prompt');
 
     const generationId: string = randomUUID();
@@ -800,7 +802,8 @@ export class VideoGenerationFlowService {
     const requestContent = Array.isArray(requestBody.content)
       ? (requestBody.content as Array<{ type: string }>)
       : [];
-    if (requestContent.length === 0)
+    // 判空协议无关（同 generateClip）：flat-media（PoYo）无 content 数组，按 prompt+素材判。
+    if (resolvedPrompt.trim().length === 0 && storyboardMaterials.length === 0)
       throw new BadRequestException('项目缺少分镜 prompt');
 
     const generationId = randomUUID();

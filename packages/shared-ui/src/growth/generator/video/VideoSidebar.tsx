@@ -109,11 +109,45 @@ export function VideoSidebar({
     () => resolveVideoCapabilityFromModelConfig(selectedModel, initialModel),
     [initialModel, selectedModel],
   );
+  // 表单选项**从模型自己的 paramsSchema 出**（enum + default）——每个模型按自己的 schema
+  // 渲染，不写死、不用全局共享的比例/分辨率集。paramsSchema 缺失（未配置）时才回退到能力表。
+  const videoParams = useMemo(() => {
+    const props = (paramsSchema?.properties ?? {}) as Record<
+      string,
+      { enum?: unknown[]; default?: unknown }
+    >;
+    const nums = (v: unknown[] | undefined, fb: number[]) =>
+      Array.isArray(v) && v.every((x) => typeof x === 'number') ? (v as number[]) : fb;
+    const strs = (v: unknown[] | undefined, fb: string[]) =>
+      Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : fb;
+    return {
+      durations: nums(props.duration?.enum, videoCapability.durations),
+      ratios: strs(props.ratio?.enum, videoCapability.ratios as string[]),
+      resolutions: strs(props.resolution?.enum, videoCapability.resolutions),
+      supportsAudio: 'generate_audio' in props ? true : videoCapability.audio,
+      defaultDuration:
+        typeof props.duration?.default === 'number'
+          ? (props.duration.default as number)
+          : videoCapability.defaultDuration,
+      defaultResolution:
+        typeof props.resolution?.default === 'string'
+          ? (props.resolution.default as string)
+          : videoCapability.defaultResolution,
+      defaultRatio:
+        typeof props.ratio?.default === 'string'
+          ? (props.ratio.default as string)
+          : videoCapability.defaultRatio,
+      defaultAudio:
+        typeof props.generate_audio?.default === 'boolean'
+          ? (props.generate_audio.default as boolean)
+          : videoCapability.audio,
+    };
+  }, [paramsSchema, videoCapability]);
   const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(videoCapability.defaultDuration);
-  const [resolution, setResolution] = useState(videoCapability.defaultResolution);
-  const [ratio, setRatio] = useState<string>(videoCapability.defaultRatio);
-  const [generateAudio, setGenerateAudio] = useState(videoCapability.audio);
+  const [duration, setDuration] = useState(videoParams.defaultDuration);
+  const [resolution, setResolution] = useState(videoParams.defaultResolution);
+  const [ratio, setRatio] = useState<string>(videoParams.defaultRatio);
+  const [generateAudio, setGenerateAudio] = useState(videoParams.defaultAudio);
   const [selectedVideoRefs, setSelectedVideoRefs] = useState<PublicVideoReference[]>([]);
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
@@ -147,41 +181,39 @@ export function VideoSidebar({
   const modelLabel = selectedModel?.name ?? videoCapability.displayName;
   const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
   const hasVideoRefs = selectedVideoRefs.length > 0;
-  const durationOptions = videoCapability.durations;
+  const durationOptions = videoParams.durations;
   const ratioOptions = useMemo(
     () =>
-      videoCapability.ratios.map((value) => ({
+      videoParams.ratios.map((value) => ({
         value,
-        label: value === 'adaptive' ? t('auto') : t(`videoRatios.${value}`),
+        // adaptive / auto 都是「自动」；其余按 i18n key。
+        label: value === 'adaptive' || value === 'auto' ? t('auto') : t(`videoRatios.${value}`),
       })),
-    [t, videoCapability.ratios],
+    [t, videoParams.ratios],
   );
   const resolutionOptions = useMemo(
-    () => videoCapability.resolutions.map((value) => ({
+    () => videoParams.resolutions.map((value) => ({
       value,
       label: t(`videoResolutions.${value}`),
     })),
-    [t, videoCapability.resolutions],
+    [t, videoParams.resolutions],
   );
   const ratioLabel = ratioOptions.find((option) => option.value === ratio)?.label ?? ratio;
   const durationLabel = `${duration}s`;
 
+  // 切模型时按新模型 schema 的可选集/默认值收敛当前选择（旧选择不在新集合里就回默认）。
   useEffect(() => {
     setResolution((current) =>
-      videoCapability.resolutions.includes(current)
-        ? current
-        : videoCapability.defaultResolution,
+      videoParams.resolutions.includes(current) ? current : videoParams.defaultResolution,
     );
     setDuration((current) =>
-      videoCapability.durations.includes(current) ? current : videoCapability.defaultDuration,
+      videoParams.durations.includes(current) ? current : videoParams.defaultDuration,
     );
     setRatio((current) =>
-      (videoCapability.ratios as string[]).includes(current)
-        ? current
-        : videoCapability.defaultRatio,
+      videoParams.ratios.includes(current) ? current : videoParams.defaultRatio,
     );
-    setGenerateAudio((current) => (videoCapability.audio ? current : false));
-  }, [videoCapability]);
+    setGenerateAudio((current) => (videoParams.supportsAudio ? current : false));
+  }, [videoParams]);
 
   useEffect(() => {
     setSelectedVideoRefs((current) => limitPublicVideoReferences(current, uploadLimit));
@@ -596,12 +628,12 @@ export function VideoSidebar({
               options={resolutionOptions}
               value={resolution}
               onChange={(value) => {
-                if (videoCapability.resolutions.includes(value as typeof resolution)) {
+                if ((videoParams.resolutions as string[]).includes(value)) {
                   setResolution(value as typeof resolution);
                 }
               }}
             />
-            {videoCapability.audio ? (
+            {videoParams.supportsAudio ? (
               <button
                 type="button"
                 onClick={() => setGenerateAudio((prev) => !prev)}

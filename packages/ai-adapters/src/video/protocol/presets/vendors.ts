@@ -1,4 +1,4 @@
-import type { VideoProtocolPreset } from '../types';
+import type { ContentBinding, VideoProtocolPreset } from '../types';
 
 /**
  * 火山方舟（Ark）v3 —— 现网唯一的视频协议。
@@ -95,3 +95,157 @@ export const arkVideoV3: VideoProtocolPreset = {
 
   errorMapping: { '400': 'params', '401': 'auth', '429': 'rate-limit', '*': 'upstream' },
 };
+
+/**
+ * PoYo VEO 3.1（官方渠道）—— 第二家视频协议。
+ *
+ * 全部字段翻译自 PoYo 官方文档（docs.poyo.ai）：
+ *   - 提交       ← POST /api/generate/submit，body `{ model, callback_url?, input:{...} }`
+ *   - 请求体形态 ← input.prompt（纯字符串）+ input.image_urls（纯 URL 字符串数组）→ flat-media 策略
+ *   - 查询       ← GET /api/generate/status/{task_id}
+ *   - 终态       ← data.status(not_started|running|finished|failed) / data.files[0].file_url / data.error_message
+ *
+ * 与 Ark 的差异点：请求体是嵌套 `input.*`（非顶层）、素材是 image_urls 纯 URL 数组（非 typed
+ * content items）、比例字段叫 aspect_ratio、音频字段叫 sound。这些全部由 preset 声明表达，
+ * 引擎仅新增了 flat-media content 策略（设计 §4.3 预留）。v1 纯轮询（不接回调），callback 可后续加。
+ */
+export const poyoVeo: VideoProtocolPreset = {
+  key: 'poyo-veo@v1',
+  transport: 'async-poll',
+  timeoutMs: 60_000,
+  auth: { in: 'header', name: 'Authorization', template: 'Bearer {apiKey}' },
+
+  submit: {
+    endpoint: { method: 'POST', path: '/api/generate/submit' },
+    model: { path: 'model' },
+    content: {
+      strategy: 'flat-media',
+      promptPath: 'input.prompt',
+      mediaUrlsPath: 'input.image_urls',
+    },
+    paramBindings: {
+      // 统一参数名（toUnifiedVideoParams 的输出）→ PoYo 的 input.* 位置。
+      // duration/resolution 同名，ratio→aspect_ratio，generate_audio→sound。
+      duration: { path: 'input.duration', omitWhen: 'undefined' }, // 明确指定的秒数
+      resolution: { path: 'input.resolution', omitWhen: 'falsy' },
+      ratio: { path: 'input.aspect_ratio', omitWhen: 'falsy' }, // schema 值即 PoYo 原生 auto/16:9/9:16
+      generate_audio: { path: 'input.sound', omitWhen: 'undefined' }, // sound=false 有意义，必须发
+    },
+    // 提交响应 { code, data:{ task_id, status, created_time } } —— 取 data.task_id。
+    taskIdPath: 'data.task_id',
+  },
+
+  query: {
+    endpoint: { method: 'GET', path: '/api/generate/status/{taskId}' },
+  },
+
+  result: {
+    statusPath: 'data.status',
+    statusMap: {
+      not_started: 'active',
+      running: 'active',
+      finished: 'succeeded',
+      failed: 'failed',
+    },
+    // 成功件的视频在 data.files[0].file_url（readPath 按 '.' 分段，数组下标以字符串键命中）。
+    videoUrlPath: 'data.files.0.file_url',
+    errorMessagePath: 'data.error_message',
+  },
+
+  // v1 不接回调（webhook 省略 = 纯轮询收敛，见 types.ts SubmitSpec 注释）。
+
+  errorMapping: { '400': 'params', '401': 'auth', '429': 'rate-limit', '*': 'upstream' },
+};
+
+/**
+ * PoYo Wan 2.7 —— 第三家视频协议（与 VEO 同平台：同 submit/status 端点、同 Bearer、同 flat
+ * `input` 形状；差异仅在 input 字段与素材去向）。四个公开模型（t2v/i2v/ref/edit）请求体不同，
+ * 故各一个 protocolKey，用工厂共享协议外壳、按模型声明 content 路由与 paramBindings。
+ *
+ * 全部翻译自 PoYo 官方文档（docs.poyo.ai · Wan 2.7 Video）。v1 纯轮询（不接回调）。
+ */
+function makeWanPreset(config: {
+  key: string;
+  content: ContentBinding;
+  hasAspectRatio: boolean;
+}): VideoProtocolPreset {
+  return {
+    key: config.key,
+    transport: 'async-poll',
+    timeoutMs: 60_000,
+    auth: { in: 'header', name: 'Authorization', template: 'Bearer {apiKey}' },
+    submit: {
+      endpoint: { method: 'POST', path: '/api/generate/submit' },
+      model: { path: 'model' },
+      content: config.content,
+      paramBindings: {
+        resolution: { path: 'input.resolution', omitWhen: 'falsy' },
+        // edit-video 用 duration:0 让 PoYo 探测源视频时长 → 0 必须发（omitWhen undefined）。
+        duration: { path: 'input.duration', omitWhen: 'undefined' },
+        // Wan seed 取值 0..2147483647，无 -1 语义；-1（统一“随机”哨兵）省略。
+        seed: { path: 'input.seed', omitWhen: 'undefined', omitValues: [-1] },
+        ...(config.hasAspectRatio
+          ? { ratio: { path: 'input.aspect_ratio', omitWhen: 'falsy' as const } }
+          : {}),
+      },
+      taskIdPath: 'data.task_id',
+    },
+    query: { endpoint: { method: 'GET', path: '/api/generate/status/{taskId}' } },
+    result: {
+      statusPath: 'data.status',
+      statusMap: { not_started: 'active', running: 'active', finished: 'succeeded', failed: 'failed' },
+      videoUrlPath: 'data.files.0.file_url',
+      errorMessagePath: 'data.error_message',
+    },
+    errorMapping: { '400': 'params', '401': 'auth', '429': 'rate-limit', '*': 'upstream' },
+  };
+}
+
+/** 文生视频：仅 prompt，无素材。 */
+export const poyoWanT2V = makeWanPreset({
+  key: 'poyo-wan-t2v@v1',
+  content: { strategy: 'flat-media', promptPath: 'input.prompt' },
+  hasAspectRatio: true,
+});
+
+/** 图生视频：首/末帧 → image_urls（[0]=起始、[1]=结束）；无 aspect_ratio（由图片决定）。 */
+export const poyoWanI2V = makeWanPreset({
+  key: 'poyo-wan-i2v@v1',
+  content: {
+    strategy: 'flat-media',
+    promptPath: 'input.prompt',
+    mediaRolePaths: {
+      first_frame: { path: 'input.image_urls', mode: 'array' },
+      last_frame: { path: 'input.image_urls', mode: 'array' },
+    },
+  },
+  hasAspectRatio: false,
+});
+
+/** 参考生视频：参考图 → reference_image_urls，参考视频 → reference_video_urls。 */
+export const poyoWanRef = makeWanPreset({
+  key: 'poyo-wan-ref@v1',
+  content: {
+    strategy: 'flat-media',
+    promptPath: 'input.prompt',
+    mediaRolePaths: {
+      reference_image: { path: 'input.reference_image_urls', mode: 'array' },
+      reference_video: { path: 'input.reference_video_urls', mode: 'array' },
+    },
+  },
+  hasAspectRatio: true,
+});
+
+/** 视频编辑：源视频（reference_video 角色）→ 单个 video_url；参考图 → 单个 reference_image_url。 */
+export const poyoWanEdit = makeWanPreset({
+  key: 'poyo-wan-edit@v1',
+  content: {
+    strategy: 'flat-media',
+    promptPath: 'input.prompt',
+    mediaRolePaths: {
+      reference_video: { path: 'input.video_url', mode: 'single' },
+      reference_image: { path: 'input.reference_image_url', mode: 'single' },
+    },
+  },
+  hasAspectRatio: true,
+});

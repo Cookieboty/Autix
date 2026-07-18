@@ -50,6 +50,8 @@ describe('golden: arkVideoV3 request shape', () => {
       (fixtures as Fixture[]).flatMap((f) => f.input.materials.map((m) => m.role)),
     );
     // 漏一个角色 = 漏一整类素材的组装未被验证。roleItems 的键集就是 VideoMaterialRole 全集。
-    expect([...covered].sort()).toEqual(Object.keys(arkVideoV3.submit.content.roleItems).sort());
+    const content = arkVideoV3.submit.content;
+    if (content.strategy !== 'typed-content-items') throw new Error('arkVideoV3 must use typed-content-items');
+    expect([...covered].sort()).toEqual(Object.keys(content.roleItems).sort());
   });
 });

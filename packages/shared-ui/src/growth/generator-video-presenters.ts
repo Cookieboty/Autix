@@ -90,6 +90,9 @@ export function buildPublicVideoEstimateInput({
       referenceImages: Math.max(0, Math.floor(Number(referenceImages) || 0)),
       hasVideoInput: false,
       hasAudioInput: generateAudio,
+      // PoYo VEO 按「分辨率 × 是否出声」定每秒单价，pricingSchema 的 when 读 generate_audio。
+      // 本地预估必须带上它，否则展示价按无声算、与服务端扣费分裂（seedance 不读它，无害）。
+      generate_audio: generateAudio,
     },
   };
 }

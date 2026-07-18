@@ -9,7 +9,7 @@ import {
   type PricingSchema,
 } from '@autix/domain/pricing';
 import { buildVideoParamsSchema } from './seed-pricing.schemas';
-import { SEED_MODELS, DEFAULT_MULTIPLIER, IMAGE_MODEL_CONFIGS } from './seed-pricing.models';
+import { SEED_MODELS, DEFAULT_MULTIPLIER, IMAGE_MODEL_CONFIGS, VIDEO_MODEL_CONFIGS } from './seed-pricing.models';
 import { createPrismaClient } from './db';
 
 
@@ -239,6 +239,24 @@ async function seedModelSchemas() {
         },
       });
       console.log(`${model.name} -> image [${alreadyConfigured ? 'force-refreshed schema' : 'filled empty schema'}]`);
+      continue;
+    }
+
+    // 视频模型：优先用 VIDEO_MODEL_CONFIGS 的 per-model 全量（VEO 等 —— 每模型按自己的
+    // schema 写，不复用通用 buildVideoParamsSchema）。命中即写；不命中的（seedance）落到
+    // 下面通用路径（buildVideoParamsSchema + MODEL_PRICING）。
+    if (key === 'video' && VIDEO_MODEL_CONFIGS[model.model]) {
+      const cfg = VIDEO_MODEL_CONFIGS[model.model];
+      const alreadyConfigured = model.paramsSchema !== null && model.pricingSchema !== null;
+      if (alreadyConfigured && !FORCE_MODEL_SCHEMAS) continue;
+      await prisma.model_configs.update({
+        where: { id: model.id },
+        data: {
+          paramsSchema: toInputJson(cfg.paramsSchema),
+          pricingSchema: toInputJson(cfg.pricingSchema),
+        },
+      });
+      console.log(`${model.name} -> video [per-model config] [${alreadyConfigured ? 'force-refreshed schema' : 'filled empty schema'}]`);
       continue;
     }
 

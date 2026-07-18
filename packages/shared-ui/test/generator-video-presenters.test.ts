@@ -93,6 +93,8 @@ describe('buildPublicVideoEstimateInput', () => {
         referenceImages: 0,
         hasVideoInput: false,
         hasAudioInput: true,
+        // PoYo VEO 计价读 generate_audio；本地预估随之带上（seedance 不读，无害）。
+        generate_audio: true,
       },
     });
   });

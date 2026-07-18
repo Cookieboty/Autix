@@ -84,6 +84,19 @@ export const SEED_MODELS: SeedModelRow[] = [
   // （2.0 含 1080p/4k、Fast 到 720p），pricingSchema 走 MODEL_PRICING 的逐模型档位。
   { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance video model', 'zh-CN': 'Seedance 视频模型' } },
   { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0-fast', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
+
+  // —— PoYo VEO 3.1（第二家视频渠道，protocolKey=poyo-veo@v1）——
+  // baseUrl(https://api.poyo.ai)/apiKey 由运营在 admin 补；schema/pricing 从 VIDEO_MODEL_CONFIGS 写全量。
+  { name: 'VEO 3.1 Fast', provider: 'poyo', model: 'veo3.1-fast-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'veo3.1-fast', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 fast official', 'zh-CN': 'PoYo VEO 3.1 快速官方版' } },
+  { name: 'VEO 3.1 Lite', provider: 'poyo', model: 'veo3.1-lite-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'veo3.1-lite', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 lite official', 'zh-CN': 'PoYo VEO 3.1 轻量官方版' } },
+  { name: 'VEO 3.1 Quality', provider: 'poyo', model: 'veo3.1-quality-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'veo3.1-quality', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 quality official', 'zh-CN': 'PoYo VEO 3.1 高质量官方版' } },
+
+  // —— PoYo Wan 2.7（第三家视频渠道，同 PoYo 平台）—— 四个模型各一个 protocolKey（请求体不同）。
+  // 不设 videoModelKind（detectVideoModelKind 回落 compatible，仅用于分辨率兜底）；表单从 paramsSchema 渲染。
+  { name: 'Wan 2.7 文生视频', provider: 'poyo', model: 'wan2.7-text-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { protocolKey: 'poyo-wan-t2v@v1' }, description: { en: 'PoYo Wan 2.7 text-to-video', 'zh-CN': 'PoYo Wan 2.7 文生视频' } },
+  { name: 'Wan 2.7 图生视频', provider: 'poyo', model: 'wan2.7-image-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { protocolKey: 'poyo-wan-i2v@v1' }, description: { en: 'PoYo Wan 2.7 image-to-video', 'zh-CN': 'PoYo Wan 2.7 图生视频' } },
+  { name: 'Wan 2.7 参考生视频', provider: 'poyo', model: 'wan2.7-reference-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { protocolKey: 'poyo-wan-ref@v1' }, description: { en: 'PoYo Wan 2.7 reference-to-video', 'zh-CN': 'PoYo Wan 2.7 参考生视频' } },
+  { name: 'Wan 2.7 视频编辑', provider: 'poyo', model: 'wan2.7-edit-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { protocolKey: 'poyo-wan-edit@v1' }, description: { en: 'PoYo Wan 2.7 edit-video', 'zh-CN': 'PoYo Wan 2.7 视频编辑' } },
 ];
 
 /**
@@ -298,4 +311,99 @@ export const IMAGE_MODEL_CONFIGS: Record<
       ],
     } as PricingSchema,
   },
+};
+
+const JSON_SCHEMA_DRAFT_VIDEO = 'https://json-schema.org/draft/2020-12/schema';
+
+/**
+ * VEO 的 per-model paramsSchema。**每个模型按自己的 schema 渲染**（不复用
+ * buildVideoParamsSchema / 全局 VIDEO_ASPECT_RATIO_VALUES）：aspect_ratio 只有
+ * 16:9/9:16/auto，duration 只有 4/6/8，sound(generate_audio) 作计价+wire 参数。
+ * resolution 逐模型不同（lite 无 4K）。
+ */
+function veoParamsSchema(resolutions: string[]): ParamsSchema {
+  return {
+    $schema: JSON_SCHEMA_DRAFT_VIDEO,
+    type: 'object',
+    required: ['resolution', 'duration'],
+    properties: {
+      resolution: { type: 'string', enum: resolutions, default: '720p', 'x-ui': { role: 'both', control: 'chips', order: 10, labelKey: 'pricing.params.resolution' } },
+      ratio: { type: 'string', enum: ['16:9', '9:16', 'auto'], default: '16:9', 'x-ui': { role: 'wire', control: 'chips', order: 20, labelKey: 'pricing.params.ratio' } },
+      duration: { type: 'integer', enum: [4, 6, 8], default: 8, 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+      generate_audio: { type: 'boolean', default: true, 'x-ui': { role: 'both', control: 'switch', order: 40, labelKey: 'pricing.params.generateAudio' } },
+    },
+  } as ParamsSchema;
+}
+
+/**
+ * VEO 每秒积分（1 美元 = 500 积分，PoYo 官方每秒价 × 500）。计价维度是「分辨率 × 是否出声」——
+ * 用**互斥的 when 谓词**切换每秒单价，只有一条命中 → unitCost × duration。
+ * 无声用 `generate_audio ne true`（false / 未设都算无声），有声用 `eq true`。
+ */
+function veoGroupedPricing(sdNoAudio: number, sdAudio: number, k4NoAudio: number, k4Audio: number): PricingSchema {
+  return {
+    terms: [
+      // 首项必须是 const（校验器 FIRST_TERM_MUST_BE_CONST）：所有条件项跳过时兜底 0。
+      { id: 'base', op: 'add', const: 0 },
+      { id: 'sd-noaudio', op: 'add', perUnit: { param: 'duration', unitCost: sdNoAudio }, when: { all: [{ param: 'resolution', op: 'in', value: ['720p', '1080p'] }, { param: 'generate_audio', op: 'ne', value: true }] } },
+      { id: 'sd-audio', op: 'add', perUnit: { param: 'duration', unitCost: sdAudio }, when: { all: [{ param: 'resolution', op: 'in', value: ['720p', '1080p'] }, { param: 'generate_audio', op: 'eq', value: true }] } },
+      { id: 'k4-noaudio', op: 'add', perUnit: { param: 'duration', unitCost: k4NoAudio }, when: { all: [{ param: 'resolution', op: 'eq', value: '4k' }, { param: 'generate_audio', op: 'ne', value: true }] } },
+      { id: 'k4-audio', op: 'add', perUnit: { param: 'duration', unitCost: k4Audio }, when: { all: [{ param: 'resolution', op: 'eq', value: '4k' }, { param: 'generate_audio', op: 'eq', value: true }] } },
+    ],
+  } as PricingSchema;
+}
+
+// lite 无 4K，且 720p 与 1080p 单价不同，故逐档写。
+const veoLitePricing: PricingSchema = {
+  terms: [
+    { id: 'base', op: 'add', const: 0 },
+    { id: 'r720-noaudio', op: 'add', perUnit: { param: 'duration', unitCost: 9 }, when: { all: [{ param: 'resolution', op: 'eq', value: '720p' }, { param: 'generate_audio', op: 'ne', value: true }] } },
+    { id: 'r720-audio', op: 'add', perUnit: { param: 'duration', unitCost: 15 }, when: { all: [{ param: 'resolution', op: 'eq', value: '720p' }, { param: 'generate_audio', op: 'eq', value: true }] } },
+    { id: 'r1080-noaudio', op: 'add', perUnit: { param: 'duration', unitCost: 15 }, when: { all: [{ param: 'resolution', op: 'eq', value: '1080p' }, { param: 'generate_audio', op: 'ne', value: true }] } },
+    { id: 'r1080-audio', op: 'add', perUnit: { param: 'duration', unitCost: 24 }, when: { all: [{ param: 'resolution', op: 'eq', value: '1080p' }, { param: 'generate_audio', op: 'eq', value: true }] } },
+  ],
+} as PricingSchema;
+
+/**
+ * 视频模型的 per-model paramsSchema + pricingSchema（按 model-id 索引，同 IMAGE_MODEL_CONFIGS）。
+ * seedModelSchemas() 里视频模型优先查这里；命中就写全量，不命中的（seedance）仍走
+ * buildVideoParamsSchema + MODEL_PRICING 的既有路径。
+ */
+/**
+ * Wan 2.7 的 per-model paramsSchema。resolution 只 720p/1080p，比例 16:9/9:16/1:1/4:3/3:4
+ * （i2v 无比例，由图片决定）。duration 逐模型不同（t2v 5/10/15、ref/edit 2-10 取 5/10）。
+ * Wan 无 generate_audio 布尔（音频经 audio_url），故不含 sound 参数。
+ */
+function wanParamsSchema(durations: number[], hasRatio: boolean): ParamsSchema {
+  const properties: Record<string, unknown> = {
+    resolution: { type: 'string', enum: ['720p', '1080p'], default: '720p', 'x-ui': { role: 'both', control: 'chips', order: 10, labelKey: 'pricing.params.resolution' } },
+    duration: { type: 'integer', enum: durations, default: durations[0], 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+  };
+  if (hasRatio) {
+    properties.ratio = { type: 'string', enum: ['16:9', '9:16', '1:1', '4:3', '3:4'], default: '16:9', 'x-ui': { role: 'wire', control: 'chips', order: 20, labelKey: 'pricing.params.ratio' } };
+  }
+  return { $schema: JSON_SCHEMA_DRAFT_VIDEO, type: 'object', required: ['resolution', 'duration'], properties } as ParamsSchema;
+}
+
+// Wan 计价：所有模型同价，仅按 分辨率×时长。720p $0.06/s=30、1080p $0.09/s=45（×500）。
+const wanPricing: PricingSchema = {
+  terms: [
+    { id: 'base', op: 'add', const: 0 },
+    { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '720p': 30, '1080p': 45 } } },
+    { id: 'duration', op: 'mul', perUnit: { param: 'duration', unitCost: 1 } },
+  ],
+} as PricingSchema;
+
+export const VIDEO_MODEL_CONFIGS: Record<
+  string,
+  { paramsSchema: ParamsSchema; pricingSchema: PricingSchema }
+> = {
+  'veo3.1-fast-official': { paramsSchema: veoParamsSchema(['720p', '1080p', '4k']), pricingSchema: veoGroupedPricing(25, 37.5, 75, 87.5) },
+  'veo3.1-lite-official': { paramsSchema: veoParamsSchema(['720p', '1080p']), pricingSchema: veoLitePricing },
+  'veo3.1-quality-official': { paramsSchema: veoParamsSchema(['720p', '1080p', '4k']), pricingSchema: veoGroupedPricing(60, 120, 120, 180) },
+  // Wan 2.7：t2v 5/10/15 有比例；i2v 无比例；ref/edit 5/10 有比例。
+  'wan2.7-text-to-video': { paramsSchema: wanParamsSchema([5, 10, 15], true), pricingSchema: wanPricing },
+  'wan2.7-image-to-video': { paramsSchema: wanParamsSchema([5, 10, 15], false), pricingSchema: wanPricing },
+  'wan2.7-reference-to-video': { paramsSchema: wanParamsSchema([5, 10], true), pricingSchema: wanPricing },
+  'wan2.7-edit-video': { paramsSchema: wanParamsSchema([5, 10], true), pricingSchema: wanPricing },
 };
