@@ -3588,6 +3588,7 @@
     "accountMenu": {
       "accountMenu": "Account menu",
       "signIn": "Sign in",
+      "signUp": "Sign up",
       "signInOrRegister": "Login / Register",
       "freePlan": "Free Plan",
       "credits": "Credits",

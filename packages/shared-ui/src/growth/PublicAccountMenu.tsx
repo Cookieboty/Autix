@@ -201,16 +201,30 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
 
   if (!isAuthenticated || !user) {
     return (
-      <button
-        type="button"
-        onClick={() => openAuthModal({ mode: 'entry' })}
-        className={`inline-flex cursor-pointer items-center justify-center rounded-full border border-growth-accent/45 bg-growth-accent/12 font-black text-growth-accent growth-signin-glow transition hover:border-growth-accent hover:bg-growth-accent hover:text-background ${
-          compact ? 'min-h-7 px-3 text-[13px]' : 'min-h-10 px-4 text-sm'
-        }`}
-        aria-label={t('signInOrRegister')}
-      >
-        {t('signInOrRegister')}
-      </button>
+      <div className="flex shrink-0 items-center gap-2">
+        <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
+        {/* 登录走弹窗（不打断当前浏览），注册直接进独立页面 */}
+        {/* 样式与导航里的 Pricing / Assets 入口一致（growth-nav-btn + pillSize） */}
+        <button
+          type="button"
+          onClick={() => openAuthModal({ mode: 'entry' })}
+          className={cn(
+            'growth-nav-btn inline-flex cursor-pointer items-center gap-2 font-semibold text-growth-accent transition-all duration-300',
+            compact ? 'min-h-7 px-2.5 text-[13px]' : 'min-h-9 px-3 text-sm',
+          )}
+        >
+          {t('signIn')}
+        </button>
+        <Link
+          href="/register"
+          className={cn(
+            'inline-flex cursor-pointer items-center justify-center rounded-lg bg-growth-accent font-bold text-background transition hover:brightness-110',
+            compact ? 'min-h-7 px-3 text-[13px]' : 'min-h-9 px-4 text-sm',
+          )}
+        >
+          {t('signUp')}
+        </Link>
+      </div>
     );
   }
 

@@ -3251,7 +3251,8 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "Вход",
+      "signUp": "Регистрация",
       "signInOrRegister": "Вход / Регистрация",
       "freePlan": "Free Plan",
       "credits": "Credits",

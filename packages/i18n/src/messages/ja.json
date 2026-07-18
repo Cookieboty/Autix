@@ -3251,7 +3251,8 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "ログイン",
+      "signUp": "新規登録",
       "signInOrRegister": "ログイン/登録",
       "freePlan": "Free Plan",
       "credits": "Credits",

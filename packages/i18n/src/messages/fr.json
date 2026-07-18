@@ -3587,7 +3587,8 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "Connexion",
+      "signUp": "Inscription",
       "signInOrRegister": "Connexion / Inscription",
       "freePlan": "Free Plan",
       "credits": "Credits",

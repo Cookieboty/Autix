@@ -3252,6 +3252,7 @@
     "accountMenu": {
       "accountMenu": "帳號選單",
       "signIn": "登入",
+      "signUp": "註冊",
       "signInOrRegister": "登入/註冊",
       "freePlan": "免費方案",
       "credits": "積分",

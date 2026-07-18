@@ -3251,7 +3251,8 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "Đăng nhập",
+      "signUp": "Đăng ký",
       "signInOrRegister": "Đăng nhập / Đăng ký",
       "freePlan": "Free Plan",
       "credits": "Credits",

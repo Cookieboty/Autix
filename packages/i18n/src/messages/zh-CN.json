@@ -3588,6 +3588,7 @@
     "accountMenu": {
       "accountMenu": "账号菜单",
       "signIn": "登录",
+      "signUp": "注册",
       "signInOrRegister": "登录/注册",
       "freePlan": "免费计划",
       "credits": "积分",
