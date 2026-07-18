@@ -1,6 +1,7 @@
 'use client';
 
-import { Crown } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   findRecommendedMembershipLevel,
@@ -10,6 +11,8 @@ import {
   type MembershipPlan,
 } from '@autix/shared-store';
 import { formatCurrency } from '../format';
+import { TONE_ACCENT, type PlanTone } from '../growth/public-pricing-helpers';
+import { GROWTH_CTA_FOCUS } from '../growth/dialog-styles';
 import { Button, SidebarTrigger, toast } from '../ui';
 
 type MembershipUpgradeViewProps = {
@@ -29,6 +32,23 @@ const CYCLE_KEYS: Record<MembershipBillingCycle, string> = {
 };
 
 const BILLING_CYCLES: MembershipBillingCycle[] = ['MONTHLY', 'YEARLY'];
+
+/** 与 /pricing 的 PlanCards 保持同一套色调：neutral=白 / brand=品牌绿 / top=品红 */
+const TONE_STYLE: Record<PlanTone, { accent: string; ctaText: string; tinted: boolean }> = {
+  neutral: { accent: TONE_ACCENT.neutral, ctaText: 'var(--color-background)', tinted: false },
+  brand: { accent: TONE_ACCENT.brand, ctaText: 'var(--color-background)', tinted: true },
+  top: { accent: TONE_ACCENT.top, ctaText: '#ffffff', tinted: true },
+};
+
+/** 复刻 PlanCards 的着色卡片：品牌色描边 + 斜向微渐变 + 同色投影 */
+function toneCardStyle(accent: string, tinted: boolean): CSSProperties {
+  if (!tinted) return {};
+  return {
+    borderColor: `color-mix(in srgb, ${accent} 42%, transparent)`,
+    backgroundImage: `linear-gradient(157deg, color-mix(in srgb, ${accent} 17%, transparent) 0%, color-mix(in srgb, ${accent} 5%, transparent) 42%, rgba(255,255,255,0.02) 100%)`,
+    boxShadow: `0 24px 80px color-mix(in srgb, ${accent} 12%, transparent)`,
+  };
+}
 
 function translationValue(value: unknown, fallback: string | number) {
   if (typeof value === 'string' || typeof value === 'number' || value instanceof Date) {
@@ -137,25 +157,20 @@ export function MembershipUpgradeView({
     );
   }
 
-  const activeBackground = `var(${activeColorVar})`;
-  const activeForeground =
-    activeColorVar === '--brand' ? 'var(--brand-foreground)' : '#fff';
   const warningColor = activeColorVar === '--brand' ? 'var(--warning)' : '#f59e0b';
   const recommendedLevel = findRecommendedMembershipLevel(
     levels,
     (level) => level.plans.some((plan) => plan.billingCycle === cycle && plan.autoRenew === autoRenew),
   );
+  // 最高付费档走 top 品红，与 /pricing 的分档规则一致
+  const maxPaidLevel = Math.max(0, ...levels.map((level) => level.level));
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div
-        className="flex-shrink-0 h-12 px-4 flex items-center gap-2"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
+      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
         {showSidebarTrigger && <SidebarTrigger className="-ml-1" />}
         <h1
-          className={`${showSidebarTrigger ? 'ml-1 ' : ''}text-sm font-semibold`}
-          style={{ color: 'var(--foreground)' }}
+          className={`${showSidebarTrigger ? 'ml-1 ' : ''}text-sm font-black uppercase tracking-tight text-foreground`}
         >
           {t('upgradeMembership')}
         </h1>
@@ -163,30 +178,20 @@ export function MembershipUpgradeView({
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {descriptionVariant === 'card' ? (
-          <div
-            className="rounded-lg p-4 mb-5"
-            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
-          >
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>
-              {t(descriptionKey)}
-            </p>
+          <div className="mb-5 rounded-xl border border-white/10 bg-white/[0.025] p-4">
+            <p className="text-xs leading-5 text-foreground/60">{t(descriptionKey)}</p>
           </div>
         ) : (
-          <p className="text-xs mb-5" style={{ color: 'var(--muted)' }}>
-            {t(descriptionKey)}
-          </p>
+          <p className="mb-5 text-xs leading-5 text-foreground/60">{t(descriptionKey)}</p>
         )}
 
         {membership && (
-          <div
-            className="rounded-lg p-4 mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
-          >
+          <div className="mb-5 flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+              <div className="text-xs font-semibold text-foreground">
                 {t('currentPlan')}：{membership.level?.name ?? t('noMembership')}
               </div>
-              <div className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+              <div className="mt-1 text-xs text-foreground/50">
                 {t('expiresAt')} {new Date(membership.expiresAt).toLocaleDateString()}
                 {' · '}
                 {membership.cancelAtPeriodEnd ? t('cancelAtPeriodEndOn') : t('cancelAtPeriodEndOff')}
@@ -212,111 +217,93 @@ export function MembershipUpgradeView({
           </div>
         )}
 
-        <div className="flex gap-2 mb-4">
+        {/* 计费周期切换：对标 /pricing 的 BillingCycleSwitch */}
+        <div className="mb-5 flex w-fit flex-wrap gap-2 rounded-xl border border-border bg-foreground/[0.05] p-1">
           {BILLING_CYCLES.map((nextCycle) => (
             <button
               key={nextCycle}
+              type="button"
               onClick={() => setCycle(nextCycle)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-              style={{
-                backgroundColor: cycle === nextCycle ? activeBackground : 'var(--surface)',
-                color: cycle === nextCycle ? activeForeground : 'var(--foreground)',
-                border: cycle === nextCycle ? 'none' : '1px solid var(--border)',
-              }}
+              className={`min-h-9 cursor-pointer rounded-md px-4 text-sm font-semibold transition ${cycle === nextCycle ? 'growth-billing-tab-active' : 'growth-billing-tab'}`}
             >
               {t(CYCLE_KEYS[nextCycle])}
             </button>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {levels.map((level) => {
             const plan = getPlan(level);
             const isDowngrade = isDowngradeLevel(level);
             const isCurrent =
               membership?.status === 'ACTIVE' && level.level === currentLevelValue;
             const isRecommended = level.id === recommendedLevel?.id;
-            const isHighlight = isCurrent || (!membership && isRecommended);
             const labels = featureLabels(level.features, t);
+            const tone: PlanTone = isRecommended
+              ? 'brand'
+              : level.level > 0 && level.level === maxPaidLevel
+                ? 'top'
+                : 'neutral';
+            const style = TONE_STYLE[tone];
+            const disabled = !plan || purchasingId === plan?.id || isDowngrade || isCurrent;
             return (
               <div
                 key={level.id}
-                className="rounded-xl p-5 flex flex-col"
-                style={{
-                  backgroundColor: 'var(--surface)',
-                  border: isHighlight
-                    ? `2px solid var(${activeColorVar})`
-                    : '1px solid var(--border)',
-                  opacity: isDowngrade ? 0.6 : 1,
-                }}
+                className={`group relative flex flex-col overflow-hidden rounded-2xl border p-5 text-left transition duration-300 ${style.tinted ? '' : 'border-white/10 bg-white/[0.025] hover:bg-white/[0.05]'} ${isDowngrade ? 'opacity-60' : ''}`}
+                style={toneCardStyle(style.accent, style.tinted)}
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <Crown
-                    className="w-4 h-4"
-                    style={{ color: isHighlight ? activeBackground : 'var(--muted)' }}
-                  />
-                  <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                {/* Header：名称 + 徽章 */}
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <h3 className="text-xl font-black uppercase tracking-tight text-foreground">
                     {level.name}
-                  </span>
-                  {isRecommended && !isCurrent && (
+                  </h3>
+                  {isCurrent ? (
+                    <span className="rounded px-1.5 py-0.5 text-[10px] font-black uppercase italic leading-none text-foreground/60 ring-1 ring-white/15">
+                      {t('currentPlan')}
+                    </span>
+                  ) : isRecommended ? (
                     <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                      style={{ backgroundColor: activeBackground, color: activeForeground }}
+                      className="rounded px-1.5 py-0.5 text-[10px] font-black uppercase italic leading-none"
+                      style={{ backgroundColor: style.accent, color: style.ctaText }}
                     >
                       {t('recommendedBadge')}
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
+                {/* 积分盒子 */}
                 {plan ? (
-                  <>
-                    <div className="mb-3">
-                      <span className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>
-                        {formatCurrency(plan.price)}
-                      </span>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-lg font-bold text-foreground">
+                      {plan.points} {t('pointsUnit')}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* 价格 */}
+                <div className="mt-5 flex flex-wrap items-end gap-x-2">
+                  {plan ? (
+                    <>
                       {plan.originalPrice !== plan.price && (
-                        <span
-                          className="text-xs ml-2 line-through"
-                          style={{ color: 'var(--muted)' }}
-                        >
+                        <span className="pb-1 text-lg font-bold text-[#ff4f82] line-through">
                           {formatCurrency(plan.originalPrice)}
                         </span>
                       )}
-                    </div>
+                      <span className="text-3xl font-black text-foreground">
+                        {formatCurrency(plan.price)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-3xl font-black text-foreground/40">-</span>
+                  )}
+                </div>
 
-                    <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
-                      {plan.points} {t('pointsUnit')}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>-</p>
-                )}
-
-                {labels.length > 0 && (
-                  <ul className="space-y-1.5 mb-4 flex-1">
-                    {labels.map((label, index) => (
-                      <li
-                        key={`${level.id}-${index}`}
-                        className="text-xs flex items-start gap-1.5"
-                        style={{ color: 'var(--foreground)' }}
-                      >
-                        <span style={{ color: 'var(--success)' }}>✓</span>
-                        {label}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {isDowngrade && (
-                  <p className="text-[11px] mb-2" style={{ color: 'var(--muted)' }}>
-                    {t('downgradeUnavailableHint')}
-                  </p>
-                )}
-
-                <Button
-                  size="sm"
-                  className="w-full mt-auto cursor-pointer"
-                  disabled={!plan || purchasingId === plan?.id || isDowngrade || isCurrent}
+                {/* CTA */}
+                <button
+                  type="button"
+                  className={`mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg text-sm font-bold transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${GROWTH_CTA_FOCUS}`}
+                  style={{ backgroundColor: style.accent, color: style.ctaText }}
+                  disabled={disabled}
                   onClick={() => plan && handlePurchase(plan.id, level)}
                 >
                   {isDowngrade
@@ -324,7 +311,28 @@ export function MembershipUpgradeView({
                     : isCurrent
                       ? t('currentPlan')
                       : t('subscribe')}
-                </Button>
+                </button>
+
+                {isDowngrade && (
+                  <p className="mt-2 text-center text-xs text-foreground/45">
+                    {t('downgradeUnavailableHint')}
+                  </p>
+                )}
+
+                {/* 权益清单 */}
+                {labels.length > 0 && (
+                  <div className="mt-5 flex flex-1 flex-col gap-2.5 border-t border-white/10 pt-5">
+                    {labels.map((label, index) => (
+                      <div
+                        key={`${level.id}-${index}`}
+                        className="flex items-start gap-2 text-[13px] leading-5 text-foreground/80"
+                      >
+                        <Check className="mt-0.5 size-4 shrink-0 text-foreground/70" />
+                        <span>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

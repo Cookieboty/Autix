@@ -7,38 +7,24 @@ import { formatCurrency } from '../../format';
 import { MagneticLink } from '../GrowthInteractions';
 import { formatCount, pointsPerDollar } from '../public-pricing-helpers';
 
-const FALLBACK_CODE_MAP: Record<string, 'trial' | 'standard' | 'pro' | 'team'> = {
-  trial_topup: 'trial',
-  standard_topup: 'standard',
-  pro_topup: 'pro',
-  team_topup: 'team',
-};
-
-function TopUpCard({ pkg }: { pkg: PointsPackage }) {
+/**
+ * 卡片主体。定价页里是「跳转到积分包页」的链接，计费拦截弹框里则要能就地下单，
+ * 所以外壳（MagneticLink / button）由 onPurchase 是否传入决定，卡面完全共用。
+ */
+function TopUpCard({
+  pkg,
+  onPurchase,
+  purchasing = false,
+}: {
+  pkg: PointsPackage;
+  onPurchase?: () => void;
+  purchasing?: boolean;
+}) {
   const t = useTranslations('publicGrowth.pricing');
   const creditUnit = t('creditUnit');
 
-  const fallbackKey = pkg.id.startsWith('fallback-') && pkg.code
-    ? FALLBACK_CODE_MAP[pkg.code]
-    : undefined;
-
-  const displayName = fallbackKey === 'trial' ? t('topupFallback.trial.name')
-    : fallbackKey === 'standard' ? t('topupFallback.standard.name')
-    : fallbackKey === 'pro' ? t('topupFallback.pro.name')
-    : fallbackKey === 'team' ? t('topupFallback.team.name')
-    : pkg.name;
-
-  const displayDescription = fallbackKey === 'trial' ? t('topupFallback.trial.description')
-    : fallbackKey === 'standard' ? t('topupFallback.standard.description')
-    : fallbackKey === 'pro' ? t('topupFallback.pro.description')
-    : fallbackKey === 'team' ? t('topupFallback.team.description')
-    : (pkg.description ?? '');
-
-  return (
-    <MagneticLink
-      href="/membership/packages"
-      className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.025] p-5 transition duration-300 hover:border-white/20 hover:bg-white/[0.05]"
-    >
+  const body = (
+    <>
       <div className="mb-4 flex items-center justify-between gap-3">
         <span className="grid size-9 place-items-center rounded-lg border border-white/8 bg-white/5 text-growth-accent">
           <Gift className="size-5" />
@@ -48,9 +34,9 @@ function TopUpCard({ pkg }: { pkg: PointsPackage }) {
         </span>
       </div>
 
-      <h3 className="text-base font-bold text-foreground">{displayName}</h3>
+      <h3 className="text-base font-bold text-foreground">{pkg.name}</h3>
       <p className="mt-1 min-h-9 text-xs leading-5 text-foreground/50 line-clamp-2">
-        {displayDescription}
+        {pkg.description ?? ''}
       </p>
 
       <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
@@ -65,7 +51,55 @@ function TopUpCard({ pkg }: { pkg: PointsPackage }) {
         <Zap className="size-3.5 text-growth-accent/80" />
         {t('pointsPerDollar', { ratio: pointsPerDollar(pkg) })}
       </div>
+    </>
+  );
+
+  if (onPurchase) {
+    return (
+      <button
+        type="button"
+        className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.025] p-5 text-left transition duration-300 hover:border-white/20 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={purchasing}
+        onClick={onPurchase}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <MagneticLink href="/membership/packages" className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.025] p-5 text-left transition duration-300 hover:border-white/20 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-60">
+      {body}
     </MagneticLink>
+  );
+}
+
+/**
+ * 只有卡片网格，不带标题与「查看全部」入口 —— 供弹框等已自带页头的宿主复用，
+ * 保证积分包卡面与 /pricing 完全同源。
+ */
+export function TopUpGrid({
+  packages,
+  onPurchase,
+  purchasingId,
+  limit = 4,
+}: {
+  packages: PointsPackage[];
+  onPurchase?: (pkg: PointsPackage) => void;
+  purchasingId?: string | null;
+  limit?: number;
+}) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {packages.slice(0, limit).map((pkg) => (
+        <TopUpCard
+          key={pkg.id}
+          pkg={pkg}
+          onPurchase={onPurchase ? () => onPurchase(pkg) : undefined}
+          purchasing={purchasingId === pkg.id}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -92,11 +126,7 @@ export function TopUpSection({ packages }: { packages: PointsPackage[] }) {
         </MagneticLink>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {packages.slice(0, 4).map((pkg) => (
-          <TopUpCard key={pkg.id} pkg={pkg} />
-        ))}
-      </div>
+      <TopUpGrid packages={packages} />
     </section>
   );
 }

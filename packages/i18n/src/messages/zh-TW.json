@@ -3229,7 +3229,12 @@
     "packagesHeading": "點數包",
     "plansHeading": "會員方案",
     "currentLevel": "當前會員",
-    "levelFree": "免費用戶"
+    "levelFree": "免費用戶",
+    "unlockGeneric": "解鎖更多創作額度",
+    "unlockFeature": "解鎖 {name}",
+    "unlockFeatureDesc": "升級會員或補充積分，即可繼續使用 {name} 生成",
+    "shortfallSummary": "本次需要 {required} 積分，目前餘額 {available}，還差 {shortfall}",
+    "footnote": "價格不含加值稅及當地稅費，將於結帳時計算。會員權益與積分包可疊加使用，積分包不含會員專屬權益。"
   },
   "publicGrowth": {
     "nav": {
@@ -3247,6 +3252,7 @@
     "accountMenu": {
       "accountMenu": "帳號選單",
       "signIn": "登入",
+      "signUp": "註冊",
       "signInOrRegister": "登入/註冊",
       "freePlan": "免費方案",
       "credits": "積分",
@@ -3731,24 +3737,6 @@
         "0": "公開瀏覽與收藏靈感",
         "1": "私有草稿與基礎發布",
         "2": "適合低頻試用"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "試用包",
-          "description": "適合一次性專案的輕量積分補充"
-        },
-        "standard": {
-          "name": "標準包",
-          "description": "為活躍創作者補充積分"
-        },
-        "pro": {
-          "name": "專業包",
-          "description": "高頻補充，需保持有效會員資格"
-        },
-        "team": {
-          "name": "團隊包",
-          "description": "團隊積分補充，商業授權隨會員等級適用"
-        }
       },
       "creditsMo": "{count} 點數/月",
       "fixedCredits": "每月固定 {count} 點數",

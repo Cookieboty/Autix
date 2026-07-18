@@ -74,45 +74,6 @@ export const PLAN_ACCENTS: string[] = [
 ];
 export const FREE_PLAN_ACCENT = 'var(--growth-plan-free)';
 
-const FALLBACK_TOP_UP_PACKAGES: PointsPackage[] = [
-  {
-    id: 'fallback-trial-topup',
-    code: 'trial_topup',
-    name: 'trial_topup',
-    price: '9.90',
-    points: 800,
-    validityDays: 180,
-    sort: 1,
-  },
-  {
-    id: 'fallback-standard-topup',
-    code: 'standard_topup',
-    name: 'standard_topup',
-    price: '59.00',
-    points: 5500,
-    validityDays: 180,
-    sort: 2,
-  },
-  {
-    id: 'fallback-pro-topup',
-    code: 'pro_topup',
-    name: 'pro_topup',
-    price: '199.00',
-    points: 20000,
-    validityDays: 180,
-    sort: 3,
-  },
-  {
-    id: 'fallback-team-topup',
-    code: 'team_topup',
-    name: 'team_topup',
-    price: '599.00',
-    points: 60000,
-    validityDays: 365,
-    showCommercialLicense: true,
-    sort: 4,
-  },
-];
 
 function getRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -306,52 +267,6 @@ function buildFreePlan(): PricingPlan {
   };
 }
 
-function buildFallbackPlans(cycle: BillingCycle): PricingPlan[] {
-  const serverNames = ['Free', 'Creator', 'Studio'];
-  const points = [0, 12000, 52000];
-  const prices = ['$0', '$19', '$79'];
-
-  const fallbackTones: PlanTone[] = ['neutral', 'brand', 'top'];
-  return serverNames.map((serverName, index) => ({
-    id: `fallback-${serverName.toLowerCase()}`,
-    planId: index === 0 ? null : `fallback-plan-${serverName.toLowerCase()}`,
-    serverName,
-    badgeKey: index === 0 ? 'free' : index === 1 ? 'popular' : null,
-    tone: fallbackTones[index]!,
-    accent: TONE_ACCENT[fallbackTones[index]!],
-    href: index === 0 ? '/register' : '/membership/upgrade',
-    level: index,
-    points: points[index]!,
-    price: prices[index]!,
-    pricePerMonth: prices[index]!,
-    originalPrice: null,
-    annualSavings: null,
-    billingCycle: cycle,
-    recommended: index === 1,
-    isFree: index === 0,
-    hasYearlyDiscount: cycle === 'YEARLY' && index > 0,
-    featureItems: index === 0
-      ? [{ kind: 'server' as const, text: 'free-feature-0' }, { kind: 'server' as const, text: 'free-feature-1' }, { kind: 'server' as const, text: 'free-feature-2' }]
-      : index === 1
-        ? [{ kind: 'watermark' as const }, { kind: 'commercial' as const }, { kind: 'video' as const, spec: '720p · 5s · 1x' }, { kind: 'server' as const, text: 'creator-profile' }]
-        : [{ kind: 'video' as const, spec: '1080p · 30s · 4x' }, { kind: 'batch' as const, level: 'enabled' as const }, { kind: 'history' as const, days: 365 }, { kind: 'server' as const, text: 'team-workspace' }],
-    comparison: {
-      monthlyPoints: points[index]!,
-      videoSpec: index === 0 ? null : index === 1 ? '720p · 5s · 1x' : '1080p · 30s · 4x',
-      imageConcurrency: index === 0 ? null : index === 1 ? 4 : 8,
-      videoConcurrency: index === 0 ? null : index === 1 ? 1 : 4,
-      removeWatermark: index > 0,
-      commercialLicense: index > 1,
-      queuePriority: (index === 2 ? 'highest' : 'standard') as QueuePriority,
-      batchGeneration: (index === 0 ? 'disabled' : index === 1 ? 'limited' : 'enabled') as BatchLevel,
-      historyDays: index === 0 ? null : index === 1 ? 30 : 365,
-      carryoverCycles: index === 0 ? null : 1,
-      carryoverMaxPoints: index === 0 ? null : points[index]!,
-      teamSpace: index === 2,
-      invoiceStatus: index === 2 ? 'included' as InvoiceStatus : null,
-    },
-  })) as PricingPlan[];
-}
 
 export function buildPricingPlans(
   levels: MembershipLevel[] | null | undefined,
@@ -361,7 +276,8 @@ export function buildPricingPlans(
     .filter((level) => level.isActive !== false)
     .sort((a, b) => (a.sort ?? a.level) - (b.sort ?? b.level));
 
-  if (!activeLevels.length) return buildFallbackPlans(cycle);
+  // 没有真实档位就返回空，交给调用方出加载/空态 —— 绝不编造价格。
+  if (!activeLevels.length) return [];
 
   const paidLevels = activeLevels.filter((level) => !isFreeLevel(level));
 
@@ -445,8 +361,7 @@ export function buildPricingPlans(
 }
 
 export function normalizePointsPackages(packages: PointsPackage[] | null | undefined) {
-  const source = packages?.length ? packages : FALLBACK_TOP_UP_PACKAGES;
-  return [...source]
+  return [...(packages ?? [])]
     .filter((pkg) => pkg.isActive !== false)
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 }

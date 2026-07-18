@@ -199,14 +199,14 @@ export function Navbar() {
               >
                 {t('login')}
               </button>
-              <button
-                type="button"
-                onClick={() => openAuthModal({ mode: 'register' })}
+              {/* 注册直接进独立页面，登录才用弹窗 */}
+              <Link
+                href="/register"
                 className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors"
                 style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}
               >
                 {t('register')}
-              </button>
+              </Link>
             </>
           )}
         </div>
@@ -393,7 +393,7 @@ export function Navbar() {
             ) : (
               <>
                 <button type="button" onClick={() => { setMobileOpen(false); openAuthModal({ mode: 'entry' }); }} className="flex-1 text-center text-sm py-2 rounded-md" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>{t('login')}</button>
-                <button type="button" onClick={() => { setMobileOpen(false); openAuthModal({ mode: 'register' }); }} className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{t('register')}</button>
+                <Link href="/register" onClick={() => setMobileOpen(false)} className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{t('register')}</Link>
               </>
             )}
           </div>

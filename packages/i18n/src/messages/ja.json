@@ -3229,7 +3229,12 @@
     "packagesHeading": "ポイントパック",
     "plansHeading": "メンバーシッププラン",
     "currentLevel": "現在のプラン",
-    "levelFree": "無料"
+    "levelFree": "無料",
+    "unlockGeneric": "生成枠をアンロック",
+    "unlockFeature": "{name} をアンロック",
+    "unlockFeatureDesc": "プランをアップグレードするかクレジットを追加すると、{name} で生成を続けられます",
+    "shortfallSummary": "この操作には {required} クレジットが必要です。残高 {available}、{shortfall} 不足しています。",
+    "footnote": "価格には VAT および現地税は含まれず、決済時に計算されます。クレジットパックはプランと併用できますが、会員限定特典は含まれません。"
   },
   "publicGrowth": {
     "nav": {
@@ -3246,7 +3251,8 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "ログイン",
+      "signUp": "新規登録",
       "signInOrRegister": "ログイン/登録",
       "freePlan": "Free Plan",
       "credits": "Credits",
@@ -3731,24 +3737,6 @@
         "0": "公開作品を閲覧・収集",
         "1": "非公開ドラフトと基本公開",
         "2": "ライトユーザー向け"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "トライアルパック",
-          "description": "単発プロジェクト向けの軽量クレジット補充"
-        },
-        "standard": {
-          "name": "スタンダードパック",
-          "description": "アクティブクリエイター向けクレジット補充"
-        },
-        "pro": {
-          "name": "プロパック",
-          "description": "高頻度補充、アクティブなメンバーシップが必要"
-        },
-        "team": {
-          "name": "チームパック",
-          "description": "メンバーシップランクに応じた商用権付きチームクレジット補充"
-        }
       },
       "creditsMo": "{count} クレジット/月",
       "fixedCredits": "毎月 {count} クレジット固定",

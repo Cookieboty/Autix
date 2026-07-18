@@ -30,10 +30,9 @@ describe('buildGeneratorNavItems', () => {
     }
   });
 
-  test('places the separator after the video entry', () => {
+  test('draws no separator after the video entry', () => {
     const items = buildGeneratorNavItems('image');
-    // The divider sits after the core generation tools (image/video).
-    expect(items.find((i) => i.key === 'video')?.separatorAfter).toBe(true);
+    expect(items.every((i) => !i.separatorAfter)).toBe(true);
   });
 
   test('starts with the explore entry that links home', () => {
@@ -41,6 +40,14 @@ describe('buildGeneratorNavItems', () => {
     expect(items[0]?.key).toBe('explore');
     expect(items[0]?.href).toBe('/');
     expect(items[0]?.active).toBe(true);
+  });
+
+  test('highlights explore only on the home route', () => {
+    // kind 'home' 是「非 image/video」的兜底，/pricing 之类的页面也会落进来
+    const onPricing = buildGeneratorNavItems('home', false);
+    expect(onPricing.find((i) => i.key === 'explore')!.active).toBe(false);
+    const onHome = buildGeneratorNavItems('home', true);
+    expect(onHome.find((i) => i.key === 'explore')!.active).toBe(true);
   });
 
   test('ends with the video entry; community entry is gone', () => {

@@ -83,7 +83,7 @@ export function ForgotPasswordPanel({
           <Button
             type="button"
             onClick={onBackToLogin}
-            className="min-h-13 w-full cursor-pointer rounded-md bg-white text-base font-bold text-black hover:bg-[#c9ff00]"
+            className="min-h-13 w-full cursor-pointer rounded-lg bg-white text-base font-bold text-black hover:bg-[#c9ff00]"
             size="lg"
           >
             {t('backToLogin')}
@@ -102,13 +102,13 @@ export function ForgotPasswordPanel({
             placeholder={t('emailPlaceholder')}
             autoComplete="email"
             error={errors.email?.message}
-            className="h-14 rounded-md border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20"
+            className="h-14 rounded-lg border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20"
           />
 
           <Button
             type="submit"
             disabled={loading}
-            className="min-h-13 w-full cursor-pointer rounded-md bg-white text-base font-bold text-black hover:bg-[#c9ff00]"
+            className="min-h-13 w-full cursor-pointer rounded-lg bg-white text-base font-bold text-black hover:bg-[#c9ff00]"
             size="lg"
           >
             {loading ? t('sending') : t('sendResetLink')}

@@ -1,11 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Coins, Crown, Package } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   useInsufficientPointsStore,
+  useMembershipPackagesController,
+  useMembershipUpgradeController,
   useMyMembershipQuery,
+  type PointsPackage,
 } from '@autix/shared-store';
 import {
   Dialog,
@@ -14,28 +16,104 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { cn } from '../ui/utils';
-import { MembershipPackagesView } from '../membership/MembershipPackagesView';
-import { MembershipUpgradeView } from '../membership/MembershipUpgradeView';
+import { toast } from '../ui';
+import { GROWTH_CTA_FOCUS } from '../growth/dialog-styles';
+import {
+  buildPricingPlans,
+  normalizePointsPackages,
+  type PricingPlan,
+} from '../growth/public-pricing-helpers';
+import { BillingCycleSwitch, PlanCard } from '../growth/pricing/PlanCards';
+import { TopUpGrid } from '../growth/pricing/TopUpPacks';
 
-type PaidTab = 'packages' | 'plans';
+type GateView = 'plans' | 'packages';
 
-export function InsufficientPointsDialog({
-  onNavigateOrder,
-}: {
+/** 加载占位。形状贴近真实卡片，避免数据到位时布局跳动 */
+function CardSkeleton({ compact = false }: { compact?: boolean }) {
+  return (
+    <div
+      className={`animate-pulse rounded-2xl border border-white/10 bg-white/[0.025] p-5 ${compact ? 'h-56' : 'h-[520px]'}`}
+    >
+      <div className="h-6 w-1/2 rounded bg-white/10" />
+      <div className="mt-4 h-20 rounded-xl bg-white/[0.06]" />
+      <div className="mt-5 h-9 w-2/3 rounded bg-white/10" />
+      <div className="mt-4 h-11 rounded-lg bg-white/[0.08]" />
+    </div>
+  );
+}
+
+type GateProps = {
   onNavigateOrder?: (orderId: string) => void;
   onNavigateUpgrade?: () => void;
   onNavigatePackages?: () => void;
-}) {
-  const t = useTranslations('insufficientPoints');
+  /** 「查看全部套餐」的去向，通常是 /pricing */
+  onNavigatePricing?: () => void;
+};
+
+/**
+ * 计费拦截全屏页。档位卡 / 周期切换 / 积分包卡一律复用 /pricing 的组件
+ * （PlanCard、BillingCycleSwitch、TopUpGrid），不再另写一套近似样式 ——
+ * 定价页改版时这里自动跟随，不会漂移。
+ */
+export function InsufficientPointsDialog(props: GateProps) {
   const open = useInsufficientPointsStore((s) => s.open);
-  const payload = useInsufficientPointsStore((s) => s.payload);
   const closeDialog = useInsufficientPointsStore((s) => s.closeDialog);
 
-  const membershipQuery = useMyMembershipQuery(open);
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) closeDialog(); }}>
+      <DialogContent variant="fullscreen" className="px-4 py-14 md:px-6">
+        {/* 计费 query 全部收在 GateBody 里：本组件常驻于 Providers，
+            而 levels/packages 查询不支持 enabled，挂在顶层会让每次页面加载都白拉一轮。 */}
+        {open ? <GateBody {...props} onClose={closeDialog} /> : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function GateBody({
+  onNavigateOrder,
+  onNavigatePricing,
+  onClose,
+}: GateProps & { onClose: () => void }) {
+  const t = useTranslations('insufficientPoints');
+  const tPricing = useTranslations('publicGrowth.pricing');
+  const tCommon = useTranslations('common');
+  const payload = useInsufficientPointsStore((s) => s.payload);
+
+  const membershipQuery = useMyMembershipQuery();
   const membership = membershipQuery.data?.membership ?? null;
   const pointsBalance = membershipQuery.data?.pointsBalance ?? null;
+
+  const [view, setView] = useState<GateView>('plans');
+
+  const {
+    levels,
+    cycle,
+    setCycle,
+    isLoading: plansLoading,
+    purchasingId: purchasingPlanId,
+    purchasePlan,
+  } = useMembershipUpgradeController({
+    navigateToOrder: onNavigateOrder,
+  });
+
+  const {
+    packages: rawPackages,
+    isLoading: packagesLoading,
+    purchasingId: purchasingPackageId,
+    purchasePackage,
+  } = useMembershipPackagesController({
+    requirePaidLevel: false,
+    navigateToOrder: onNavigateOrder,
+  });
+
+  // 与 /pricing 同源：主卡片区只展示付费档，无付费档时回退到全部
+  const allPlans = useMemo(() => buildPricingPlans(levels, cycle), [levels, cycle]);
+  const plans = useMemo(() => {
+    const paid = allPlans.filter((plan) => !plan.isFree);
+    return paid.length ? paid : allPlans;
+  }, [allPlans]);
+  const packages = useMemo(() => normalizePointsPackages(rawPackages), [rawPackages]);
 
   const isPaidMember = useMemo(() => {
     if (!membership) return false;
@@ -44,158 +122,147 @@ export function InsufficientPointsDialog({
     return Number(membership.level?.level ?? 0) > 0;
   }, [membership]);
 
-  const currentLevelName = membership?.level?.name ?? t('levelFree');
+  const handlePurchasePlan = async (plan: PricingPlan) => {
+    if (!plan.planId) {
+      toast.message(tPricing('selectedPlan'));
+      return;
+    }
+    try {
+      await purchasePlan(plan.planId);
+    } catch (e) {
+      console.error(e);
+      toast.error(tCommon('operationFailed'));
+    }
+  };
 
-  const [paidTab, setPaidTab] = useState<PaidTab>('packages');
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      closeDialog();
-      setPaidTab('packages');
+  const handlePurchasePackage = async (pkg: PointsPackage) => {
+    try {
+      await purchasePackage(pkg.id);
+    } catch (e) {
+      console.error(e);
+      toast.error(tCommon('operationFailed'));
     }
   };
 
   const required = payload?.required ?? null;
   const available = payload?.available ?? pointsBalance;
 
+  // 标题跟着触发来源走：知道被拦下的是哪个模型就说「解锁 XXX」，否则退回通用文案。
+  const featureName = payload?.context?.featureName?.trim();
+  const title = featureName ? t('unlockFeature', { name: featureName }) : t('unlockGeneric');
+  const subtitle = featureName
+    ? t('unlockFeatureDesc', { name: featureName })
+    : isPaidMember
+      ? t('descriptionPaid')
+      : t('descriptionFree');
+
+  // 与 /pricing 一致的列宽策略：档位少时收窄，避免卡片被拉得过宽
+  const planGridClass =
+    plans.length === 1
+      ? 'grid gap-4 mx-auto max-w-md'
+      : plans.length === 2
+        ? 'grid gap-4 md:grid-cols-2 mx-auto max-w-3xl'
+        : plans.length === 3
+          ? 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'
+          : 'grid gap-4 md:grid-cols-2 xl:grid-cols-4';
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className={cn(
-          'flex max-h-[90vh] w-[min(96vw,1040px)] flex-col gap-0 overflow-hidden border-border bg-popover p-0 text-popover-foreground sm:max-w-[1040px]',
-        )}
-      >
-        <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="size-4 text-amber-500" />
-            {t('title')}
-          </DialogTitle>
-          <DialogDescription>
-            {isPaidMember ? t('descriptionPaid') : t('descriptionFree')}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader className="mx-auto w-full max-w-6xl items-center text-center">
+        <DialogTitle className="text-3xl font-black uppercase tracking-tight text-foreground md:text-4xl">
+          {title}
+        </DialogTitle>
+        <DialogDescription className="mt-3 max-w-2xl text-sm leading-6 text-foreground/55">
+          {subtitle}
+        </DialogDescription>
+        {typeof required === 'number' && typeof available === 'number' ? (
+          <p className="mt-2 text-xs text-foreground/45">
+            {t('shortfallSummary', {
+              required,
+              available,
+              shortfall: Math.max(0, required - available),
+            })}
+          </p>
+        ) : null}
+      </DialogHeader>
 
-        <div className="shrink-0 border-b border-border bg-muted/30 px-6 py-3">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-            <div className="flex items-center gap-1.5">
-              {isPaidMember ? (
-                <Crown className="size-3.5 text-primary" />
-              ) : (
-                <Crown className="size-3.5 text-muted-foreground" />
-              )}
-              <span className="text-muted-foreground">{t('currentLevel')}</span>
-              <span className="font-semibold text-foreground">{currentLevelName}</span>
-            </div>
-            {typeof available === 'number' ? (
-              <div className="flex items-center gap-1.5">
-                <Coins className="size-3.5 text-muted-foreground" />
-                <span className="text-muted-foreground">{t('current')}</span>
-                <span className="font-semibold text-foreground">{available}</span>
-              </div>
-            ) : null}
-            {typeof required === 'number' ? (
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground">{t('required')}</span>
-                <span className="font-semibold text-foreground">{required}</span>
-              </div>
-            ) : null}
-            {typeof required === 'number' && typeof available === 'number' ? (
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground">{t('shortfall')}</span>
-                <span className="font-semibold text-amber-500">
-                  {Math.max(0, required - available)}
-                </span>
-              </div>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => handleOpenChange(false)}
-            >
-              {t('dismiss')}
-            </Button>
-          </div>
-        </div>
-
-        {isPaidMember ? (
+      <div className="mx-auto mt-8 flex w-full max-w-6xl flex-col items-center">
+        {view === 'plans' ? (
           <>
-            <div className="flex shrink-0 items-center gap-1 border-b border-border px-6 pt-3">
-              <TabButton
-                active={paidTab === 'packages'}
-                onClick={() => setPaidTab('packages')}
-                icon={<Package className="size-3.5" />}
-                label={t('packagesHeading')}
-              />
-              <TabButton
-                active={paidTab === 'plans'}
-                onClick={() => setPaidTab('plans')}
-                icon={<Crown className="size-3.5" />}
-                label={t('plansHeading')}
-              />
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {paidTab === 'packages' ? (
-                <MembershipPackagesView
-                  showSidebarTrigger={false}
-                  descriptionKey="packageTip"
-                  descriptionVariant="plain"
-                  showPackageDetails
-                  requirePaidLevel={false}
-                  disablePurchaseForNonMember={false}
-                  onNavigateOrder={onNavigateOrder}
-                  onNavigateUpgrade={() => setPaidTab('plans')}
-                />
-              ) : (
-                <MembershipUpgradeView
-                  descriptionKey="choosePlan"
-                  descriptionVariant="plain"
-                  showDowngradeToast={false}
-                  onNavigateOrder={onNavigateOrder}
-                />
-              )}
-            </div>
+            <BillingCycleSwitch
+              cycle={cycle}
+              monthlyLabel={tPricing('billingMonthly')}
+              yearlyLabel={tPricing('billingYearly')}
+              onCycleChange={setCycle}
+            />
+            {plansLoading ? (
+              <div className="mt-7 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[0, 1, 2].map((i) => <CardSkeleton key={i} />)}
+              </div>
+            ) : plans.length ? (
+              <div className={`mt-7 w-full ${planGridClass}`}>
+                {plans.map((plan, index) => (
+                  <PlanCard
+                    key={plan.id}
+                    plan={plan}
+                    tagline={index < 3 ? tPricing(`taglines.${index}`) : undefined}
+                    showYearlyHint={cycle === 'YEARLY'}
+                    purchasing={Boolean(plan.planId) && purchasingPlanId === plan.planId}
+                    onPurchase={() => handlePurchasePlan(plan)}
+                    t={tPricing}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="mt-10 text-sm text-foreground/45">{tCommon('noData')}</p>
+            )}
           </>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <MembershipUpgradeView
-              descriptionKey="choosePlan"
-              descriptionVariant="plain"
-              showDowngradeToast={false}
-              onNavigateOrder={onNavigateOrder}
-            />
+          <div className="w-full">
+            {packagesLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[0, 1, 2, 3].map((i) => <CardSkeleton key={i} compact />)}
+              </div>
+            ) : packages.length ? (
+              <TopUpGrid
+                packages={packages}
+                purchasingId={purchasingPackageId}
+                onPurchase={handlePurchasePackage}
+              />
+            ) : (
+              <p className="text-center text-sm text-foreground/45">{tCommon('noData')}</p>
+            )}
           </div>
         )}
-      </DialogContent>
-    </Dialog>
-  );
-}
+      </div>
 
-function TabButton({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1.5 border-b-2 px-3 pb-2 pt-1 text-sm font-medium transition-colors',
-        active
-          ? 'border-primary text-foreground'
-          : 'border-transparent text-muted-foreground hover:text-foreground',
-      )}
-    >
-      {icon}
-      {label}
-    </button>
+      <div className="mx-auto mt-12 flex w-full max-w-6xl flex-col items-center gap-5">
+        <p className="max-w-3xl text-center text-xs leading-5 text-foreground/40">
+          {t('footnote')}
+        </p>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {onNavigatePricing ? (
+            <button
+              type="button"
+              className={`inline-flex min-h-11 min-w-56 cursor-pointer items-center justify-center rounded-lg border border-white/12 bg-white/[0.04] px-6 text-sm font-semibold text-foreground transition hover:bg-white/[0.08] ${GROWTH_CTA_FOCUS}`}
+              onClick={() => {
+                onClose();
+                onNavigatePricing();
+              }}
+            >
+              {t('viewPlansSecondary')}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={`inline-flex min-h-11 min-w-56 cursor-pointer items-center justify-center rounded-lg border border-white/12 bg-white/[0.04] px-6 text-sm font-semibold text-foreground transition hover:bg-white/[0.08] ${GROWTH_CTA_FOCUS}`}
+            onClick={() => setView(view === 'plans' ? 'packages' : 'plans')}
+          >
+            {view === 'plans' ? t('buyPacks') : t('plansHeading')}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -203,6 +270,7 @@ export function InsufficientPointsGate(props: {
   onNavigateOrder?: (orderId: string) => void;
   onNavigateUpgrade?: () => void;
   onNavigatePackages?: () => void;
+  onNavigatePricing?: () => void;
 }) {
   return <InsufficientPointsDialog {...props} />;
 }
