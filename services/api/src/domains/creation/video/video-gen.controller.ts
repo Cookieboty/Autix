@@ -43,8 +43,10 @@ export class VideoGenController {
   @Get('history')
   async history(@CurrentUser() user: AuthUser, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     const userId = getCurrentUserId(user);
-    const p = Math.max(1, page ? +page : 1);
-    const ps = Math.min(MAX_PAGE_SIZE, Math.max(1, pageSize ? +pageSize : 20));
+    const rawPage = page ? +page : 1;
+    const p = Number.isFinite(rawPage) ? Math.max(1, rawPage) : 1;
+    const rawPs = pageSize ? +pageSize : 20;
+    const ps = Number.isFinite(rawPs) ? Math.min(MAX_PAGE_SIZE, Math.max(1, rawPs)) : 20;
     const { generations, total } = await this.repository.findUserDirectGenerations({ userId, page: p, pageSize: ps });
     return { items: generations.map(toDirectVideoGenerationDto), total, page: p, pageSize: ps, hasMore: (p - 1) * ps + generations.length < total };
   }

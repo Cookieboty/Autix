@@ -370,7 +370,10 @@ export function VideoSidebar({
         }),
       );
     } catch (err) {
-      setGenerateError(err instanceof Error ? err.message : t('generateFailed'));
+      // 注意：SDK 拦截器把后端 msg 挂在 error.msg 上，不是 error.message
+      // （error.message 只是 axios 的通用 "Request failed with status code 4xx"）。
+      const message = (err as { msg?: string })?.msg ?? (err instanceof Error ? err.message : t('generateFailed'));
+      setGenerateError(message);
     }
   };
 

@@ -33,6 +33,14 @@ describe('VideoGenController', () => {
     expect(repo.findUserDirectGenerations).toHaveBeenCalledWith({ userId: 'u1', page: 1, pageSize: 60 });
   });
 
+  it('history page/pageSize 非数字时回退默认值而非 NaN', async () => {
+    const repo = { findUserDirectGenerations: vi.fn().mockResolvedValue({ generations: [], total: 0 }) };
+    const ctrl = new VideoGenController({} as any, repo as any, {} as any);
+    const r = await ctrl.history({ id: 'u1' } as any, 'abc', 'xyz');
+    expect(repo.findUserDirectGenerations).toHaveBeenCalledWith({ userId: 'u1', page: 1, pageSize: 20 });
+    expect(r).toMatchObject({ page: 1, pageSize: 20 });
+  });
+
   it('generate 缺少 prompt 返回 400', async () => {
     const directService = { generate: vi.fn() };
     const ctrl = new VideoGenController(directService as any, {} as any, {} as any);
