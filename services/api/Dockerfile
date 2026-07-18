@@ -100,6 +100,13 @@ RUN mkdir -p node_modules/@autix && \
 # The prisma CLI version is derived from the @prisma/client actually installed:
 # Prisma refuses to run when the two drift, and hardcoding a version here would
 # silently rot the moment the lockfile resolves a new patch.
+#
+# PNPM_HOME 必须显式设置且进 PATH：pnpm 的 `add -g` 会先校验全局 bin 目录是否
+# 在 PATH 中，不在就直接报错退出（"Run pnpm setup to update your shell
+# configuration"）。容器里没有交互式 shell 配置，只能在这里声明。Bun 时代没有
+# 这一步，是 pnpm 迁移遗留。
+ENV PNPM_HOME=/usr/local/share/pnpm
+ENV PATH="${PNPM_HOME}:${PATH}"
 RUN PRISMA_VERSION="$(node -p "require('/app/node_modules/@prisma/client/package.json').version")" && \
     TSX_VERSION="$(node -p "require('/app/package.json').devDependencies.tsx")" && \
     DOTENV_VERSION="$(node -p "require('/app/package.json').devDependencies['dotenv-cli']")" && \
