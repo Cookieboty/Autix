@@ -40,22 +40,36 @@ function expectCode(error: unknown, code: string) {
   expect((error as StepUpHttpException).getResponse()).toMatchObject({ code });
 }
 
+// 不要写成 `promise.catch(cb)`：实现一旦不再抛错，回调不执行，测试零断言通过。
+async function expectRejection(promise: Promise<unknown>, code: string, httpStatus?: number) {
+  const error = await promise.then(
+    (value) => { throw new Error(`expected rejection, resolved with ${JSON.stringify(value)}`); },
+    (caught: unknown) => caught,
+  );
+  expectCode(error, code);
+  if (httpStatus !== undefined) {
+    expect((error as StepUpHttpException).getStatus()).toBe(httpStatus);
+  }
+}
+
 describe('StepUpService', () => {
   describe('authorizeByPassword', () => {
     it('requires a session-bound request', async () => {
       const { service, repository } = createDeps();
-      await service.authorizeByPassword('u1', 'change-password', 'secret').catch((error) => {
-        expectCode(error, 'STEP_UP_INVALID_OR_EXPIRED');
-      });
+      await expectRejection(
+        service.authorizeByPassword('u1', 'change-password', 'secret'),
+        'STEP_UP_INVALID_OR_EXPIRED',
+      );
       expect(repository.findUser).not.toHaveBeenCalled();
     });
 
     it('rejects users without a password', async () => {
       const { service } = createDeps();
-      await service.authorizeByPassword('u1', 'change-password', 'secret', 'session-1').catch((error) => {
-        expectCode(error, 'STEP_UP_UNAVAILABLE');
-        expect((error as StepUpHttpException).getStatus()).toBe(409);
-      });
+      await expectRejection(
+        service.authorizeByPassword('u1', 'change-password', 'secret', 'session-1'),
+        'STEP_UP_UNAVAILABLE',
+        409,
+      );
     });
 
     it('rejects an incorrect password with the unified error code', async () => {
@@ -67,9 +81,10 @@ describe('StepUpService', () => {
         emailVerified: true,
         status: 'ACTIVE',
       });
-      await service.authorizeByPassword('u1', 'change-password', 'wrong', 'session-1').catch((error) => {
-        expectCode(error, 'STEP_UP_INVALID_OR_EXPIRED');
-      });
+      await expectRejection(
+        service.authorizeByPassword('u1', 'change-password', 'wrong', 'session-1'),
+        'STEP_UP_INVALID_OR_EXPIRED',
+      );
     });
 
     it('persists a session-bound one-time proof after successful verification', async () => {
@@ -116,10 +131,11 @@ describe('StepUpService', () => {
         status: 'ACTIVE',
       });
 
-      await service.requestOtp('u1', 'change-email', 'session-1').catch((error) => {
-        expectCode(error, 'STEP_UP_REQUIRED');
-        expect((error as StepUpHttpException).getStatus()).toBe(400);
-      });
+      await expectRejection(
+        service.requestOtp('u1', 'change-email', 'session-1'),
+        'STEP_UP_REQUIRED',
+        400,
+      );
       expect(rateLimit.consume).not.toHaveBeenCalled();
       expect(mail.sendStepUpOtp).not.toHaveBeenCalled();
     });
@@ -133,19 +149,21 @@ describe('StepUpService', () => {
         emailVerified: true,
         status: 'ACTIVE',
       });
-      await service.requestOtp('u1', 'change-email', 'session-1').catch((error) => {
-        expectCode(error, 'STEP_UP_UNAVAILABLE');
-      });
+      await expectRejection(
+        service.requestOtp('u1', 'change-email', 'session-1'),
+        'STEP_UP_UNAVAILABLE',
+      );
     });
 
     it('invalidates the OTP when email delivery fails', async () => {
       const { service, repository, mail } = createDeps();
       mail.sendStepUpOtp.mockRejectedValueOnce(new Error('mail unavailable'));
 
-      await service.requestOtp('u1', 'change-email', 'session-1').catch((error) => {
-        expectCode(error, 'STEP_UP_UNAVAILABLE');
-        expect((error as StepUpHttpException).getStatus()).toBe(409);
-      });
+      await expectRejection(
+        service.requestOtp('u1', 'change-email', 'session-1'),
+        'STEP_UP_UNAVAILABLE',
+        409,
+      );
       expect(repository.invalidateOtp).toHaveBeenCalledWith('otp-1');
     });
 
@@ -172,9 +190,10 @@ describe('StepUpService', () => {
       const { service, repository, mail } = createDeps();
       repository.createOtp.mockResolvedValueOnce(null);
 
-      await service.requestOtp('u1', 'delete-account', 'session-1').catch((error) => {
-        expectCode(error, 'STEP_UP_INVALID_OR_EXPIRED');
-      });
+      await expectRejection(
+        service.requestOtp('u1', 'delete-account', 'session-1'),
+        'STEP_UP_INVALID_OR_EXPIRED',
+      );
       expect(mail.sendStepUpOtp).not.toHaveBeenCalled();
     });
   });
@@ -191,10 +210,11 @@ describe('StepUpService', () => {
       const { service, repository } = createDeps();
       repository.verifyAndConsumeOtp.mockResolvedValueOnce({ status });
 
-      await service.verifyOtp('u1', 'change-email', 'otp-1', '123456', 'session-1').catch((error) => {
-        expectCode(error, code);
-        expect((error as StepUpHttpException).getStatus()).toBe(httpStatus);
-      });
+      await expectRejection(
+        service.verifyOtp('u1', 'change-email', 'otp-1', '123456', 'session-1'),
+        code,
+        httpStatus,
+      );
     });
 
     it('signs an OTP proof only after atomic OTP consumption succeeds', async () => {
@@ -226,15 +246,10 @@ describe('StepUpService', () => {
       const { service, repository, jwt } = createDeps();
       repository.createProof.mockResolvedValueOnce(false);
 
-      await service.verifyOtp(
-        'u1',
-        'change-email',
-        'otp-1',
-        '123456',
-        'session-1',
-      ).catch((error) => {
-        expectCode(error, 'STEP_UP_INVALID_OR_EXPIRED');
-      });
+      await expectRejection(
+        service.verifyOtp('u1', 'change-email', 'otp-1', '123456', 'session-1'),
+        'STEP_UP_INVALID_OR_EXPIRED',
+      );
       expect(jwt.sign).not.toHaveBeenCalled();
     });
   });

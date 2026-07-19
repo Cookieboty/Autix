@@ -376,4 +376,53 @@ function f(x: number) {
   it('does not count a string literal with no CJK', () => {
     expect(countCjkStringLiteralsInSource("const m = 'no chinese here';")).toBe(0);
   });
+
+  // Finding (Critical, real repro at
+  // services/api/src/domains/creation/artifact/artifact.service.ts:65): the old
+  // hand-written scanner has no concept of a regex literal, so the `"` inside
+  // `/^["']|["']$/`'s character class was misread as opening a `dquote` string,
+  // desyncing quote parity for everything after it and swallowing a real
+  // user-facing Chinese string. An AST walk sees the regex as a single
+  // RegularExpressionLiteral node and never enters string-parsing state for it.
+  it('does not let a quote inside a regex literal desync a later real string', () => {
+    const src = "x.replace(/^[\"']|[\"']$/g, ''); const later = '中文在这里';";
+    expect(countCjkStringLiteralsInSource(src)).toBe(1);
+  });
+
+  // Finding (Critical, real repro at
+  // services/api/src/domains/identity/user/dto/update-status.dto.ts:25): the old
+  // scanner tracked a single shared `sawCjk` boolean; entering a string nested
+  // inside a template's `${…}` reset that flag and never restored it on exit,
+  // so the outer template's own Chinese text was lost. The AST fix counts each
+  // template's literal spans (TemplateHead/Middle/Tail) independently of any
+  // string literal nested in its substitutions.
+  it('counts an outer template literal containing CJK even when its ${} holds a nested string', () => {
+    const src = 'const m = `状态 only allows ${x.join(\' | \')}`;';
+    expect(countCjkStringLiteralsInSource(src)).toBe(1);
+  });
+
+  it('counts a nested string inside ${} that itself contains CJK, independently of the outer template', () => {
+    // Both the outer template ('状态' in a literal span) and the nested string
+    // ('中文') contain CJK — each is its own AST node, so each counts on its own.
+    const src = "const m = `状态 ${'中文'} suffix`;";
+    expect(countCjkStringLiteralsInSource(src)).toBe(2);
+  });
+
+  it('counts CJK in a nested ${} string even when the outer template spans have none', () => {
+    // The outer spans ('prefix ' / ' suffix') carry no CJK by themselves — only
+    // the nested string does — yet it must still be counted (as 1, not 0).
+    const src = "const m = `prefix ${'中文'} suffix`;";
+    expect(countCjkStringLiteralsInSource(src)).toBe(1);
+  });
+
+  it('counts a string with many CJK characters as 1, not N', () => {
+    expect(countCjkStringLiteralsInSource("const m = '这是一段很长的中文字符串用于测试计数规则';")).toBe(1);
+  });
+
+  it('does not count a regex literal even if it contains something CJK-adjacent-looking', () => {
+    // Regex literals are excluded entirely by construction (RegularExpressionLiteral
+    // nodes are never string literals or template spans) — nothing to count here,
+    // this just documents the exclusion explicitly.
+    expect(countCjkStringLiteralsInSource('const re = /foo/;')).toBe(0);
+  });
 });

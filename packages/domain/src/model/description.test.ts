@@ -5,40 +5,38 @@ import { fileURLToPath } from 'url';
 import { resolveDescription, validateDescription, SUPPORTED_LOCALES } from './description';
 
 describe('SUPPORTED_LOCALES', () => {
-  it('matches the locale files shipped by @autix/i18n', () => {
-    // Resolve the path relative to this test file's location
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const messagesDir = resolve(__dirname, '../../../i18n/src/messages');
+  // messages 按业务拆 chunk：`messages/<chunk>/<locale>.json`。
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const messagesDir = resolve(__dirname, '../../../i18n/src/messages');
+  const LOCALE_FILE = /^[a-z]{2}(-[A-Z]{2})?\.json$/;
 
-    // Only top-level locale bundles count. The directory also holds
-    // namespaced bundles like `docs-layout.en.json`, whose basename is
-    // `docs-layout.en` — not a locale. Match `en` / `zh-CN` shapes only.
-    const LOCALE_FILE = /^[a-z]{2}(-[A-Z]{2})?\.json$/;
+  const chunkDirs = readdirSync(messagesDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 
-    const localeFiles = readdirSync(messagesDir)
+  const localesIn = (chunk: string) =>
+    readdirSync(resolve(messagesDir, chunk))
       .filter((file) => LOCALE_FILE.test(file))
       .map((file) => file.replace(/\.json$/, ''))
       .sort();
 
-    // Guard against silently empty directory listings — an empty list would
-    // make the comparison below vacuously interesting rather than protective.
-    expect(localeFiles.length).toBeGreaterThan(0);
+  it('ships at least one message chunk', () => {
+    // 防空转：读空会让下面的集合比较恒真。
+    expect(chunkDirs.length).toBeGreaterThan(0);
+  });
 
-    // And guard against the regex quietly swallowing everything: any file that
-    // looks like a locale bundle but is not matched would be invisible here.
-    const namespaced = readdirSync(messagesDir).filter(
-      (file) => file.endsWith('.json') && !LOCALE_FILE.test(file),
-    );
-    for (const file of namespaced) {
-      expect(file, `${file} must be a namespaced bundle, not a bare locale`).toContain('.');
-      expect(file.split('.').length).toBeGreaterThan(2);
-    }
+  it.each(chunkDirs)('chunk %s ships exactly the SUPPORTED_LOCALES bundles', (chunk) => {
+    expect(localesIn(chunk)).toEqual([...SUPPORTED_LOCALES].sort());
+  });
 
-    // Compare in both directions: tuple must match files exactly
-    const supportedLocales = [...SUPPORTED_LOCALES].sort();
-    expect(supportedLocales).toEqual(localeFiles);
-    expect(localeFiles).toEqual(supportedLocales);
+  it('has no stray bare-locale bundle left at the messages root', () => {
+    // 根目录只应有 docs-layout.en.json 这类带命名空间的文件。
+    const strays = readdirSync(messagesDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .filter((entry) => LOCALE_FILE.test(entry.name))
+      .map((entry) => entry.name);
+    expect(strays).toEqual([]);
   });
 });
 

@@ -240,7 +240,8 @@ describe('InviteService.recordInvitation', () => {
     const result = await service.recordInvitation('ABCD1234', 'user-1');
 
     expect(result).toBeNull();
-    expect(prisma.invite_codes.findUnique).not.toHaveBeenCalled();
+    // recordInvitation 走 findCodeByCode → findFirst；断言 findUnique 恒真（它只在 findCodeByUser 里）。
+    expect(prisma.invite_codes.findFirst).not.toHaveBeenCalled();
     expect(prisma.invite_records.create).not.toHaveBeenCalled();
   });
 });

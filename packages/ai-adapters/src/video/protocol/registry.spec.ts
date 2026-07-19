@@ -14,8 +14,18 @@ describe('resolveVideoPreset', () => {
     );
   });
 
-  it('resolves a registered key', () => {
-    const key = Object.keys(VIDEO_PROTOCOL_PRESETS)[0];
-    expect(resolveVideoPreset(key).key).toBe(key);
+  // 硬编码 key：从 Object.keys()[0] 取会让等式天然成立，「永远返回第一个 preset」
+  // 这种误路由测不出来。取首个之外的 key 才能区分。
+  it.each(['ark-video@v3', 'poyo-veo@v1', 'poyo-happyhorse-11@v1'])(
+    'resolves %s to its own preset',
+    (key) => {
+      expect(resolveVideoPreset(key).key).toBe(key);
+    },
+  );
+
+  it('registry is keyed by each preset own key', () => {
+    for (const [key, preset] of Object.entries(VIDEO_PROTOCOL_PRESETS)) {
+      expect(preset.key).toBe(key);
+    }
   });
 });

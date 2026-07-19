@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import {
   PointGrantType,
   PointHoldStatus,
@@ -210,7 +210,10 @@ describe('PointsService.deductPoints (grant ledger)', () => {
         'skill_acquisition: Agent X',
         'skill_acquisition',
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      i18nKey: 'points.balance_insufficient',
+      status: HttpStatus.BAD_REQUEST,
+    });
     expect(tx.point_grants.updateMany).not.toHaveBeenCalled();
   });
 });

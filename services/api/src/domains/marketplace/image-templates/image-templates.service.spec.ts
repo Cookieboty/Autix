@@ -418,7 +418,7 @@ describe('ImageTemplatesService.createGeneration billing', () => {
   });
 
   it('does not create a generation when point hold fails', async () => {
-    const { service, points, tx } = createMocks();
+    const { service, points, generations } = createMocks();
     points.createHold.mockRejectedValue(new BadRequestException('积分余额不足'));
 
     await expect(
@@ -428,7 +428,7 @@ describe('ImageTemplatesService.createGeneration billing', () => {
       }),
     ).rejects.toThrow('积分余额不足');
 
-    expect(tx.image_generations.create).not.toHaveBeenCalled();
+    expect(generations.createImageGeneration).not.toHaveBeenCalled();
     expect(points.confirmHold).not.toHaveBeenCalled();
   });
 

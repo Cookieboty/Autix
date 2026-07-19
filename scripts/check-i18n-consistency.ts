@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import * as ts from 'typescript';
 import { flattenLeaves } from './i18n/merge-locales.core';
 import { CHUNKS } from '../packages/i18n/src/messages';
 import { ROUTE_POLICY } from '../clients/web/lib/i18n/route-policy';
@@ -289,8 +290,8 @@ export function assertUntranslatedRatchet(
 const CJK_CHAR = /[一-鿿]/;
 
 /**
- * 扫描一段 TypeScript 源码，统计其中"包含至少一个中文字符的字符串字面量"个数——
- * 单引号、双引号、模板字符串各算一次，跳过 `//`、`/* *\/`（含 JSDoc）注释里的中文。
+ * 用 TypeScript 编译器 API 解析一段源码，统计其中"包含至少一个中文字符的字符串字面量"
+ * 个数——单引号、双引号、模板字符串各算一次。
  *
  * 为什么不再只匹配 `throw new XException(` / `throw new Error(` 后面紧跟的中文字面量：
  * 真实代码里中文经常是"先拼进变量、再抛出"或"传给非 Exception 的调用"，例如：
@@ -304,129 +305,46 @@ const CJK_CHAR = /[一-鿿]/;
  * 的中文"集合的超集（连日志、纯内部字符串也一并算了进去），但换来单调安全：真的降到
  * 0 就代表该域源码里不再有任何中文字符串字面量，不会再有漏网之鱼。
  *
- * 必须排除注释：本仓库大量用中文写注释/JSDoc，连注释一起数会让基线被噪声淹没、0 永远
- * 达不到，棘轮直接失去意义——这是本函数实现的重点，因此不用正则而用一个逐字符状态机，
- * 以便正确处理：转义引号（`'it\'s 中文'`）、字符串内的撇号（`"it's 中文"`）、模板字符串
- * 里 `${expr}` 内嵌的（可能自带字符串/注释的）代码。
+ * 计数规则（供后续读者对齐口径）：**每个"含至少一个中文字符的字符串字面量"算 1 次，
+ * 而非每个中文字符算 1 次**。带 `${…}` 代换的模板字符串，只要它自身的字面量文本段
+ * （`TemplateHead`/`TemplateMiddle`/`TemplateTail`）里有任意一段含中文，整个模板算 1
+ * 次——这些文本段共享同一个模板，视为一个整体，与旧实现的意图一致；而 `${…}` 内嵌套
+ * 的字符串字面量是独立的 AST 节点，会被单独遍历、单独计数，既不会被外层模板"吞掉"，
+ * 也不会反过来污染外层模板的计数。
  *
- * 已知局限：不处理正则字面量里出现未转义 `//`/`/*` 这种极端写法（本仓库未见），会被
- * 误判为注释起点；可接受，因为漏检只会让计数偏低，而基线的安全边界只依赖"计数不为负"。
+ * 为什么改用 AST 而不是继续手写状态机：此前的逐字符状态机没有"正则字面量"这个概念，
+ * 于是 `/^["']|["']$/` 这类字符类里的引号会被误当成字符串定界符打开，desync 掉后面
+ * 所有引号奇偶性判断；它还只用一个未入栈的共享 `sawCjk` 标志，模板 `${…}` 内嵌套字符
+ * 串会把外层模板"看到过中文"的记录直接重置且从不恢复。两者都是本仓库真实代码踩中的
+ * Critical 级漏报（分别见 `artifact.service.ts:65` 与 `update-status.dto.ts:25`）。
+ * `ts.createSourceFile` 天然按语法而非字符扫描，正则字面量是独立的
+ * `RegularExpressionLiteral` 节点、绝不会被误判为字符串边界；每层模板/字符串都是独立
+ * 节点，天然不共享可变状态，不存在"内层污染外层"的问题。
+ *
+ * AST 天然也排除了注释（含 JSDoc）——注释只是 trivia，从不出现在语法树节点里，不需要
+ * 也不可能被误数进来；本仓库大量用中文写注释/JSDoc，这是棘轮能归零的前提。
  */
-export function countCjkStringLiteralsInSource(source: string): number {
+export function countCjkStringLiteralsInSource(source: string, fileName = 'source.ts'): number {
+  const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, /* setParentNodes */ true);
   let count = 0;
-  let mode: 'code' | 'linecomment' | 'blockcomment' | 'squote' | 'dquote' | 'template' = 'code';
-  let sawCjk = false;
-  // 每个元素对应一层 `${…}` 模板表达式，记录其内部尚未闭合的花括号深度，用来判断
-  // 当前 `}` 是"表达式结束、回到模板文本"还是表达式内部对象字面量自己的 `}`。
-  const templateExprBraceDepth: number[] = [];
-  const n = source.length;
 
-  for (let i = 0; i < n; ) {
-    const c = source[i];
-
-    if (mode === 'linecomment') {
-      if (c === '\n') mode = 'code';
-      i++;
-      continue;
+  function visit(node: ts.Node): void {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      if (CJK_CHAR.test(node.text)) count++;
+      return; // 叶子节点，无需再往下走
     }
-
-    if (mode === 'blockcomment') {
-      if (c === '*' && source[i + 1] === '/') {
-        mode = 'code';
-        i += 2;
-        continue;
-      }
-      i++;
-      continue;
+    if (ts.isTemplateExpression(node)) {
+      // 该模板自身的字面量文本段——不含 `${…}` 内代换表达式的文本，最多算 1 次。
+      const literalSpans = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)];
+      if (literalSpans.some((t) => CJK_CHAR.test(t))) count++;
+      // 代换表达式仍需递归——里面可能嵌套独立的字符串/模板字面量，各自单独计数。
+      node.templateSpans.forEach((s) => visit(s.expression));
+      return;
     }
-
-    if (mode === 'squote' || mode === 'dquote') {
-      const quote = mode === 'squote' ? "'" : '"';
-      if (c === '\\') {
-        i += 2; // 跳过转义对：`\'`、`\"`、`\\` 等都不应结束/触发字符串
-        continue;
-      }
-      if (c === quote) {
-        if (sawCjk) count++;
-        mode = 'code';
-        i++;
-        continue;
-      }
-      if (CJK_CHAR.test(c)) sawCjk = true;
-      i++;
-      continue;
-    }
-
-    if (mode === 'template') {
-      if (c === '\\') {
-        i += 2;
-        continue;
-      }
-      if (c === '`') {
-        if (sawCjk) count++;
-        mode = 'code';
-        i++;
-        continue;
-      }
-      if (c === '$' && source[i + 1] === '{') {
-        templateExprBraceDepth.push(1);
-        mode = 'code'; // 进入表达式，按普通代码解析（可能含嵌套字符串/注释/模板）
-        i += 2;
-        continue;
-      }
-      if (CJK_CHAR.test(c)) sawCjk = true;
-      i++;
-      continue;
-    }
-
-    // mode === 'code'
-    if (c === '/' && source[i + 1] === '/') {
-      mode = 'linecomment';
-      i += 2;
-      continue;
-    }
-    if (c === '/' && source[i + 1] === '*') {
-      mode = 'blockcomment';
-      i += 2;
-      continue;
-    }
-    if (c === "'") {
-      mode = 'squote';
-      sawCjk = false;
-      i++;
-      continue;
-    }
-    if (c === '"') {
-      mode = 'dquote';
-      sawCjk = false;
-      i++;
-      continue;
-    }
-    if (c === '`') {
-      mode = 'template';
-      sawCjk = false;
-      i++;
-      continue;
-    }
-    if (templateExprBraceDepth.length > 0) {
-      if (c === '{') {
-        templateExprBraceDepth[templateExprBraceDepth.length - 1]++;
-        i++;
-        continue;
-      }
-      if (c === '}') {
-        const depth = --templateExprBraceDepth[templateExprBraceDepth.length - 1];
-        if (depth === 0) {
-          templateExprBraceDepth.pop();
-          mode = 'template'; // 表达式结束，回到外层模板文本
-        }
-        i++;
-        continue;
-      }
-    }
-    i++;
+    ts.forEachChild(node, visit);
   }
 
+  visit(sourceFile);
   return count;
 }
 

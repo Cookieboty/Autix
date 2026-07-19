@@ -21,11 +21,13 @@ const taskFixedSchema: PricingSchema = {
 
 describe('quoteTask', () => {
   it('applies multiplier and discount to the model side', () => {
+    // 乘积刻意不为 1，否则实现忽略这两个入参也测不出来。
     const result = quoteTask({
-      modelSchema, multiplier: 2, discountFactor: 0.5, params: { quality: 'medium' },
+      modelSchema, multiplier: 3, discountFactor: 0.5, params: { quality: 'medium' },
     });
-    expect(result.modelSubtotalRaw).toBe(90);
-    expect(result.total).toBe(90);
+    // modelSubtotalRaw 的 "raw" 指未取整，倍率与折扣已计入。
+    expect(result.modelSubtotalRaw).toBe(135);
+    expect(result.total).toBe(135);
   });
 
   it('does not round the model subtotal before applying multiplier and discount', () => {

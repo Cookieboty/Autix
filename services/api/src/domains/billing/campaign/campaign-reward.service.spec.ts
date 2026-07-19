@@ -72,7 +72,12 @@ function makeService(overrides: {
       aggregate: vi.fn(async () => ({ _sum: { pointsGranted: 0 } })),
     },
   };
-  const ownedCount = vi.fn(async () => (generationOwned ? 1 : 0));
+  // 三张表各自独立的 spy：共用一个 vi.fn 会让「查了哪张表」无法区分，
+  // 图片任务的完成判定被误路由到 video 表也照样绿。
+  const makeOwnedCount = () => vi.fn(async () => (generationOwned ? 1 : 0));
+  const imageCount = makeOwnedCount();
+  const videoCount = makeOwnedCount();
+  const videoClipCount = makeOwnedCount();
   const prisma = {
     $transaction: vi.fn(async (cb: any) => cb(tx)),
     campaigns: {
@@ -84,9 +89,9 @@ function makeService(overrides: {
       findFirst: vi.fn(async () => overrides.existingReward ?? null),
       findMany: vi.fn(async () => overrides.claimedRewards ?? []),
     },
-    image_generations: { count: ownedCount },
-    video_generations: { count: ownedCount },
-    video_clip_generations: { count: ownedCount },
+    image_generations: { count: imageCount },
+    video_generations: { count: videoCount },
+    video_clip_generations: { count: videoClipCount },
   };
   const pointsService = {
     grantPointsWithinTx: vi.fn(async () => ({ grant: { id: 'grant-1' } })),
@@ -432,6 +437,9 @@ describe('CampaignRewardService home starter quests', () => {
         generatedImages: { isEmpty: false },
       }),
     });
+    // 图片任务只应查图片表：漏掉这两条负向断言，误路由到 video 表也测不出来。
+    expect(prisma.video_generations.count).not.toHaveBeenCalled();
+    expect(prisma.video_clip_generations.count).not.toHaveBeenCalled();
   });
 
   it('disables active home starter quests with unsupported completion kinds', async () => {

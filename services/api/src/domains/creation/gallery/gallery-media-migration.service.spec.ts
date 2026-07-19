@@ -243,7 +243,9 @@ describe('GalleryMediaMigrationService.migratePendingBatch', () => {
     expect(updates[0]!.data).not.toHaveProperty('publishedAt');
   });
 
-  it('并发处理整批（所有作品都被更新一次）', async () => {
+  // 这条只保证「整批都被处理一次」，对并发度无约束；
+  // 并发行为由 run-with-concurrency.spec.ts 直接覆盖。
+  it('整批作品都被更新一次', async () => {
     const updates: Array<{ id: string; data: Record<string, unknown> }> = [];
     const pending: PendingPost[] = Array.from({ length: 12 }, (_, i) => ({
       id: `p${i}`,

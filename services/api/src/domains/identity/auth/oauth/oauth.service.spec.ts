@@ -22,7 +22,6 @@ function deps() {
         fetchProfile: vi.fn().mockResolvedValue({ provider: name, providerAccountId: 'sub1', email: 'a@x.com', emailVerified: true, displayName: 'A', avatar: null, raw: {}, tokens: { accessToken: 'at' } }),
       };
     },
-    listEnabled: () => ['google'],
   };
   const resolution = { resolve: vi.fn().mockResolvedValue({ kind: 'login', userId: 'u1' }) };
   const authService = {

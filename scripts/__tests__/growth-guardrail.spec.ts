@@ -6,9 +6,8 @@ test('catches named, opacity, and arbitrary-value colors', () => {
     `bg-[#c9ff00]/12 bg-[linear-gradient(0deg,#050606,#0b0b0b)] ` +
     `text-[oklch(0.78_0.09_235)] shadow-[0_0_28px_rgb(201_255_0/38%)]`,
   );
-  // bg-zinc-900, text-white, bg-white(arb-opacity), border-[..](arb),
-  // bg-[..](arb hex), bg-[linear-gradient](arb), text-[oklch](arb), shadow-[..](arb)
-  expect(c.color).toBeGreaterThanOrEqual(8);
+  // 8 个 token，14 次命中：各正则独立求和，方括号任意值与其中的裸 hex 会各计一次。
+  expect(c.color).toBe(14);
 });
 
 test('size/spacing arbitraries are NOT counted as colors', () => {
@@ -62,9 +61,4 @@ test('evaluateRatchet: structurally-broken baseline {} is rejected as corrupt', 
   const violations = evaluateRatchet({ color: 0, inlineZh: 0 }, {} as unknown as null, []);
   expect(violations).toHaveLength(1);
   expect(violations[0]).toContain('missing or corrupt');
-});
-
-test('size/spacing arbitraries still yield 0 when no color-mix present', () => {
-  const c = countGrowthViolations('text-[10px] border-[5px] text-[40px] w-[12px] grid-cols-[1fr]');
-  expect(c.color).toBe(0);
 });

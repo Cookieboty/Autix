@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   ALL_SOCIAL_LOGIN_FLOWS,
@@ -8,7 +8,6 @@ import * as dist from '../dist';
 import * as sourceEnums from '../src/generated/client/enums';
 
 const schema = readFileSync(resolve(import.meta.dirname, '../prisma/schema.prisma'), 'utf8');
-const supportedLocales = ['en', 'fr', 'ja', 'ru', 'vi', 'zh-CN', 'zh-TW'] as const;
 
 function readSchemaBlock(kind: 'enum' | 'model', name: string): string[] {
   const lines = schema.split(/\r?\n/);
@@ -97,18 +96,32 @@ describe('database generated artifact freshness', () => {
     expect(Object.values(dist.SocialLoginFlow).sort()).toEqual([...ALL_SOCIAL_LOGIN_FLOWS].sort());
   });
 
-  for (const locale of supportedLocales) {
-    test(`i18n ${locale} source and dist messages match`, () => {
-      const source = JSON.parse(readFileSync(
-        resolve(import.meta.dirname, `../../i18n/src/messages/${locale}.json`),
-        'utf8',
-      ));
-      const built = JSON.parse(readFileSync(
-        resolve(import.meta.dirname, `../../i18n/dist/messages/${locale}.json`),
-        'utf8',
-      ));
+  // 应用加载 dist，messages 按 chunk 分目录，故比对整棵树。
+  const i18nSrcDir = resolve(import.meta.dirname, '../../i18n/src/messages');
+  const i18nDistDir = resolve(import.meta.dirname, '../../i18n/dist/messages');
 
-      expect(built).toEqual(source);
-    });
+  function listJson(root: string, prefix = ''): string[] {
+    return readdirSync(resolve(root, prefix), { withFileTypes: true })
+      .flatMap((entry) => {
+        const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) return listJson(root, rel);
+        return entry.name.endsWith('.json') ? [rel] : [];
+      })
+      .sort();
   }
+
+  const i18nSrcFiles = listJson(i18nSrcDir);
+
+  test('i18n dist mirrors src exactly (no missing, no stale orphans)', () => {
+    // 防空转：src 读空会让下面的比较恒真。
+    expect(i18nSrcFiles.length).toBeGreaterThan(0);
+    // 双向：dist 缺文件 = 构建陈旧；dist 多文件 = 重构残留。
+    expect(listJson(i18nDistDir)).toEqual(i18nSrcFiles);
+  });
+
+  test.each(i18nSrcFiles)('i18n %s source and dist content match', (relativePath) => {
+    const source = JSON.parse(readFileSync(resolve(i18nSrcDir, relativePath), 'utf8'));
+    const built = JSON.parse(readFileSync(resolve(i18nDistDir, relativePath), 'utf8'));
+    expect(built).toEqual(source);
+  });
 });

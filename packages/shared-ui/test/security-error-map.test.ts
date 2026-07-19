@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   extractAuthErrorPayload,
   translateAuthError,
@@ -75,13 +77,23 @@ describe('translateAuthError', () => {
 });
 
 describe('AUTH_ERROR_CODE_I18N', () => {
-  it('账号自助错误码都有对应 i18n key', () => {
-    expect(AUTH_ERROR_CODE_I18N.STEP_UP_INVALID_OR_EXPIRED).toBe('auth.errorCodes.STEP_UP_INVALID_OR_EXPIRED');
-    expect(AUTH_ERROR_CODE_I18N.STEP_UP_UNAVAILABLE).toBe('auth.errorCodes.STEP_UP_UNAVAILABLE');
-    expect(AUTH_ERROR_CODE_I18N.OTP_INVALID).toBe('auth.errorCodes.OTP_INVALID');
-    expect(AUTH_ERROR_CODE_I18N.OTP_LOCKED).toBe('auth.errorCodes.OTP_LOCKED');
-    expect(AUTH_ERROR_CODE_I18N.OTP_ALREADY_CONSUMED).toBe('auth.errorCodes.OTP_ALREADY_CONSUMED');
-    expect(AUTH_ERROR_CODE_I18N.TOO_MANY_REQUESTS).toBe('auth.errorCodes.TOO_MANY_REQUESTS');
-    expect(AUTH_ERROR_CODE_I18N.USER_DELETED).toBe('auth.errorCodes.USER_DELETED');
+  // 遍历映射本身而非手抄清单：手抄会漏掉新增项，删掉实现里的条目也不会红。
+  const entries = Object.entries(AUTH_ERROR_CODE_I18N);
+  const catalog = JSON.parse(
+    readFileSync(resolve(__dirname, '../../i18n/src/messages/auth/en.json'), 'utf8'),
+  ).auth.errorCodes as Record<string, string>;
+
+  // 目录里这两个不是抛出的错误码，是 unsupportedReason / hint，走另一条渲染路径。
+  const CATALOG_ONLY = ['PROVIDER_REAUTH_UNSUPPORTED', 'CONTACT_SUPPORT'];
+
+  it('映射恰好覆盖目录中的抛出型错误码', () => {
+    expect(Object.keys(AUTH_ERROR_CODE_I18N).sort()).toEqual(
+      Object.keys(catalog).filter((code) => !CATALOG_ONLY.includes(code)).sort(),
+    );
+  });
+
+  it.each(entries)('%s 映射到 auth.errorCodes.%s 且目录中有文案', (code, key) => {
+    expect(key).toBe(`auth.errorCodes.${code}`);
+    expect(catalog).toHaveProperty(code);
   });
 });

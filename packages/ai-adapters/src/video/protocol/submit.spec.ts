@@ -39,11 +39,21 @@ describe('submitVideoTask', () => {
     expect((seen.init?.headers as Record<string, string>).Authorization).toBe('Bearer secret-key');
   });
 
-  // taskIdPath 是候选链：Ark 的提交响应同时有 id 与 task_id，现有实现取 id。
+  // taskIdPath 是候选链 ['id', 'task_id']：只给后备字段时回落到它。
   it('falls back through the taskId candidate chain', async () => {
     stubPublicDns();
     vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ task_id: 'task_2' }), { status: 200 }));
     expect((await submitVideoTask(args)).providerTaskId).toBe('task_2');
+  });
+
+  // 两个字段都在时必须取 id —— 只测单字段的话候选链顺序反过来也照样绿。
+  it('prefers id over task_id when the response carries both', async () => {
+    stubPublicDns();
+    vi.stubGlobal('fetch', async () => new Response(
+      JSON.stringify({ id: 'from-id', task_id: 'from-task-id' }),
+      { status: 200 },
+    ));
+    expect((await submitVideoTask(args)).providerTaskId).toBe('from-id');
   });
 
   it('classifies upstream errors via the preset errorMapping', async () => {

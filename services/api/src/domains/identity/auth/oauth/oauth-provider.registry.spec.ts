@@ -1,3 +1,4 @@
+import { HttpStatus } from '@nestjs/common';
 import { OAuthProviderRegistry } from './oauth-provider.registry';
 
 const fakeGoogle = { name: 'google' } as any;
@@ -20,9 +21,19 @@ function makeConfig(overrides: {
 }
 
 describe('OAuthProviderRegistry', () => {
-  it('getInstance 未知名称抛 OAUTH_PROVIDER_DISABLED', () => {
+  it('getInstance 未知名称抛 oauth.provider_disabled', () => {
     const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig());
-    expect(() => reg.getInstance('unknown')).toThrow('OAUTH_PROVIDER_DISABLED');
+    // 迁 i18n 后错误消息不再含业务码，稳定契约是 i18nKey + status。
+    let caught: unknown;
+    try {
+      reg.getInstance('unknown');
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toMatchObject({
+      i18nKey: 'oauth.provider_disabled',
+      status: HttpStatus.BAD_REQUEST,
+    });
   });
 
   it('getInstance 已知名称返回实例', () => {

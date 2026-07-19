@@ -33,14 +33,16 @@ function createRepository() {
         txArg: typeof tx,
         input: { userId: string; previousCycleStart: Date; cycleStart: Date },
       ) =>
+        // 这里必须传真实 where：塞 expect.objectContaining 给一个忽略入参的 mock，
+        // 断言永远不会被求值，上周期窗口谓词等于零覆盖。
         txArg.point_grants.findMany({
-          where: expect.objectContaining({
+          where: {
             userId: input.userId,
             expiresAt: {
               gt: input.previousCycleStart,
               lte: input.cycleStart,
             },
-          }),
+          },
         }),
     ),
     findMembershipInTx: vi.fn((txArg: typeof tx, id: string) =>
@@ -391,6 +393,17 @@ describe('MembershipCycleService', () => {
         sourceId: 'membership-cycle:membership-1:1',
       }),
     );
+    // 结转只能取「上一周期」的 grant：窗口谓词必须是 (previousCycleStart, cycleStart]。
+    // 窗口写错会把更早或当期的 grant 也卷进来，重复结转。
+    expect(repository._tx.point_grants.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        expiresAt: {
+          gt: new Date('2026-01-01T00:00:00.000Z'),
+          lte: new Date('2026-02-01T00:00:00.000Z'),
+        },
+      },
+    });
   });
 
   it('P2-D2: 年付场景下同一 cycleIndex sourceId 多次调用幂等（同一个月只发一次）', async () => {
