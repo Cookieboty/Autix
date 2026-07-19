@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { ParamsSchema } from '@autix/domain/pricing';
 import { validateModelProtocolConfig } from './validate-config';
 import { doubaoImagesV1, openaiImagesV1 } from './presets/vendors';
-import type { ProtocolPreset } from './types';
+import type { BindingSpec, ProtocolPreset } from './types';
 
 /**
  * 夹具：doubao 形状 —— 统一参数与原生字段一一对应（直接绑定）。
@@ -259,6 +259,81 @@ describe('validateModelProtocolConfig — 复合绑定（composeFrom）', () => 
       paramsSchema: schema, metadata: OPENAI_META, preset: openaiImagesV1,
     }).find((v) => v.code === 'BINDING_TARGETS_UNKNOWN_PARAM');
     expect(found?.message).toMatch(/can never be composed/);
+  });
+
+  // 规则 9 —— 复合 size 绑定的每个 valueMap 值都必须过上游尺寸契约。
+  //
+  // 规则 8 只保证「组合有条目」，看不见值本身违不违规。这几条守的是「表里写了上游会 400
+  // 的尺寸」这类 bug：4096x4096（超边+超像素）、2048x1365（边非 16 倍数）、3840x2560
+  // （超像素上限）——它们正是 gpt-image-2 除 9:16/16:9 外偶发 400 的根因。
+  const sizeBinding = openaiImagesV1.paramBindings.size as BindingSpec & { valueMap: Record<string, string> };
+
+  // 每一种违规模式各构造一个坏值，逐一确认被抓住（对应上游四条约束）。
+  it.each([
+    ['4096x4096', /max edge 4096 > 3840/], // 超最长边（且超像素，但先命中边）
+    ['2048x1365', /not multiples of 16/],  // 边非 16 的倍数
+    ['3840x2560', /pixels 9830400 > 8294400/], // 超总像素上限
+    ['4000x1000', /ratio 4\.000 > 3:1/],   // 长短边比 > 3:1
+    ['640x640', /pixels 409600 < 655360/], // 低于总像素下限
+  ])('rejects an illegal size %s in the composed valueMap', (badSize, expected) => {
+    const preset: ProtocolPreset = {
+      ...openaiImagesV1,
+      paramBindings: {
+        ...openaiImagesV1.paramBindings,
+        size: { ...sizeBinding, valueMap: { ...sizeBinding.valueMap, '1:1@1K': badSize } },
+      },
+    };
+    const found = validateModelProtocolConfig({
+      paramsSchema: OPENAI_SCHEMA, metadata: OPENAI_META, preset,
+    }).find((v) => v.code === 'COMPOSED_SIZE_ILLEGAL');
+    expect(found?.message).toMatch(expected);
+  });
+
+  it('reports COMPOSED_SIZE_ILLEGAL for every bad entry, not just the first', () => {
+    const preset: ProtocolPreset = {
+      ...openaiImagesV1,
+      paramBindings: {
+        ...openaiImagesV1.paramBindings,
+        size: {
+          ...sizeBinding,
+          valueMap: { ...sizeBinding.valueMap, '1:1@2K': '4096x4096', '1:1@4K': '2048x1365' },
+        },
+      },
+    };
+    const bad = validateModelProtocolConfig({
+      paramsSchema: OPENAI_SCHEMA, metadata: OPENAI_META, preset,
+    }).filter((v) => v.code === 'COMPOSED_SIZE_ILLEGAL');
+    expect(bad.length).toBe(2);
+  });
+
+  // Seedream 也走复合 size（比例 × 档位 → WxH），但约束和 gpt-image 不同（无 16 倍数、无边上限）。
+  // 用最全的 schema（8 比例 × 2K/3K/4K，即 5.0-lite）确认规则 8（组合覆盖）+ 规则 9（尺寸合法）双绿。
+  const SEEDREAM_SCHEMA: ParamsSchema = {
+    type: 'object',
+    required: ['aspectRatio', 'resolution'],
+    properties: {
+      aspectRatio: {
+        type: 'string', enum: ['1:1', '4:3', '3:4', '16:9', '9:16', '3:2', '2:3', '21:9'], default: '1:1',
+        'x-ui': { role: 'wire', control: 'select', order: 10 },
+      },
+      resolution: {
+        type: 'string', enum: ['2K', '3K', '4K'], default: '2K',
+        'x-ui': { role: 'both', control: 'select', order: 20 },
+      },
+      referenceImages: {
+        type: 'integer', minimum: 0, default: 0,
+        'x-ui': { role: 'pricing', control: 'hidden', uploadMax: 10 },
+      },
+    },
+  };
+  const SEEDREAM_META = { protocolKey: 'doubao-images@v1', operations: ['generate'], limits: { maxCount: 15 } };
+
+  it('accepts the real Seedream config: size composes for every ratio × tier and each maps to a legal size', () => {
+    expect(
+      validateModelProtocolConfig({
+        paramsSchema: SEEDREAM_SCHEMA, metadata: SEEDREAM_META, preset: doubaoImagesV1,
+      }),
+    ).toEqual([]);
   });
 });
 

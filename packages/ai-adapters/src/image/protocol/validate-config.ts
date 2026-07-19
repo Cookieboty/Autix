@@ -2,9 +2,29 @@ import { resolveImagePricingResolution } from '@autix/domain/image';
 import { readImageModelMetadata, type ImageOperation } from '@autix/domain/model';
 import type { ParamsSchema, XUiRole } from '@autix/domain/pricing';
 import { TRANSFORMS } from './transforms';
-import type { BindingSpec, ParamStrategy, ProtocolPreset } from './types';
+import type { BindingSpec, ParamStrategy, PixelSizeConstraints, ProtocolPreset } from './types';
 
 export interface ConfigViolation { code: string; message: string; param?: string }
+
+/** 逐条核对一个像素尺寸串（`WxH`）是否满足约束；满足返回 undefined，否则返回违规描述。 */
+function checkPixelSize(value: string, c: PixelSizeConstraints): string | undefined {
+  const match = value.match(/^(\d+)x(\d+)$/);
+  if (!match) return `not a WxH pixel string`;
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  const long = Math.max(width, height);
+  const short = Math.min(width, height);
+  const pixels = width * height;
+  const problems: string[] = [];
+  if (c.maxEdge !== undefined && long > c.maxEdge) problems.push(`max edge ${long} > ${c.maxEdge}`);
+  if (c.edgeMultipleOf !== undefined && (width % c.edgeMultipleOf !== 0 || height % c.edgeMultipleOf !== 0)) {
+    problems.push(`edges not multiples of ${c.edgeMultipleOf}`);
+  }
+  if (short > 0 && long / short > c.maxRatio) problems.push(`ratio ${(long / short).toFixed(3)} > ${c.maxRatio}:1`);
+  if (pixels < c.minPixels) problems.push(`pixels ${pixels} < ${c.minPixels}`);
+  if (pixels > c.maxPixels) problems.push(`pixels ${pixels} > ${c.maxPixels}`);
+  return problems.length ? problems.join('; ') : undefined;
+}
 
 const WIRE_ROLES: ReadonlySet<XUiRole> = new Set(['wire', 'both']);
 
@@ -195,6 +215,27 @@ export function validateModelProtocolConfig(input: {
         violations.push({
           code: 'COMPOSED_BINDING_MISSING_COMBO', param: name,
           message: `preset "${preset.key}" composes "${name}" from [${binding.composeFrom.join(', ')}], but its valueMap has no entry for "${key}" — that combination is selectable in this model's schema and would be silently dropped`,
+        });
+      }
+    }
+  }
+
+  // 规则 9：产出像素尺寸的复合绑定，valueMap 的每个值都必须满足上游声明的尺寸约束。
+  //
+  // 规则 8 只保证「schema 的每个组合在表里都有条目」——但**条目的值**仍可能是上游根本
+  // 不接受的尺寸：4096x4096（超边 3840 + 超像素上限）、2048x1365（边非 16 的倍数）、
+  // 3840x2560（像素 9.83M 超 8.29M 上限）。这类值不会被静默丢，而是原样发出去，在运行期
+  // 变成**偶发** 400（同一比例换个档位就时好时坏）。这条规则在保存期把它拦成红灯。
+  for (const [name, binding] of Object.entries(preset.paramBindings)) {
+    if (isStrategy(binding) || Array.isArray(binding)) continue;
+    const constraints = binding.pixelSizeConstraints;
+    if (!constraints || !binding.valueMap) continue;
+    for (const [combo, value] of Object.entries(binding.valueMap)) {
+      const problem = checkPixelSize(value, constraints);
+      if (problem) {
+        violations.push({
+          code: 'COMPOSED_SIZE_ILLEGAL', param: name,
+          message: `preset "${preset.key}" composes "${name}", but valueMap["${combo}"] = "${value}" violates the upstream size contract: ${problem}`,
         });
       }
     }

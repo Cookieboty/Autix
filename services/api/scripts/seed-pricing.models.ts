@@ -293,9 +293,9 @@ export const IMAGE_MODEL_CONFIGS: Record<
       required: ['aspectRatio', 'resolution'],
       properties: {
         resolution: {
-          enum: ['2K', '3K'],
+          enum: ['2K', '3K', '4K'],
           type: 'string',
-          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '2K': '2K', '3K': '3K' } },
+          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '2K': '2K', '3K': '3K', '4K': '4K' } },
           default: '2K',
         },
         aspectRatio: {
@@ -315,7 +315,7 @@ export const IMAGE_MODEL_CONFIGS: Record<
     pricingSchema: {
       terms: [
         { id: 'base', op: 'add', const: 0 },
-        { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '3K': 34 } } },
+        { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '3K': 34, '4K': 45 } } },
       ],
     } as PricingSchema,
   },
