@@ -137,10 +137,77 @@ async function backfillVideos() {
   console.log(`\n  video_generations: scanned=${scanned} ${DRY_RUN ? 'would insert' : 'inserted'}=${inserted}`);
 }
 
+/**
+ * video_clip_generations 的存量补齐。
+ *
+ * 与 backfillVideos 读的**不是同一张表**：`video_generations` 是早期的视频流水，
+ * 而 /ai/video 的直连生成、分镜与项目生成都落在 `video_clip_generations`。
+ * 后者写素材库是从「三个完成入口内联写入」那次改动才开始的，之前的存量只在流水表里。
+ *
+ * 单条记录只有一个产物（videoUrl），封面取 lastFrameUrl —— 与运行时写入路径
+ * （VideoGenerationRepository.persistGeneratedVideoAsset）保持一致的行形状。
+ */
+async function backfillClipVideos() {
+  let cursor: string | undefined;
+  let scanned = 0;
+  let inserted = 0;
+
+  for (;;) {
+    const rows = await prisma.video_clip_generations.findMany({
+      where: { status: 'completed', videoUrl: { not: null } },
+      select: {
+        id: true,
+        userId: true,
+        resolvedPrompt: true,
+        videoUrl: true,
+        lastFrameUrl: true,
+        durationSec: true,
+        model: true,
+        createdAt: true,
+      },
+      orderBy: { id: 'asc' },
+      take: BATCH,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+    if (rows.length === 0) break;
+    cursor = rows[rows.length - 1]!.id;
+    scanned += rows.length;
+
+    const data = rows.flatMap((row) =>
+      buildGenerationMaterialRows({
+        userId: row.userId,
+        generationId: row.id,
+        urls: [row.videoUrl as string],
+        prompt: row.resolvedPrompt,
+        kind: 'video',
+        thumbnailUrl: row.lastFrameUrl,
+        createdAt: row.createdAt,
+        metadata: { modelUsed: row.model, durationSec: row.durationSec },
+      }),
+    );
+
+    if (data.length > 0 && !DRY_RUN) {
+      const { count } = await prisma.material_assets.createMany({
+        data,
+        skipDuplicates: true,
+      });
+      inserted += count;
+    } else {
+      inserted += data.length;
+    }
+    process.stdout.write(`  video_clip_generations: scanned=${scanned} rows=${inserted}\r`);
+  }
+
+  console.log(
+    `\n  video_clip_generations: scanned=${scanned} ${DRY_RUN ? 'would insert' : 'inserted'}=${inserted}`,
+  );
+}
+
 async function main() {
   console.log(`backfill generation → material_assets${DRY_RUN ? ' (dry run)' : ''}`);
   await backfillImages();
   await backfillVideos();
+  await backfillClipVideos();
   console.log('done.');
 }
 
