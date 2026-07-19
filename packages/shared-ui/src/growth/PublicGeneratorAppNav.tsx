@@ -9,6 +9,7 @@ import { buildDiscountTranslationValues } from './discount';
 import { buildGeneratorNavItems } from './generator-nav-items';
 import { GrowthNotificationMenu } from './GrowthNotificationMenu';
 import { ImageNavFlyout } from './ImageNavFlyout';
+import { VideoNavFlyout } from './VideoNavFlyout';
 import { PublicAccountMenu } from './PublicAccountMenu';
 
 export type PublicGeneratorAppNavKind = 'home' | 'image' | 'video';
@@ -174,6 +175,9 @@ export function PublicGeneratorAppNav({
                     ) : item.key === 'image' ? (
                       // Image 项：点击照常进入 /ai/image，悬浮弹出全部图像模型下拉（点击带 ?model= 跳转）
                       <ImageNavFlyout>{linkNode}</ImageNavFlyout>
+                    ) : item.key === 'video' ? (
+                      // Video 项同理，走 /ai/video
+                      <VideoNavFlyout>{linkNode}</VideoNavFlyout>
                     ) : (
                       linkNode
                     )}

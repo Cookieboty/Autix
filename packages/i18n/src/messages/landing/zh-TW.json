@@ -916,8 +916,17 @@
       "createImageDesc": "生成 AI 圖像",
       "editImage": "編輯圖像",
       "editImageDesc": "修改與精修圖像",
-      "gallery": "作品廣場",
-      "galleryDesc": "探索社群創作"
+      "gallery": "圖片廣場",
+      "galleryDesc": "瀏覽社群圖片作品"
+    },
+    "videoNavFlyout": {
+      "models": "模型",
+      "loading": "正在載入模型…",
+      "features": "功能",
+      "createVideo": "生成影片",
+      "createVideoDesc": "用 AI 生成影片",
+      "gallery": "影片廣場",
+      "galleryDesc": "瀏覽社群影片作品"
     }
   },
   "landing": {

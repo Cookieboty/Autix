@@ -1239,8 +1239,17 @@
       "createImageDesc": "Generate AI images",
       "editImage": "Edit Image",
       "editImageDesc": "Modify and refine images",
-      "gallery": "Gallery",
-      "galleryDesc": "Explore community creations"
+      "gallery": "Image Gallery",
+      "galleryDesc": "Explore community images"
+    },
+    "videoNavFlyout": {
+      "models": "Models",
+      "loading": "Loading models…",
+      "features": "Features",
+      "createVideo": "Create Video",
+      "createVideoDesc": "Generate AI videos",
+      "gallery": "Video Gallery",
+      "galleryDesc": "Explore community videos"
     }
   }
 }

@@ -1239,8 +1239,17 @@
       "createImageDesc": "生成 AI 图像",
       "editImage": "编辑图像",
       "editImageDesc": "修改与精修图像",
-      "gallery": "作品广场",
-      "galleryDesc": "探索社区创作"
+      "gallery": "图片广场",
+      "galleryDesc": "浏览社区图片作品"
+    },
+    "videoNavFlyout": {
+      "models": "模型",
+      "loading": "正在加载模型…",
+      "features": "功能",
+      "createVideo": "生成视频",
+      "createVideoDesc": "用 AI 生成视频",
+      "gallery": "视频广场",
+      "galleryDesc": "浏览社区视频作品"
     }
   }
 }

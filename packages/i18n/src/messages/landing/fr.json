@@ -1239,8 +1239,17 @@
       "createImageDesc": "Générer des images IA",
       "editImage": "Modifier l’image",
       "editImageDesc": "Retoucher et affiner les images",
-      "gallery": "Galerie",
-      "galleryDesc": "Explorer les créations de la communauté"
+      "gallery": "Galerie d’images",
+      "galleryDesc": "Explorer les images de la communauté"
+    },
+    "videoNavFlyout": {
+      "models": "Modèles",
+      "loading": "Chargement des modèles…",
+      "features": "Fonctions",
+      "createVideo": "Créer une vidéo",
+      "createVideoDesc": "Générer des vidéos par IA",
+      "gallery": "Galerie vidéo",
+      "galleryDesc": "Explorer les vidéos de la communauté"
     }
   }
 }

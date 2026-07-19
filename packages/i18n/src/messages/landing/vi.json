@@ -916,8 +916,17 @@
       "createImageDesc": "Tạo ảnh bằng AI",
       "editImage": "Chỉnh sửa ảnh",
       "editImageDesc": "Sửa và tinh chỉnh ảnh",
-      "gallery": "Thư viện",
-      "galleryDesc": "Khám phá tác phẩm cộng đồng"
+      "gallery": "Thư viện ảnh",
+      "galleryDesc": "Khám phá ảnh cộng đồng"
+    },
+    "videoNavFlyout": {
+      "models": "Mô hình",
+      "loading": "Đang tải mô hình…",
+      "features": "Tính năng",
+      "createVideo": "Tạo video",
+      "createVideoDesc": "Tạo video bằng AI",
+      "gallery": "Thư viện video",
+      "galleryDesc": "Khám phá video cộng đồng"
     }
   },
   "landing": {

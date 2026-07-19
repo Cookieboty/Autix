@@ -916,8 +916,17 @@
       "createImageDesc": "AI画像を生成",
       "editImage": "画像を編集",
       "editImageDesc": "画像を修正・調整",
-      "gallery": "ギャラリー",
-      "galleryDesc": "コミュニティの作品を見る"
+      "gallery": "画像ギャラリー",
+      "galleryDesc": "コミュニティの画像を見る"
+    },
+    "videoNavFlyout": {
+      "models": "モデル",
+      "loading": "モデルを読み込み中…",
+      "features": "機能",
+      "createVideo": "動画を生成",
+      "createVideoDesc": "AI で動画を生成",
+      "gallery": "動画ギャラリー",
+      "galleryDesc": "コミュニティの動画を見る"
     }
   },
   "landing": {

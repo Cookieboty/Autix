@@ -1,43 +1,43 @@
 'use client';
 
 import { useRef, useState, type ReactNode } from 'react';
-import { ImagePlus, LayoutGrid, Wand2, type LucideIcon } from 'lucide-react';
+import { LayoutGrid, Video, type LucideIcon } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-store';
 import { ModelVendorIcon } from '../brand';
 import { Popover, PopoverAnchor, PopoverContent } from '../ui/popover';
-import { NavFlyoutRow } from './NavFlyoutRow';
 import { resolveModelDescription } from './generator/model-description';
+import { NavFlyoutRow } from './NavFlyoutRow';
 import {
-  IMAGE_NAV_FEATURES,
-  imageModelHref,
-  useImageNavModels,
-  type ImageNavFeatureKey,
-} from './image-nav';
+  VIDEO_NAV_FEATURES,
+  useVideoNavModels,
+  videoModelHref,
+  type VideoNavFeatureKey,
+} from './video-nav';
 
 function isPremium(model: ModelConfigItem) {
   return (model.allowedMembershipLevels?.length ?? 0) > 0;
 }
 
-/** Features 三项对应的图标（文案/顺序在共享的 IMAGE_NAV_FEATURES 里定义） */
-const FEATURE_ICONS: Record<ImageNavFeatureKey, LucideIcon> = {
-  createImage: ImagePlus,
-  editImage: Wand2,
+/** Features 各项对应的图标（文案/顺序在共享的 VIDEO_NAV_FEATURES 里定义） */
+const FEATURE_ICONS: Record<VideoNavFeatureKey, LucideIcon> = {
+  createVideo: Video,
   gallery: LayoutGrid,
 };
 
-
 /**
- * 导航「Image」悬浮下拉：点击照常进入 /ai/image；悬浮弹出 Features（Create / Edit / Gallery）
- * + 全部图像模型列表。点击模型带 `?model=<模型名>`（空格转下划线）跳转并预选该模型。
+ * 导航「Video」悬浮下拉：点击照常进入 /ai/video；悬浮弹出 Features（Create / Gallery）
+ * + 全部视频模型列表。点击模型带 `?model=<模型名>`（空格转下划线）跳转并预选该模型。
+ *
+ * 与 ImageNavFlyout 同构，仅数据源与跳转地址不同；行渲染共用 NavFlyoutRow。
  *
  * children 为原本的导航 Link（作为定位锚点与 hover 触发区）。
  */
-export function ImageNavFlyout({ children }: { children: ReactNode }) {
-  const t = useTranslations('publicGrowth.imageNavFlyout');
+export function VideoNavFlyout({ children }: { children: ReactNode }) {
+  const t = useTranslations('publicGrowth.videoNavFlyout');
   const locale = useLocale();
   const [open, setOpen] = useState(false);
-  const models = useImageNavModels();
+  const models = useVideoNavModels();
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cancelClose = () => {
@@ -89,7 +89,7 @@ export function ImageNavFlyout({ children }: { children: ReactNode }) {
           <div className="px-2.5 pb-1 pt-2.5 text-xs font-semibold uppercase tracking-wide text-foreground/40">
             {t('features')}
           </div>
-          {IMAGE_NAV_FEATURES.map((feature) => {
+          {VIDEO_NAV_FEATURES.map((feature) => {
             const Icon = FEATURE_ICONS[feature.key];
             return (
               <NavFlyoutRow
@@ -115,8 +115,8 @@ export function ImageNavFlyout({ children }: { children: ReactNode }) {
             models.map((model) => (
               <NavFlyoutRow
                 key={model.id}
-                href={imageModelHref(model.name)}
-                // 默认灰度弱化，悬浮该行时恢复厂商品牌彩色（Gemini/ByteDance 图标本身带色）
+                href={videoModelHref(model.name)}
+                // 默认灰度弱化，悬浮该行时恢复厂商品牌彩色
                 icon={
                   <ModelVendorIcon
                     model={model}

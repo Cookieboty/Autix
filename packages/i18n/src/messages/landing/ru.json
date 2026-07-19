@@ -916,8 +916,17 @@
       "createImageDesc": "Генерация ИИ-изображений",
       "editImage": "Редактировать изображение",
       "editImageDesc": "Изменение и доработка изображений",
-      "gallery": "Галерея",
-      "galleryDesc": "Смотреть работы сообщества"
+      "gallery": "Галерея изображений",
+      "galleryDesc": "Изображения сообщества"
+    },
+    "videoNavFlyout": {
+      "models": "Модели",
+      "loading": "Загрузка моделей…",
+      "features": "Возможности",
+      "createVideo": "Создать видео",
+      "createVideoDesc": "Генерация видео с ИИ",
+      "gallery": "Галерея видео",
+      "galleryDesc": "Видео сообщества"
     }
   },
   "landing": {
