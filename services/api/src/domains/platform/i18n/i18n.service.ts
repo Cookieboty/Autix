@@ -1,6 +1,4 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import * as yaml from 'js-yaml';
-import * as fs from 'fs';
 import * as path from 'path';
 import {
   DEFAULT_LANGUAGE,
@@ -8,6 +6,7 @@ import {
   normalizeLang,
   type SupportedLanguage,
 } from '@autix/i18n';
+import { loadLocaleTree } from './locale-loader';
 
 export interface I18nRequestLike {
   lang?: SupportedLanguage;
@@ -20,14 +19,9 @@ export class I18nService implements OnModuleInit {
 
   onModuleInit() {
     const localesDir = path.join(__dirname, 'locales');
-    const files = fs.readdirSync(localesDir).filter((f) => f.endsWith('.yaml'));
-
-    for (const file of files) {
-      const lang = file.replace('.yaml', '');
-      const content = fs.readFileSync(path.join(localesDir, file), 'utf-8');
-      const dict = yaml.load(content) as Record<string, string>;
-      this.translations.set(lang, dict ?? {});
-      this.logger.log(`Loaded ${Object.keys(dict ?? {}).length} keys for [${lang}]`);
+    this.translations = loadLocaleTree(localesDir);
+    for (const [lang, dict] of this.translations) {
+      this.logger.log(`Loaded ${Object.keys(dict).length} keys for [${lang}]`);
     }
   }
 
