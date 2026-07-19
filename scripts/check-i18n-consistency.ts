@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { load as loadYaml } from 'js-yaml';
 import { flattenLeaves } from './i18n/merge-locales.core';
 import { CHUNKS } from '../packages/i18n/src/messages';
 import { ROUTE_POLICY } from '../clients/web/lib/i18n/route-policy';
@@ -20,6 +21,32 @@ const APP_LOCALE_DIR = 'clients/web/app/[locale]';
  * only ever reads `src/`.
  */
 const DIST_DIR = 'packages/i18n/dist/messages';
+
+/**
+ * 后端错误文案，与 `packages/i18n` 完全独立的一套：扁平点分键的 YAML，插值语法是
+ * `{{name}}`（前端走 next-intl 的 `{name}`）。这套文件长期不在本脚本覆盖范围内，
+ * 于是 ja/fr/ru/vi 四份纯英文占位文件（与 en.yaml 逐字节相同）潜伏了数月无人发现。
+ */
+const API_LOCALE_DIR = 'services/api/src/domains/platform/i18n/locales';
+
+/** 前端 catalog 未译条目数的棘轮基线，详见 `assertUntranslatedRatchet`。 */
+const BASELINE_FILE = 'scripts/i18n/untranslated-baseline.json';
+
+/**
+ * 允许各语言使用**不同**占位符的键——极少数，必须逐个论证。
+ *
+ * 目前只有折扣文案：中文习惯说"折"（8折 = 打八折 = 便宜 20%），英文说 "% OFF"，
+ * 两者是不同的数字而非同一变量改名，无法互相换算复用。
+ * `packages/shared-ui/src/growth/discount.ts` 的 `buildDiscountTranslationValues()`
+ * 同时传入 `percent` 和 `zhe` 两个值，所以中英各取所需都能正确渲染。
+ *
+ * 加新条目前先确认调用方**确实**传了该语言用到的所有变量，否则运行时会抛
+ * MISSING_VALUE——这个豁免名单绕过的正是唯一能发现该问题的检查。
+ */
+const PLACEHOLDER_EXEMPT: ReadonlySet<string> = new Set([
+  'publicGrowth.generator.studio.topPromo',
+  'publicGrowth.pricing.yearlyDiscountBadge',
+]);
 
 /**
  * 按 CHUNKS 合并出某个 locale 的完整 message 树——刻意复刻 `loadMessages()` 的
@@ -120,6 +147,139 @@ export function assertDistMatchesSrc(
   return issues;
 }
 
+/** 提取 API YAML 的 `{{name}}` 插值名，含重复、按字典序，便于直接比较。 */
+export function extractMustacheArgs(value: string): string[] {
+  return [...value.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]).sort();
+}
+
+/**
+ * 提取 next-intl / ICU 文案里的参数名。
+ *
+ * 关键点是只取参数名，不取 `plural` / `select` 的分支关键字：
+ * `{count, plural, one {# item} other {# items}}` 的参数是 `count`，而 `one`/`other`
+ * 是 ICU 关键字。把它们当参数会让每一条**正确**的复数翻译都显示成占位符错配——
+ * 各语言的复数分支数量本来就不同（俄语有 one/few/many）。
+ */
+export function extractIcuArgs(value: string): string[] {
+  return [...stripIcuQuotes(value).matchAll(/\{\s*(\w+)\s*(?:,|\})/g)].map((m) => m[1]).sort();
+}
+
+/**
+ * 去掉 ICU 的单引号转义段，因为里面的花括号是**字面量**而非占位符。
+ *
+ * ICU 规则：`'` 后面紧跟 `{` 或 `}` 时开启转义，直到下一个 `'` 为止；`''` 表示一个
+ * 真正的撇号。所以 `Use '{varName}' placeholders` 展示给用户的就是字面的
+ * `{varName}`——它是在向用户说明占位符语法。译者把它本地化成 `{变量名}` /
+ * `{nomVariable}` 是完全正确的，不加这一步会把每条正确翻译都误报成占位符错配。
+ *
+ * 注意不能无脑删所有 `'…'`：法语 `l'utilisateur`、英语 `don't` 里的撇号后面没有花括号，
+ * 不构成转义，删掉会连带吞掉真正的占位符。
+ */
+function stripIcuQuotes(value: string): string {
+  let out = '';
+  for (let i = 0; i < value.length; i++) {
+    if (value[i] !== "'") {
+      out += value[i];
+      continue;
+    }
+    if (value[i + 1] === "'") {
+      i++; // `''` —— 字面撇号，不开启转义
+      continue;
+    }
+    if (value[i + 1] !== '{' && value[i + 1] !== '}') {
+      continue; // 普通撇号（l'utilisateur、don't），原样跳过即可
+    }
+    const end = value.indexOf("'", i + 1);
+    if (end === -1) break; // 未闭合的转义：后面全部视为字面量
+    i = end;
+  }
+  return out;
+}
+
+/**
+ * 校验每个译文携带的占位符集合与基准语言完全一致。
+ *
+ * 顺序不敏感——译文按自身语法重排 `{{a}}`/`{{b}}` 是正常的；数量和名字敏感——
+ * 丢失占位符会让变量凭空消失，多写或拼错（`{{levelName}}` → `{{levelname}}`）
+ * 则会把花括号原样渲染给用户。
+ */
+export function assertPlaceholdersMatch(
+  byLang: Record<string, Record<string, string>>,
+  baseLang: string,
+  extract: (value: string) => string[],
+  exempt: ReadonlySet<string> = new Set(),
+): string[] {
+  const issues: string[] = [];
+  const base = byLang[baseLang] ?? {};
+  for (const lang of Object.keys(byLang)) {
+    if (lang === baseLang) continue;
+    for (const [key, baseValue] of Object.entries(base)) {
+      if (exempt.has(key)) continue;
+      const translated = byLang[lang][key];
+      if (translated === undefined) continue; // 缺键由 assertAligned 负责报告
+      const want = extract(baseValue);
+      const got = extract(translated);
+      if (want.join(' ') === got.join(' ')) continue;
+      const lost = want.filter((a) => !got.includes(a));
+      const added = got.filter((a) => !want.includes(a));
+      const detail = [
+        lost.length ? `缺少 ${lost.join(', ')}` : '',
+        added.length ? `多出 ${added.join(', ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('；');
+      issues.push(`[placeholder:${lang}] ${key} — ${detail || '占位符数量不一致'}`);
+    }
+  }
+  return issues;
+}
+
+/** 统计各语言中与基准语言逐字节相同的值——即从未被翻译的条目。 */
+export function countUntranslated(
+  byLang: Record<string, Record<string, string>>,
+  baseLang: string,
+): Record<string, number> {
+  const base = byLang[baseLang] ?? {};
+  const counts: Record<string, number> = {};
+  for (const lang of Object.keys(byLang)) {
+    if (lang === baseLang) continue;
+    counts[lang] = Object.entries(base).filter(([k, v]) => byLang[lang][k] === v).length;
+  }
+  return counts;
+}
+
+/**
+ * 未译条目数的棘轮：只许降、不许升。
+ *
+ * 前端 catalog 存量有上千条未译文案，一次性清零不现实，硬失败会让 `i18n:check`
+ * 长期红着从而被忽略。棘轮让存量债务不挡路，但新增未译键会被立刻拦住。
+ *
+ * 低于基线同样报错——否则基线只会单调上漂，翻译推进后不再有约束力，检查就退化成
+ * 了摆设。要求同步下调基线，才能把已完成的翻译成果锁住。
+ */
+export function assertUntranslatedRatchet(
+  counts: Record<string, number>,
+  baseline: Record<string, number>,
+): string[] {
+  const issues: string[] = [];
+  for (const lang of Object.keys(counts).sort()) {
+    const actual = counts[lang];
+    const allowed = baseline[lang] ?? 0;
+    if (actual > allowed) {
+      issues.push(
+        `[untranslated:${lang}] ${actual} 条未译 > 基线 ${allowed}（新增 ${actual - allowed} 条）。` +
+          `请翻译新增的键，不要上调基线。`,
+      );
+    } else if (actual < allowed) {
+      issues.push(
+        `[untranslated:${lang}] ${actual} 条未译 < 基线 ${allowed}——翻译有进展，` +
+          `请把 ${BASELINE_FILE} 里的 ${lang} 下调到 ${actual} 以锁住成果。`,
+      );
+    }
+  }
+  return issues;
+}
+
 /** 把 `clients/web/app/[locale]/(public)/ai/image/page.tsx` 还原成路由模板 `/ai/image`。 */
 export function pageFileToTemplate(file: string): string {
   const rel = file
@@ -146,10 +306,54 @@ export function assertRoutePolicyCoverage(pages: string[], policyKeys: string[])
     .map((t) => `[route-policy] 缺少声明: ${t}`);
 }
 
+/** 读取 API 侧的扁平 YAML 文案表，缺失的语言留空交给 assertAligned 报告。 */
+function loadApiLocales(): Record<string, Record<string, string>> {
+  const byLang: Record<string, Record<string, string>> = {};
+  for (const l of LANGS) {
+    const file = join(API_LOCALE_DIR, `${l}.yaml`);
+    byLang[l] = existsSync(file)
+      ? (loadYaml(readFileSync(file, 'utf8')) as Record<string, string>)
+      : {};
+  }
+  return byLang;
+}
+
+/** 把嵌套的 message 树压平成 `a.b.c -> 字符串值`，用于按值比较。 */
+function flattenValues(tree: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(flattenLeaves(tree))) {
+    if (typeof v === 'string') out[k] = v;
+  }
+  return out;
+}
+
 function main() {
   const issues = assertChunkDirsMatchRuntime();
   const byLang = loadMergedByLang(DIR);
   issues.push(...assertAligned(byLang));
+
+  // 前端文案：占位符一致性 + 未译棘轮。基准语言是 en（DEFAULT_LANGUAGE）。
+  const webValues = Object.fromEntries(
+    LANGS.map((l) => [l, flattenValues(byLang[l])]),
+  ) as Record<string, Record<string, string>>;
+  issues.push(...assertPlaceholdersMatch(webValues, 'en', extractIcuArgs, PLACEHOLDER_EXEMPT));
+
+  const baseline: Record<string, number> = existsSync(BASELINE_FILE)
+    ? JSON.parse(readFileSync(BASELINE_FILE, 'utf8'))
+    : {};
+  issues.push(...assertUntranslatedRatchet(countUntranslated(webValues, 'en'), baseline));
+
+  // API 错误文案：这套是新纳入的，没有存量债务，所以未译一律硬失败——不给棘轮。
+  const apiByLang = loadApiLocales();
+  issues.push(...assertAligned(apiByLang).map((i) => `[api]${i}`));
+  issues.push(...assertPlaceholdersMatch(apiByLang, 'en', extractMustacheArgs).map((i) => `[api]${i}`));
+  for (const [lang, n] of Object.entries(countUntranslated(apiByLang, 'en'))) {
+    if (n > 0) {
+      issues.push(
+        `[api][untranslated:${lang}] ${API_LOCALE_DIR}/${lang}.yaml 有 ${n} 条值与 en.yaml 逐字相同——未翻译。`,
+      );
+    }
+  }
 
   // `packages/i18n/dist/` is gitignored: on a fresh clone before the first
   // `pnpm --filter @autix/i18n build`, it simply doesn't exist yet. That's
@@ -182,7 +386,10 @@ function main() {
     issues.slice(0, 50).forEach((i) => console.error(`- ${i}`));
     process.exit(1);
   }
-  console.log('i18n messages aligned across all languages; route-policy covers all pages.');
+  console.log(
+    'i18n OK — 前端与 API 文案键对齐、占位符一致；API 无未译条目；' +
+      '前端未译数未超基线；route-policy 覆盖全部页面。',
+  );
 }
 
 /**

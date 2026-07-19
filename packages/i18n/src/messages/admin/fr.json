@@ -473,7 +473,7 @@
     "approvalConfirmReject": "Confirmer le rejet",
     "approvalProcessing": "Traitement...",
     "resetPassword": "Réinitialiser le mot de passe",
-    "resetPasswordSent": "E-mail de réinitialisation envoyé"
+    "resetPasswordSent": "E-mail de réinitialisation envoyé à {email}"
   },
   "publish": {
     "drawerEyebrow": "Publier une ressource",
