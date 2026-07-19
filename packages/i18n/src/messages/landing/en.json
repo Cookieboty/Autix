@@ -1186,7 +1186,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "File name",
+        "uploader": "Uploaded by"
       },
       "fit": {
         "toCover": "Fill card",
@@ -1213,7 +1215,9 @@
         "deleteFailed": "Could not delete asset",
         "save": "Save",
         "more": "More",
-        "publish": "Publish"
+        "publish": "Publish",
+        "play": "Play",
+        "pause": "Pause"
       },
       "bulk": {
         "download": "Download",

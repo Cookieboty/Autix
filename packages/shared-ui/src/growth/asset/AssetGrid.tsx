@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Check, Ellipsis, ImageIcon, Minus, Play } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { Check, Ellipsis, ImageIcon, Minus, Pause, Play } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { MaterialAsset, MaterialFolder } from '@autix/shared-store';
 import type { TemplateDensity } from '../generator/generator-studio-helpers';
@@ -79,6 +79,26 @@ function AssetCard({
   const t = useTranslations('publicGrowth.assets');
   const isVideo = asset.type === 'video';
   const isAudio = asset.type === 'audio';
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+
+  /**
+   * 音频试听。必须 stopPropagation + preventDefault：这个按钮浮在整卡的点击热区之上，
+   * 不拦的话点「播放」会冒泡上去打开详情弹窗 —— 音频根本没播。
+   */
+  const toggleAudio = (event: ReactMouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) {
+      void el.play().catch(() => undefined);
+      setAudioPlaying(true);
+    } else {
+      el.pause();
+      setAudioPlaying(false);
+    }
+  };
   /**
    * 图片用缩略图/原图；视频**不能**这样退回 asset.url —— 那是个 .mp4，
    * 塞进 <img> 浏览器解不出来，素材库里的视频至今是一片空白。
@@ -125,10 +145,34 @@ function AssetCard({
             </span>
             <AudioWaveThumb seed={asset.id} bars={24} className="min-h-0 flex-1 py-2" />
             <span className="flex justify-end">
-              <span className="grid size-6 place-items-center rounded-full bg-foreground text-background">
-                <Play className="size-3 translate-x-px fill-current" />
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label={audioPlaying ? t('card.pause') : t('card.play')}
+                onClick={toggleAudio}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleAudio(event as unknown as ReactMouseEvent);
+                  }
+                }}
+                className="z-20 grid size-6 cursor-pointer place-items-center rounded-full bg-foreground text-background transition hover:brightness-90"
+              >
+                {audioPlaying ? (
+                  <Pause className="size-3 fill-current" />
+                ) : (
+                  <Play className="size-3 translate-x-px fill-current" />
+                )}
               </span>
             </span>
+            <audio
+              ref={audioRef}
+              src={asset.url}
+              preload="none"
+              onEnded={() => setAudioPlaying(false)}
+              onPause={() => setAudioPlaying(false)}
+              className="hidden"
+            />
           </span>
         ) : isVideo ? (
           <video

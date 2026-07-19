@@ -863,7 +863,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "ファイル名",
+        "uploader": "アップロード者"
       },
       "fit": {
         "toCover": "Fill card",
@@ -890,7 +892,9 @@
         "deleteFailed": "Could not delete asset",
         "save": "Save",
         "more": "More",
-        "publish": "ギャラリーに公開"
+        "publish": "ギャラリーに公開",
+        "play": "再生",
+        "pause": "一時停止"
       },
       "bulk": {
         "download": "Download",

@@ -26,11 +26,13 @@ export function MediaDetailShell({
   onClose,
   mediaUrl,
   isVideo,
+  isAudio,
   poster,
   mediaAlt,
   author,
   authorSubtitle,
   prompt,
+  promptLabel,
   details,
   footer,
   mediaOverlay,
@@ -40,12 +42,22 @@ export function MediaDetailShell({
   onClose: () => void;
   mediaUrl: string | null;
   isVideo?: boolean;
+  /** 音频：媒体区渲染播放器而不是 <img>/<video>（否则 .mp3 塞进 <img> 是一片空白）。 */
+  isAudio?: boolean;
   poster?: string | null;
   mediaAlt?: string;
   author: { name: string; avatarUrl?: string | null };
   /** 作者名下面那行小字（历史里是「作者」，广场里也是）。 */
   authorSubtitle: string;
   prompt: string;
+  /**
+   * PROMPT 卡的标题。缺省就是「提示词」。
+   *
+   * 存在的理由：素材库里**用户上传**的素材没有提示词，那一栏放的是文件名 ——
+   * 顶着「PROMPT」的标题展示一个文件名是在说谎。调用方可以改标题，
+   * 或者干脆传空 prompt 让整张卡不渲染。
+   */
+  promptLabel?: string;
   details: MediaDetailRow[];
   /** 面板底部动作区。 */
   footer?: ReactNode;
@@ -118,7 +130,12 @@ export function MediaDetailShell({
       <div className="relative flex min-w-0 flex-1 items-center justify-center p-6">
         <div ref={mediaWrapRef} className="relative grid max-h-full place-items-center">
           {mediaUrl ? (
-            isVideo ? (
+            isAudio ? (
+              // 音频没有画面可看：给一个居中的原生播放器，宽度受限以免拉满整屏
+              <div className="w-[min(680px,80vw)] rounded-2xl bg-white/[0.06] p-6">
+                <audio src={mediaUrl} controls className="w-full" />
+              </div>
+            ) : isVideo ? (
               <video
                 src={mediaUrl}
                 poster={poster ?? undefined}
@@ -180,12 +197,13 @@ export function MediaDetailShell({
           </button>
         </header>
 
-        {/* PROMPT */}
+        {/* PROMPT。prompt 为空 = 调用方明确表示「这条没有提示词」，整张卡不渲染 */}
+        {prompt ? (
         <section className="rounded-xl bg-white/[0.04] p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-foreground/42">
               <Sparkles className="size-3.5" />
-              {t('prompt')}
+              {promptLabel ?? t('prompt')}
             </h3>
             <button
               type="button"
@@ -223,6 +241,7 @@ export function MediaDetailShell({
             </button>
           ) : null}
         </section>
+        ) : null}
 
         {/* DETAILS */}
         {details.length > 0 ? (

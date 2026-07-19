@@ -1186,7 +1186,9 @@
         "size": "尺寸",
         "createdAt": "创建时间",
         "download": "下载",
-        "delete": "删除"
+        "delete": "删除",
+        "fileName": "文件名",
+        "uploader": "上传者"
       },
       "fit": {
         "toCover": "铺满卡片",
@@ -1213,7 +1215,9 @@
         "deleteFailed": "删除素材失败",
         "save": "保存",
         "more": "更多",
-        "publish": "发布到广场"
+        "publish": "发布到广场",
+        "play": "播放",
+        "pause": "暂停"
       },
       "bulk": {
         "download": "下载",

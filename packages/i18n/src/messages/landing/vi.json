@@ -863,7 +863,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "Tên tệp",
+        "uploader": "Người tải lên"
       },
       "fit": {
         "toCover": "Fill card",
@@ -890,7 +892,9 @@
         "deleteFailed": "Could not delete asset",
         "save": "Save",
         "more": "More",
-        "publish": "Đăng lên thư viện"
+        "publish": "Đăng lên thư viện",
+        "play": "Phát",
+        "pause": "Tạm dừng"
       },
       "bulk": {
         "download": "Download",

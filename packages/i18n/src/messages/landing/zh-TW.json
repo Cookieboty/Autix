@@ -863,7 +863,9 @@
         "size": "尺寸",
         "createdAt": "建立時間",
         "download": "下載",
-        "delete": "刪除"
+        "delete": "刪除",
+        "fileName": "檔名",
+        "uploader": "上傳者"
       },
       "fit": {
         "toCover": "鋪滿卡片",
@@ -890,7 +892,9 @@
         "deleteFailed": "刪除素材失敗",
         "save": "儲存",
         "more": "更多",
-        "publish": "發布到廣場"
+        "publish": "發布到廣場",
+        "play": "播放",
+        "pause": "暫停"
       },
       "bulk": {
         "download": "下載",

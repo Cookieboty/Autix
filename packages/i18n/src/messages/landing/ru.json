@@ -863,7 +863,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "Имя файла",
+        "uploader": "Загрузил"
       },
       "fit": {
         "toCover": "Fill card",
@@ -890,7 +892,9 @@
         "deleteFailed": "Could not delete asset",
         "save": "Save",
         "more": "More",
-        "publish": "Опубликовать"
+        "publish": "Опубликовать",
+        "play": "Воспроизвести",
+        "pause": "Пауза"
       },
       "bulk": {
         "download": "Download",

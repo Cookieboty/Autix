@@ -37,8 +37,17 @@ export function AssetDetailDialog({
 
   const width = metaString(asset, 'width');
   const height = metaString(asset, 'height');
+  /**
+   * 用户上传的素材没有提示词，title 是**文件名**。顶着「PROMPT」的标题展示文件名
+   * 是在说谎，所以上传素材不渲染那张卡，改把文件名放进 DETAILS 里的「文件名」一行。
+   * 生成素材的 title 本来就是提示词（见 buildGenerationMaterialRows），照旧。
+   */
+  const isGenerated = asset.librarySource === 'GENERATION';
+  // 类型行要认全三种；原来写的是 video ? video : image，音频会被标成「图片」。
+  const typeKey = asset.type === 'video' ? 'video' : asset.type === 'audio' ? 'audio' : 'image';
   const details: MediaDetailRow[] = [
-    { label: t('detail.type'), value: t(`bucket.${asset.type === 'video' ? 'video' : 'image'}`) },
+    { label: t('detail.type'), value: t(`bucket.${typeKey}`) },
+    ...(isGenerated ? [] : [{ label: t('detail.fileName'), value: asset.title }]),
     ...(metaString(asset, 'modelUsed')
       ? [{ label: t('detail.model'), value: metaString(asset, 'modelUsed')! }]
       : []),
@@ -61,11 +70,13 @@ export function AssetDetailDialog({
       onClose={onClose}
       mediaUrl={asset.url}
       isVideo={asset.type === 'video'}
+      isAudio={asset.type === 'audio'}
       poster={asset.thumbnailUrl}
       mediaAlt={asset.title}
       author={{ name: user?.realName || user?.username || '', avatarUrl: user?.avatar }}
-      authorSubtitle={t('detail.author')}
-      prompt={asset.title}
+      authorSubtitle={isGenerated ? t('detail.author') : t('detail.uploader')}
+      // 上传素材传空串 → PROMPT 卡整张不渲染（文件名已挪进 DETAILS）
+      prompt={isGenerated ? asset.title : ''}
       details={details}
       ariaLabel={asset.title}
       footer={
