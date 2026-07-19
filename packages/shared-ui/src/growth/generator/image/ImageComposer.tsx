@@ -28,7 +28,6 @@ import { translateSchemaKey, useSchemaForm } from '../../../pricing';
 import {
   getImageReferenceUploadLimit,
 } from '../../generator-image-presenters';
-import { OfferStrip } from '../parts';
 import type { PublicUploadedReference } from '../generator-studio-helpers';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../ui/tooltip';
 import { ImageModelParamMenu } from './ImageParamMenus';
@@ -334,11 +333,9 @@ export function ImageComposer({
 
   return (
     <div className="pointer-events-auto relative mx-auto w-full max-w-6xl px-4">
-      <OfferStrip
-        label={t('imageOffer')}
-        premium={t('premiumPlans')}
-        className="mx-auto mb-2 min-h-10 max-w-6xl"
-      />
+      {/* 引导付费条幅（OfferStrip）暂时摘掉，原因同 video 侧：无会员门槛（付费用户
+          也会看到），且折扣数字是前端常量、与后端扣费用的 discountFactor 不同源。
+          补齐这两点后再放回来。 */}
       <SpotlightPanel className="growth-panel-shadow mx-auto rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(32,34,37,0.88),rgba(24,26,29,0.92))] p-[22px] backdrop-blur-[32px]">
         <div className="grid items-stretch gap-3 md:grid-cols-[1fr_174px]">
           <div className="min-w-0">

@@ -4,7 +4,7 @@ import { History, LayoutGrid } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAuthStore, useUiStore, type DirectVideoGenerationDto } from '@autix/shared-store';
-import { OfferStrip, StudioDensitySlider } from '../parts';
+import { StudioDensitySlider } from '../parts';
 import { VideoHistoryPanel, type PendingVideoGenerationCard } from './VideoHistoryPanel';
 import { VideoGalleryWall } from './VideoGalleryWall';
 import type { TemplateDensity } from '../generator-studio-helpers';
@@ -106,7 +106,11 @@ export function VideoHowItWorks({
           内层 min-h-full + 卡片 flex-1 —— 内容短时卡片撑到视口底部，内容长时随内容增高。 */}
       <div className="lg:absolute lg:inset-0 lg:overflow-y-auto lg:overscroll-contain">
         <div className="flex flex-col lg:min-h-full lg:pt-12">
-          <OfferStrip label={t('videoOffer')} premium={t('premiumPlans')} />
+          {/* 引导付费条幅（OfferStrip）暂时摘掉：它无条件渲染、不读会员状态，
+              已付费用户也会被劝「Go Unlimited」；且折扣数字是前端常量
+              （discount.ts 的 DISCOUNT_PERCENT），与后端实际扣费用的 discountFactor
+              是两套独立的数，对不上就是标价与实收不符。
+              补上会员门槛 + 折扣改走后端来源后再放回来。 */}
 
           {/* 内容卡片只保留上圆角：下沿贴着视口底部，圆角会露出背景显得断开 */}
           {isAuthenticated && activeTab === 'history' ? (
