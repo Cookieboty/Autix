@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpStatus, Logger } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { randomUUID } from 'crypto';
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
@@ -110,9 +111,10 @@ export class VideoDirectGenerationService {
       input.materials.map((m) => m.role),
     );
     if (routing.maxDurationSeconds != null && limits.durationSeconds > routing.maxDurationSeconds)
-      throw new BadRequestException(
-        `该生成模式最长 ${routing.maxDurationSeconds}s，当前请求 ${limits.durationSeconds}s`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'video.duration_exceeds_mode_limit', {
+        max: routing.maxDurationSeconds,
+        requested: limits.durationSeconds,
+      });
     const preset = routing.preset;
     const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {

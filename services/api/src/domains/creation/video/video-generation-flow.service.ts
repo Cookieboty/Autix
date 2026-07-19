@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpStatus, NotFoundException, Logger } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
@@ -266,9 +267,10 @@ export class VideoGenerationFlowService {
     // Wan 2.7 是一个模型，上游按素材角色分派到 t2v/i2v/ref —— routing 据素材覆盖 preset 与 model ID。
     const routing = resolveVideoRouting(modelConfig.metadata, modelConfig.model, materials.map((m) => m.role));
     if (routing.maxDurationSeconds != null && requestLimits.durationSeconds > routing.maxDurationSeconds)
-      throw new BadRequestException(
-        `该生成模式最长 ${routing.maxDurationSeconds}s，当前请求 ${requestLimits.durationSeconds}s`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'video.duration_exceeds_mode_limit', {
+        max: routing.maxDurationSeconds,
+        requested: requestLimits.durationSeconds,
+      });
     const preset = routing.preset;
     const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
@@ -850,9 +852,10 @@ export class VideoGenerationFlowService {
       storyboardMaterials.map((m) => m.role),
     );
     if (routing.maxDurationSeconds != null && requestLimits.durationSeconds > routing.maxDurationSeconds)
-      throw new BadRequestException(
-        `该生成模式最长 ${routing.maxDurationSeconds}s，当前请求 ${requestLimits.durationSeconds}s`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'video.duration_exceeds_mode_limit', {
+        max: routing.maxDurationSeconds,
+        requested: requestLimits.durationSeconds,
+      });
     const preset = routing.preset;
     const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
