@@ -5,10 +5,11 @@ import { describe, it, expect } from 'vitest';
 import {
   assertAligned,
   assertApiCatalogNonEmpty,
-  assertCjkExceptionRatchet,
+  assertCjkStringLiteralRatchet,
   assertPlaceholdersMatch,
   assertUntranslatedRatchet,
   collectIssues,
+  countCjkStringLiteralsInSource,
   countUntranslated,
   extractIcuArgs,
   extractMustacheArgs,
@@ -235,6 +236,21 @@ describe('collectIssues (main() wiring)', () => {
     const issues = collectIssues(emptyApiByLang);
     expect(issues.some((i) => i.includes('catalog:'))).toBe(true);
   });
+
+  // Finding 2 (Critical): deleting the 4-line block that wires
+  // `assertCjkStringLiteralRatchet` into `collectIssues()` causes zero test
+  // failures on the pure functions and leaves `i18n:check` green, because
+  // nothing exercises the wiring itself — the exact same class of bug as
+  // above. Inject a domain key guaranteed to be absent from the real
+  // baseline file (absent defaults to an allowed count of 0), so a nonzero
+  // injected count must surface as an issue if — and only if — the wiring
+  // is intact. This doesn't require mutating any real domain source file.
+  it('surfaces a cjk-string-literal: issue when the injected count exceeds its (absent-from-baseline) allowance', () => {
+    const issues = collectIssues(undefined, { __wiring_test_probe__: 1 });
+    expect(
+      issues.some((i) => i.includes('cjk-string-literal') && i.includes('__wiring_test_probe__')),
+    ).toBe(true);
+  });
 });
 
 describe('loadApiLocales', () => {
@@ -257,26 +273,107 @@ describe('loadApiLocales', () => {
   });
 });
 
-describe('assertCjkExceptionRatchet', () => {
+describe('assertCjkStringLiteralRatchet', () => {
   it('域内数量等于基线时通过', () => {
-    expect(assertCjkExceptionRatchet({ creation: 181 }, { creation: 181 })).toEqual([]);
+    expect(assertCjkStringLiteralRatchet({ creation: 181 }, { creation: 181 })).toEqual([]);
   });
 
-  it('已归零的域再写中文异常立刻失败', () => {
-    const issues = assertCjkExceptionRatchet({ identity: 2 }, { identity: 0 });
+  it('已归零的域再写中文字符串字面量立刻失败', () => {
+    const issues = assertCjkStringLiteralRatchet({ identity: 2 }, { identity: 0 });
     expect(issues).toHaveLength(1);
     expect(issues[0]).toContain('identity');
     expect(issues[0]).toContain('2');
   });
 
   it('低于基线时要求下调基线，避免棘轮失效', () => {
-    const issues = assertCjkExceptionRatchet({ admin: 0 }, { admin: 8 });
+    const issues = assertCjkStringLiteralRatchet({ admin: 0 }, { admin: 8 });
     expect(issues).toHaveLength(1);
     expect(issues[0]).toContain('0');
   });
 
   it('基线里没有的域按 0 处理', () => {
-    expect(assertCjkExceptionRatchet({ newdomain: 1 }, {})).toHaveLength(1);
-    expect(assertCjkExceptionRatchet({ newdomain: 0 }, {})).toEqual([]);
+    expect(assertCjkStringLiteralRatchet({ newdomain: 1 }, {})).toHaveLength(1);
+    expect(assertCjkStringLiteralRatchet({ newdomain: 0 }, {})).toEqual([]);
+  });
+});
+
+describe('countCjkStringLiteralsInSource', () => {
+  // Finding 1 (Critical): the old counter only matched a CJK literal sitting
+  // immediately after `throw new XException(` / `throw new Error(`, so
+  // Chinese reaching an exception indirectly (via an intermediate variable,
+  // a helper call, or a non-Exception constructor) was invisible — a domain
+  // could be declared "migrated to zero" while still shipping Chinese error
+  // text. The fix counts every Chinese string literal in the source, a
+  // superset of the true set, so reaching 0 is a genuine guarantee. The
+  // crux of that fix is excluding comments — this codebase writes comments
+  // in Chinese pervasively, so counting them would make 0 unreachable.
+
+  it('counts a single-quoted string literal containing CJK', () => {
+    expect(countCjkStringLiteralsInSource("const m = '创建失败';")).toBe(1);
+  });
+
+  it('counts a double-quoted string literal containing CJK', () => {
+    expect(countCjkStringLiteralsInSource('const m = "创建失败";')).toBe(1);
+  });
+
+  it('counts a template literal containing CJK', () => {
+    expect(countCjkStringLiteralsInSource('const m = `创建${x}失败`;')).toBe(1);
+  });
+
+  it('does NOT count CJK inside a // line comment', () => {
+    expect(countCjkStringLiteralsInSource('// 这是注释\nconst m = "ok";')).toBe(0);
+  });
+
+  it('does NOT count CJK inside a /* */ block comment', () => {
+    expect(countCjkStringLiteralsInSource('/* 这是块注释 */\nconst m = "ok";')).toBe(0);
+  });
+
+  it('does NOT count CJK inside a JSDoc comment', () => {
+    const src = `
+/**
+ * 这是一段 JSDoc 说明，不应被计入。
+ * @param x 参数说明
+ */
+function f(x: number) {
+  return x;
+}
+`;
+    expect(countCjkStringLiteralsInSource(src)).toBe(0);
+  });
+
+  it('still counts a real CJK string literal sitting right after a Chinese comment', () => {
+    const src = '// 说明：下面是真正的错误信息\nthrow new Error(\'创建失败\');';
+    expect(countCjkStringLiteralsInSource(src)).toBe(1);
+  });
+
+  it('counts indirect Chinese that never sits directly after `throw new`', () => {
+    // The exact miss the old regex had: message built earlier, thrown later.
+    const src = [
+      "const message = reason ?? '创建 Stripe Checkout 会话失败';",
+      'throw new BadRequestException(message);',
+    ].join('\n');
+    expect(countCjkStringLiteralsInSource(src)).toBe(1);
+  });
+
+  it('counts Chinese passed to a helper call, not just to `new XException(`', () => {
+    const src = "this.handleDeleteError(err, '会员等级不存在');";
+    expect(countCjkStringLiteralsInSource(src)).toBe(1);
+  });
+
+  it('does not let an apostrophe inside a string end the scan early', () => {
+    expect(countCjkStringLiteralsInSource('const m = "it\'s 中文 fine";')).toBe(1);
+  });
+
+  it('does not let an escaped quote inside a string end the scan early', () => {
+    expect(countCjkStringLiteralsInSource("const m = 'it\\'s 中文 fine';")).toBe(1);
+  });
+
+  it('counts multiple distinct CJK literals in the same source', () => {
+    const src = "const a = '第一条';\nconst b = '第二条';";
+    expect(countCjkStringLiteralsInSource(src)).toBe(2);
+  });
+
+  it('does not count a string literal with no CJK', () => {
+    expect(countCjkStringLiteralsInSource("const m = 'no chinese here';")).toBe(0);
   });
 });

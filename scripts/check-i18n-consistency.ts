@@ -32,8 +32,8 @@ const API_LOCALE_DIR = 'services/api/src/domains/platform/i18n/locales';
 /** 前端 catalog 未译条目数的棘轮基线，详见 `assertUntranslatedRatchet`。 */
 const BASELINE_FILE = 'scripts/i18n/untranslated-baseline.json';
 
-/** 各域硬编码中文异常数的棘轮基线，详见 `assertCjkExceptionRatchet`。 */
-const CJK_BASELINE_FILE = 'scripts/i18n/cjk-exception-baseline.json';
+/** 各域中文字符串字面量数的棘轮基线，详见 `assertCjkStringLiteralRatchet`。 */
+const CJK_BASELINE_FILE = 'scripts/i18n/cjk-string-baseline.json';
 
 /** `services/api/src/domains` 下参与棘轮统计的业务域。 */
 const API_DOMAIN_ROOT = 'services/api/src/domains';
@@ -286,43 +286,181 @@ export function assertUntranslatedRatchet(
   return issues;
 }
 
+const CJK_CHAR = /[一-鿿]/;
+
 /**
- * 统计各域仍在硬编码中文的异常抛出点。
+ * 扫描一段 TypeScript 源码，统计其中"包含至少一个中文字符的字符串字面量"个数——
+ * 单引号、双引号、模板字符串各算一次，跳过 `//`、`/* *\/`（含 JSDoc）注释里的中文。
  *
- * 只数抛异常的构造调用，不数普通中文字符串——注释和日志里的中文是本仓库的常态，
- * 一并统计会让基线充满噪声、失去信号。
+ * 为什么不再只匹配 `throw new XException(` / `throw new Error(` 后面紧跟的中文字面量：
+ * 真实代码里中文经常是"先拼进变量、再抛出"或"传给非 Exception 的调用"，例如：
+ *
+ *   const message = reason ?? '创建 Stripe Checkout 会话失败';
+ *   throw new BadRequestException(message);
+ *   this.handleDeleteError(err, '会员等级不存在');
+ *
+ * 旧的正则对这类间接路径视而不见，于是某个域可以被"迁移到 0"而用户仍能看到中文报错。
+ * 新口径改为统计该域全部非 spec `.ts` 源码里的中文字符串字面量——这是真实"会到达用户
+ * 的中文"集合的超集（连日志、纯内部字符串也一并算了进去），但换来单调安全：真的降到
+ * 0 就代表该域源码里不再有任何中文字符串字面量，不会再有漏网之鱼。
+ *
+ * 必须排除注释：本仓库大量用中文写注释/JSDoc，连注释一起数会让基线被噪声淹没、0 永远
+ * 达不到，棘轮直接失去意义——这是本函数实现的重点，因此不用正则而用一个逐字符状态机，
+ * 以便正确处理：转义引号（`'it\'s 中文'`）、字符串内的撇号（`"it's 中文"`）、模板字符串
+ * 里 `${expr}` 内嵌的（可能自带字符串/注释的）代码。
+ *
+ * 已知局限：不处理正则字面量里出现未转义 `//`/`/*` 这种极端写法（本仓库未见），会被
+ * 误判为注释起点；可接受，因为漏检只会让计数偏低，而基线的安全边界只依赖"计数不为负"。
  */
-export function countCjkExceptions(domains: string[]): Record<string, number> {
-  const pattern = /(?:throw new \w*Exception\(|throw new Error\()\s*[`'"][^`'"]*[一-鿿]/g;
+export function countCjkStringLiteralsInSource(source: string): number {
+  let count = 0;
+  let mode: 'code' | 'linecomment' | 'blockcomment' | 'squote' | 'dquote' | 'template' = 'code';
+  let sawCjk = false;
+  // 每个元素对应一层 `${…}` 模板表达式，记录其内部尚未闭合的花括号深度，用来判断
+  // 当前 `}` 是"表达式结束、回到模板文本"还是表达式内部对象字面量自己的 `}`。
+  const templateExprBraceDepth: number[] = [];
+  const n = source.length;
+
+  for (let i = 0; i < n; ) {
+    const c = source[i];
+
+    if (mode === 'linecomment') {
+      if (c === '\n') mode = 'code';
+      i++;
+      continue;
+    }
+
+    if (mode === 'blockcomment') {
+      if (c === '*' && source[i + 1] === '/') {
+        mode = 'code';
+        i += 2;
+        continue;
+      }
+      i++;
+      continue;
+    }
+
+    if (mode === 'squote' || mode === 'dquote') {
+      const quote = mode === 'squote' ? "'" : '"';
+      if (c === '\\') {
+        i += 2; // 跳过转义对：`\'`、`\"`、`\\` 等都不应结束/触发字符串
+        continue;
+      }
+      if (c === quote) {
+        if (sawCjk) count++;
+        mode = 'code';
+        i++;
+        continue;
+      }
+      if (CJK_CHAR.test(c)) sawCjk = true;
+      i++;
+      continue;
+    }
+
+    if (mode === 'template') {
+      if (c === '\\') {
+        i += 2;
+        continue;
+      }
+      if (c === '`') {
+        if (sawCjk) count++;
+        mode = 'code';
+        i++;
+        continue;
+      }
+      if (c === '$' && source[i + 1] === '{') {
+        templateExprBraceDepth.push(1);
+        mode = 'code'; // 进入表达式，按普通代码解析（可能含嵌套字符串/注释/模板）
+        i += 2;
+        continue;
+      }
+      if (CJK_CHAR.test(c)) sawCjk = true;
+      i++;
+      continue;
+    }
+
+    // mode === 'code'
+    if (c === '/' && source[i + 1] === '/') {
+      mode = 'linecomment';
+      i += 2;
+      continue;
+    }
+    if (c === '/' && source[i + 1] === '*') {
+      mode = 'blockcomment';
+      i += 2;
+      continue;
+    }
+    if (c === "'") {
+      mode = 'squote';
+      sawCjk = false;
+      i++;
+      continue;
+    }
+    if (c === '"') {
+      mode = 'dquote';
+      sawCjk = false;
+      i++;
+      continue;
+    }
+    if (c === '`') {
+      mode = 'template';
+      sawCjk = false;
+      i++;
+      continue;
+    }
+    if (templateExprBraceDepth.length > 0) {
+      if (c === '{') {
+        templateExprBraceDepth[templateExprBraceDepth.length - 1]++;
+        i++;
+        continue;
+      }
+      if (c === '}') {
+        const depth = --templateExprBraceDepth[templateExprBraceDepth.length - 1];
+        if (depth === 0) {
+          templateExprBraceDepth.pop();
+          mode = 'template'; // 表达式结束，回到外层模板文本
+        }
+        i++;
+        continue;
+      }
+    }
+    i++;
+  }
+
+  return count;
+}
+
+/** 统计各域全部非 spec `.ts` 源码里的中文字符串字面量数，详见 `countCjkStringLiteralsInSource`。 */
+export function countCjkStringLiterals(domains: string[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const domain of domains) {
     const dir = join(API_DOMAIN_ROOT, domain);
-    counts[domain] = existsSync(dir) ? countInDir(dir, pattern) : 0;
+    counts[domain] = existsSync(dir) ? countInDir(dir) : 0;
   }
   return counts;
 }
 
-function countInDir(dir: string, pattern: RegExp): number {
+function countInDir(dir: string): number {
   let total = 0;
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) {
-      total += countInDir(p, pattern);
+      total += countInDir(p);
       continue;
     }
     if (!name.endsWith('.ts') || name.endsWith('.spec.ts')) continue;
-    total += (readFileSync(p, 'utf8').match(pattern) ?? []).length;
+    total += countCjkStringLiteralsInSource(readFileSync(p, 'utf8'));
   }
   return total;
 }
 
 /**
- * 各域硬编码中文异常数的棘轮：只许降、不许升。
+ * 各域中文字符串字面量数的棘轮：只许降、不许升。
  *
- * 与 `assertUntranslatedRatchet` 同构。已归零的域基线为 0，再写中文异常立刻失败；
- * 未迁移的域保留存量债务但不允许增长。每迁完一个域把基线降到 0。
+ * 与 `assertUntranslatedRatchet` 同构。已归零的域基线为 0，再写中文字符串字面量立刻
+ * 失败；未迁移的域保留存量债务但不允许增长。
  */
-export function assertCjkExceptionRatchet(
+export function assertCjkStringLiteralRatchet(
   counts: Record<string, number>,
   baseline: Record<string, number>,
 ): string[] {
@@ -332,12 +470,14 @@ export function assertCjkExceptionRatchet(
     const allowed = baseline[domain] ?? 0;
     if (actual > allowed) {
       issues.push(
-        `[cjk-exception:${domain}] ${actual} 处硬编码中文异常 > 基线 ${allowed}` +
-          `（新增 ${actual - allowed} 处）。请改用 I18nHttpException + 词条键。`,
+        `[cjk-string-literal:${domain}] ${actual} 处中文字符串字面量 > 基线 ${allowed}` +
+          `（新增 ${actual - allowed} 处）。若新增的中文会到达用户（异常消息、校验提示等），` +
+          `请改用 I18nHttpException + 词条键；确认只是日志/内部字符串的，也请勿因此上调基线——` +
+          `改用非中文标识或挪出该域即可。`,
       );
     } else if (actual < allowed) {
       issues.push(
-        `[cjk-exception:${domain}] ${actual} 处 < 基线 ${allowed}——迁移有进展，` +
+        `[cjk-string-literal:${domain}] ${actual} 处 < 基线 ${allowed}——迁移有进展，` +
           `请把 ${CJK_BASELINE_FILE} 里的 ${domain} 下调到 ${actual} 以锁住成果。`,
       );
     }
@@ -428,9 +568,15 @@ function flattenValues(tree: Record<string, unknown>): Record<string, string> {
  *
  * `apiByLangOverride` 允许测试注入一个空/构造出的 API 词条表，从而不必移动或清空
  * 仓库里真实的 locales 目录就能验证 `assertApiCatalogNonEmpty` 确实被调用到了。
+ *
+ * `cjkCountsOverride` 是同一套防御用在 CJK 字符串字面量棘轮上：注入一个基线里必然
+ * 不存在的域名、且计数非零，可以在不改动任何真实域源码的前提下验证
+ * `assertCjkStringLiteralRatchet` 确实被调用到了——同样的接线遗漏此前发生过多次
+ * （详见文件底部 `isDirectRun` 的注释），必须对"接线本身"写回归测试。
  */
 export function collectIssues(
   apiByLangOverride?: Record<string, Record<string, string>>,
+  cjkCountsOverride?: Record<string, number>,
 ): string[] {
   const issues = assertChunkDirsMatchRuntime();
   const byLang = loadMergedByLang(DIR);
@@ -483,13 +629,12 @@ export function collectIssues(
     );
   }
 
-  // 各域硬编码中文异常的棘轮。
+  // 各域中文字符串字面量数的棘轮。
   const cjkBaseline: Record<string, number> = existsSync(CJK_BASELINE_FILE)
     ? JSON.parse(readFileSync(CJK_BASELINE_FILE, 'utf8'))
     : {};
-  issues.push(
-    ...assertCjkExceptionRatchet(countCjkExceptions(Object.keys(cjkBaseline)), cjkBaseline),
-  );
+  const cjkCounts = cjkCountsOverride ?? countCjkStringLiterals(Object.keys(cjkBaseline));
+  issues.push(...assertCjkStringLiteralRatchet(cjkCounts, cjkBaseline));
 
   const pages = collectPages(APP_LOCALE_DIR);
   issues.push(...assertRoutePolicyCoverage(pages, Object.keys(ROUTE_POLICY)));
