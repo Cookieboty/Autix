@@ -2155,6 +2155,12 @@ model gallery_posts {
   @@index([imageTemplateId])
   @@index([videoTemplateId])
   @@index([mediaMigrated, mediaMigrationAttempts])
+  // 另有两条 Prisma schema 无法表达的 partial unique index，只存在于 SQL 迁移里：
+  //   gallery_posts_image_generation_active_uniq
+  //   gallery_posts_video_generation_active_uniq
+  // （见 migrations/20260719120000_gallery_generation_active_uniq）
+  // 它们保证「一次生成至多一条活着的广场帖」。image 那条曾在迁移压平时被静默丢掉，
+  // 去重退化成可并发击穿的读后写——压平/重建 schema 时务必把它们带上。
 }
 
 model gallery_comments {

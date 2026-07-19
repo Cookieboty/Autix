@@ -231,6 +231,17 @@ export class GalleryService {
       if (existing) return existing;
     }
 
+    // 视频同理。此前缺这一支不是疏忽也无害——videoGenerationId 指向的是那张永不产出的
+    // 第一代表，视频投稿根本走不到落库。现在它指向 clip 表、投稿真的会成功，
+    // 缺了就意味着同一次视频生成能在广场里刷出任意多条一模一样的帖子。
+    if (dto.videoGenerationId) {
+      const existing = await this.repo.findActivePostByVideoGenerationId(
+        dto.videoGenerationId,
+        authorId,
+      );
+      if (existing) return existing;
+    }
+
     const snapshot = await this.buildGenerationSnapshot(
       generation,
       authorId,

@@ -117,7 +117,19 @@ function makeService(options: {
         userId: 'user-1',
         status: VideoGenStatus.pending,
       })),
-      update: vi.fn(),
+      // Prisma 的 update 命中返回整行、未命中抛 P2025，绝不会返回 undefined。
+      // 之前这里返回 undefined，逼得仓储层写了个永不为假的 `if (generation)` 守卫；
+      // 完成路径要拿 userId/resolvedPrompt/model/createdAt 落素材库，mock 必须还原真实形状。
+      update: vi.fn(async (args: any) => ({
+        id: args.where.id,
+        clipId: 'clip-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+        model: 'seedance-2-0-fast',
+        resolvedPrompt: 'a cat surfing',
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        ...args.data,
+      })),
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       findMany: vi.fn(async (): Promise<any[]> => []),

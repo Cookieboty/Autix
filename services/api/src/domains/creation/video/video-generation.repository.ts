@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   MessageRole,
   VideoClipStatus,
@@ -11,6 +11,8 @@ import { buildGenerationMaterialRows } from '../materials/generation-library';
 
 @Injectable()
 export class VideoGenerationRepository {
+  private readonly logger = new Logger(VideoGenerationRepository.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   findActiveProviderGenerations(limit = 50) {
@@ -191,38 +193,46 @@ export class VideoGenerationRepository {
 
   /**
    * 完成的生成视频同步进素材库，让 /asset 与素材选择面板能聚合到生成内容。
-   * 三个完成入口（直连 / 分镜 / 项目）共用；必须在各自的完成事务内调用 ——
-   * 生成记录与其素材要么一起可见、要么都不落库，避免素材库出现悬挂行。
+   * 三个完成入口（直连 / 分镜 / 项目）共用。
+   *
+   * **刻意不在完成事务内调用**：素材同步只是派生视图，而同一事务里还有 confirmHold
+   * （真实扣费确认）与生成状态落库。放进去意味着素材写入的任何失败——唯一索引冲突之外的
+   * 约束错、连接抖动——都会把已确认的扣费和已完成的生成一起回滚，把「视频生成好了」
+   * 变成「视频没了钱也退了」，用可有可无的副产品绑架了关键路径。
+   * 因此改为事务提交后单独写，失败只记日志：素材缺失可由回填脚本补，扣费回滚不能。
    *
    * skipDuplicates 配合 partial unique index 保证幂等：回调重投、回填重跑都不会重复。
    */
-  private async persistGeneratedVideoAsset(
-    tx: Prisma.TransactionClient,
-    input: {
-      userId: string;
-      generationId: string;
-      videoUrl: string;
-      lastFrameUrl: string | null;
-      durationSec: number | null;
-      prompt: string;
-      model: string;
-      createdAt: Date;
-    },
-  ) {
-    await tx.material_assets.createMany({
-      data: buildGenerationMaterialRows({
-        userId: input.userId,
-        generationId: input.generationId,
-        urls: [input.videoUrl],
-        prompt: input.prompt,
-        kind: 'video',
-        // 封面走末帧：视频没有自带缩略图，素材库/选择面板拿它当 poster
-        thumbnailUrl: input.lastFrameUrl,
-        createdAt: input.createdAt,
-        metadata: { modelUsed: input.model, durationSec: input.durationSec },
-      }),
-      skipDuplicates: true,
-    });
+  private async persistGeneratedVideoAsset(input: {
+    userId: string;
+    generationId: string;
+    videoUrl: string;
+    lastFrameUrl: string | null;
+    durationSec: number | null;
+    prompt: string;
+    model: string;
+    createdAt: Date;
+  }) {
+    try {
+      await this.prisma.material_assets.createMany({
+        data: buildGenerationMaterialRows({
+          userId: input.userId,
+          generationId: input.generationId,
+          urls: [input.videoUrl],
+          prompt: input.prompt,
+          kind: 'video',
+          // 封面走末帧：视频没有自带缩略图，素材库/选择面板拿它当 poster
+          thumbnailUrl: input.lastFrameUrl,
+          createdAt: input.createdAt,
+          metadata: { modelUsed: input.model, durationSec: input.durationSec },
+        }),
+        skipDuplicates: true,
+      });
+    } catch (error) {
+      this.logger.error(
+        `生成视频同步素材库失败 generation=${input.generationId}: ${(error as Error).message}`,
+      );
+    }
   }
 
   async markGenerationCompletedAndConfirmHold(
@@ -237,6 +247,7 @@ export class VideoGenerationRepository {
     confirmHold: (tx: Prisma.TransactionClient) => Promise<{ userId: string }>,
   ): Promise<string | null> {
     let confirmedUserId: string | null = null;
+    let pendingAsset: Parameters<typeof this.persistGeneratedVideoAsset>[0] | null = null;
     await this.prisma.$transaction(async (tx) => {
       const confirmation = await confirmHold(tx);
       confirmedUserId = confirmation.userId;
@@ -254,26 +265,27 @@ export class VideoGenerationRepository {
         },
       });
 
-      // generation 理论上必然有值（update 命中才走到这里），但完成回调是外部触发的关键路径：
-      // 落库失败不该把整笔生成连同扣费确认一起回滚，故缺字段时跳过而非抛错。
-      if (generation) {
-        await this.persistGeneratedVideoAsset(tx, {
-          userId: confirmation.userId,
-          generationId: input.generationId,
-          videoUrl: input.videoUrl,
-          lastFrameUrl: input.lastFrameUrl,
-          durationSec: input.durationSec,
-          prompt: generation.resolvedPrompt,
-          model: generation.model,
-          createdAt: generation.createdAt,
-        });
-      }
+      // 素材同步挪到事务外（见 persistGeneratedVideoAsset 注释）：这里只留取数据。
+      // userId 取生成记录本身而非 confirmation——素材归属该跟着生成走，
+      // 而不是跟着谁付的款。
+      pendingAsset = {
+        userId: generation.userId,
+        generationId: input.generationId,
+        videoUrl: input.videoUrl,
+        lastFrameUrl: input.lastFrameUrl,
+        durationSec: input.durationSec,
+        prompt: generation.resolvedPrompt,
+        model: generation.model,
+        createdAt: generation.createdAt,
+      };
 
       await tx.video_clips.update({
         where: { id: input.clipId },
         data: { status: VideoClipStatus.completed },
       });
     });
+    // 事务已提交：扣费确认与生成状态已经落定，素材同步失败不再影响它们。
+    if (pendingAsset) await this.persistGeneratedVideoAsset(pendingAsset);
     return confirmedUserId;
   }
 
@@ -289,6 +301,7 @@ export class VideoGenerationRepository {
     confirmHold: (tx: Prisma.TransactionClient) => Promise<{ userId: string }>,
   ): Promise<string | null> {
     let confirmedUserId: string | null = null;
+    let pendingAsset: Parameters<typeof this.persistGeneratedVideoAsset>[0] | null = null;
     await this.prisma.$transaction(async (tx) => {
       const confirmation = await confirmHold(tx);
       confirmedUserId = confirmation.userId;
@@ -306,20 +319,19 @@ export class VideoGenerationRepository {
         },
       });
 
-      // generation 理论上必然有值（update 命中才走到这里），但完成回调是外部触发的关键路径：
-      // 落库失败不该把整笔生成连同扣费确认一起回滚，故缺字段时跳过而非抛错。
-      if (generation) {
-        await this.persistGeneratedVideoAsset(tx, {
-          userId: confirmation.userId,
-          generationId: input.generationId,
-          videoUrl: input.videoUrl,
-          lastFrameUrl: input.lastFrameUrl,
-          durationSec: input.durationSec,
-          prompt: generation.resolvedPrompt,
-          model: generation.model,
-          createdAt: generation.createdAt,
-        });
-      }
+      // 素材同步挪到事务外（见 persistGeneratedVideoAsset 注释）：这里只留取数据。
+      // userId 取生成记录本身而非 confirmation——素材归属该跟着生成走，
+      // 而不是跟着谁付的款。
+      pendingAsset = {
+        userId: generation.userId,
+        generationId: input.generationId,
+        videoUrl: input.videoUrl,
+        lastFrameUrl: input.lastFrameUrl,
+        durationSec: input.durationSec,
+        prompt: generation.resolvedPrompt,
+        model: generation.model,
+        createdAt: generation.createdAt,
+      };
 
       await tx.video_clips.updateMany({
         where: { projectId: input.projectId },
@@ -331,6 +343,8 @@ export class VideoGenerationRepository {
         data: { status: VideoProjectStatus.completed },
       });
     });
+    // 事务已提交：扣费确认与生成状态已经落定，素材同步失败不再影响它们。
+    if (pendingAsset) await this.persistGeneratedVideoAsset(pendingAsset);
     return confirmedUserId;
   }
 
@@ -538,6 +552,7 @@ export class VideoGenerationRepository {
     confirmHold: (tx: Prisma.TransactionClient) => Promise<{ userId: string }>,
   ): Promise<string | null> {
     let confirmedUserId: string | null = null;
+    let pendingAsset: Parameters<typeof this.persistGeneratedVideoAsset>[0] | null = null;
     await this.prisma.$transaction(async (tx) => {
       const confirmation = await confirmHold(tx);
       confirmedUserId = confirmation.userId;
@@ -555,21 +570,22 @@ export class VideoGenerationRepository {
         },
       });
 
-      // generation 理论上必然有值（update 命中才走到这里），但完成回调是外部触发的关键路径：
-      // 落库失败不该把整笔生成连同扣费确认一起回滚，故缺字段时跳过而非抛错。
-      if (generation) {
-        await this.persistGeneratedVideoAsset(tx, {
-          userId: confirmation.userId,
-          generationId: input.generationId,
-          videoUrl: input.videoUrl,
-          lastFrameUrl: input.lastFrameUrl,
-          durationSec: input.durationSec,
-          prompt: generation.resolvedPrompt,
-          model: generation.model,
-          createdAt: generation.createdAt,
-        });
-      }
+      // 素材同步挪到事务外（见 persistGeneratedVideoAsset 注释）：这里只留取数据。
+      // userId 取生成记录本身而非 confirmation——素材归属该跟着生成走，
+      // 而不是跟着谁付的款。
+      pendingAsset = {
+        userId: generation.userId,
+        generationId: input.generationId,
+        videoUrl: input.videoUrl,
+        lastFrameUrl: input.lastFrameUrl,
+        durationSec: input.durationSec,
+        prompt: generation.resolvedPrompt,
+        model: generation.model,
+        createdAt: generation.createdAt,
+      };
     });
+    // 事务已提交：扣费确认与生成状态已经落定，素材同步失败不再影响它们。
+    if (pendingAsset) await this.persistGeneratedVideoAsset(pendingAsset);
     return confirmedUserId;
   }
 

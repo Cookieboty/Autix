@@ -76,6 +76,18 @@ export class GalleryRepository {
     });
   }
 
+  /** 同上，按视频生成 id 查活帖（规则逐字一致，见 findActivePostByImageGenerationId）。 */
+  findActivePostByVideoGenerationId(videoGenerationId: string, authorId: string) {
+    return this.prisma.gallery_posts.findFirst({
+      where: {
+        videoGenerationId,
+        authorId,
+        status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
+      },
+      select: { id: true, status: true },
+    });
+  }
+
   /**
    * 按一组来源生成记录批量查活帖——与 findActivePostByImageGenerationId 同一条规则
    * （status NOT IN (REMOVED, DRAFT)），一次 findMany，供 workbench history 整页回传
