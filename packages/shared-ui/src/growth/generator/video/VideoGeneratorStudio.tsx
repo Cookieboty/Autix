@@ -14,11 +14,11 @@ import {
   type ModelConfigItem,
 } from '@autix/shared-store';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
-import type { PublicGrowthMediaItem } from '../../types';
 import { VideoSidebar } from './VideoSidebar';
 import { VideoHowItWorks } from './VideoHowItWorks';
 import type { PublicVideoGenerationPayload } from './public-video-generation';
 import type { PendingVideoGenerationCard } from './VideoHistoryPanel';
+import { usePathname, useRouter, useSearchParams } from '../../../navigation';
 
 /** 轮询终态：completed/failed/expired 都收敛为「结束」，非 completed 的按失败处理。 */
 const TERMINAL_VIDEO_STATUSES = new Set(['completed', 'failed', 'expired']);
@@ -29,7 +29,6 @@ const VIDEO_POLL_MAX_ATTEMPTS = 120;
 const VIDEO_POLL_INTERVAL_MS = 3000;
 
 export function VideoGeneratorStudio({
-  items,
   initialModel,
   videoModels,
   selectedModel,
@@ -41,7 +40,6 @@ export function VideoGeneratorStudio({
   pricingContext,
   onModelChange,
 }: {
-  items: PublicGrowthMediaItem[];
   initialModel?: string | null;
   videoModels: ModelConfigItem[];
   selectedModel: ModelConfigItem | null;
@@ -54,7 +52,26 @@ export function VideoGeneratorStudio({
   onModelChange: (modelId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const [tab, setTab] = useState<'history' | 'howItWorks'>('howItWorks');
+  // tab 存进 URL，刷新/分享都能保持；默认 history。
+  // 用 replace 而非 push：切 tab 不该在浏览器历史里堆一堆条目，返回键应回到上一个页面。
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const tab: 'history' | 'gallery' = searchParams.get('tab') === 'gallery' ? 'gallery' : 'history';
+  const setTab = useCallback(
+    (next: 'history' | 'gallery') => {
+      const params = new URLSearchParams(searchParams.toString());
+      // history 是默认值，不写进 URL，保持地址干净
+      if (next === 'gallery') params.set('tab', 'gallery');
+      else params.delete('tab');
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams],
+  );
+  // 素材面板的挂载宿主（右栏容器）。用 state 而非 ref：ref 变化不触发重渲染，
+  // portal 目标拿不到就永远渲染不出来。
+  const [assetPanelHost, setAssetPanelHost] = useState<HTMLDivElement | null>(null);
   const [generating, setGenerating] = useState(false);
   const [pendingGeneration, setPendingGeneration] = useState<PendingVideoGenerationCard | null>(null);
   const [textModels, setTextModels] = useState<ModelConfigItem[]>([]);
@@ -242,15 +259,17 @@ export function VideoGeneratorStudio({
     }
   };
 
+  // lg 起吃满滚动容器高度：右栏据此做「自身滚动 + 顶栏悬浮」，外层滚动条不再出现
   return (
-    <div className="relative min-h-[calc(100svh-104px)]">
+    <div className="relative min-h-[calc(100svh-104px)] lg:h-full lg:min-h-0">
       {/* 背景由 PublicGeneratorStudioView 的全屏固定底层统一提供，此处不再自带背景，避免滑动时错位漏底 */}
-      <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-3 px-4 py-3 lg:flex-row lg:px-6">
-        {/* Keep the original DOM (form first, display second) so the display stays
-            a direct flex child. Only flip the desktop visual order: form → right,
-            display → left. Mobile keeps the form on top (source order). */}
-        <div className="lg:order-2 lg:w-[320px] lg:shrink-0">
+      {/* 与导航核心内容同宽：max-w-[1920px] + px-3/md:px-5。
+          只留上内边距：右栏内容卡片要一直贴到视口底部，有下内边距就会露出一条缝。 */}
+      <div className="relative z-10 mx-auto flex max-w-[1920px] flex-col gap-4 px-3 pb-3 pt-3 md:px-5 lg:h-full lg:pb-0 lg:flex-row">
+        {/* 编辑区在左、引导/历史区在右；移动端编辑区在上（同 DOM 顺序） */}
+        <div className="lg:w-[320px] lg:shrink-0">
           <VideoSidebar
+            assetPanelHost={assetPanelHost}
             initialModel={initialModel}
             videoModels={videoModels}
             selectedModel={selectedModel}
@@ -271,8 +290,9 @@ export function VideoGeneratorStudio({
             onOptimizePrompt={handleOptimizePrompt}
           />
         </div>
+        {/* 右栏包一层定位容器：素材面板 portal 到这里，正好覆盖右侧内容区 */}
+        <div ref={setAssetPanelHost} className="relative min-w-0 flex-1 lg:h-full">
         <VideoHowItWorks
-          items={items}
           activeTab={tab}
           pendingGeneration={pendingGeneration}
           onTabChange={setTab}
@@ -280,6 +300,7 @@ export function VideoGeneratorStudio({
           historyLoading={historyLoading}
           onDeleteHistory={handleDeleteHistory}
         />
+        </div>
       </div>
     </div>
   );

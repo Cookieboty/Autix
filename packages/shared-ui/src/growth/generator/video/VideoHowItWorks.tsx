@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Box, Film, History, Upload, Video, WandSparkles, X } from 'lucide-react';
+import { Film, History, LayoutGrid, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuthStore, useUiStore, type DirectVideoGenerationDto } from '@autix/shared-store';
-import { SpotlightPanel } from '../../GrowthInteractions';
-import { MediaThumb } from '../../MediaBlocks';
-import type { PublicGrowthMediaItem } from '../../types';
-import { OfferStrip } from '../parts';
+import { OfferStrip, StudioDensitySlider } from '../parts';
 import { VideoHistoryPanel, type PendingVideoGenerationCard } from './VideoHistoryPanel';
+import { VideoGalleryWall } from './VideoGalleryWall';
+import type { TemplateDensity } from '../generator-studio-helpers';
+import { useGalleryFeedController } from '@autix/shared-store';
 
 // ---------------------------------------------------------------------------
 // Preview Dialog
@@ -92,7 +92,6 @@ function VideoPreviewDialog({
 // ---------------------------------------------------------------------------
 
 export function VideoHowItWorks({
-  items,
   activeTab,
   pendingGeneration,
   onTabChange,
@@ -100,11 +99,9 @@ export function VideoHowItWorks({
   historyLoading,
   onDeleteHistory,
 }: {
-  /** "如何使用"介绍卡片的示例素材——与下方 historyItems（扁平生成历史）无关，勿混淆同名。 */
-  items: PublicGrowthMediaItem[];
-  activeTab: 'history' | 'howItWorks';
+  activeTab: 'history' | 'gallery';
   pendingGeneration?: PendingVideoGenerationCard | null;
-  onTabChange: (tab: 'history' | 'howItWorks') => void;
+  onTabChange: (tab: 'history' | 'gallery') => void;
   historyItems: DirectVideoGenerationDto[];
   historyLoading?: boolean;
   onDeleteHistory: (id: string) => Promise<void>;
@@ -114,43 +111,31 @@ export function VideoHowItWorks({
   const openAuthModal = useUiStore((s) => s.openAuthModal);
 
   const [previewItem, setPreviewItem] = useState<DirectVideoGenerationDto | null>(null);
+  // 卡片密度只在会话内有效（与 image studio 一致，不做持久化）
+  const [density, setDensity] = useState<TemplateDensity>('normal');
+  // 视频广场直接复用站内公开 feed，传 'VIDEO' 分流
+  const {
+    items: galleryItems,
+    loading: galleryLoading,
+    loadingMore: galleryLoadingMore,
+    hasMore: galleryHasMore,
+    loadMore: galleryLoadMore,
+  } = useGalleryFeedController('VIDEO');
 
-  const cards = [
-    {
-      title: t('addImage'),
-      body: t('addImageBody'),
-      item: items[0],
-      label: t('uploadImage'),
-      icon: Upload,
-    },
-    {
-      title: t('chooseTemplate'),
-      body: t('chooseTemplateBody'),
-      item: items[1],
-      label: t('chooseTemplate'),
-      icon: WandSparkles,
-    },
-    {
-      title: t('getVideo'),
-      body: t('getVideoBody'),
-      item: items[2],
-      label: t('getVideo'),
-      icon: Video,
-    },
-  ];
-
+  // 右栏不加上下内边距：与左侧 aside 一起贴容器的 py-3，保证两栏顶部对齐
   return (
-    <main className="min-w-0 flex-1 px-3 pb-2 pt-2 lg:order-1 lg:px-4">
-      {/* Tab Toggle */}
-      <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
-        <div className="inline-flex rounded-[11px] border border-border bg-secondary p-1">
+    <main className="relative min-w-0 lg:h-full">
+      {/* Tab Toggle。lg 起脱离文档流浮在滚动区之上，滚动时固定在顶部；
+          容器本身 pointer-events-none，只让两个子块可点，避免挡住下方内容的滚轮与点击。 */}
+      <div className="z-30 mb-2.5 flex flex-wrap items-center justify-between gap-2 lg:pointer-events-none lg:absolute lg:inset-x-0 lg:top-0 lg:mb-0">
+        <div className="growth-panel pointer-events-auto inline-flex rounded-[11px] border p-1">
           {/* History tab — disabled when not authenticated */}
           {isAuthenticated ? (
             <button
               type="button"
               onClick={() => onTabChange('history')}
               className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${activeTab === 'history'
-                ? 'bg-secondary text-foreground'
+                ? 'growth-panel-item text-foreground'
                 : 'text-foreground/42 hover:text-foreground/76'
                 }`}
             >
@@ -172,72 +157,55 @@ export function VideoHowItWorks({
           {/* How it works tab */}
           <button
             type="button"
-            onClick={() => onTabChange('howItWorks')}
-            className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${activeTab === 'howItWorks'
-              ? 'bg-secondary text-foreground'
+            onClick={() => onTabChange('gallery')}
+            className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${activeTab === 'gallery'
+              ? 'growth-panel-item text-foreground'
               : 'text-foreground/42 hover:text-foreground/76'
               }`}
           >
-            <Box className="size-3.5" />
-            {t('howItWorks')}
+            <LayoutGrid className="size-3.5" />
+            {t('gallery')}
           </button>
+        </div>
+        {/* 两个 tab 都支持缩放：History 与 Gallery 同样按密度决定列数 */}
+        <div className="pointer-events-auto">
+          <StudioDensitySlider label={t('density')} value={density} onChange={setDensity} />
         </div>
       </div>
 
-      <OfferStrip label={t('videoOffer')} premium={t('premiumPlans')} />
+      {/* 滚动区：lg 起铺满右栏、自身滚动，顶部留出悬浮 tab 的高度。
+          内层 min-h-full + 卡片 flex-1 —— 内容短时卡片撑到视口底部，内容长时随内容增高。 */}
+      <div className="lg:absolute lg:inset-0 lg:overflow-y-auto lg:overscroll-contain">
+        <div className="flex flex-col lg:min-h-full lg:pt-12">
+          <OfferStrip label={t('videoOffer')} premium={t('premiumPlans')} />
 
-      {/* History panel */}
-      {isAuthenticated && activeTab === 'history' ? (
-        <div className="mt-2 rounded-[13px] border border-border bg-card p-4 shadow-xl md:p-4">
-          <VideoHistoryPanel
-            items={historyItems}
-            loading={historyLoading}
-            pending={pendingGeneration}
-            onSelectItem={setPreviewItem}
-            onDelete={onDeleteHistory}
-          />
+          {/* 内容卡片只保留上圆角：下沿贴着视口底部，圆角会露出背景显得断开 */}
+          {isAuthenticated && activeTab === 'history' ? (
+            <div className="growth-panel mt-2.5 rounded-t-[18px] border border-b-0 p-4 shadow-xl md:p-4 lg:flex-1">
+              <VideoHistoryPanel
+                items={historyItems}
+                loading={historyLoading}
+                pending={pendingGeneration}
+                density={density}
+                onSelectItem={setPreviewItem}
+                onDelete={onDeleteHistory}
+              />
+            </div>
+          ) : (
+            /* Gallery：视频广场 */
+            <div className="growth-panel mt-2.5 rounded-t-[18px] border border-b-0 p-3 shadow-xl md:p-4 lg:flex-1">
+              <VideoGalleryWall
+                items={galleryItems}
+                loading={galleryLoading}
+                loadingMore={galleryLoadingMore}
+                hasMore={galleryHasMore}
+                density={density}
+                onLoadMore={galleryLoadMore}
+              />
+            </div>
+          )}
         </div>
-      ) : (
-        /* How it works panel */
-        <SpotlightPanel className="mt-2 rounded-[13px] border border-border bg-card p-4 shadow-xl md:p-4">
-          <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-14" />
-          <div className="mb-3">
-            <h1 className="text-3xl font-black uppercase leading-none md:text-[40px]">
-              {t('videoHeroTitle')}
-            </h1>
-            <p className="mt-1.5 max-w-4xl text-xs font-semibold leading-5 text-foreground/42 md:text-sm">
-              {t('videoHeroDescription')}
-            </p>
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-3">
-            {cards.map((card, index) => {
-              const Icon = card.icon;
-              return (
-                <button key={card.title} type="button" className="group block w-full text-left">
-                  <div className="growth-generator-video-card relative aspect-[16/10.4] overflow-hidden rounded-[12px] border border-border bg-background">
-                    {card.item ? (
-                      <MediaThumb item={card.item} eager={index === 0} autoPlay={index === 0} className="opacity-82 transition duration-700 group-hover:scale-[1.04]" />
-                    ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-b from-background/10 to-background/60" />
-                    <div className="absolute inset-7 rounded-[10px] border border-dashed border-border bg-background/12" />
-                    <div className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[11px] border border-input bg-background/45 text-foreground backdrop-blur">
-                      <Icon className="size-6" />
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 p-3">
-                      <span className="inline-flex rounded-[8px] bg-growth-accent px-2 py-1 text-[10px] font-black uppercase text-background">
-                        {card.label}
-                      </span>
-                    </div>
-                  </div>
-                  <h2 className="mt-2.5 text-lg font-black uppercase">{card.title}</h2>
-                  <p className="mt-1 text-xs font-medium leading-5 text-foreground/45">{card.body}</p>
-                </button>
-              );
-            })}
-          </div>
-        </SpotlightPanel>
-      )}
+      </div>
 
       {/* Preview dialog */}
       <VideoPreviewDialog

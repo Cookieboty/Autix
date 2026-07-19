@@ -5,6 +5,8 @@ import { Clock3, Film, Image as ImageIcon, Loader2, PlayCircle, Sparkles, Trash2
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import type { DirectVideoGenerationDto } from '@autix/shared-store';
+import type { TemplateDensity } from '../generator-studio-helpers';
+import { VideoEmptyShowcase } from './VideoEmptyShowcase';
 
 export type PendingVideoGenerationCard = {
   id: string;
@@ -14,10 +16,21 @@ export type PendingVideoGenerationCard = {
   coverUrl?: string | null;
 };
 
+/** 每档密度下的列数，与右上角滑块联动（Gallery 用同一套档位） */
+const DENSITY_GRID: Record<TemplateDensity, string> = {
+  xrelaxed: 'grid-cols-1 sm:grid-cols-2',
+  relaxed: 'grid-cols-2 xl:grid-cols-3',
+  normal: 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4',
+  dense: 'grid-cols-3 sm:grid-cols-4 xl:grid-cols-5',
+  xdense: 'grid-cols-3 sm:grid-cols-5 xl:grid-cols-6',
+};
+
 interface VideoHistoryPanelProps {
   items: DirectVideoGenerationDto[];
   loading?: boolean;
   pending?: PendingVideoGenerationCard | null;
+  /** 卡片密度，来自右上角滑块 */
+  density: TemplateDensity;
   onSelectItem: (item: DirectVideoGenerationDto) => void;
   /** 删除一条直连生成记录；进行中的记录服务端会拒绝（409），由调用方 toast 展示原因。 */
   onDelete: (id: string) => Promise<void>;
@@ -52,7 +65,7 @@ function formatDate(value: string) {
   }
 }
 
-export function VideoHistoryPanel({ items, loading, pending, onSelectItem, onDelete }: VideoHistoryPanelProps) {
+export function VideoHistoryPanel({ items, loading, pending, density, onSelectItem, onDelete }: VideoHistoryPanelProps) {
   const t = useTranslations('publicGrowth.generator.studio');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -75,7 +88,7 @@ export function VideoHistoryPanel({ items, loading, pending, onSelectItem, onDel
 
   if (loading && items.length === 0 && !pending) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="grid min-h-[46vh] place-items-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -83,23 +96,15 @@ export function VideoHistoryPanel({ items, loading, pending, onSelectItem, onDel
 
   if (items.length === 0 && !pending) {
     return (
-      <div className="growth-flow-border relative overflow-hidden rounded-[14px] border border-dashed border-border bg-secondary p-8 text-center">
-        <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-20" />
-        <div className="relative mx-auto grid size-12 place-items-center rounded-full border border-border bg-card text-foreground/48">
-          <Film className="size-5" />
-        </div>
-        <h2 className="relative mt-3 text-sm font-black uppercase text-foreground">
-          {t('emptyVideoHistory')}
-        </h2>
-        <p className="relative mx-auto mt-2 max-w-sm text-xs font-semibold leading-5 text-foreground/44">
-          {t('emptyVideoHistoryHint')}
-        </p>
-      </div>
+      <VideoEmptyShowcase
+        title={t('emptyVideoHistory')}
+        description={t('emptyVideoHistoryHint')}
+      />
     );
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div className={`grid gap-3 ${DENSITY_GRID[density]}`}>
       {pending ? <ProcessingVideoCard title={pending.title} prompt={pending.prompt} model={pending.model} coverUrl={pending.coverUrl ?? null} /> : null}
       {items.map((item) => {
         const cover = getItemCover(item);
