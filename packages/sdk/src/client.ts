@@ -254,6 +254,13 @@ export interface ModelConfigItem {
   isDefault: boolean;
   capabilities: string[];
   visibility: string;
+  /**
+   * 该模型的参数 schema。`/api/models/public/available` 对**每个**模型都整行返回，
+   * 所以模型列表里就能读到分辨率枚举 / 时长范围 / 是否支持音频，无需再逐个请求。
+   * （此前类型里漏了，前端误以为只有选中模型才有 schema。）
+   */
+  paramsSchema?: ParamsSchema | null;
+  schemaVersion?: number;
   baseUrl?: string | null;
   apiKey?: string | null;
   allowedMembershipLevels?: Array<{
@@ -425,6 +432,8 @@ export type MaterialSourceState = 'available' | 'unpublished' | 'blocked' | 'mis
 export interface MaterialCounts {
   all: number;
   favorites: number;
+  /** 用户上传（librarySource='UPLOAD'） */
+  uploads: number;
   image: number;
   video: number;
   audio: number;
