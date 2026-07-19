@@ -162,9 +162,13 @@ export function VideoGeneratorStudio({
     }
   }, [historyItems, isAuthenticated]);
 
-  const handleDeleteHistory = async (id: string) => {
-    await publicGeneratorActions.deleteVideoHistory(id);
-    await reloadHistory();
+  /**
+   * 历史「Recreate」：把该次生成的提示词推回侧边栏输入框，并切到 history 之外无需动作
+   * （用户就在这个页面上，直接改了输入框即可）。token 递增让连点两次也能生效。
+   */
+  const [injectedPrompt, setInjectedPrompt] = useState<{ text: string; token: number } | undefined>();
+  const handleRecreate = (item: DirectVideoGenerationDto) => {
+    setInjectedPrompt((prev) => ({ text: item.prompt, token: (prev?.token ?? 0) + 1 }));
   };
 
   useEffect(() => {
@@ -293,6 +297,7 @@ export function VideoGeneratorStudio({
             onTextModelChange={setSelectedTextModelId}
             optimizing={optimizing}
             onOptimizePrompt={handleOptimizePrompt}
+            injectedPrompt={injectedPrompt}
           />
         </div>
         {/* 右栏包一层定位容器：素材面板 portal 到这里，正好覆盖右侧内容区 */}
@@ -303,7 +308,8 @@ export function VideoGeneratorStudio({
           onTabChange={setTab}
           historyItems={historyItems}
           historyLoading={historyLoading}
-          onDeleteHistory={handleDeleteHistory}
+          onRecreate={handleRecreate}
+          onHistoryChanged={() => void reloadHistory()}
         />
         </div>
       </div>

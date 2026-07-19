@@ -72,6 +72,7 @@ export function VideoSidebar({
   onTextModelChange,
   optimizing,
   onOptimizePrompt,
+  injectedPrompt,
 }: {
   /** 素材面板的 portal 宿主（右栏容器）；为 null 时不渲染面板 */
   assetPanelHost?: HTMLElement | null;
@@ -93,6 +94,14 @@ export function VideoSidebar({
   onTextModelChange: (modelId: string) => void;
   optimizing: boolean;
   onOptimizePrompt: (prompt: string) => Promise<string | null>;
+  /**
+   * 从历史「Recreate」推回来的提示词。
+   *
+   * prompt 是本组件的内部状态，外部只能靠这个口子写入。带 token 而不是只传字符串：
+   * 对同一条历史连点两次 Recreate，文本相同、token 递增，用户仍能看到它被重新应用
+   * （只比对文本的话第二次会静默无反应，像是按钮坏了）。
+   */
+  injectedPrompt?: { text: string; token: number };
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const tImagePrompt = useTranslations('imageStudio.prompt');
@@ -187,6 +196,15 @@ export function VideoSidebar({
     };
   }, [paramsSchema, videoCapability]);
   const [prompt, setPrompt] = useState('');
+  // 只认 token 变化：把 text 也放进依赖会让用户在输入框里改字后被回滚
+  const injectedToken = injectedPrompt?.token;
+  const injectedText = injectedPrompt?.text;
+  useEffect(() => {
+    if (injectedToken === undefined) return;
+    setPrompt(injectedText ?? '');
+    promptEditorRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injectedToken]);
   const [duration, setDuration] = useState(videoParams.defaultDuration);
   const [resolution, setResolution] = useState(videoParams.defaultResolution);
   const [ratio, setRatio] = useState<string>(videoParams.defaultRatio);

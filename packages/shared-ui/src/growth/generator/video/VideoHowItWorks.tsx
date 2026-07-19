@@ -1,7 +1,7 @@
 'use client';
 
+import { History, LayoutGrid } from 'lucide-react';
 import { useState } from 'react';
-import { Film, History, LayoutGrid, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuthStore, useUiStore, type DirectVideoGenerationDto } from '@autix/shared-store';
 import { OfferStrip, StudioDensitySlider } from '../parts';
@@ -9,83 +9,6 @@ import { VideoHistoryPanel, type PendingVideoGenerationCard } from './VideoHisto
 import { VideoGalleryWall } from './VideoGalleryWall';
 import type { TemplateDensity } from '../generator-studio-helpers';
 import { useGalleryFeedController } from '@autix/shared-store';
-
-// ---------------------------------------------------------------------------
-// Preview Dialog
-// ---------------------------------------------------------------------------
-
-function VideoPreviewDialog({
-  item,
-  onClose,
-}: {
-  item: DirectVideoGenerationDto | null;
-  onClose: () => void;
-}) {
-  const t = useTranslations('publicGrowth.generator.studio');
-
-  if (!item) return null;
-
-  const videoUrl = item.videoUrl;
-  const poster =
-    item.thumbnailUrl ?? item.lastFrameUrl ?? item.materials.find((material) => material.url)?.url ?? undefined;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-10 sm:px-8"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('historyPreviewTitle')}
-    >
-      {/* Backdrop */}
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Panel */}
-      <div className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="truncate text-sm font-semibold text-foreground">{item.prompt}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('close')}
-            className="ml-2 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        {/* Video / Poster */}
-        <div className="relative aspect-video w-full bg-muted">
-          {videoUrl ? (
-            <video
-              src={videoUrl}
-              poster={poster}
-              className="h-full w-full object-contain"
-              controls
-              autoPlay
-              playsInline
-              aria-label={item.prompt}
-            />
-          ) : poster ? (
-            <img
-              src={poster}
-              alt={item.prompt}
-              className="h-full w-full object-contain"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Film className="size-12 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -97,20 +20,26 @@ export function VideoHowItWorks({
   onTabChange,
   historyItems,
   historyLoading,
-  onDeleteHistory,
+  onRecreate,
+  onSelectionActiveChange,
+  onHistoryChanged,
 }: {
   activeTab: 'history' | 'gallery';
   pendingGeneration?: PendingVideoGenerationCard | null;
   onTabChange: (tab: 'history' | 'gallery') => void;
   historyItems: DirectVideoGenerationDto[];
   historyLoading?: boolean;
-  onDeleteHistory: (id: string) => Promise<void>;
+  /** 点击 Recreate：把该次生成的 prompt 应用回输入框。 */
+  onRecreate?: (item: DirectVideoGenerationDto) => void;
+  /** 多选态：父级据此切换「输入框 ↔ 操作栏」，与 image studio 同一交互。 */
+  onSelectionActiveChange?: (active: boolean) => void;
+  /** 发布/删除后重拉 history —— 徽章状态来自服务端，不靠本地内存猜。 */
+  onHistoryChanged?: () => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const openAuthModal = useUiStore((s) => s.openAuthModal);
 
-  const [previewItem, setPreviewItem] = useState<DirectVideoGenerationDto | null>(null);
   // 卡片密度只在会话内有效（与 image studio 一致，不做持久化）
   const [density, setDensity] = useState<TemplateDensity>('normal');
   // 视频广场直接复用站内公开 feed，传 'VIDEO' 分流
@@ -187,8 +116,9 @@ export function VideoHowItWorks({
                 loading={historyLoading}
                 pending={pendingGeneration}
                 density={density}
-                onSelectItem={setPreviewItem}
-                onDelete={onDeleteHistory}
+                onRecreate={onRecreate}
+                onSelectionActiveChange={onSelectionActiveChange}
+                onHistoryChanged={onHistoryChanged}
               />
             </div>
           ) : (
@@ -206,12 +136,6 @@ export function VideoHowItWorks({
           )}
         </div>
       </div>
-
-      {/* Preview dialog */}
-      <VideoPreviewDialog
-        item={previewItem}
-        onClose={() => setPreviewItem(null)}
-      />
     </main>
   );
 }
