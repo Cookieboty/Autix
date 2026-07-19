@@ -103,7 +103,10 @@ function AvatarMark({
   );
 }
 
-/** Circular points-usage progress ring wrapping the avatar. `ratio` is 0..1 consumed. */
+/**
+ * 头像外环的积分进度。`ratio` 是 0..1 的**剩余**占比：主色弧画的是还剩多少，
+ * 不是已经花了多少（后者与电量表之类的日常直觉相反）。
+ */
 function PointsUsageRing({
   ratio,
   size,
@@ -174,8 +177,14 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
   // 悬浮延时关闭用的定时器 ref —— 必须在任何条件 return 之前声明，保证 hooks 顺序稳定
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 头像外环进度 = 已消耗积分 / 已发放积分总额
-  const usageRatio = (() => {
+  /**
+   * 头像外环进度 = **剩余**积分 / 已发放积分总额。
+   *
+   * 原来画的是已消耗占比，方向反了：主色弧越长表示花得越多，等于「用得越狠环越满」。
+   * 用户对这种环的直觉是「剩下多少」（同电量/油量表），满环 = 充足、快空 = 该充值了。
+   * 没有发放记录时按满环处理，而不是空环 —— 空环会让新用户以为自己没积分。
+   */
+  const remainingRatio = (() => {
     const grants = pointsSummaryQuery.data?.grants ?? [];
     let total = 0;
     let consumed = 0;
@@ -183,7 +192,8 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
       total += grant.totalAmount ?? 0;
       consumed += grant.consumedAmount ?? 0;
     }
-    return total > 0 ? Math.min(1, consumed / total) : 0;
+    if (total <= 0) return 1;
+    return Math.max(0, Math.min(1, (total - consumed) / total));
   })();
 
   // hydrate 完成前无法确定登录态：渲染与头像等尺寸的中性占位，
@@ -281,7 +291,7 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
           onMouseEnter={openOnHover}
           onMouseLeave={closeOnHover}
         >
-          <PointsUsageRing ratio={usageRatio} size={compact ? 32 : 40}>
+          <PointsUsageRing ratio={remainingRatio} size={compact ? 32 : 40}>
             <AvatarMark name={name} avatar={user.avatar} px={compact ? 24 : 30} />
           </PointsUsageRing>
         </button>
@@ -296,7 +306,7 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
       >
         <div className="p-3">
           <div className="flex items-center gap-2.5">
-            <PointsUsageRing ratio={usageRatio} size={38}>
+            <PointsUsageRing ratio={remainingRatio} size={38}>
               <AvatarMark name={name} avatar={user.avatar} px={28} />
             </PointsUsageRing>
             <div className="min-w-0">
