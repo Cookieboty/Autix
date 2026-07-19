@@ -15,8 +15,47 @@ import {
   type VideoModelHint,
   type VideoResolution,
 } from '@autix/domain/video';
+import { readProtocolKey } from '@autix/domain/model';
+import { resolveVideoPreset, resolveWanMode, type VideoProtocolPreset } from '@autix/ai-adapters/video';
 
 export type { VideoGenerationClipParams };
+
+/**
+ * 视频提交路由:把 (模型配置, 素材) 解析成实际要用的 preset 与上游 model ID。
+ *
+ * - 常规模型:静态 —— `protocolKey → preset`、上游 model ID = 行的 `model`(与旧逻辑逐字等价)。
+ * - Wan 2.7(`metadata.videoDispatch === 'wan'`):**一个模型**,上游按素材角色分到 t2v/i2v/ref,
+ *   故在此按素材覆盖 preset 与 model ID(见 resolveWanMode)。计费四模式统一,覆盖 model ID
+ *   仍是服务端权威、价格恒等,不违反 FIX-3。
+ *
+ * 派发信号用**专用键 `videoDispatch`** 而非 `modelFamily`:后者按约定「仅展示、代码里不得
+ * switch(modelFamily)」(image-metadata.types.ts)。`protocolKey` 保持真 preset(poyo-wan-t2v@v1),
+ * 让非派发路径(legacy 查询/刷新)仍能正常解析。
+ *
+ * `maxDurationSeconds` 仅 Wan 会返回(各模式时长上限不同),调用方据此在打上游前拦超范围的 duration。
+ */
+export interface VideoRouting {
+  preset: VideoProtocolPreset;
+  model: string;
+  maxDurationSeconds?: number;
+}
+
+export function resolveVideoRouting(
+  metadata: unknown,
+  baseModel: string,
+  materialRoles: readonly string[],
+): VideoRouting {
+  const dispatch = (metadata as { videoDispatch?: unknown } | null | undefined)?.videoDispatch;
+  if (dispatch === 'wan') {
+    const wan = resolveWanMode(materialRoles);
+    return {
+      preset: resolveVideoPreset(wan.protocolKey),
+      model: wan.modelId,
+      maxDurationSeconds: wan.maxDurationSeconds,
+    };
+  }
+  return { preset: resolveVideoPreset(readProtocolKey(metadata)), model: baseModel };
+}
 
 // 计划 4 Task 4：类型原定义于已删除的 seedance-api.service.ts。仍被
 // summarizeSeedanceContent 使用（该函数不在本次删除范围内），故就地保留定义。
