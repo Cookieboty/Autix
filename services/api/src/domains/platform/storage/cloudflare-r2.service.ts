@@ -46,6 +46,17 @@ function sanitizeFolder(folder?: string): string {
     .join('/');
 }
 
+/**
+ * 显式文件名的白名单过滤：只留 [A-Za-z0-9._-]，去掉目录分隔与 `.`/`..`。
+ * 过滤后为空则返回 '' —— 调用方据此回退到随机名，而不是拼出个裸扩展名的 key。
+ */
+function sanitizeFileName(fileName?: string): string {
+  if (!fileName) return '';
+  const cleaned = fileName.replace(/[^a-zA-Z0-9._-]/g, '');
+  if (!cleaned || cleaned === '.' || cleaned === '..') return '';
+  return cleaned.slice(0, 120);
+}
+
 @Injectable()
 export class CloudflareR2Service {
   constructor(private readonly systemSettingsService: SystemSettingsService) { }
@@ -106,13 +117,28 @@ export class CloudflareR2Service {
     contentType: string;
     folder?: string;
     ext?: string;
+    /**
+     * 文件名（不含目录与扩展名）。给了就用它，否则按 `时间戳-随机` 生成。
+     *
+     * 存在的意义是**幂等**：同一份逻辑产物重复上传时落到同一个 key，覆盖写而不是
+     * 各自留一份。视频生成的回调与轮询会并发收敛同一条 generation，随机 key 会让
+     * 两边各产出一个对象——generation 指向后写的那个、素材库指向先写的那个，
+     * 内容一样却对不上，还多一个没人回收的孤儿。
+     *
+     * 与 folder 同样过 sanitize：调用方传的是内部 id，但这里是拼 object key 的地方，
+     * 不做校验就等于把路径穿越的口子开在存储层。
+     */
+    fileName?: string;
   }) {
     const config = await this.getRuntimeConfig();
     const rawExt = (opts.ext ?? 'png').toLowerCase();
     const extension = /^[a-z0-9]{1,12}$/.test(rawExt) ? rawExt : 'bin';
     const folder = sanitizeFolder(opts.folder);
     const prefix = folder ? `${folder}/` : '';
-    const key = `${prefix}${Date.now()}-${randomBytes(8).toString('hex')}.${extension}`;
+    const fileName = sanitizeFileName(opts.fileName);
+    const key = fileName
+      ? `${prefix}${fileName}.${extension}`
+      : `${prefix}${Date.now()}-${randomBytes(8).toString('hex')}.${extension}`;
 
     // 服务端回源内容类型不可信（如管理端导入的任意来源）：非白名单一律降级为不可执行类型。
     const normalized = normalizeContentType(opts.contentType);

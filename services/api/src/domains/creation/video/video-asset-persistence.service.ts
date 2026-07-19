@@ -40,10 +40,34 @@ export class VideoAssetPersistenceService {
   ): Promise<string | null> {
     if (!sourceUrl) return null;
 
+    /**
+     * key 按 generationId 确定，不用随机名 —— 这是并发安全的关键。
+     *
+     * 回调与 30s 轮询会同时收敛同一条 generation（applyTaskStatus 开头的守卫读的是
+     * 传进来的快照、无锁，两边都会放行），随机 key 时两边各传一个对象：generation.videoUrl
+     * 指向后写的那个、素材库指向先写的那个（createMany skipDuplicates 丢弃了后者），
+     * 内容一样却对不上，还多一个没人回收的孤儿。
+     *
+     * 用同一个 key 后两边写的是同一个对象、同样的字节，PutObject 覆盖写是原子的：
+     * 不一致与孤儿同时消失，且不需要抢占锁——也就不会有「抢占者中途崩掉、行永远卡在
+     * running 没人再捡」的活性风险。代价只是偶尔重复一次下载/上传的带宽。
+     *
+     * generation 与行 1:1（重新生成是新行新 id，多变体各自成行），不存在跨生成撞 key。
+     */
     const upload =
       kind === 'video'
-        ? { contentType: 'video/mp4', folder: 'amux-studio/video-generations', ext: 'mp4' }
-        : { contentType: 'image/jpeg', folder: 'amux-studio/video-frames', ext: 'jpg' };
+        ? {
+            contentType: 'video/mp4',
+            folder: 'amux-studio/video-generations',
+            ext: 'mp4',
+            fileName: generationId,
+          }
+        : {
+            contentType: 'image/jpeg',
+            folder: 'amux-studio/video-frames',
+            ext: 'jpg',
+            fileName: `${generationId}-last`,
+          };
 
     // 3 次重试 + 1s/2s 指数退避；失败返回 null，避免保留 24h 过期的供应商源链接。
     const MAX_ATTEMPTS = 3;
