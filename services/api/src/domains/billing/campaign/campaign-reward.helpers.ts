@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import {
   CampaignStatus,
   CampaignType,
@@ -219,13 +220,13 @@ export function assertCampaignCanGrant(
   nowMs = Date.now(),
 ) {
   if (campaign.status !== CampaignStatus.ACTIVE) {
-    throw new BadRequestException('活动未启用');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.not_enabled');
   }
   if (campaign.startsAt && campaign.startsAt.getTime() > nowMs) {
-    throw new BadRequestException('活动尚未开始');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.not_started');
   }
   if (campaign.endsAt && campaign.endsAt.getTime() < nowMs) {
-    throw new BadRequestException('活动已结束');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.ended');
   }
 }
 
@@ -367,14 +368,14 @@ export function assertBuiltinCampaignUpdateAllowed(
   if (!isBuiltinCampaign(campaign)) return;
 
   if (input.code !== undefined && input.code.trim() !== campaign.code) {
-    throw new BadRequestException('固定活动 code 不允许修改');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.fixed_code_immutable');
   }
 
   if (
     input.type !== undefined &&
     enumValue(CampaignType, input.type, campaign.type) !== campaign.type
   ) {
-    throw new BadRequestException('固定活动类型不允许修改');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.fixed_type_immutable');
   }
 }
 
@@ -532,7 +533,7 @@ export function buildCampaignPointGrantInput(
   now = new Date(),
 ) {
   const sourceId = String(input.pointGrantSourceId ?? campaign.id).trim();
-  if (!sourceId) throw new BadRequestException('活动积分来源 ID 必填');
+  if (!sourceId) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.source_id_required');
 
   const expiresAt =
     campaign.rewardExpiresInDays > 0

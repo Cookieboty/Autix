@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json && mkdir -p dist/messages && cp src/messages/*.json dist/messages/",
+    "build": "tsc --project tsconfig.json && rm -rf dist/messages && mkdir -p dist/messages && cp -R src/messages/. dist/messages/",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

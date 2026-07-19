@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  HttpStatus,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { BillingCycle, OrderStatus, OrderType, type orders } from '../../platform/prisma/generated';
@@ -63,33 +65,33 @@ export class StripePaymentService {
     private readonly config: ConfigService,
     private readonly orderService: OrderService,
     private readonly systemSettingsService: SystemSettingsService,
-  ) {}
+  ) { }
 
   async createCheckout(
     userId: string,
     input: CreateStripeCheckoutInput,
   ): Promise<StripeCheckoutResult> {
     if (!input?.productId) {
-      throw new BadRequestException('缺少商品 ID');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.product_id_required');
     }
     const currency = await this.getCurrency();
     const order =
       input.orderType === OrderType.MEMBERSHIP
         ? await this.orderService.createMembershipOrder(
+          userId,
+          input.productId,
+          currency.toUpperCase(),
+        )
+        : input.orderType === OrderType.POINTS_PACKAGE
+          ? await this.orderService.createPointsPackageOrder(
             userId,
             input.productId,
             currency.toUpperCase(),
           )
-        : input.orderType === OrderType.POINTS_PACKAGE
-          ? await this.orderService.createPointsPackageOrder(
-              userId,
-              input.productId,
-              currency.toUpperCase(),
-            )
           : null;
 
     if (!order) {
-      throw new BadRequestException('暂不支持的订单类型');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.order_type_unsupported');
     }
 
     return this.createCheckoutForOrder(order, currency);
@@ -110,12 +112,12 @@ export class StripePaymentService {
     const session = await this.retrieveCheckoutSession(sessionId);
     const orderId = session.metadata?.orderId ?? session.client_reference_id;
     if (!orderId) {
-      throw new BadRequestException('Stripe Checkout 会话缺少订单信息');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_missing_order');
     }
 
     const order = await this.orderService.getOrderById(orderId, userId);
     if (!orderMatchesStripeCheckoutSession(order, session)) {
-      throw new BadRequestException('Stripe Checkout 会话与订单不匹配');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_order_mismatch');
     }
 
     if (order.status === OrderStatus.PAID) {
@@ -189,7 +191,7 @@ export class StripePaymentService {
     metadata: StripeRefundResult;
   }> {
     const paymentIntentId = resolveStripePaymentIntentId(input.order);
-    if (!paymentIntentId) throw new BadRequestException('Stripe 退款缺少 PaymentIntent ID');
+    if (!paymentIntentId) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.refund_missing_payment_intent');
 
     const currency = (input.order.currency ?? DEFAULT_PAYMENT_CURRENCY).toUpperCase();
     const refundAmount = input.amount ?? input.order.paidAmount ?? input.order.amount;
@@ -222,11 +224,11 @@ export class StripePaymentService {
       const message =
         stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
         '创建 Stripe 退款失败';
-      throw new BadRequestException(message);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.refund_failed', { message });
     }
 
     const refund = payload as StripeRefundResult;
-    if (!refund.id) throw new BadRequestException('Stripe 未返回退款 ID');
+    if (!refund.id) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.refund_missing_id');
     return {
       provider: 'stripe',
       externalRefundId: refund.id,
@@ -252,7 +254,7 @@ export class StripePaymentService {
   ): Promise<StripeSubscription> {
     const id = stringValue(subscriptionId);
     if (!id || !id.startsWith('sub_')) {
-      throw new BadRequestException('Stripe Subscription ID 无效');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.subscription_id_invalid');
     }
 
     const response = await fetch(
@@ -271,7 +273,7 @@ export class StripePaymentService {
       const message =
         stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
         '取消 Stripe 订阅失败';
-      throw new BadRequestException(message);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.subscription_cancel_failed', { message });
     }
     return payload as StripeSubscription;
   }
@@ -286,7 +288,7 @@ export class StripePaymentService {
   ): Promise<{ url: string }> {
     const id = stringValue(customerId);
     if (!id || !id.startsWith('cus_')) {
-      throw new BadRequestException('Stripe Customer ID 无效');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.customer_id_invalid');
     }
     const params = new URLSearchParams({
       customer: id,
@@ -305,10 +307,10 @@ export class StripePaymentService {
       const message =
         stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
         '创建 Stripe 账单门户会话失败';
-      throw new BadRequestException(message);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.billing_portal_failed', { message });
     }
     const url = stringValue((payload as { url?: unknown } | null)?.url);
-    if (!url) throw new BadRequestException('Stripe 未返回账单门户地址');
+    if (!url) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.billing_portal_missing_url');
     return { url };
   }
 
@@ -320,20 +322,20 @@ export class StripePaymentService {
       return { order, checkoutUrl: null, sessionId: null };
     }
     if (order.status !== OrderStatus.PENDING) {
-      throw new BadRequestException('只有待支付订单可以创建支付会话');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_only_for_pending');
     }
     await this.orderService.assertOrderCanCheckout(order);
 
     const currency = configuredCurrency ?? await this.getCurrency();
     if (order.currency && order.currency.toLowerCase() !== currency) {
-      throw new BadRequestException('订单币种与当前支付币种不一致，请重新下单');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_currency_mismatch');
     }
     const amount = Number(order.amount);
     if (!Number.isFinite(amount) || amount < 0) {
-      throw new BadRequestException('订单金额无效');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_amount_invalid');
     }
     if (amount === 0) {
-      throw new BadRequestException('0 元订单不应进入支付流程');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_zero_amount_invalid');
     }
 
     const reusableCheckout = resolveReusableStripeCheckout(order);
@@ -348,7 +350,7 @@ export class StripePaymentService {
     const plan = await this.orderService.getMembershipPlanForOrder(order);
     const session = await this.createStripeCheckoutSession(order, currency, plan?.billingCycle);
     if (!session.url) {
-      throw new BadRequestException('Stripe 未返回 Checkout URL');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_missing_url');
     }
 
     const updatedOrder = await this.orderService.attachStripeCheckoutSession(order.id, {

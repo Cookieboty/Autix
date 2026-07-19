@@ -18,6 +18,27 @@ export type ErrorClassification =
 /** Valid transform function names */
 export type TransformKey = 'stripTierSuffix';
 
+/**
+ * 复合绑定产出像素尺寸串（`WxH`）时，上游对该尺寸的硬性约束。逐 preset 声明，因为它们
+ * 是各上游端点自己的契约，各家不同：
+ * - gpt-image-2：边≤3840、16 倍数、长短边≤3:1、像素∈[655360, 8294400]。
+ * - Seedream 4.5 / 5.0-lite：像素∈[3686400, 16777216]、长短边∈[1/16,16]；**无** 16 倍数、**无** 边上限。
+ * 故 `maxEdge` / `edgeMultipleOf` 可选（某家没有这条约束就不声明）。声明后由跨配置
+ * 校验器（规则 9）校验 valueMap 的每个值。
+ */
+export interface PixelSizeConstraints {
+  /** 最长边像素上限（某些上游无此约束 → 不声明） */
+  maxEdge?: number;
+  /** 两边都必须是它的整数倍（某些上游无此约束 → 不声明） */
+  edgeMultipleOf?: number;
+  /** 长边 / 短边 比例上限 */
+  maxRatio: number;
+  /** 总像素下限（含） */
+  minPixels: number;
+  /** 总像素上限（含） */
+  maxPixels: number;
+}
+
 /** Binding specification for a preset parameter */
 export interface BindingSpec {
   path: string; // 'size' | 'generationConfig.seed' | '$url.model'
@@ -36,6 +57,12 @@ export interface BindingSpec {
   valueMap?: Record<string, string>;
   transform?: TransformKey;
   omitWhen?: 'empty';
+  /**
+   * 该复合绑定产出的是像素尺寸串（`WxH`）。声明后，跨配置校验器（规则 9）会校验
+   * `valueMap` 的**每个值**都满足这些上游约束——把「表里写了上游会 400 的尺寸」这类
+   * 错误从运行期的偶发 400 提前到保存期的红灯。
+   */
+  pixelSizeConstraints?: PixelSizeConstraints;
 }
 
 /** How a plain param binds into the request: either a path write, or a strategy */

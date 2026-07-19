@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { AuthIdentityRepository } from './auth-identity.repository';
 
 describe('AuthIdentityRepository.setPendingEmail', () => {
@@ -23,7 +22,7 @@ describe('AuthIdentityRepository.setPendingEmail', () => {
     const repository = new AuthIdentityRepository(prisma as any);
 
     await expect(repository.setPendingEmail('u1', 'new@example.com'))
-      .rejects.toBeInstanceOf(BadRequestException);
+      .rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
   });
 
   it('applies a verified email only when it is still the current pending request', async () => {

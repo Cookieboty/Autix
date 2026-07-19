@@ -17,14 +17,13 @@ export class ChunkService {
     private readonly documentRepository: DocumentRepository,
     private readonly embedding: EmbeddingService,
     private readonly sseService: SseService,
-  ) {}
+  ) { }
 
   async processDocument(documentId: string, userId: string): Promise<void> {
     const doc = await this.documentRepository.findById(documentId);
     if (!doc) throw new NotFoundException('文档不存在');
     if (!doc.filePath) throw new NotFoundException('文档文件路径不存在');
 
-    // 发送"开始"事件
     await this.sseService.emit(userId, {
       id: uuid(),
       taskType: 'document_vectorize',
@@ -55,7 +54,6 @@ export class ChunkService {
         await this.documentRepository.updateChunkEmbedding(created.id, vector);
       }
 
-      // 发送"完成"事件
       await this.sseService.emit(userId, {
         id: uuid(),
         taskType: 'document_vectorize',
@@ -68,7 +66,6 @@ export class ChunkService {
 
       await this.documentRepository.updateStatus(documentId, 'done', chunks.length);
     } catch (err) {
-      // 发送"错误"事件
       await this.sseService.emit(userId, {
         id: uuid(),
         taskType: 'document_vectorize',

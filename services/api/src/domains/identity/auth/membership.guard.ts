@@ -1,12 +1,13 @@
 import {
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
+  HttpStatus,
   Injectable,
 } from '@nestjs/common';
 import { Request } from 'express';
 import type { AuthUser } from '@autix/domain';
 import { AuthIdentityRepository } from './auth-identity.repository';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 /**
  * FIX-20: 与会员服务的过期判定对齐——会员在 `expiresAt <= now` 时即视为过期（非生效）。
@@ -26,14 +27,14 @@ export class MembershipGuard implements CanActivate {
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest<Request & { user?: AuthUser }>();
     const userId = req.user?.id;
-    if (!userId) throw new ForbiddenException('未登录');
+    if (!userId) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.not_logged_in');
 
     const membership = await this.authIdentityRepository.findMembershipByUserId(
       userId,
     );
 
     if (!isMembershipActiveAt(membership, new Date())) {
-      throw new ForbiddenException('该功能需要开通会员');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.membership.required');
     }
 
     return true;

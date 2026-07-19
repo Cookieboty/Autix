@@ -67,12 +67,11 @@ describe('VEO 计价 golden（每秒单价 = 美元×500，按 分辨率×是否
   });
 });
 
-describe('Wan 2.7 计价 golden（所有模型同价：720p 30/s、1080p 45/s，仅 分辨率×时长）', () => {
-  it('四个模型都是 720p=30/s、1080p=45/s', () => {
-    for (const m of ['wan2.7-text-to-video', 'wan2.7-image-to-video', 'wan2.7-reference-to-video', 'wan2.7-edit-video']) {
-      expect(price(m, { resolution: '720p', duration: 5 }), m).toBe(150); // 30×5
-      expect(price(m, { resolution: '1080p', duration: 10 }), m).toBe(450); // 45×10
-    }
+describe('Wan 2.7 计价 golden（合成为一个模型：720p 30/s、1080p 45/s，仅 分辨率×时长）', () => {
+  it('wan2.7-video：720p=30/s、1080p=45/s', () => {
+    const m = 'wan2.7-video';
+    expect(price(m, { resolution: '720p', duration: 5 }), m).toBe(150); // 30×5
+    expect(price(m, { resolution: '1080p', duration: 10 }), m).toBe(450); // 45×10
   });
 });
 

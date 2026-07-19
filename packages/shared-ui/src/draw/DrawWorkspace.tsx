@@ -15,6 +15,7 @@ import {
   type DragEvent,
 } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from '../navigation';
 import {
   Layers,
   Loader2,
@@ -174,6 +175,7 @@ export function DrawWorkspace({
 }: DrawWorkspaceProps) {
   const t = useTranslations('drawWorkspace');
   const locale = useLocale();
+  const router = useRouter();
 
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const revisionRef = useRef(1);
@@ -1871,13 +1873,13 @@ export function DrawWorkspace({
       if (ensured.projectId !== view.projectId) {
         await updateVideoNodeData(view.id, { projectId: ensured.projectId });
       }
-      if (typeof window !== 'undefined') {
-        window.location.assign(`/ai/video?projectId=${encodeURIComponent(ensured.projectId)}`);
-      }
+      // 走 intl router：硬跳裸路径会丢掉 locale 前缀（as-needed 下等于切成英文）。
+      // 中间件有兜底，但那要多一次 302 + 整页重载。
+      router.push(`/ai/video?projectId=${encodeURIComponent(ensured.projectId)}`);
     } catch (error) {
       toast.error(errorMessage(error, t));
     }
-  }, [t, title, updateVideoNodeData]);
+  }, [router, t, title, updateVideoNodeData]);
 
   const generateVideoNode = useCallback(async (view: VideoNodeOverlayView) => {
     const api = apiRef.current;

@@ -15,7 +15,6 @@ import {
 } from '../../drawer-shell';
 import { SkillForm } from './SkillForm';
 import { McpForm } from './McpForm';
-// import { AgentForm } from './AgentForm';
 
 interface TypeOption {
   slug: MarketplaceTypeSlug;

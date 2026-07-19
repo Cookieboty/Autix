@@ -15,7 +15,7 @@ export class ArtifactService {
     private readonly artifactRepository: ArtifactRepository,
     private readonly modelConfigService: ModelConfigService,
     private readonly billing: CallBillingService,
-  ) {}
+  ) { }
 
   private async getDefaultModelConfig() {
     const config = await this.modelConfigService.findDefaultByType(ModelType.general);
@@ -41,7 +41,6 @@ export class ArtifactService {
     return createChatModelFromDbConfig(config);
   }
 
-  // 创建或更新产物（AI生成时调用）
   async upsertArtifact(data: {
     conversationId: string;
     userId: string;
@@ -53,7 +52,6 @@ export class ArtifactService {
     return this.artifactRepository.upsertArtifact(data);
   }
 
-  // 使用 LLM 生成标题
   async generateTitle(summaryContent: string): Promise<string> {
     const prompt = `请为以下需求分析报告生成一个简洁的标题（10-20字）：
 
@@ -67,7 +65,6 @@ ${summaryContent.substring(0, 500)}
     return response.content.toString().trim().replace(/^["']|["']$/g, '');
   }
 
-  // 更新标题（同时更新关联的会话标题）
   async updateTitle(artifactId: string, title: string): Promise<artifacts> {
     const artifact = await this.artifactRepository.findByIdWithConversation(artifactId);
     return this.artifactRepository.updateTitleWithConversation(
@@ -85,7 +82,6 @@ ${summaryContent.substring(0, 500)}
   ): Promise<artifacts> {
     const artifact = await this.artifactRepository.findByIdWithLatestVersion(artifactId);
 
-    // 从上一个版本继承 sourcetags，并添加 HUMAN
     const lastVersion = artifact.artifact_versions[0];
     const inheritedTags = lastVersion?.sourcetags || [];
     const newTags = inheritedTags.includes('HUMAN')
@@ -116,7 +112,6 @@ ${summaryContent.substring(0, 500)}
     const originalContent = artifact.content;
     const inheritedTags = lastVersion?.sourcetags || ['AI'];
 
-    // 设置 SSE 响应头
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -162,14 +157,12 @@ ${originalContent}
 
       let accumulatedContent = '';
 
-      // 流式生成
       const stream = await optimizeAgent.stream(systemPrompt);
 
       for await (const chunk of stream) {
         const content = chunk.content.toString();
         accumulatedContent += content;
 
-        // 发送流式事件
         res.write(
           `data: ${JSON.stringify({
             type: 'markdown',
@@ -178,7 +171,6 @@ ${originalContent}
         );
       }
 
-      // 保存新版本
       const newVersion = artifact.currentVersion + 1;
       await this.artifactRepository.updateArtifactWithVersion({
         artifactId,
@@ -197,7 +189,6 @@ ${originalContent}
       });
       holdId = null;
 
-      // 发送完成事件
       res.write(
         `data: ${JSON.stringify({
           type: 'done',
@@ -232,12 +223,10 @@ ${originalContent}
     return [provider, model].filter(Boolean).join('/') || model;
   }
 
-  // 获取版本历史
   async getVersions(artifactId: string): Promise<artifact_versions[]> {
     return this.artifactRepository.getVersions(artifactId);
   }
 
-  // 恢复到指定版本
   async revertToVersion(
     artifactId: string,
     targetVersion: number,
@@ -249,7 +238,6 @@ ${originalContent}
 
     const artifact = await this.artifactRepository.findById(artifactId);
 
-    // 从目标版本继承 sourcetags，并添加 HUMAN（恢复是用户操作）
     const inheritedTags = version.sourcetags || [];
     const newTags = inheritedTags.includes('HUMAN')
       ? inheritedTags
@@ -266,17 +254,14 @@ ${originalContent}
     });
   }
 
-  // 根据会话ID查找产物
   async findByConversation(conversationId: string): Promise<artifacts | null> {
     return this.artifactRepository.findByConversation(conversationId);
   }
 
-  // 根据ID查找产物
   async findById(artifactId: string): Promise<artifacts> {
     return this.artifactRepository.findById(artifactId);
   }
 
-  // 删除产物
   async deleteArtifact(artifactId: string): Promise<void> {
     await this.artifactRepository.deleteArtifact(artifactId);
   }

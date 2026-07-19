@@ -1,12 +1,7 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { MailService } from '../../platform/mail/mail.service';
 import { AuthUser, MessageResponse } from '@autix/domain';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
 import { Prisma } from '../../platform/prisma/generated';
 import { RegistrationRepository } from './registration.repository';
@@ -20,7 +15,7 @@ export class RegistrationService {
     private registrationRepository: RegistrationRepository,
     private mailService: MailService,
     private inviteService: InviteService,
-  ) {}
+  ) { }
 
   private async assertSystemAdminAccess(user: AuthUser, systemId: string): Promise<void> {
     if (user.isSuperAdmin) return;
@@ -29,7 +24,7 @@ export class RegistrationService {
       systemId,
     );
     if (!userRole) {
-      throw new ForbiddenException('无权操作此系统的注册申请');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'registration.forbidden');
     }
   }
 
@@ -53,9 +48,9 @@ export class RegistrationService {
     dto: ProcessRegistrationDto,
   ): Promise<MessageResponse> {
     const registration = await this.registrationRepository.findById(id);
-    if (!registration) throw new NotFoundException('注册申请不存在');
+    if (!registration) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'registration.not_found');
     if (registration.status !== 'PENDING') {
-      throw new BadRequestException('该申请已处理');
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'registration.already_processed');
     }
 
     await this.assertSystemAdminAccess(user, registration.systemId);
@@ -66,7 +61,11 @@ export class RegistrationService {
     );
 
     if (!userRole) {
-      throw new BadRequestException('该系统未配置默认用户角色(USER)，无法完成审批');
+      throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'registration.default_role_missing',
+        { roleCode: 'USER' },
+      );
     }
 
     await this.registrationRepository.approveRegistration({
@@ -90,7 +89,7 @@ export class RegistrationService {
       registration.userId,
     );
     if (approvedUser?.email) {
-      this.mailService.sendApprovalEmail(approvedUser.email, approvedUser.username).catch(() => {});
+      this.mailService.sendApprovalEmail(approvedUser.email, approvedUser.username).catch(() => { });
     }
 
     return { message: '审批通过' };
@@ -102,9 +101,9 @@ export class RegistrationService {
     dto: ProcessRegistrationDto,
   ): Promise<MessageResponse> {
     const registration = await this.registrationRepository.findById(id);
-    if (!registration) throw new NotFoundException('注册申请不存在');
+    if (!registration) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'registration.not_found');
     if (registration.status !== 'PENDING') {
-      throw new BadRequestException('该申请已处理');
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'registration.already_processed');
     }
 
     await this.assertSystemAdminAccess(user, registration.systemId);

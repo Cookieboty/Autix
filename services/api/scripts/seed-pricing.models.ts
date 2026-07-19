@@ -85,26 +85,27 @@ export const SEED_MODELS: SeedModelRow[] = [
   { name: 'Seedance 2.0', provider: 'amux', model: 'doubao-seedance-2.0', type: 'video', capabilities: ['video'], isDefault: false, metadata: { videoModelKind: 'seedance-2.0', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance video model', 'zh-CN': 'Seedance 视频模型' } },
   { name: 'Seedance 2.0 Fast', provider: 'amux', model: 'doubao-seedance-2.0-fast', type: 'video', capabilities: ['video'], isDefault: true, metadata: { videoModelKind: 'seedance-2.0-fast', protocolKey: 'ark-video@v3' }, description: { en: 'Seedance fast video model', 'zh-CN': 'Seedance 快速视频模型' } },
 
-  // —— PoYo VEO 3.1（第二家视频渠道，protocolKey=poyo-veo@v1）——
+  // —— VEO 3.1（第二家视频渠道，protocolKey=poyo-veo@v1）——
   // baseUrl(https://api.poyo.ai)/apiKey 由运营在 admin 补；schema/pricing 从 VIDEO_MODEL_CONFIGS 写全量。
-  { name: 'VEO 3.1 Fast', provider: 'poyo', model: 'veo3.1-fast-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-fast', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 fast official', 'zh-CN': 'PoYo VEO 3.1 快速官方版' } },
-  { name: 'VEO 3.1 Lite', provider: 'poyo', model: 'veo3.1-lite-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-lite', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 lite official', 'zh-CN': 'PoYo VEO 3.1 轻量官方版' } },
-  { name: 'VEO 3.1 Quality', provider: 'poyo', model: 'veo3.1-quality-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-quality', protocolKey: 'poyo-veo@v1' }, description: { en: 'PoYo VEO 3.1 quality official', 'zh-CN': 'PoYo VEO 3.1 高质量官方版' } },
+  { name: 'VEO 3.1 Fast', provider: 'poyo', model: 'veo3.1-fast-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-fast', protocolKey: 'poyo-veo@v1' }, description: { en: 'VEO 3.1 fast official', 'zh-CN': 'VEO 3.1 快速官方版' } },
+  { name: 'VEO 3.1 Lite', provider: 'poyo', model: 'veo3.1-lite-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-lite', protocolKey: 'poyo-veo@v1' }, description: { en: 'VEO 3.1 lite official', 'zh-CN': 'VEO 3.1 轻量官方版' } },
+  { name: 'VEO 3.1 Quality', provider: 'poyo', model: 'veo3.1-quality-official', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoModelKind: 'veo3.1-quality', protocolKey: 'poyo-veo@v1' }, description: { en: 'VEO 3.1 quality official', 'zh-CN': 'VEO 3.1 高质量官方版' } },
 
-  // —— PoYo Wan 2.7（第三家视频渠道，同 PoYo 平台）—— 四个模型各一个 protocolKey（请求体不同）。
+  // —— Wan 2.7（第三家视频渠道）—— 四个模型各一个 protocolKey（请求体不同）。
   // 不设 videoModelKind（detectVideoModelKind 回落 compatible，仅用于分辨率兜底）；表单从 paramsSchema 渲染。
-  { name: 'Wan 2.7 文生视频', provider: 'poyo', model: 'wan2.7-text-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-wan-t2v@v1' }, description: { en: 'PoYo Wan 2.7 text-to-video', 'zh-CN': 'PoYo Wan 2.7 文生视频' } },
-  { name: 'Wan 2.7 图生视频', provider: 'poyo', model: 'wan2.7-image-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-wan-i2v@v1' }, description: { en: 'PoYo Wan 2.7 image-to-video', 'zh-CN': 'PoYo Wan 2.7 图生视频' } },
-  { name: 'Wan 2.7 参考生视频', provider: 'poyo', model: 'wan2.7-reference-to-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-wan-ref@v1' }, description: { en: 'PoYo Wan 2.7 reference-to-video', 'zh-CN': 'PoYo Wan 2.7 参考生视频' } },
-  { name: 'Wan 2.7 视频编辑', provider: 'poyo', model: 'wan2.7-edit-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-wan-edit@v1' }, description: { en: 'PoYo Wan 2.7 edit-video', 'zh-CN': 'PoYo Wan 2.7 视频编辑' } },
+  // Wan 2.7 是**一个**模型 —— 上游按素材角色分派到 t2v/i2v/ref 三个 model ID（见
+  // ai-adapters 的 resolveWanMode）。故只留一行，`metadata.videoDispatch='wan'` 触发运行时派发
+  // （用专用键而非 modelFamily：后者按约定仅展示、不得 switch）；`model`/`protocolKey` 只是文生
+  // （t2v）基线，实际由 routing 按素材覆盖。edit 暂不纳入自动推断（其源视频与 ref 同角色）。
+  { name: 'Wan 2.7', provider: 'poyo', model: 'wan2.7-video', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', videoDispatch: 'wan', protocolKey: 'poyo-wan-t2v@v1' }, description: { en: 'Wan 2.7 video (text/image/reference to video)', 'zh-CN': 'Wan 2.7 视频（文/图/参考生视频）' } },
 
-  // —— PoYo Grok Imagine（第四家，同 PoYo 平台）——
-  { name: 'Grok Imagine', provider: 'poyo', model: 'grok-imagine', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-grok-imagine@v1' }, description: { en: 'PoYo Grok Imagine (text/image-to-video)', 'zh-CN': 'PoYo Grok Imagine 文/图生视频' } },
-  { name: 'Grok Imagine Video 1.5', provider: 'poyo', model: 'grok-imagine-video-1.5', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-grok-v15@v1' }, description: { en: 'PoYo Grok Imagine Video 1.5 (image-to-video)', 'zh-CN': 'PoYo Grok Imagine Video 1.5 图生视频' } },
+  // —— Grok Imagine（第四家）——
+  { name: 'Grok Imagine', provider: 'poyo', model: 'grok-imagine', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-grok-imagine@v1' }, description: { en: 'Grok Imagine (text/image-to-video)', 'zh-CN': 'Grok Imagine 文/图生视频' } },
+  { name: 'Grok Imagine Video 1.5', provider: 'poyo', model: 'grok-imagine-video-1.5', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-grok-v15@v1' }, description: { en: 'Grok Imagine Video 1.5 (image-to-video)', 'zh-CN': 'Grok Imagine Video 1.5 图生视频' } },
 
-  // —— PoYo Happy Horse（阿里，同 PoYo 平台）—— v1 只做 t2v/i2v/ref（edit 暂不接）。
-  { name: 'Happy Horse', provider: 'poyo', model: 'happy-horse', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-happyhorse@v1' }, description: { en: 'PoYo Happy Horse (t2v/i2v/ref)', 'zh-CN': 'PoYo Happy Horse 文/图/参考生视频' } },
-  { name: 'Happy Horse 1.1', provider: 'poyo', model: 'happy-horse-1.1', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-happyhorse-11@v1' }, description: { en: 'PoYo Happy Horse 1.1 (t2v/i2v/ref)', 'zh-CN': 'PoYo Happy Horse 1.1 文/图/参考生视频' } },
+  // —— Happy Horse（阿里）—— v1 只做 t2v/i2v/ref（edit 暂不接）。
+  { name: 'Happy Horse', provider: 'poyo', model: 'happy-horse', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-happyhorse@v1' }, description: { en: 'Happy Horse (t2v/i2v/ref)', 'zh-CN': 'Happy Horse 文/图/参考生视频' } },
+  { name: 'Happy Horse 1.1', provider: 'poyo', model: 'happy-horse-1.1', type: 'video', capabilities: ['video'], isDefault: false, metadata: { gateway: 'poyo', protocolKey: 'poyo-happyhorse-11@v1' }, description: { en: 'Happy Horse 1.1 (t2v/i2v/ref)', 'zh-CN': 'Happy Horse 1.1 文/图/参考生视频' } },
 ];
 
 /**
@@ -293,9 +294,9 @@ export const IMAGE_MODEL_CONFIGS: Record<
       required: ['aspectRatio', 'resolution'],
       properties: {
         resolution: {
-          enum: ['2K', '3K'],
+          enum: ['2K', '3K', '4K'],
           type: 'string',
-          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '2K': '2K', '3K': '3K' } },
+          'x-ui': { role: 'both', order: 20, control: 'select', labelKey: 'pricing.params.resolution', optionLabels: { '2K': '2K', '3K': '3K', '4K': '4K' } },
           default: '2K',
         },
         aspectRatio: {
@@ -315,7 +316,7 @@ export const IMAGE_MODEL_CONFIGS: Record<
     pricingSchema: {
       terms: [
         { id: 'base', op: 'add', const: 0 },
-        { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '3K': 34 } } },
+        { id: 'resolution', op: 'add', table: { param: 'resolution', values: { '2K': 23, '3K': 34, '4K': 45 } } },
       ],
     } as PricingSchema,
   },
@@ -344,7 +345,7 @@ function veoParamsSchema(resolutions: string[]): ParamsSchema {
 }
 
 /**
- * VEO 每秒积分（1 美元 = 500 积分，PoYo 官方每秒价 × 500）。计价维度是「分辨率 × 是否出声」——
+ * VEO 每秒积分（1 美元 = 500 积分，官方每秒价 × 500）。计价维度是「分辨率 × 是否出声」——
  * 用**互斥的 when 谓词**切换每秒单价，只有一条命中 → unitCost × duration。
  * 无声用 `generate_audio ne true`（false / 未设都算无声），有声用 `eq true`。
  */
@@ -472,10 +473,10 @@ export const VIDEO_MODEL_CONFIGS: Record<
   'veo3.1-lite-official': { paramsSchema: veoParamsSchema(['720p', '1080p']), pricingSchema: veoLitePricing },
   'veo3.1-quality-official': { paramsSchema: veoParamsSchema(['720p', '1080p', '4k']), pricingSchema: veoGroupedPricing(60, 120, 120, 180) },
   // Wan 2.7：t2v 5/10/15 有比例；i2v 无比例；ref/edit 5/10 有比例。
-  'wan2.7-text-to-video': { paramsSchema: wanParamsSchema([5, 10, 15], true), pricingSchema: wanPricing },
-  'wan2.7-image-to-video': { paramsSchema: wanParamsSchema([5, 10, 15], false), pricingSchema: wanPricing },
-  'wan2.7-reference-to-video': { paramsSchema: wanParamsSchema([5, 10], true), pricingSchema: wanPricing },
-  'wan2.7-edit-video': { paramsSchema: wanParamsSchema([5, 10], true), pricingSchema: wanPricing },
+  // 合成为一个模型：paramsSchema 取各模式的**并集**（aspect_ratio + duration 全档 5/10/15）。
+  // aspect_ratio 在 i2v 模式由 preset 忽略（图定比例）；duration 15 仅 t2v/i2v 合法，ref 上限 10
+  // 由 resolveVideoRouting 在打上游前按推断模式拦截，避免上游偶发 400。
+  'wan2.7-video': { paramsSchema: wanParamsSchema([5, 10, 15], true), pricingSchema: wanPricing },
   // Grok Imagine（整段计价）+ Grok Imagine Video 1.5（每秒×分辨率 + 输入图）。
   'grok-imagine': { paramsSchema: grokImagineParamsSchema, pricingSchema: grokImaginePricing },
   'grok-imagine-video-1.5': { paramsSchema: grokV15ParamsSchema, pricingSchema: grokV15Pricing },

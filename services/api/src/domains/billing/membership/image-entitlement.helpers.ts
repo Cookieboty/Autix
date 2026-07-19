@@ -1,4 +1,6 @@
-import { ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus } from '@nestjs/common';
+import type { ErrorCode } from '@autix/domain';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 /**
  * FIX-4: 图片生成分级权益（复用视频侧 features 机制）。
@@ -77,27 +79,33 @@ export function assertImageEntitlement(
   requested: { size?: string | null; quality?: string | null },
 ): void {
   if (!entitlement.enabled) {
-    throw new ForbiddenException({
-      code: 'IMAGE_MEMBERSHIP_REQUIRED',
-      message: `当前会员等级（${entitlement.levelName}）未开通图片生成功能，请升级套餐`,
-    });
+    throw new I18nHttpException(
+      HttpStatus.FORBIDDEN,
+      'image_entitlement.membership_required',
+      { levelName: entitlement.levelName },
+      { code: 'IMAGE_MEMBERSHIP_REQUIRED' as ErrorCode },
+    );
   }
   const pixels = parseImageSizePixels(requested.size);
   if (pixels > entitlement.maxPixels) {
-    throw new ForbiddenException({
-      code: 'IMAGE_MEMBERSHIP_LIMIT_EXCEEDED',
-      message: `当前会员等级（${entitlement.levelName}）图片分辨率超出上限，请降低分辨率或升级套餐`,
-    });
+    throw new I18nHttpException(
+      HttpStatus.FORBIDDEN,
+      'image_entitlement.resolution_exceeded',
+      { levelName: entitlement.levelName },
+      { code: 'IMAGE_MEMBERSHIP_LIMIT_EXCEEDED' as ErrorCode },
+    );
   }
   if (
     entitlement.allowedQualities.length > 0 &&
     requested.quality &&
     !entitlement.allowedQualities.includes(requested.quality)
   ) {
-    throw new ForbiddenException({
-      code: 'IMAGE_MEMBERSHIP_LIMIT_EXCEEDED',
-      message: `当前会员等级（${entitlement.levelName}）不支持画质 ${requested.quality}，请调整画质或升级套餐`,
-    });
+    throw new I18nHttpException(
+      HttpStatus.FORBIDDEN,
+      'image_entitlement.quality_not_supported',
+      { levelName: entitlement.levelName, quality: requested.quality },
+      { code: 'IMAGE_MEMBERSHIP_LIMIT_EXCEEDED' as ErrorCode },
+    );
   }
 }
 

@@ -1,10 +1,11 @@
 import {
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
+  HttpStatus,
   Injectable,
 } from '@nestjs/common';
 import type { AuthUser } from '@autix/domain';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
@@ -12,7 +13,7 @@ export class AdminGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{ user?: AuthUser }>();
     const user = request.user;
     if (!user?.id) {
-      throw new ForbiddenException('未登录');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.not_logged_in');
     }
 
     const roles: string[] = Array.isArray(user.roles) ? user.roles : [];
@@ -28,6 +29,6 @@ export class AdminGuard implements CanActivate {
       return true;
     }
 
-    throw new ForbiddenException('需要管理员权限');
+    throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.admin_required');
   }
 }

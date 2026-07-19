@@ -64,7 +64,6 @@ const presets: Record<string, ModelPreset> = {
 async function main() {
   console.log('🚀 模型配置向导\n');
 
-  // 1. 选择预设
   const presetChoice = await select({
     message: '选择一个 LLM 提供商:',
     choices: Object.entries(presets).map(([key, preset]) => ({
@@ -76,7 +75,6 @@ async function main() {
   const preset = presets[presetChoice];
   console.log(`\n✓ 选择了: ${preset.name}`);
 
-  // 2. 自定义配置（如果是 custom）
   let finalName = preset.name;
   let finalModel = preset.model;
   let finalBaseUrl = preset.baseUrl;
@@ -98,7 +96,6 @@ async function main() {
     });
   }
 
-  // 3. 输入 API Key
   let apiKey: string | undefined;
   if (preset.requiresApiKey) {
     apiKey = await input({
@@ -112,14 +109,12 @@ async function main() {
     }
   }
 
-  // 4. 检查是否已存在默认模型
   const existingDefault = await prisma.model_configs.findFirst({
     where: { isDefault: true, type: 'general' },
   });
 
   const shouldBeDefault = !existingDefault;
 
-  // 5. 创建配置
   console.log('\n📝 创建模型配置...');
   const modelConfig = await prisma.model_configs.create({
     data: {
@@ -148,7 +143,6 @@ async function main() {
   console.log(`   Base URL: ${modelConfig.baseUrl}`);
   console.log(`   默认模型: ${modelConfig.isDefault ? '是' : '否'}`);
 
-  // 6. 测试连接（可选）
   const shouldTest = await select({
     message: '\n要测试 API 连接吗?',
     choices: [

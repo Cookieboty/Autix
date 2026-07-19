@@ -230,7 +230,7 @@ describe('StripePaymentService', () => {
 
     await expect(
       service.createCheckoutForExistingOrder('user-1', 'order-1'),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'stripe.checkout_currency_mismatch' });
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -248,7 +248,7 @@ describe('StripePaymentService', () => {
         orderType: OrderType.MEMBERSHIP,
         productId: 'plan-1',
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'stripe.checkout_zero_amount_invalid' });
 
     expect(orderService.confirmManualPayment).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -504,9 +504,9 @@ describe('StripePaymentService', () => {
     const fetchMock = vi.fn();
     (globalThis as any).fetch = fetchMock;
 
-    await expect(service.cancelSubscriptionImmediately('not-a-sub')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(service.cancelSubscriptionImmediately('not-a-sub')).rejects.toMatchObject({
+      i18nKey: 'stripe.subscription_id_invalid',
+    });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

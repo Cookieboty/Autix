@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload, AuthUser } from '@autix/domain';
 import { AuthIdentityRepository } from '../auth-identity.repository';
 import { AuthSessionRepository } from '../auth-session.repository';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -22,9 +23,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const session = await this.authSessionRepository.findJwtSession(
       payload.sessionId,
     );
-    if (!session) throw new UnauthorizedException('Session revoked');
+    if (!session) throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.jwt.session_revoked');
     if (!session.isActive || session.expiresAt < new Date()) {
-      throw new UnauthorizedException('Session expired');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.jwt.session_expired');
     }
 
     const currentSystemId = session.currentSystemId ?? undefined;
@@ -34,7 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       currentSystemId,
     );
     if (!user || user.status === 'DISABLED' || user.status === 'LOCKED' || user.status === 'DELETED') {
-      throw new UnauthorizedException('User disabled');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.jwt.user_disabled');
     }
 
     const permissions = [

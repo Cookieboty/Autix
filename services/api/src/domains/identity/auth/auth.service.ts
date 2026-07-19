@@ -1,6 +1,7 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { MailService } from '../../platform/mail/mail.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { StorageCleanupService } from '../../platform/storage/storage-cleanup.service';
@@ -60,7 +61,7 @@ export class AuthService {
   async login(dto: LoginDto, ip: string, userAgent: string): Promise<LoginResult> {
     const user = await this.identityRepository.findLoginUserByUsername(dto.username);
     if (!user || !user.password || !(await bcrypt.compare(dto.password, user.password))) {
-      throw new UnauthorizedException('用户名或密码错误');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.login.invalid_credentials');
     }
     const { loginResult } = await this.issueSessionForUser(user, { ip, userAgent });
     return loginResult; // 响应保持不变，不暴露 sessionId
@@ -76,15 +77,15 @@ export class AuthService {
     const session = await this.sessionRepository.findById(sessionId);
     // 与 JwtStrategy.validate / refresh 同等守卫：会话必须有效，用户必须可用
     if (!session || !session.isActive || session.expiresAt < new Date()) {
-      throw new UnauthorizedException('会话已失效');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.session.expired');
     }
     const user = await this.identityRepository.findLoginUserById(session.userId);
     if (!user || user.status === 'DISABLED' || user.status === 'LOCKED') {
-      throw new UnauthorizedException('账户不可用');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
     }
     // DELETED 用户即使仍有异常残留 session 也不能继续使用。
     if (user.status === 'DELETED') {
-      throw new UnauthorizedException('账户不可用');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
     }
     const accessibleSystems = await this.computeAccessibleSystems(user);
     const payload: JwtPayload = {
@@ -100,10 +101,10 @@ export class AuthService {
 
   async issueSessionForUser(user: SessionUser, ctx: { ip: string; userAgent: string }): Promise<IssuedSession> {
     if (user.status === 'DISABLED' || user.status === 'LOCKED') {
-      throw new UnauthorizedException('账户已被禁用');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.disabled');
     }
     if ((user as { status: string }).status === 'DELETED') {
-      throw new UnauthorizedException('账户不可用');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
     }
     const accessibleSystems = await this.computeAccessibleSystems(user);
     const currentSystemId = accessibleSystems[0]?.id;
@@ -133,17 +134,17 @@ export class AuthService {
   ): Promise<{ message: string; requiresActivation: boolean }> {
     const existingUsername = await this.identityRepository.findUserByUsername(dto.username);
     if (existingUsername) {
-      throw new ConflictException('用户名已存在');
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'auth.register.username_taken');
     }
 
     const existingEmail = await this.identityRepository.findUserByEmail(dto.email);
     if (existingEmail) {
-      throw new ConflictException('Email 已存在');
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'auth.register.email_taken');
     }
 
     const system = await this.identityRepository.findSystemByCode(dto.systemCode);
     if (!system) {
-      throw new BadRequestException('系统不存在');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.system.not_found');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 12);
@@ -226,26 +227,26 @@ export class AuthService {
     try {
       payload = this.jwtService.verify(dto.token);
     } catch {
-      throw new BadRequestException('激活链接已过期或无效');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.activation.link_invalid');
     }
     if (payload.purpose !== 'email-activation') {
-      throw new BadRequestException('无效的激活链接');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.activation.link_wrong_purpose');
     }
 
     const user = await this.identityRepository.findUserById(payload.sub);
     if (!user) {
-      throw new BadRequestException('用户不存在');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.user.not_found');
     }
     if (user.status !== 'PENDING') {
-      throw new BadRequestException('账户已激活或状态异常，无需重复激活');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.activation.already_done');
     }
 
     const system = await this.identityRepository.findSystemById(payload.systemId);
     if (!system) {
-      throw new BadRequestException('系统不存在');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.system.not_found');
     }
     if (!system.autoApprove) {
-      throw new BadRequestException('无效的激活链接');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.activation.link_wrong_purpose');
     }
 
     const registration = await this.identityRepository.findRegistrationByUserAndSystem(
@@ -253,12 +254,17 @@ export class AuthService {
       system.id,
     );
     if (!registration || registration.status !== 'PENDING_ACTIVATION') {
-      throw new BadRequestException('账户已激活或状态异常，无需重复激活');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.activation.already_done');
     }
 
     const userRole = await this.identityRepository.findRoleBySystemAndCode(system.id, 'USER');
     if (!userRole) {
-      throw new BadRequestException('该系统未配置默认用户角色(USER)，无法完成激活');
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'auth.activation.default_role_missing',
+        undefined,
+        { code: 'REGISTRATION_ROLE_MISSING' },
+      );
     }
 
     await this.identityRepository.activateRegistration({
@@ -278,14 +284,14 @@ export class AuthService {
   async refresh(dto: RefreshDto): Promise<TokenPair> {
     const session = await this.sessionRepository.findByRefreshToken(dto.refreshToken);
     if (!session || !session.isActive || session.expiresAt < new Date()) {
-      throw new UnauthorizedException('RefreshToken 已过期或无效');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.refresh.token_invalid');
     }
     if (
       session.user.status === 'DELETED' ||
       session.user.status === 'DISABLED' ||
       session.user.status === 'LOCKED'
     ) {
-      throw new UnauthorizedException('账户不可用');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
     }
 
     const newRefreshToken = this.tokenFactory.createRefreshToken();
@@ -316,7 +322,7 @@ export class AuthService {
         dto.systemId,
       );
       if (!userRole) {
-        throw new BadRequestException('您无权访问该系统');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.system.forbidden');
       }
     }
 
@@ -343,19 +349,19 @@ export class AuthService {
     try {
       payload = this.jwtService.verify(dto.token);
     } catch {
-      throw new BadRequestException('链接已过期或无效');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.password_reset.link_invalid');
     }
     if (payload.purpose !== 'password-reset') {
-      throw new BadRequestException('无效的重置链接');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.password_reset.link_wrong_purpose');
     }
 
     const user = await this.identityRepository.findUserById(payload.sub);
     if (!user || !user.password || user.password.slice(-8) !== payload.ph) {
-      throw new BadRequestException('链接已使用或无效');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.password_reset.link_used');
     }
     // T3: 补 status 条件，DELETED / DISABLED / LOCKED 账户不允许重置密码
     if (user.status === 'DELETED' || user.status === 'DISABLED' || user.status === 'LOCKED') {
-      throw new BadRequestException('账户不可用');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
     }
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 12);
@@ -384,10 +390,20 @@ export class AuthService {
     // 安全：账户态失败用 409（业务冲突）而非 401——step-up 端点返回 401 会触发 SDK 自动 refresh+重试，
     // refresh 通常仍合法 → 重试再 401 → SDK 清 token 强制登出（脚枪）。这里用 USER_NOT_AVAILABLE/409。
     if (!dbUser) {
-      throw new ConflictException({ code: 'USER_NOT_AVAILABLE', message: '账户不可用' });
+      throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'auth.account.unavailable',
+        undefined,
+        { code: 'USER_NOT_AVAILABLE' },
+      );
     }
     if (dbUser.status === 'DELETED' || dbUser.status === 'DISABLED' || dbUser.status === 'LOCKED') {
-      throw new ConflictException({ code: 'USER_NOT_AVAILABLE', message: '账户不可用' });
+      throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'auth.account.unavailable',
+        undefined,
+        { code: 'USER_NOT_AVAILABLE' },
+      );
     }
 
     const purpose: StepUpPurpose = dbUser.password ? 'change-password' : 'set-password';
@@ -453,10 +469,10 @@ export class AuthService {
   ) {
     const dbUser = await this.identityRepository.findUserById(user.id);
     if (!dbUser) {
-      throw new UnauthorizedException('账户不可用');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
     }
     if (dbUser.status === 'DELETED' || dbUser.status === 'DISABLED' || dbUser.status === 'LOCKED') {
-      throw new UnauthorizedException('账户不可用');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
     }
 
     // T16: 分派两条头像路径
@@ -478,10 +494,10 @@ export class AuthService {
     const hasBannerKey = typeof bannerStorageKey === 'string' && bannerStorageKey.length > 0;
     // DTO 已校验互斥，这里 defence-in-depth 再兜一次
     if (hasAvatarField && hasAvatarKey) {
-      throw new BadRequestException('avatar 与 avatarStorageKey 不能同时提交');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.profile.avatar_conflict');
     }
     if (hasBannerField && hasBannerKey) {
-      throw new BadRequestException('bannerImage 与 bannerStorageKey 不能同时提交');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.profile.banner_conflict');
     }
 
     // 先写非头像字段（若存在），保持事务粒度最小
@@ -522,7 +538,12 @@ export class AuthService {
         (reservation.sizeBytes !== null && object.contentLength !== reservation.sizeBytes) ||
         (expectedContentType !== null && actualContentType !== expectedContentType)
       ) {
-        throw new BadRequestException('头像对象不存在或与上传凭据不匹配');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.profile.avatar_upload_mismatch',
+          undefined,
+          { code: 'AVATAR_UPLOAD_MISMATCH' },
+        );
       }
       const processed = await this.avatarImageProcessor.processAndUpload(user.id, avatarStorageKey!);
 
@@ -563,7 +584,12 @@ export class AuthService {
         (reservation.sizeBytes !== null && object.contentLength !== reservation.sizeBytes) ||
         (expectedContentType !== null && actualContentType !== expectedContentType)
       ) {
-        throw new BadRequestException('banner 对象不存在或与上传凭据不匹配');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.profile.banner_upload_mismatch',
+          undefined,
+          { code: 'AVATAR_UPLOAD_MISMATCH' },
+        );
       }
       const publicUrl = await this.r2.getPublicUrl(bannerStorageKey!);
       await this.identityRepository.consumeBannerReservation(user.id, bannerStorageKey!, publicUrl);
@@ -600,7 +626,7 @@ export class AuthService {
     const session = await this.sessionRepository.findById(user.sessionId);
     const userWithSystems = await this.identityRepository.findProfileUser(user.id);
     if (!userWithSystems || userWithSystems.status === 'DELETED') {
-      throw new UnauthorizedException('账户不可用');
+      throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
     }
 
     const accessibleSystems = user.isSuperAdmin

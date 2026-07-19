@@ -28,9 +28,9 @@ describe('verifyVideoCallback', () => {
       .not.toThrow();
   });
 
-  // 长度不同的 token 也必须走常量时间比较而不是提前返回 —— 先 sha256 等长化再
-  // timingSafeEqual（继承自 handler.ts:5-10 的 secretsMatch）。
-  it('does not leak length via early return', () => {
+  // 常量时间比较本身在单测里不可观测，这里只覆盖「长度不同」这一输入类；
+  // 等长化由 secretsMatch 的 sha256 + timingSafeEqual 保证。
+  it('rejects a token whose length differs from the secret', () => {
     expect(() => verifyVideoCallback({ preset: arkVideoV3, token: 'x', secret: 's3cret' }))
       .toThrow(/invalid or missing token/i);
   });

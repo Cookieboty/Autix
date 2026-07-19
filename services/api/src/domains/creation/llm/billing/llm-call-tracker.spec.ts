@@ -76,11 +76,14 @@ describe('createTrackedModel — no pointCostWeight fallback', () => {
   });
 
   it('never reads a pointCostWeight/modelTier field off the context — TrackerContext no longer declares them', () => {
-    // Compile-time guarantee: this object satisfies TrackerContext without those
-    // fields. If someone re-adds `pointCostWeight` or `modelTier` as required on
-    // TrackerContext, this file fails to typecheck.
-    const ctx: TrackerContext = { ...baseCtx };
-    expect('pointCostWeight' in ctx).toBe(false);
-    expect('modelTier' in ctx).toBe(false);
+    // 真正的守卫在类型层：对象字面量的多余属性检查会报错，@ts-expect-error 因此成立。
+    // 一旦有人把这两个字段加回 TrackerContext，报错消失 → @ts-expect-error 自身变成错误 → typecheck 失败。
+    // 运行时断言 `'x' in ctx` 查的是测试自己写的字面量，与类型定义无关，不能替代它。
+    // @ts-expect-error pointCostWeight 不得出现在 TrackerContext 上
+    const withWeight: TrackerContext = { ...baseCtx, pointCostWeight: 1 };
+    // @ts-expect-error modelTier 不得出现在 TrackerContext 上
+    const withTier: TrackerContext = { ...baseCtx, modelTier: 'pro' };
+    expect(withWeight).toBeDefined();
+    expect(withTier).toBeDefined();
   });
 });

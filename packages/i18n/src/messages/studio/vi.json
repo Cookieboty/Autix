@@ -1,0 +1,1588 @@
+{
+  "chat": {
+    "newConversation": "Cuộc trò chuyện mới",
+    "searchConversation": "Tìm kiếm cuộc trò chuyện...",
+    "noConversations": "Không có cuộc trò chuyện",
+    "noMatchingConversation": "Không tìm thấy cuộc trò chuyện phù hợp",
+    "deleteConversationTitle": "Xóa cuộc trò chuyện",
+    "deleteConversationMsg": "Bạn có chắc muốn xóa cuộc trò chuyện {title}? Tất cả tin nhắn, artifact và lịch sử phiên bản sẽ bị xóa vĩnh viễn.",
+    "inputPlaceholder": "Nhập yêu cầu của bạn",
+    "inputPlaceholderWithImage": "Nhập văn bản hoặc dán hình ảnh",
+    "sendMessage": "Gửi tin nhắn",
+    "generatingReply": "Đang tạo phản hồi",
+    "sendShortcut": "⌘/Ctrl + Enter để gửi",
+    "addImage": "Thêm hình ảnh",
+    "imageCount": "{count}/{max} hình",
+    "thinking": "Đang suy nghĩ",
+    "thinkingDefault": "Amux Studio đang chuẩn bị phản hồi",
+    "thinkingProgress": "Đang thực hiện bước {step}/{totalSteps}",
+    "thinkingPreparing": "Đang chuẩn bị nội dung phản hồi…",
+    "copied": "Đã sao chép",
+    "copy": "Sao chép",
+    "copyReply": "Sao chép phản hồi",
+    "preview": {
+      "copyLink": "Sao chép liên kết",
+      "linkCopied": "Đã sao chép",
+      "download": "Tải xuống",
+      "openOriginal": "Mở ảnh gốc",
+      "close": "Đóng xem trước"
+    },
+    "images": {
+      "title": "Hình ảnh",
+      "empty": "Chưa có hình ảnh",
+      "count": "Tổng {count}",
+      "expand": "Mở bảng hình ảnh",
+      "collapse": "Thu gọn bảng hình ảnh",
+      "refresh": "Làm mới",
+      "retry": "Thử lại",
+      "error": "Tải thất bại"
+    },
+    "selectModel": "Chọn mô hình",
+    "default": "Mặc định",
+    "searchModels": "Tìm kiếm mô hình...",
+    "noModelsFound": "Không tìm thấy mô hình",
+    "chatWorkspace": "Không gian làm việc",
+    "welcomeMessage": "Xin chào! Tôi là trợ lý phân tích yêu cầu Amux Studio.\nHãy mô tả yêu cầu của bạn, tôi sẽ giúp bạn phân tích có cấu trúc và tổ chức.",
+    "selectOrCreateChat": "Chọn hoặc tạo cuộc trò chuyện để bắt đầu",
+    "requestError": "Lỗi yêu cầu, vui lòng thử lại",
+    "deepSearch": "Tìm kiếm sâu",
+    "newChat": "Cuộc trò chuyện mới",
+    "deleteChat": "Xóa cuộc trò chuyện",
+    "deleteConfirm": "Bạn có chắc muốn xóa cuộc trò chuyện này?",
+    "renameChat": "Đổi tên cuộc trò chuyện",
+    "template": {
+      "drawerTitle": "Chọn mẫu hình ảnh",
+      "searchPlaceholder": "Tìm mẫu",
+      "current": "Hiện tại",
+      "editPrompt": "Sửa Prompt",
+      "edit": "Sửa",
+      "reusePrompt": "Dùng lại",
+      "removeTemplate": "Gỡ mẫu",
+      "dialogTitle": "{name} · Trình sửa Prompt",
+      "sectionRaw": "Nội dung mẫu",
+      "sectionReferences": "Ảnh tham chiếu",
+      "sectionVariables": "Biến",
+      "refSelectAll": "Chọn tất cả",
+      "refClear": "Bỏ chọn",
+      "refSelectedCount": "Đã chọn {n}/{total}",
+      "refEmpty": "Mẫu này chưa có ảnh tham chiếu",
+      "reset": "Đặt lại",
+      "applyToInput": "Áp vào ô nhập",
+      "noVariables": "Mẫu này không có biến",
+      "variableCount": "{count} biến",
+      "imagesCapHit": "Ảnh tham chiếu đã gộp đến giới hạn {max}",
+      "confirmSwitch": "Chuyển mẫu sẽ xoá nội dung và ảnh tham chiếu hiện tại. Tiếp tục?",
+      "pendingVariables": "{n} biến còn thiếu",
+      "empty": "No templates available",
+      "templateAlt": "Template",
+      "noCover": "No cover",
+      "untitled": "Untitled template",
+      "useThisTemplate": "Use this template",
+      "dialogDescription": "Edit template variables and reference assets. Applying will fill the session input.",
+      "drawerTitleVideo": "选择视频模板"
+    },
+    "error": {
+      "chatModelInvalid": "Mô hình trò chuyện đã chọn không hỗ trợ tạo văn bản. Vui lòng chọn mô hình khác hoặc để trống để dùng mặc định.",
+      "defaultModelMissing": "Chưa cấu hình mô hình tổng quát mặc định để tạo prompt",
+      "imageMaxReached": "Chỉ có thể thêm tối đa {max} ảnh",
+      "imageMaxPartial": "Đã đạt giới hạn {max} ảnh; chỉ thêm {n} ảnh đầu tiên",
+      "requestFailedTitle": "Yêu cầu thất bại",
+      "imageUploadFailed": "Tải ảnh lên thất bại",
+      "imageUploadMissingUrl": "Phản hồi tải ảnh thiếu URL",
+      "switchModeFailed": "Chuyển chế độ thất bại",
+      "selectImageTemplateFirst": "Vui lòng chọn mẫu hình ảnh trước",
+      "messageSaveFailed": "Lưu tin nhắn thất bại",
+      "modeComingSoon": "Chế độ {kind} sắp ra mắt và chưa hỗ trợ gửi",
+      "attachmentUploadFailed": "Tải tệp đính kèm thất bại"
+    },
+    "toolbar": {
+      "selectModel": "Chọn mô hình",
+      "selectTemplate": "Chọn mẫu",
+      "chatModelTooltip": "Mô hình trò chuyện (dùng để tóm tắt prompt)",
+      "noModels": "Không có mô hình {kind} khả dụng"
+    },
+    "modelPicker": {
+      "placeholder": "Chọn mô hình",
+      "searchPlaceholder": "Tìm theo tên mô hình / nhà cung cấp",
+      "empty": "Không có mô hình phù hợp"
+    },
+    "inputPlaceholderWithMedia": "Upload reference assets and describe what you want with images, text, audio, or video",
+    "attachments": {
+      "unsupportedType": "Unsupported file type",
+      "maxReached": "You can upload up to {max} attachments",
+      "maxRemaining": "You can still upload {remaining} attachments",
+      "uploadFile": "Upload file",
+      "remove": "Remove attachment"
+    },
+    "mentions": {
+      "title": "Reference resources",
+      "empty": "No acquired resources available to reference"
+    },
+    "imageWorkflow": {
+      "image": "Image",
+      "editImage": "Edit image",
+      "referenceToImage": "Reference to image",
+      "createImage": "Create image",
+      "editingFrom": "Editing from {count} images",
+      "removeSource": "Remove edit source",
+      "removeImage": "Remove image",
+      "clear": "Clear",
+      "editModeHint": "Choosing Edit image sends this as an image edit. Normal send continues the conversation.",
+      "referenceImage": "Reference image",
+      "editPlaceholder": "Describe how you want to change this image",
+      "cancelGeneration": "Cancel image generation",
+      "promptSuggestion": "Prompt suggestion",
+      "generateImage": "Generate image",
+      "editSuggestion": "Edit suggestion",
+      "imageResult": "Image result",
+      "regenerateFromPrompt": "Generate again with this prompt",
+      "useAsEditSource": "Use as edit source",
+      "editingImage": "Editing image...",
+      "generatingImage": "Generating image..."
+    },
+    "points": {
+      "estimatedCost": "Estimated cost: {cost} points",
+      "estimating": "Estimating point cost",
+      "cost": "{cost} points"
+    },
+    "activeResources": {
+      "title": "Session Skills",
+      "add": "Add",
+      "loading": "Loading...",
+      "empty": "No Skills activated for this session",
+      "remove": "Remove"
+    },
+    "resourceLauncher": {
+      "addResource": "+ Add Resource",
+      "openPanel": "Open resource panel"
+    },
+    "imageParams": {
+      "smartRatio": "Auto",
+      "summary": "{size}",
+      "quality": "Image quality",
+      "size": "Image size",
+      "resolution": "Độ phân giải",
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
+    },
+    "agentKind": {
+      "chat": "Trò chuyện",
+      "image": "Hình ảnh",
+      "video": "Video",
+      "avatar": "Avatar"
+    },
+    "agentPicker": {
+      "title": "Choose Agent",
+      "loading": "Loading...",
+      "locked": "The conversation has started, so the mode cannot be changed",
+      "emptyKind": "No Agents of this type",
+      "current": "Current"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "General Assistant",
+      "defaultChatDescription": "All-purpose assistant",
+      "chatAssistant": "Chat assistant",
+      "imageGeneration": "Image generation",
+      "videoCreation": "Video creation"
+    },
+    "inputMode": {
+      "chat": "Thường",
+      "image": "Hình ảnh",
+      "video": "Video"
+    },
+    "emptyGreeting": "Xin chào! Tôi có thể giúp gì cho bạn?",
+    "uiAction": {
+      "types": {
+        "newFeature": "Yêu cầu tính năng mới",
+        "bugFix": "Sửa lỗi",
+        "optimization": "Tối ưu hiệu năng",
+        "refactoring": "Tái cấu trúc mã"
+      },
+      "selectedType": "Loại yêu cầu đã chọn: {type}",
+      "requirementTitle": "Tiêu đề yêu cầu: {value}",
+      "targetUsers": "Người dùng mục tiêu: {value}",
+      "businessGoal": "Mục tiêu kinh doanh: {value}",
+      "functionalDescription": "Mô tả chức năng: {value}",
+      "confirmSubmit": "Xác nhận gửi",
+      "cancelAction": "Hủy thao tác",
+      "executeAction": "Thực hiện thao tác: {action}"
+    },
+    "unknownError": "未知错误",
+    "dismiss": "关闭"
+  },
+  "template": {
+    "discover": "Khám phá",
+    "recommended": "Đề xuất",
+    "allTemplates": "Tất cả template",
+    "popularRanking": "Phổ biến",
+    "latestPublished": "Mới nhất",
+    "categories": "Danh mục",
+    "searchPlaceholder": "Tìm kiếm template...",
+    "publishTemplate": "Đăng template",
+    "headline": "Template prompt chất lượng cho sự sáng tạo không giới hạn",
+    "subline": "Chụp sản phẩm, chân dung, phong cách du lịch, từ cảm hứng đến thành phẩm",
+    "noTemplates": "Không có template",
+    "noCover": "Không có ảnh bìa",
+    "noImage": "Không có hình ảnh",
+    "title": "Tiêu đề",
+    "description": "Mô tả",
+    "category": "Danh mục",
+    "prompt": "Prompt",
+    "variables": "Biến",
+    "variableDefinition": "Định nghĩa biến",
+    "variableName": "Tên biến",
+    "variableLabel": "Nhãn hiển thị",
+    "defaultValue": "Giá trị mặc định",
+    "addVariable": "Thêm biến",
+    "recommendedModel": "Mô hình đề xuất",
+    "exampleImages": "Ví dụ",
+    "noExamples": "Không có ví dụ",
+    "uses": "Lượt dùng",
+    "likes": "Thích",
+    "coverImage": "Ảnh bìa",
+    "images": "Hình ảnh",
+    "tags": "Thẻ",
+    "tagsPlaceholder": "Phân tách bằng dấu phẩy, ví dụ: chân dung, nữ, ngoại cảnh",
+    "other": "Khác",
+    "approved": "Đã duyệt",
+    "categoryLabel": "Danh mục: {category}",
+    "publishedAt": "Đăng ngày {date}",
+    "selectTemplateGenerate": "Sử dụng template",
+    "publishNewTemplate": "Đăng template mới",
+    "editTemplate": "Chỉnh sửa template",
+    "submitForReview": "Gửi để duyệt",
+    "editDescription": "Thay đổi sẽ cần được phê duyệt lại",
+    "newDescription": "Tạo template prompt mới. Template sẽ được quản trị viên xem xét sau khi gửi.",
+    "reviewNote": "Sẽ được đăng sau khi quản trị viên phê duyệt",
+    "editSaveNote": "Sẽ trở về trạng thái chờ duyệt sau khi lưu",
+    "titlePlaceholder": "Đặt tên cho template của bạn",
+    "descriptionPlaceholder": "Mô tả ngắn gọn mục đích và hiệu quả của template này",
+    "promptDescription": "Sử dụng '{{variable}}' để định nghĩa biến thay thế",
+    "promptPlaceholder": "Ví dụ: Chân dung đẹp của '{{gender}}', phong cách '{{style}}', nền '{{background}}'",
+    "typeText": "Văn bản",
+    "typeSelect": "Lựa chọn",
+    "typeNumber": "Số",
+    "basicInfo": "Thông tin cơ bản",
+    "templateEyebrow": "Template",
+    "exampleNumber": "Ví dụ {n}",
+    "submitting": "Đang gửi...",
+    "createTemplate": "Tạo template",
+    "deleteConfirm": "Bạn có chắc muốn xóa template này?",
+    "deleteSuccess": "Xóa template thành công",
+    "useTemplate": "Sử dụng template"
+  },
+  "templateReview": {
+    "title": "Duyệt template",
+    "pending": "Chờ xử lý",
+    "inReview": "Đang duyệt",
+    "approved": "Đã duyệt",
+    "rejected": "Bị từ chối",
+    "headerTitle": "Tiêu đề",
+    "headerCategory": "Danh mục",
+    "headerStatus": "Trạng thái",
+    "headerSubmittedAt": "Ngày gửi",
+    "headerActions": "Thao tác",
+    "rejectReason": "Lý do từ chối",
+    "rejectReasonPlaceholder": "Lý do từ chối/chỉnh sửa (tùy chọn)",
+    "approve": "Phê duyệt",
+    "reject": "Từ chối",
+    "revise": "Yêu cầu sửa",
+    "importDropPaste": "Kéo tệp vào đây / dán nội dung JSON",
+    "setHot": "Đặt là nổi bật",
+    "unsetHot": "Bỏ nổi bật",
+    "batchImport": "Nhập hàng loạt",
+    "downloadTemplate": "Tải mẫu",
+    "exportTemplates": "Xuất",
+    "batchApprove": "Phê duyệt hàng loạt",
+    "batchReject": "Từ chối hàng loạt",
+    "batchRevise": "Yêu cầu sửa hàng loạt",
+    "batchDelete": "Xóa hàng loạt",
+    "selectedCount": "Đã chọn {count}",
+    "selectAll": "Chọn tất cả",
+    "deselectAll": "Bỏ chọn tất cả",
+    "confirmBatchDelete": "Bạn có chắc muốn xóa {count} mẫu không?",
+    "sourceInfo": "Thông tin nguồn",
+    "authorName": "Tác giả",
+    "authorUrl": "Liên kết tác giả",
+    "originalUrl": "Liên kết gốc",
+    "sourcePlatform": "Nền tảng",
+    "externalId": "ID bên ngoài",
+    "imageTemplates": "Mẫu ảnh",
+    "videoTemplates": "Mẫu video",
+    "importDialogTitle": "Nhập mẫu hàng loạt",
+    "importUpload": "Tải lên tệp JSON",
+    "importPreview": "Xem trước & xác nhận",
+    "importing": "Đang nhập...",
+    "importDone": "Hoàn tất nhập",
+    "importSuccess": "Thành công: {count}",
+    "importFailed": "Thất bại: {count}",
+    "importSkipped": "Bỏ qua: {count}",
+    "templatesFound": "Tìm thấy {count} mẫu",
+    "viewSource": "Xem nguồn"
+  },
+  "imageUploader": {
+    "defaultLabel": "Nhấn hoặc kéo thả để tải lên hình ảnh",
+    "uploading": "Đang tải lên..."
+  },
+  "artifact": {
+    "preview": "Xem trước",
+    "split": "Chia đôi màn hình",
+    "workspace": "Không gian làm việc Artifact",
+    "artifactTitle": "Tiêu đề artifact",
+    "clickToEditTitle": "Nhấn để chỉnh sửa tiêu đề",
+    "saveToServer": "Lưu lên máy chủ (Ctrl+S)",
+    "save": "Lưu",
+    "versionHistory": "Lịch sử phiên bản",
+    "aiOptimize": "Tối ưu AI",
+    "previewLabel": "Xem trước",
+    "optimizeEyebrow": "Tối ưu Artifact",
+    "optimizeTitle": "Tối ưu tài liệu bằng AI",
+    "optimizeDescription": "Tạo phiên bản mới rõ ràng và đầy đủ hơn dựa trên tài liệu hiện tại. Phiên bản mới sẽ được tạo khi hoàn thành.",
+    "generating": "Đang tạo",
+    "generatedNewVersion": "Phiên bản mới đã được tạo, sẽ tự động áp dụng.",
+    "aiWillOptimize": "AI sẽ tạo đề xuất tối ưu dựa trên phiên bản hiện tại.",
+    "startOptimize": "Bắt đầu tối ưu",
+    "optimizeInstruction": "Hướng dẫn tối ưu",
+    "optimizeInstructionDesc": "Mô tả trong một hoặc hai câu cách bạn muốn AI điều chỉnh tài liệu này.",
+    "optimizePlaceholder": "VD: Thêm chi tiết kỹ thuật, cải thiện ngôn ngữ, bổ sung đánh giá rủi ro…",
+    "focusTip": "Tập trung vào một mục tiêu sẽ cho kết quả tốt hơn.",
+    "optimizePreview": "Xem trước tối ưu",
+    "generatingNewVersion": "Đang tạo phiên bản mới theo thời gian thực…",
+    "optimizeDone": "Tối ưu hoàn tất, sẽ áp dụng ngay.",
+    "waitingForResult": "Đang chờ kết quả tối ưu…",
+    "closeLabel": "Đóng",
+    "cancelLabel": "Hủy",
+    "versionHistoryEyebrow": "Lịch sử phiên bản",
+    "versionHistoryTitle": "Lịch sử phiên bản",
+    "versionCount": "{count} phiên bản",
+    "noVersionHistory": "Chưa có lịch sử phiên bản",
+    "versionLabel": "Phiên bản {version}",
+    "currentTag": "Hiện tại",
+    "confirmRevert": "Bạn có chắc muốn khôi phục phiên bản {version}? Điều này sẽ tạo phiên bản mới.",
+    "reverting": "Đang khôi phục…",
+    "revert": "Khôi phục",
+    "loadingEditor": "Đang tải trình chỉnh sửa..."
+  },
+  "categoryOptions": {
+    "portrait": "Chân dung",
+    "landscape": "Phong cảnh",
+    "product": "Sản phẩm",
+    "illustration": "Minh họa",
+    "architecture": "Kiến trúc",
+    "scifi": "Khoa học viễn tưởng",
+    "scene": "Cảnh"
+  },
+  "videoCategoryOptions": {
+    "marketing": "Marketing",
+    "education": "Giáo dục",
+    "story": "Câu chuyện",
+    "festival": "Lễ hội",
+    "product": "Sản phẩm"
+  },
+  "skillCategoryOptions": {
+    "engineering": "Kỹ thuật",
+    "writing": "Viết",
+    "design": "Thiết kế",
+    "data": "Dữ liệu",
+    "ops": "Vận hành",
+    "other": "Khác"
+  },
+  "mcpCategoryOptions": {
+    "database": "Cơ sở dữ liệu",
+    "cloud": "Cloud",
+    "devtool": "Công cụ phát triển",
+    "communication": "Giao tiếp",
+    "other": "Khác"
+  },
+  "agentCategoryOptions": {
+    "product": "Sản phẩm",
+    "engineering": "Kỹ thuật",
+    "marketing": "Marketing",
+    "support": "Hỗ trợ",
+    "hr": "Nhân sự",
+    "other": "Khác"
+  },
+  "drawWorkspace": {
+    "title": "Vẽ hình ảnh",
+    "untitled": "Ảnh chưa đặt tên",
+    "model": "Chỉnh sửa ảnh",
+    "dropImage": "Thả ảnh vào canvas",
+    "status": {
+      "ready": "Chế độ vẽ độc lập",
+      "saving": "Đang lưu…",
+      "saved": "Đã lưu",
+      "conflict": "Đã tải bản mới nhất"
+    },
+    "actions": {
+      "backToImage": "Bàn làm việc ảnh",
+      "addImage": "Thêm ảnh",
+      "fit": "Vừa khung",
+      "clear": "Xóa",
+      "generate": "Tạo / áp dụng chỉnh sửa",
+      "generateComingSoon": "Đang kết nối tạo ảnh; hiện có thể vẽ và sắp xếp bố cục"
+    },
+    "tools": {
+      "paint": "Vẽ",
+      "erase": "Tẩy",
+      "reference": "Tham chiếu"
+    },
+    "source": {
+      "title": "Ngữ cảnh ảnh",
+      "empty": "Thêm ảnh"
+    },
+    "context": {
+      "imageCount": "{count} ảnh",
+      "selectedCount": "{count} đã chọn",
+      "quickEdit": "Quick edit",
+      "upscale": "Upscale",
+      "removeBg": "Remove background",
+      "eraser": "Eraser",
+      "editElement": "Edit element",
+      "editText": "Edit text",
+      "multiAngle": "Multi-angle",
+      "moveObject": "Move object",
+      "download": "Download",
+      "quickEditPrompt": "Tiếp tục chỉnh sửa ảnh này: {label}",
+      "upscalePrompt": "Phóng to ảnh này và giữ bố cục, chất liệu",
+      "removeBgPrompt": "Xóa nền và giữ chủ thể",
+      "fitSize": "Vừa kích thước",
+      "quickEditPlaceholder": "Mô tả thay đổi…",
+      "quickEditSubmit": "Tạo",
+      "close": "Đóng"
+    },
+    "contextMenu": {
+      "wrapSelectionInFrame": "Bọc vùng chọn trong khung",
+      "copyElementLink": "Sao chép liên kết đối tượng"
+    },
+    "prompt": {
+      "title": "Prompt chỉnh sửa",
+      "placeholder": "Mô tả nội dung cần tạo hoặc chỉnh sửa...",
+      "videoPlaceholder": "Mô tả cảnh quay, chuyển động, chuyển cảnh hoặc luồng storyboard..."
+    },
+    "toast": {
+      "importFailed": "Nhập ảnh thất bại",
+      "unsupportedFile": "Vui lòng chọn tệp ảnh"
+    },
+    "mode": {
+      "image": "Ảnh",
+      "video": "Video",
+      "imageHint": "Trò chuyện để tạo ảnh lên canvas",
+      "videoHint": "Nối ảnh bằng mũi tên để tạo luồng"
+    },
+    "dock": {
+      "select": "Select",
+      "frame": "Frame",
+      "upload": "Upload image",
+      "sticker": "Sticker",
+      "rectangle": "Rectangle",
+      "pen": "Pen",
+      "text": "Text",
+      "genImage": "Generate image",
+      "arrangeVideo": "Tự sắp xếp",
+      "genVideo": "Generate video",
+      "genText": "Generate text",
+      "color": "Color"
+    },
+    "chat": {
+      "newChat": "New chat",
+      "share": "Share",
+      "collapse": "Collapse",
+      "agent": "Agent",
+      "attach": "Attach",
+      "library": "Library",
+      "thumbUp": "Good",
+      "thumbDown": "Bad",
+      "done": "Done",
+      "tileAll": "Lay out history on canvas",
+      "locate": "Locate on canvas",
+      "empty": "Nhập prompt, hoặc tải/chọn ảnh làm tham chiếu",
+      "expand": "Expand chat",
+      "history": "Lịch sử",
+      "search": "Tìm cuộc trò chuyện",
+      "emptyHistory": "Chưa có cuộc trò chuyện",
+      "newConversation": "Cuộc trò chuyện mới",
+      "renameFailed": "Lưu tiêu đề thất bại",
+      "noModel": "Không có model ảnh khả dụng",
+      "noVideoModel": "Không có model video khả dụng. Hãy chọn một model video trên thanh công cụ trước.",
+      "videoFailed": "Tạo video thất bại. Vui lòng thử lại sau.",
+      "modelLoading": "Đang tải model...",
+      "modelEmpty": "Không có model",
+      "modelSearchPlaceholder": "Tìm model",
+      "modelEmptyResult": "Không có model phù hợp",
+      "videoFlowReady": "Đã tạo luồng video trên canvas. Bạn có thể nối cảnh hoặc chỉnh node.",
+      "createFailed": "Tạo cuộc trò chuyện thất bại",
+      "linkCopied": "Đã sao chép liên kết",
+      "copyFailed": "Sao chép thất bại",
+      "attachToCanvas": "Tải lên canvas",
+      "referenceImages": "{count} ảnh tham chiếu",
+      "removeAttachment": "Gỡ tệp đính kèm",
+      "thinking": "Đang tạo",
+      "generateFailed": "Tạo thất bại"
+    },
+    "flow": {
+      "prompt": "Prompt cảnh",
+      "videoOutput": "Đầu ra video",
+      "waitingForRender": "Đợi render"
+    },
+    "topbar": {
+      "credits": "Credits"
+    },
+    "video": {
+      "errors": {
+        "enterShotDescription": "Hãy nhập mô tả cảnh quay",
+        "enterVideoPrompt": "Hãy nhập prompt video"
+      },
+      "alreadyConnectedToVideoNode": "Đã kết nối với nút video",
+      "imagesAlreadyConnected": "Hai ảnh này đã được kết nối",
+      "noVideoNodesOnCanvas": "Chưa có nút video nào trên canvas"
+    }
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "Xem trước",
+      "download": "Tải xuống",
+      "delete": "Xoá",
+      "edit": "Dùng làm nguồn chỉnh sửa",
+      "selected": "Đã chọn",
+      "use": "Sử dụng",
+      "remove": "Gỡ"
+    },
+    "history": {
+      "modeEdit": "Chỉnh sửa",
+      "modeGenerate": "Tạo",
+      "noPrompt": "(Không có prompt)",
+      "deleteTask": "Xoá tác vụ này",
+      "editSource": "Nguồn chỉnh sửa",
+      "referenceImage": "Ảnh tham chiếu",
+      "refSummary": "{srcCount} nguồn · {refCount} tham chiếu",
+      "alreadyInEditor": "Đã có trong trình chỉnh sửa",
+      "useAsEditSource": "Dùng làm nguồn chỉnh sửa",
+      "addToMaterial": "Thêm vào thư viện",
+      "reuseTask": "Dùng lại thiết lập",
+      "toMaterial": "Vào thư viện",
+      "deleteImage": "Xoá ảnh này"
+    },
+    "material": {
+      "deleteMaterial": "Xoá nguyên liệu"
+    },
+    "result": {
+      "imageCount": "{count} ảnh",
+      "seed": "Seed {seed}",
+      "duration": "{seconds}s",
+      "generatedImage": "Ảnh đã tạo",
+      "feedbackHelpful": "Kết quả hữu ích",
+      "feedbackImprove": "Cần cải thiện",
+      "copyUrl": "Sao chép URL",
+      "openDraw": "Mở trong Vẽ",
+      "title": "Kết quả",
+      "subtitle": "Xem, tải, sao chép URL hoặc đưa lại vào nguồn chỉnh sửa",
+      "generating": "Đang tạo",
+      "empty": {
+        "title": "Chưa có ảnh",
+        "description": "Nhập prompt và chọn mô hình — kết quả sẽ hiển thị ở đây."
+      }
+    },
+    "toast": {
+      "feedbackRecorded": "Đã ghi nhận phản hồi",
+      "feedbackFailed": "Gửi phản hồi thất bại",
+      "autoAdjusted": "Đã tự động điều chỉnh theo mô hình hiện tại: {changes}",
+      "refineFailed": "Tinh chỉnh prompt thất bại",
+      "alreadyInEditor": "Đã có trong trình biên tập",
+      "addedToEditor": "Đã thêm vào nguồn chỉnh sửa",
+      "reusedTask": "Đã áp dụng tham số tác vụ",
+      "materialAddedToEditor": "Đã thêm tài nguyên vào nguồn chỉnh sửa",
+      "materialUseFailed": "Sử dụng tài nguyên thất bại",
+      "materialDeleted": "Đã xoá tài nguyên",
+      "materialDeleteFailed": "Xoá tài nguyên thất bại",
+      "addedToMaterial": "Đã lưu vào thư viện",
+      "addToMaterialFailed": "Lưu vào thư viện thất bại",
+      "historyDeleted": "Đã xoá tác vụ",
+      "historyDeleteFailed": "Xoá tác vụ thất bại",
+      "promptApplied": "Đã áp dụng chú thích vào prompt"
+    },
+    "template": {
+      "hot": "Phổ biến",
+      "usageSummary": "{category} · {count} lượt dùng",
+      "apply": "Áp dụng",
+      "searchPlaceholder": "Tìm mẫu, thẻ hoặc mục đích",
+      "allCategories": "Tất cả danh mục",
+      "loading": "Đang tải mẫu",
+      "empty": "Không có mẫu phù hợp"
+    },
+    "reference": {
+      "zoomAnnotate": "Phóng to & chú thích",
+      "annotated": "Đã chú thích",
+      "previewOriginal": "Xem ảnh gốc",
+      "title": "Tham chiếu & nguồn",
+      "subtitle": "Chú thích vẽ trên ảnh gốc và sẽ được hợp nhất khi gửi"
+    },
+    "annotation": {
+      "overlayLoadFailed": "Tải lớp chú thích thất bại",
+      "imageLoadFailed": "Tải ảnh thất bại",
+      "needMarkArea": "Hãy đánh dấu vùng trên ảnh trước",
+      "mergeFailed": "Hợp nhất chú thích thất bại",
+      "hint": "Hãy tô vùng cần chỉnh sửa và bổ sung prompt.",
+      "colorPickerTitle": "Đổi sang {color}",
+      "undo": "Hoàn tác",
+      "clear": "Xoá hết",
+      "useAnnotation": "Áp dụng chú thích",
+      "close": "Đóng",
+      "loadingImage": "Đang tải ảnh...",
+      "colors": {
+        "red": "đỏ",
+        "yellow": "vàng",
+        "cyan": "lục lam",
+        "green": "xanh lá",
+        "purple": "tím",
+        "white": "trắng"
+      },
+      "prompt": {
+        "stripLabelSuffix": " (tham chiếu)",
+        "noRegion": "Với \"{label}\", hãy tối ưu toàn bộ ảnh.",
+        "singleRegion": "Với \"{label}\", tập trung chỉnh sửa {region}.",
+        "multiRegion": "Với \"{label}\", đã chú thích {count} vùng: {regions}.",
+        "regionDescription": "{position} (khoảng {widthPercent}% rộng × {heightPercent}% cao)",
+        "regionDescriptionWithIndex": "Vùng {index}: {position} (khoảng {widthPercent}% rộng × {heightPercent}% cao)"
+      },
+      "position": {
+        "left": "bên trái",
+        "right": "bên phải",
+        "top": "phía trên",
+        "bottom": "phía dưới",
+        "centerHorizontal": "ở giữa",
+        "centerVertical": "ở giữa",
+        "full": "toàn bộ ảnh",
+        "horizontalOnly": "giữa {vertical}",
+        "verticalOnly": "giữa {horizontal}",
+        "combined": "{vertical} {horizontal}"
+      },
+      "mergeFailedUserAction": "Hợp nhất chú thích thất bại. Vui lòng thử lại.",
+      "emptyPromptSuffix": "Có thể bổ sung chi tiết ở đây."
+    },
+    "panel": {
+      "close": "Đóng",
+      "title": "Cài đặt ảnh",
+      "subtitle": "{provider} · cài đặt hiện tại",
+      "size": {
+        "label": "Kích thước khung"
+      },
+      "resolution": {
+        "label": "Độ phân giải"
+      },
+      "aspectRatio": {
+        "label": "Tỷ lệ ảnh"
+      },
+      "quality": {
+        "label": "Chất lượng"
+      },
+      "advanced": {
+        "label": "Nâng cao",
+        "seedPlaceholder": "Seed (trống = tự động)"
+      },
+      "style": {
+        "label": "Phong cách & negative",
+        "negativePlaceholder": "Prompt phủ định: điều cần tránh",
+        "negativeHint": "Sẽ được đưa vào prompt dưới dạng chỉ thị phủ định."
+      },
+      "refSection": {
+        "uploadedLabel": "Ảnh tham chiếu tải lên",
+        "editSourceLabel": "Nguồn chỉnh sửa",
+        "editSourceAnnotation": "Chú thích nguồn chỉnh sửa",
+        "uploadedAnnotationSuffix": " chú thích"
+      },
+      "schemaUnavailable": "Schema định giá không khả dụng — không thể tạo cho đến khi tải xong."
+    },
+    "header": {
+      "title": "Image Studio",
+      "subtitle": "Kết hợp tham số, ảnh tham chiếu, mẫu và chú thích để tạo ảnh chất lượng thương mại",
+      "paramsButton": "Tham số",
+      "variablesButton": "Biến mẫu"
+    },
+    "prompt": {
+      "title": "Prompt",
+      "subtitle": "Mô tả ý tưởng, yêu cầu thương mại hoặc hướng dẫn chỉnh sửa",
+      "removeTemplate": "Bỏ mẫu hiện tại",
+      "imageModelPrefix": "Mô hình ảnh",
+      "imageModelPlaceholder": "Chọn mô hình ảnh",
+      "noImageModelHint": "Chưa có mô hình ảnh. Hãy thêm GPT Image, Gemini hoặc mô hình tương thích trong cài đặt.",
+      "refineModelPrefix": "Tinh chỉnh prompt",
+      "refineModelDefault": "Mặc định",
+      "placeholder": "Mô tả ảnh bạn muốn tạo. Studio sẽ kết hợp mô hình, phong cách, negative và ảnh tham chiếu thành request cuối cùng.",
+      "refUnsupported": "Mô hình hiện tại không hỗ trợ ảnh tham chiếu",
+      "uploadRef": "Tải ảnh tham chiếu",
+      "aiRefine": "AI tinh chỉnh",
+      "startEdit": "Bắt đầu chỉnh sửa",
+      "startGenerate": "Tạo ảnh",
+      "estimating": "Đang ước tính",
+      "costPoints": "{points} điểm",
+      "refinedWith": "Đã tinh chỉnh với {tuning}. Bạn có thể tiếp tục chỉnh ở trên.",
+      "viewContext": "Xem ngữ cảnh",
+      "undoRefine": "Hoàn tác tinh chỉnh"
+    },
+    "inspiration": {
+      "title": "Cảm hứng",
+      "subtitle": "Tài sản đã tạo và mẫu phổ biến",
+      "close": "Đóng cảm hứng",
+      "tabs": {
+        "history": "Lịch sử",
+        "materials": "Thư viện",
+        "templates": "Mẫu"
+      },
+      "history": {
+        "empty": "Tác vụ đã tạo sẽ hiển thị ở đây."
+      },
+      "materials": {
+        "loading": "Đang tải thư viện",
+        "empty": "Ảnh thư viện sẽ hiển thị ở đây."
+      }
+    },
+    "stylePresets": {
+      "general": "Chung",
+      "commercial": "Thương mại",
+      "cinematic": "Điện ảnh",
+      "productPoster": "Poster sản phẩm",
+      "chineseIllustration": "Minh hoạ Trung Hoa",
+      "interior": "Nội thất",
+      "character": "Chân dung",
+      "sticker": "Sticker"
+    },
+    "promptTuning": {
+      "auto": "Tự động",
+      "faithful": "Trung thành",
+      "photoDetail": "Chi tiết ảnh",
+      "ecommerce": "Thương mại điện tử",
+      "storyMood": "Cảm xúc",
+      "minimal": "Tối giản"
+    },
+    "templateSort": {
+      "popular": "Phổ biến nhất",
+      "newest": "Mới nhất",
+      "likes": "Nhiều lượt thích"
+    },
+    "modelProvider": {
+      "unselected": "Chưa chọn"
+    },
+    "page": {
+      "historyLoadFailed": "Không tải được tài sản lịch sử",
+      "historyLoadFailedWithMessage": "Không tải được tài sản lịch sử: {message}",
+      "modelLoadFailed": "Không tải được mô hình",
+      "templateLoadFailed": "Không tải được mẫu",
+      "templateLoadFailedWithMessage": "Không tải được mẫu: {message}",
+      "selectImageModel": "Vui lòng cấu hình và chọn mô hình hình ảnh trước",
+      "promptRequired": "Vui lòng nhập prompt",
+      "estimateFailed": "Không ước tính được chi phí hình ảnh",
+      "generateFailed": "Tạo hình ảnh thất bại",
+      "missingGenerationForFeedback": "Thiếu bản ghi tạo, không thể gửi phản hồi",
+      "defaultGeneratedMaterialTitle": "Tư liệu tạo hình ảnh",
+      "requestFailedTitle": "Yêu cầu workbench thất bại",
+      "close": "Đóng",
+      "loadingWorkbench": "Đang tải workbench chuyên nghiệp...",
+      "confirmTitle": "Xác nhận trước khi tạo",
+      "confirmDescription": "Lần tạo này sẽ đóng băng điểm ước tính trước. Thành công sẽ khấu trừ, thất bại sẽ hoàn theo quy tắc máy chủ.",
+      "estimatingCost": "Đang ước tính chi phí điểm...",
+      "estimatedCost": "Chi phí ước tính",
+      "pointsValue": "{points} điểm",
+      "availableBalance": "Số dư khả dụng",
+      "unknown": "Không rõ",
+      "taskType": "Loại tác vụ",
+      "costDetails": "Chi tiết chi phí",
+      "noEstimate": "Chưa có kết quả ước tính.",
+      "cancel": "Hủy",
+      "confirmGenerate": "Xác nhận tạo"
+    }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "Tiêu chuẩn"
+      },
+      "first_last_frame": {
+        "label": "Khung đầu/cuối"
+      },
+      "storyboard": {
+        "label": "Phân cảnh"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "Tự động"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p",
+      "4k": "4K"
+    },
+    "materialTargets": {
+      "firstFrame": "Khung đầu",
+      "lastFrame": "Khung cuối",
+      "referenceImage": "Ảnh tham chiếu",
+      "referenceVideo": "Video tham chiếu",
+      "referenceAudio": "Âm thanh nền"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 cảnh",
+        "description": "Ngắn, nhịp nhanh"
+      },
+      "count3": {
+        "label": "3 cảnh",
+        "description": "Nhịp kể chuyện kinh điển"
+      },
+      "count5": {
+        "label": "5 cảnh",
+        "description": "Cốt truyện đầy đủ hơn"
+      },
+      "count6": {
+        "label": "6 cảnh",
+        "description": "Cảnh và chuyển cảnh phức tạp"
+      }
+    },
+    "inspirationSheet": {
+      "title": "Thư viện cảm hứng",
+      "description": "Khởi đầu nhanh từ mẫu, lịch sử hoặc tài nguyên",
+      "tabs": {
+        "history": "Lịch sử",
+        "materials": "Tài nguyên",
+        "templates": "Mẫu"
+      },
+      "templates": {
+        "searchPlaceholder": "Tìm theo tên / phong cách / tag",
+        "categoryAll": "Tất cả danh mục",
+        "loading": "Đang tải mẫu...",
+        "empty": "Chưa có mẫu",
+        "emptyHint": "Quay lại sau nhé",
+        "noMatch": "Không có mẫu phù hợp",
+        "noMatchHint": "Hãy thử điều chỉnh tìm kiếm hoặc danh mục",
+        "workflowMeta": "{count} cảnh",
+        "standardMeta": "cảnh đơn {duration}s",
+        "workflowDescriptionFallback": "Mẫu workflow",
+        "standardDescriptionFallback": "Mẫu video tiêu chuẩn",
+        "kindWorkflow": "Workflow",
+        "kindStandard": "Cảnh đơn",
+        "useCount": "Đã dùng {count} lần",
+        "useTemplate": "Dùng mẫu"
+      },
+      "history": {
+        "empty": "Chưa có dự án lịch sử",
+        "emptyHint": "Lịch sử sẽ hiện sau lần tạo đầu tiên"
+      },
+      "materials": {
+        "searchPlaceholder": "Tìm tài nguyên",
+        "typeAll": "Tất cả loại",
+        "typeImage": "Hình ảnh",
+        "typeVideo": "Video",
+        "typeAudio": "Âm thanh",
+        "targetAction": "Dùng làm {target}",
+        "loading": "Đang tải tài nguyên...",
+        "empty": "Thư viện trống",
+        "emptyHint": "Tải lên thư viện để dùng tại đây",
+        "audioFallback": "Tài nguyên âm thanh",
+        "fileFallback": "Tài nguyên tập tin"
+      },
+      "historyDetail": {
+        "back": "Back",
+        "reuse": "Reuse config",
+        "storyboard": "Storyboard",
+        "clipTitle": "Clip {order}",
+        "emptyPrompt": "No storyboard prompt",
+        "stats": {
+          "clips": "Clips",
+          "duration": "Duration",
+          "materials": "Materials"
+        },
+        "backToWorkspace": "Back to workspace",
+        "videoUnavailable": "No playable video yet",
+        "timeline": "Storyboard timeline",
+        "currentShot": "Current: {title}",
+        "timeRange": "Range",
+        "shotIndex": "Shot index",
+        "screenshot": "Snapshot",
+        "screenshotUnavailable": "Load the video before taking a snapshot",
+        "screenshotFailed": "Snapshot failed. Please make sure the video allows captures and try again.",
+        "screenshotTitle": "Video snapshot {time}",
+        "screenshotSaved": "Snapshot added to the material library",
+        "screenshotSaveFailed": "Failed to add the snapshot. Please try again later.",
+        "screenshotPreviewTitle": "Snapshot preview",
+        "screenshotPreviewDescription": "Confirm to add this frame to the material library for later reuse as an image asset.",
+        "saveScreenshot": "Add to library",
+        "share": "Share",
+        "shareCreateFailed": "Failed to create the share link. Please try again later.",
+        "shareCopied": "Share link copied",
+        "shareCopyFailed": "Copy failed. Please copy the link manually.",
+        "shareDialogTitle": "Share video detail",
+        "shareDialogDescription": "Create a public link so others can view this video and its storyboard.",
+        "shareCreating": "Creating share link...",
+        "shareLinkLabel": "Share link",
+        "shareCopiedButton": "Copied",
+        "copyShareLink": "Copy link",
+        "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
+        "openSharePage": "Open share page",
+        "download": "Tải xuống",
+        "downloadVideo": "Tải xuống video",
+        "cancel": "Cancel"
+      }
+    },
+    "estimateDialog": {
+      "title": "Ước tính chi phí",
+      "description": "Xác nhận số credit sẽ tiêu thụ",
+      "estimating": "Đang ước tính...",
+      "totalCost": "Tổng chi phí",
+      "balance": "Số dư hiện tại",
+      "balanceUnknown": "Không rõ",
+      "submittedClips": "Số cảnh gửi",
+      "clipsCount": "{count}",
+      "clipTitleFallback": "Cảnh {order}",
+      "credits": "{value} credit",
+      "cancel": "Huỷ",
+      "confirm": "Xác nhận tạo",
+      "totalDuration": "Total duration",
+      "resolution": "Resolution",
+      "pricingRule": "Pricing rule",
+      "seconds": "{value}s"
+    },
+    "storyboardDialog": {
+      "title": "Công cụ phân cảnh",
+      "description": "Mô tả video, AI sẽ tách thành các cảnh",
+      "promptLabel": "Cốt truyện",
+      "promptPlaceholder": "Mô tả video một câu, ví dụ: Cô gái đua mô-tô đuổi theo đèn neon trong thành phố cyberpunk...",
+      "clipCount": "Số cảnh",
+      "estimatedTotal": "Tổng dự kiến {total}s · mỗi cảnh {perClip}s",
+      "presetSummary": "{perClip}s × {count} = {total}s",
+      "modelLabel": "Mô hình đạo diễn",
+      "modelPlaceholder": "Chọn mô hình đạo diễn",
+      "modelSearchPlaceholder": "Tìm mô hình / nhà cung cấp",
+      "modelEmptyResult": "Không có mô hình phù hợp",
+      "modelLoading": "Đang tải mô hình...",
+      "modelEmpty": "Chưa có mô hình đạo diễn",
+      "cancel": "Huỷ",
+      "generate": "Tạo phân cảnh"
+    },
+    "parameterPanel": {
+      "title": "Thông số video",
+      "subtitle": "Chế độ và thông số Seedance cơ bản",
+      "closeAria": "Đóng thông số video",
+      "modeLabel": "Chế độ",
+      "basicsLabel": "Cơ bản",
+      "durationLabel": "Thời lượng",
+      "resolutionLabel": "Độ phân giải",
+      "ratioLabel": "Tỉ lệ",
+      "audioLabel": "Âm thanh",
+      "audioOn": "Bật",
+      "audioOff": "Tắt",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "Trống = ngẫu nhiên",
+      "schemaUnavailable": "Schema định giá không khả dụng — không thể tạo cho đến khi tải xong."
+    },
+    "generationDock": {
+      "modelPlaceholder": "Chọn mô hình video",
+      "modelSearchPlaceholder": "Tìm mô hình video / nhà cung cấp",
+      "modelEmptyResult": "Không có mô hình video phù hợp",
+      "modelLoading": "Đang tải mô hình video",
+      "modelEmpty": "Chưa có mô hình video, vui lòng liên hệ quản trị viên",
+      "generate": "Tạo video",
+      "credits": "{value} credit"
+    },
+    "productPanel": {
+      "title": "Kết quả video",
+      "subtitle": "Bản xem trước và trạng thái hiện tại sẽ hiển thị ở đây",
+      "generating": "Đang tạo",
+      "addToLibrary": "Thêm vào thư viện"
+    },
+    "configPanel": {
+      "title": "Cấu hình clip",
+      "preparingClipEditor": "Đang chuẩn bị trình chỉnh sửa clip...",
+      "clipDefaultTitle": "Clip {order}",
+      "promptLabel": {
+        "firstLastFrame": "Prompt khung đầu/cuối",
+        "standard": "Prompt video",
+        "storyboard": "Prompt phân cảnh"
+      },
+      "promptInput": {
+        "standardPlaceholder": "Mô tả cảnh, chuyển động máy quay, nhịp điệu và bầu không khí...",
+        "storyboardLabel": "Prompt toàn bộ",
+        "storyboardPlaceholder": "Mô tả phong cách tổng thể, nhịp điệu và ràng buộc chung..."
+      },
+      "paste": {
+        "uploading": "Đang tải lên {count} hình ảnh...",
+        "uploaded": "Đã thêm {count} hình ảnh",
+        "failed": "Tải hình ảnh thất bại",
+        "firstLastFull": "Khung đầu/cuối đã đầy (tối đa 2 hình)",
+        "firstLastOverflow": "Khung đầu/cuối chỉ nhận 2 hình, đã bỏ qua {count}"
+      },
+      "slots": {
+        "firstFrameImage": "Hình khung đầu",
+        "lastFrameImage": "Hình khung cuối",
+        "referenceImage": "Hình tham chiếu",
+        "referenceVideo": "Video tham chiếu",
+        "referenceAudio": "Âm thanh nền"
+      },
+      "materials": {
+        "firstLastTitle": "Tài nguyên khung đầu/cuối",
+        "firstLastDescription": "Tải lên hình khung đầu/cuối, âm thanh tùy chọn",
+        "referenceTitle": "Tài nguyên tham chiếu",
+        "referenceDescription": "Tùy chọn thêm hình / video / âm thanh tham chiếu",
+        "swapFrames": "Đổi khung đầu/cuối",
+        "preparingSlots": "Đang chuẩn bị các vị trí tài nguyên..."
+      },
+      "storyboard": {
+        "title": "Phân cảnh",
+        "description": "Quản lý từng clip trên dòng thời gian, kéo cạnh để chỉnh độ dài",
+        "addClip": "Thêm clip",
+        "generateClips": "Chia bằng AI",
+        "emptyHint": "Chưa có clip. Thêm hoặc để AI chia giúp",
+        "timeline": "Dòng thời gian",
+        "timelineUsage": "Đã dùng {used}s / giới hạn {limit}s",
+        "detail": {
+          "title": "Chi tiết clip",
+          "promptSummary": "Prompt: {prompt}",
+          "promptPlaceholder": "Chưa có prompt",
+          "materialCount": "Đã chọn {count} tài nguyên",
+          "noMaterials": "Chưa có tài nguyên",
+          "titleLabel": "Tiêu đề clip",
+          "promptLabel": "Prompt clip",
+          "promptInputPlaceholder": "Mô tả cảnh, hành động và chi tiết máy quay...",
+          "imagesTitle": "Tài nguyên clip",
+          "imagesDescription": "Chọn khung đầu, hình tham chiếu hoặc khung cuối"
+        }
+      },
+      "clip": {
+        "deleteAria": "Xóa {title}",
+        "descriptionPlaceholder": "Không có mô tả",
+        "resizeAria": "Chỉnh độ dài {title}",
+        "resizeTitle": "Kéo để chỉnh độ dài"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "Tìm mô hình văn bản / nhà cung cấp",
+        "textModelEmptyResult": "Không có mô hình văn bản phù hợp",
+        "textModelLabel": "Tối ưu: {name}",
+        "defaultLabel": "Mặc định",
+        "textModelLoading": "Đang tải mô hình văn bản...",
+        "textModelDefault": "Mô hình văn bản mặc định",
+        "aiOptimize": "Tối ưu bằng AI",
+        "videoModelSearchPlaceholder": "Tìm mô hình video / nhà cung cấp",
+        "videoModelEmptyResult": "Không có mô hình video phù hợp",
+        "videoModelLabel": "Mô hình: {name}",
+        "selectModel": "Chọn mô hình",
+        "videoModelLoading": "Đang tải mô hình video...",
+        "videoModelEmpty": "Chưa có mô hình video",
+        "generateVideo": "Tạo video",
+        "credits": "{value} tín dụng"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "Clip 1",
+      "storyboardClipTitle": "Clip {order}",
+      "shotTitleFallback": "Cảnh {order}",
+      "loading": "Đang tải không gian video...",
+      "closeParamsAria": "Đóng tham số video",
+      "headerTitle": "Video Workbench",
+      "headerSubtitle": "Storyboard, tư liệu và tham số trong một không gian làm việc",
+      "paramsButton": "Tham số",
+      "newButton": "Tạo mới",
+      "inspirationButton": "Cảm hứng"
+    },
+    "toasts": {
+      "directorDefaultFallback": "Đạo diễn đã cập nhật xong",
+      "directorRequestFailed": "Yêu cầu tới đạo diễn thất bại",
+      "insufficientDuration": "Timeline không còn thời lượng trống",
+      "selectClipFirst": "Hãy chọn một clip trước",
+      "placedInto": "Đã đặt vào {target}",
+      "materialUseFailed": "Không thể dùng tư liệu này",
+      "noFramesToSwap": "Hãy thêm frame đầu hoặc cuối trước khi hoán đổi",
+      "swappedFrames": "Đã hoán đổi frame đầu và frame cuối",
+      "swapFramesFailed": "Hoán đổi frame thất bại",
+      "emptyStoryboardPrompt": "Hãy nhập prompt tổng thể trước",
+      "emptyVideoPrompt": "Hãy nhập prompt video trước",
+      "storyboardPromptOptimized": "Đã tối ưu prompt tổng thể",
+      "videoPromptOptimized": "Đã tối ưu prompt video",
+      "storyboardPromptOptimizeFailed": "Tối ưu prompt tổng thể thất bại",
+      "videoPromptOptimizeFailed": "Tối ưu prompt video thất bại",
+      "emptyStoryboardIdea": "Hãy nhập ý tưởng video trước",
+      "storyboardGenerated": "Đã tạo {count} clip storyboard",
+      "storyboardGeneratedSuccess": "Đã tạo storyboard",
+      "storyboardGenerateFailed": "Tạo storyboard thất bại",
+      "estimateFailed": "Ước tính credit thất bại",
+      "defaultMaterialTitle": "Video đã tạo",
+      "addedToMaterials": "Đã thêm vào thư viện tư liệu",
+      "addToMaterialsFailed": "Thêm vào thư viện tư liệu thất bại"
+    },
+    "materialPicker": {
+      "title": "Chọn tư liệu - {role}",
+      "roles": {
+        "firstFrame": "Ảnh frame đầu",
+        "lastFrame": "Ảnh frame cuối",
+        "referenceImage": "Tham chiếu phong cách",
+        "referenceVideo": "Video tham chiếu",
+        "referenceAudio": "Âm thanh nền",
+        "default": "Tư liệu"
+      },
+      "tabs": {
+        "upload": "Tải lên",
+        "library": "Thư viện"
+      },
+      "description": {
+        "batch": "Từ clip hiện tại, có thể áp dụng tối đa {count} tệp vào các ô {role} còn trống theo thứ tự. Clip đã có tư liệu bị bỏ qua: {skipped}.",
+        "singleAvailable": "Chỉ còn một ô {role} trống; tư liệu đã chọn sẽ được áp dụng vào đó.",
+        "allFilled": "Tất cả ô {role} đã có tư liệu; lựa chọn này sẽ thay thế clip hiện tại."
+      },
+      "upload": {
+        "dropArea": "Nhấp hoặc kéo thả để tải tệp lên",
+        "dropAreaBatch": "Nhấp hoặc kéo thả để tải tệp lên (tối đa {count})",
+        "processing": "Đang xử lý..."
+      },
+      "library": {
+        "empty": "Chưa có tư liệu khả dụng",
+        "selectionCount": "Đã chọn {selected} / {total}",
+        "clear": "Xóa",
+        "applying": "Đang áp dụng...",
+        "applyBatchOrder": "Áp dụng lần lượt cho {count} clip",
+        "useSelected": "Dùng tư liệu đã chọn"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "Đã áp dụng {count} tư liệu cho {count} clip",
+        "libraryError": "Không thể dùng tư liệu này",
+        "uploadAppliedBatch": "Đã tải lên và áp dụng {count} tư liệu cho {count} clip",
+        "uploadError": "Tải lên thất bại",
+        "selectionLimit": "Chọn tối đa {count}",
+        "selectionLimitDescription": "Khớp với số clip còn thiếu tư liệu"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "Từ frame cuối của clip trước"
+    },
+    "videoPreview": {
+      "selectClip": "Chọn một clip để xem trước",
+      "queued": "Đang xếp hàng",
+      "generating": "Đang tạo video...",
+      "failed": "Tạo thất bại",
+      "firstFrameAlt": "Frame đầu",
+      "addMaterialOrPrompt": "Thêm tư liệu hoặc prompt để bắt đầu"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "Hoàn tất",
+        "processing": "Đang tạo",
+        "failed": "Thất bại",
+        "draft": "Bản nháp",
+        "unknown": "Không rõ"
+      },
+      "noPrompt": "Chưa có prompt storyboard",
+      "openProjectAria": "Mở dự án lịch sử",
+      "deleteProject": "Xóa dự án lịch sử",
+      "stats": {
+        "clips": "Clip",
+        "materials": "Tư liệu",
+        "results": "Kết quả"
+      },
+      "clipDefaultTitle": "Clip {order}",
+      "clipPlaceholder": "Đang chờ mô tả clip",
+      "moreClips": "+{count} clip khác",
+      "createdAt": "Tạo lúc {date}",
+      "openProject": "Mở",
+      "viewDetails": "View details",
+      "reuseProject": "Reuse config",
+      "share": "Chia sẻ",
+      "download": "Tải xuống",
+      "downloadVideo": "Tải xuống video"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "Tiến độ tạo chuỗi",
+        "cancelRemaining": "Hủy phần còn lại"
+      },
+      "directorChat": {
+        "userPrefix": "Bạn: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "Nhờ đạo diễn AI tách cảnh, sửa Prompt hoặc điều chỉnh tham số video..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "Dự án chưa đặt tên",
+        "historyTitle": "Lịch sử"
+      },
+      "modelSelector": {
+        "label": "Mô hình",
+        "default": "Mặc định",
+        "loading": "Đang tải mô hình...",
+        "empty": "Chưa có mô hình video. Vui lòng liên hệ quản trị viên."
+      },
+      "variantGrid": {
+        "title": "Variant đã tạo ({count})",
+        "generateNew": "+ Tạo Variant mới",
+        "setPrimary": "Đặt làm chính"
+      },
+      "emptyState": {
+        "title": "Bắt đầu tạo video",
+        "description": "Tạo dự án mới hoặc bắt đầu từ mẫu, rồi thêm tư liệu và prompt để tạo clip video",
+        "createProject": "Dự án mới",
+        "startFromTemplate": "Bắt đầu từ mẫu"
+      },
+      "clipTimeline": {
+        "addClip": "Thêm Clip"
+      },
+      "historyPanel": {
+        "today": "Hôm nay",
+        "yesterday": "Hôm qua",
+        "deleteSuccess": "Đã xóa lịch sử",
+        "deleteFailed": "Xóa lịch sử thất bại",
+        "title": "Lịch sử",
+        "close": "Đóng lịch sử",
+        "empty": "Chưa có lịch sử"
+      },
+      "templatePicker": {
+        "title": "Mẫu video",
+        "workflowTemplates": "Mẫu workflow",
+        "parameterPresets": "Preset tham số",
+        "clipCount": "{count} clips",
+        "useTemplate": "Dùng mẫu này",
+        "emptyWorkflow": "Chưa có mẫu workflow",
+        "presetsComingSoon": "Mẫu preset tham số sắp ra mắt"
+      },
+      "inputArea": {
+        "referenceContent": "Nội dung tham chiếu",
+        "audio": "Âm thanh",
+        "firstFrame": "Frame đầu",
+        "swapFrames": "Hoán đổi frame đầu/cuối",
+        "lastFrame": "Frame cuối",
+        "frameIndex": "Frame {index}",
+        "clearAll": "Xóa tất cả"
+      },
+      "clipSidebar": {
+        "title": "Dự án video",
+        "close": "Đóng dự án video",
+        "defaultProjectTitle": "Dự án chưa đặt tên",
+        "newProject": "Dự án mới",
+        "emptyProjects": "Chưa có dự án",
+        "clipCount": "{count} clips",
+        "back": "Quay lại",
+        "addClip": "Thêm Clip",
+        "generationRecords": "Lịch sử tạo",
+        "emptyRecords": "Chưa có bản ghi"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "Ảnh frame đầu",
+          "referenceImage": "Tham chiếu phong cách",
+          "referenceVideo": "Video tham chiếu",
+          "referenceAudio": "Âm thanh nền"
+        },
+        "ratioAdaptive": "Tự thích ứng",
+        "audioOn": "Có âm thanh",
+        "audioOff": "Tắt tiếng",
+        "clipDefaultTitle": "Clip {order}",
+        "selectClip": "Chọn một Clip để chỉnh sửa",
+        "generating": "Đang tạo, vui lòng chờ...",
+        "failed": "Tạo thất bại - hãy chỉnh tham số rồi tạo lại",
+        "titleLabel": "Tiêu đề clip",
+        "promptPlaceholder": "Nhập prompt video...",
+        "durationLabel": "Thời lượng",
+        "resolutionLabel": "Độ phân giải",
+        "ratioLabel": "Tỷ lệ",
+        "audioLabel": "Âm thanh",
+        "regenerate": "Tạo lại",
+        "generateVideo": "Tạo video"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "Tham chiếu đa năng",
+          "firstLastFrame": "Frame đầu/cuối",
+          "smartMultiframe": "Đa frame thông minh"
+        },
+        "ratioAdaptive": "Tự thích ứng",
+        "selectModel": "Chọn mô hình",
+        "loadingModels": "Đang tải mô hình video",
+        "emptyModels": "Chưa có mô hình video",
+        "selectTemplate": "Chọn mẫu"
+      }
+    },
+    "membershipGate": {
+      "title": "当前套餐暂不支持视频生成",
+      "description": "升级会员套餐后即可继续生成视频。",
+      "upgradeAction": "选择套餐",
+      "dismissAction": "稍后处理",
+      "dialogTitle": "选择可用的视频生成套餐",
+      "dialogDescription": "选择包含视频生成能力的套餐后，可继续生成当前视频。"
+    }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "Chưa có ảnh bìa",
+      "noDescription": "Chưa có mô tả",
+      "free": "Miễn phí",
+      "pointsCost": "{points} điểm",
+      "featured": "Nổi bật",
+      "emptyResources": "Chưa có tài nguyên",
+      "resource": "Tài nguyên",
+      "untitledResource": "Tài nguyên chưa đặt tên",
+      "retry": "Thử lại",
+      "loading": "Đang tải...",
+      "processing": "Đang xử lý...",
+      "cancel": "Hủy",
+      "resourceNotFound": "Không tìm thấy tài nguyên",
+      "unknownResourceType": "Loại tài nguyên không xác định: {slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "Mẫu hình ảnh",
+      "videoTemplate": "Mẫu video",
+      "imageTemplateShort": "Hình ảnh",
+      "videoTemplateShort": "Video"
+    },
+    "runtime": {
+      "cloud": "Cloud available",
+      "cloudDesc": "Runs in the cloud and works on web and desktop",
+      "desktopOnly": "Desktop only",
+      "desktopOnlyDesc": "Requires a local runtime such as a process, file, or CLI",
+      "either": "Universal",
+      "eitherDesc": "Can run in cloud or desktop environments",
+      "desktopShort": "Desktop"
+    },
+    "card": {
+      "useInChat": "Use in chat",
+      "useInChatAria": "Use template {title} in chat",
+      "useInWorkbench": "Workbench",
+      "useInWorkbenchAria": "Apply {title} to the professional workbench"
+    },
+    "sidebar": {
+      "home": "Đề xuất",
+      "resourceTypes": "Loại tài nguyên",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "Mẫu hình ảnh",
+      "videoTemplates": "Mẫu video",
+      "mine": "Của tôi",
+      "acquired": "Tài nguyên của tôi",
+      "favorites": "Yêu thích",
+      "generations": "Lịch sử tạo",
+      "published": "Đã xuất bản",
+      "history": "Lịch sử xem",
+      "profile": "Hồ sơ"
+    },
+    "platformStats": {
+      "title": "Dữ liệu nền tảng",
+      "totalResources": "Tổng tài nguyên",
+      "imageTemplates": "Mẫu hình ảnh",
+      "videoTemplates": "Mẫu video",
+      "totalAcquisitions": "Tổng lượt nhận"
+    },
+    "editorPicks": {
+      "title": "Biên tập chọn"
+    },
+    "hotRanking": {
+      "title": "Bảng xếp hạng nóng"
+    },
+    "resourcePanel": {
+      "eyebrow": "Resource panel",
+      "resourceDetails": "Resource details",
+      "addToCurrentSession": "Add to current session",
+      "unpin": "Unpin",
+      "pin": "Pin panel",
+      "searchPlaceholder": "Search resources...",
+      "loading": "Loading...",
+      "backToList": "Back to list",
+      "sourceInfo": "Source info",
+      "author": "Author",
+      "platform": "Platform",
+      "externalId": "External ID",
+      "viewOriginal": "View original",
+      "mcpLocalStatus": "MCP local status: ",
+      "statusReady": "Installed",
+      "statusMissingEnv": "Missing environment variables",
+      "statusFailed": "Check failed",
+      "statusNotInstalled": "Not installed",
+      "desktopOnlyWebBlocked": "This resource requires a desktop local environment and cannot be activated directly on web.",
+      "processing": "Processing...",
+      "acquireAndActivate": "Acquire and activate",
+      "openFullDetails": "Open full details"
+    },
+    "chatDock": {
+      "createSessionFailed": "Tạo phiên thất bại",
+      "attachTemplateFailed": "Liên kết mẫu thất bại",
+      "attachmentUploadFailed": "Tải tệp đính kèm thất bại",
+      "unknownError": "Lỗi không xác định",
+      "sendFailed": "Gửi thất bại",
+      "configureImageModelFirst": "Vui lòng cấu hình mô hình hình ảnh khả dụng trước",
+      "messageSaveFailed": "Lưu tin nhắn thất bại",
+      "requestFailed": "Yêu cầu thất bại",
+      "imageGenerationFailed": "Tạo hình ảnh thất bại",
+      "fullConversation": "Toàn bộ cuộc trò chuyện"
+    },
+    "home": {
+      "title": "Chợ mẫu",
+      "subtitle": "Mẫu sáng tạo hình ảnh và video, sẵn sàng dùng trong chat hoặc bàn làm việc chuyên nghiệp",
+      "desktopTitle": "Chợ mẫu tài nguyên AI tất cả trong một",
+      "desktopSubtitle": "Khám phá và dùng Skills, MCP, Agents cùng mẫu hình ảnh/video",
+      "imageTemplateDesc": "Bìa, poster, ảnh sản phẩm và công thức phong cách thị giác",
+      "videoTemplateDesc": "Kịch bản phân cảnh, tham số máy quay và quy trình hoàn thiện video",
+      "hotMasonry": "Luồng đề xuất nổi bật",
+      "imageVideo": "Hình ảnh · Video",
+      "hotRecommendations": "Đề xuất nổi bật"
+    },
+    "list": {
+      "sortNewest": "Mới nhất",
+      "sortPopular": "Phổ biến",
+      "sortLikes": "Lượt thích",
+      "totalCount": "Tổng {count}",
+      "emptyResources": "Chưa có tài nguyên. Hãy thử đổi danh mục hoặc từ khóa.",
+      "agentEyebrow": "AgentHub / Agent",
+      "agentDescription": "Chọn agent, chuỗi công cụ và đối tác quy trình có thể đưa thẳng vào cuộc trò chuyện.",
+      "imageEyebrow": "Image Recipes / Mẫu hình ảnh",
+      "imageDescription": "Duyệt poster, ảnh sản phẩm, bìa và mẫu phong cách thị giác như một tường tác phẩm.",
+      "videoEyebrow": "Video Flows / Mẫu video",
+      "videoDescription": "Tìm điểm bắt đầu cho phân cảnh, tham số máy quay và quy trình tạo video ngắn.",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "Tăng cường năng lực, chỉ dẫn cá nhân hóa và cách làm có thể tái sử dụng.",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "Công cụ, nguồn dữ liệu và trình kết nối bên ngoài."
+    },
+    "detail": {
+      "applyTemplateFailed": "Không thể áp dụng mẫu",
+      "newImageSessionTitle": "Phiên hình ảnh mới",
+      "newSessionTitle": "Phiên mới",
+      "workbench": "Bàn làm việc chuyên nghiệp",
+      "useInChat": "Dùng trong chat",
+      "favoriteCount": "Yêu thích {count}",
+      "whyDesktopOnly": "Vì sao chỉ dùng trên desktop?",
+      "localRuntimeRequired": "Tài nguyên này cần môi trường chạy cục bộ",
+      "variableDefinitions": "Định nghĩa biến",
+      "defaultValue": " · Mặc định: {value}",
+      "resourceInfo": "Thông tin tài nguyên",
+      "sourceInfo": "Thông tin nguồn",
+      "viewOriginal": "Xem bản gốc",
+      "hoverPreview": "Di chuột để xem trước vài giây đầu",
+      "mcpDesktopRequired": "Tài nguyên MCP phải được bật trên desktop",
+      "selectSession": "Chọn phiên",
+      "activateTo": "Kích hoạt vào",
+      "createAndActivate": "+ Tạo phiên và kích hoạt",
+      "createAndApply": "+ Tạo phiên và áp dụng mẫu",
+      "applying": "Đang áp dụng...",
+      "recentSessions": "Phiên gần đây",
+      "applyDialogTitle": "Chọn phiên và áp dụng mẫu",
+      "applyDialogDescription": "Chọn {target}, hoặc tạo phiên mới rồi áp dụng.",
+      "templateSessionMismatch": "Lựa chọn hiện tại là {current}, nhưng mẫu này cần áp dụng vào {target}. Hãy chọn phiên khác hoặc tạo phiên mới.",
+      "conversationKind": {
+        "video": "Phiên video",
+        "image": "Phiên hình ảnh",
+        "avatar": "Phiên avatar",
+        "chat": "Phiên chat"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "phiên chat hoặc phiên hình ảnh",
+        "videoTemplate": "phiên chat",
+        "default": "phiên chat"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "Nhận và kích hoạt trong phiên hiện tại",
+        "generateAndReturnToSession": "Tạo ngay và quay lại phiên",
+        "acquireWithPoints": "Dùng {points} điểm để nhận và kích hoạt",
+        "getOnDesktop": "Nhận trên desktop"
+      },
+      "info": {
+        "type": "Loại",
+        "category": "Danh mục",
+        "version": "Phiên bản",
+        "updatedAt": "Cập nhật",
+        "author": "Tác giả",
+        "platform": "Nền tảng",
+        "externalId": "ID bên ngoài",
+        "originalLink": "Liên kết gốc"
+      }
+    }
+  },
+  "videoShare": {
+    "loading": "Loading shared video...",
+    "loadFailed": "The share link does not exist, has expired, or the video is not complete yet.",
+    "unavailableTitle": "Shared video unavailable",
+    "goCreate": "Create a video",
+    "eyebrow": "Shared video",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "copyFailed": "Copy failed. Please copy the link manually.",
+    "copiedButton": "Copied",
+    "monitor": "Monitor",
+    "storyboard": "Storyboard data",
+    "duration": "Duration",
+    "model": "Model",
+    "clipTitle": "Clip {order}",
+    "clipFallback": "Storyboard",
+    "emptyPrompt": "No storyboard prompt",
+    "timeline": "Storyboard timeline",
+    "footer": "Shared video detail",
+    "growthCtaDescription": "Create your own private video project, then publish it only when it is ready to share."
+  },
+  "gallery": {
+    "title": "Gallery",
+    "subtitle": "Khám phá những gì cộng đồng đã đăng",
+    "kindImage": "Hình ảnh",
+    "kindVideo": "Video",
+    "emptyTitle": "Chưa có tác phẩm nào được đăng",
+    "emptyDescription": "Hãy là người đầu tiên đăng tác phẩm của bạn lên gallery",
+    "loadMore": "Tải thêm",
+    "unknownAuthor": "Tác giả ẩn danh",
+    "like": "Thích",
+    "favorite": "Yêu thích",
+    "backToGallery": "Quay lại gallery",
+    "notFoundTitle": "Bài đăng này hiện không khả dụng",
+    "notFoundDescription": "Có thể đã bị gỡ hoặc xoá",
+    "author": "Tác giả",
+    "metricViews": "Lượt xem",
+    "metricLikes": "Lượt thích",
+    "metricFavorites": "Lượt yêu thích",
+    "metricRecreates": "Lượt tái tạo",
+    "recreate": "Tái tạo",
+    "download": "Tải xuống",
+    "unpublish": "Gỡ đăng",
+    "republish": "Đăng lại",
+    "unpublishSuccess": "Đã gỡ bài đăng",
+    "republishSuccess": "Đã gửi để duyệt",
+    "prompt": "Prompt",
+    "copyPrompt": "Sao chép",
+    "copied": "Đã sao chép",
+    "noPrompt": "Không có prompt",
+    "information": "Thông tin",
+    "model": "Mô hình",
+    "auto": "Tự động",
+    "dimensions": "Kích thước",
+    "category": "Danh mục",
+    "status": {
+      "draft": "Bản nháp",
+      "pending": "Đang duyệt",
+      "published": "Đã đăng",
+      "unpublished": "Đã gỡ",
+      "hidden": "Đã ẩn",
+      "rejected": "Đã từ chối"
+    }
+  },
+  "myTemplates": {
+    "title": "我的模板",
+    "createTemplate": "创建模板",
+    "empty": "暂无模板，创建你的第一个模板吧",
+    "createFirst": "创建第一个模板",
+    "statusPending": "待审核",
+    "statusInReview": "审核中",
+    "statusApproved": "已通过",
+    "statusRejected": "已拒绝",
+    "statusArchived": "已归档",
+    "statusDeleted": "Deleted",
+    "includeDeleted": "Include deleted users"
+  },
+  "schemaForm": {
+    "constraint": {
+      "longerThan": "{prefix}dài hơn {bound} giây",
+      "shorterThan": "{prefix}ngắn hơn {bound} giây"
+    }
+  }
+}

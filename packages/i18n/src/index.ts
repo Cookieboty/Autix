@@ -13,4 +13,11 @@ export {
   parseAcceptLanguage,
 } from './utils.js';
 
-export { messageLoaders } from './messages.js';
+export {
+  messageLoaders,
+  chunkLoaders,
+  loadMessages,
+  CHUNKS,
+  type MessageChunk,
+  type MessagesMap,
+} from './messages.js';

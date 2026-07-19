@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import { ProfileMediaPresignService } from './profile-media-presign.service';
 import { StorageCleanupService } from './storage-cleanup.service';
 import { AuthIdentityRepository } from '../../identity/auth/auth-identity.repository';
@@ -283,7 +283,10 @@ describe('T17: avatar upload reservation-then-consume integration', () => {
         reservationA.storageKey,
         'https://cdn.mock.local/hijacked',
       ),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      i18nKey: 'auth.profile.avatar_reservation_invalid',
+      status: HttpStatus.BAD_REQUEST,
+    });
 
     // 关键断言：A 的 reservation 仍然是 PENDING（未被 B 越权消费）
     expect(pending[0].status).toBe('PENDING');

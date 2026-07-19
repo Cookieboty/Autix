@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { AuthIdentityRepository } from './auth-identity.repository';
 import { StepUpService } from './step-up/step-up.service';
 import { RateLimitService } from '../../platform/common/rate-limit.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 @Injectable()
 export class AccountDeletionService {
@@ -18,10 +19,12 @@ export class AccountDeletionService {
     usernameConfirmation?: string,
   ): Promise<{ deletedAt: Date }> {
     if (!proof || !sessionId || !usernameConfirmation) {
-      throw new BadRequestException({
-        code: 'STEP_UP_INVALID_OR_EXPIRED',
-        message: '缺少有效的身份复核凭证',
-      });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'auth.step_up.proof_missing',
+        undefined,
+        { code: 'STEP_UP_INVALID_OR_EXPIRED' },
+      );
     }
     const payload = this.stepUp.verifyProof(proof, userId, 'delete-account', sessionId);
     await this.rateLimit.consume([

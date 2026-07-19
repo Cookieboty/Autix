@@ -181,6 +181,11 @@ function triggerLabelFor(schema: ParamsSchema, field: string, params: Record<str
   return trigger;
 }
 
+export type ClampMessageTranslator = (
+  key: 'longerThan' | 'shorterThan',
+  params: { prefix: string; bound: number },
+) => string;
+
 // 已知限制：单位硬编码为"秒"，因为 ParamsSchema 没有 unit 字段。当前唯一用到
 // allOf 收窄的场景是视频时长，这个限制不影响现有 9 个任务。见 phase-3 计划 Task 3b。
 function clampMessageText(
@@ -189,9 +194,13 @@ function clampMessageText(
   bound: number,
   params: Record<string, unknown>,
   kind: 'max' | 'min' = 'max',
+  translate?: ClampMessageTranslator,
 ): string {
   const trigger = triggerLabelFor(schema, field, params);
   const prefix = trigger ? `${trigger} ` : '';
+  if (translate) {
+    return translate(kind === 'max' ? 'longerThan' : 'shorterThan', { prefix, bound });
+  }
   return kind === 'max' ? `${prefix}最长 ${bound} 秒` : `${prefix}最少 ${bound} 秒`;
 }
 
@@ -208,6 +217,7 @@ export function clampOnChange(
   currentParams: Record<string, unknown>,
   changedField: string,
   changedValue: unknown,
+  translate?: ClampMessageTranslator,
 ): ClampResult {
   const next = { ...currentParams, [changedField]: changedValue };
   const constraints = resolveConstraints(schema, next);
@@ -235,10 +245,10 @@ export function clampOnChange(
 
     if (constraint.maximum !== undefined && value > constraint.maximum) {
       next[field] = constraint.maximum;
-      message = { field, text: clampMessageText(schema, field, constraint.maximum, next) };
+      message = { field, text: clampMessageText(schema, field, constraint.maximum, next, 'max', translate) };
     } else if (constraint.minimum !== undefined && value < constraint.minimum) {
       next[field] = constraint.minimum;
-      message = { field, text: clampMessageText(schema, field, constraint.minimum, next, 'min') };
+      message = { field, text: clampMessageText(schema, field, constraint.minimum, next, 'min', translate) };
     }
   }
 

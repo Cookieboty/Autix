@@ -1,6 +1,6 @@
 import { getRequestConfig } from 'next-intl/server';
 import { hasLocale } from 'next-intl';
-import { messageLoaders, type SupportedLanguage } from '@autix/i18n';
+import { loadMessages, type SupportedLanguage } from '@autix/i18n';
 import { routing } from './routing';
 
 export default getRequestConfig(async ({ requestLocale }) => {
@@ -11,6 +11,6 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale,
-    messages: await messageLoaders[locale](),
+    messages: await loadMessages(locale),
   };
 });

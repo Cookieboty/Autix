@@ -22,7 +22,6 @@ function deps() {
         fetchProfile: vi.fn().mockResolvedValue({ provider: name, providerAccountId: 'sub1', email: 'a@x.com', emailVerified: true, displayName: 'A', avatar: null, raw: {}, tokens: { accessToken: 'at' } }),
       };
     },
-    listEnabled: () => ['google'],
   };
   const resolution = { resolve: vi.fn().mockResolvedValue({ kind: 'login', userId: 'u1' }) };
   const authService = {
@@ -69,10 +68,10 @@ describe('OAuthService', () => {
     const { svc } = deps();
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback-evil' }),
-    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+    ).rejects.toMatchObject({ i18nKey: 'oauth.redirect_not_allowed' });
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'web', redirectUri: 'http://evil.com/oauth/callback' }),
-    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+    ).rejects.toMatchObject({ i18nKey: 'oauth.redirect_not_allowed' });
   });
 
   it('createAuthorization 对未 launched provider 抛 OAUTH_PROVIDER_NOT_LAUNCHED', async () => {
@@ -81,7 +80,7 @@ describe('OAuthService', () => {
     registry.isLaunched.mockImplementation(async (name: string) => name !== 'apple');
     await expect(
       svc.createAuthorization({ provider: 'apple', systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback' }),
-    ).rejects.toThrow('OAUTH_PROVIDER_NOT_LAUNCHED');
+    ).rejects.toMatchObject({ i18nKey: 'oauth.provider_not_launched' });
     expect(social.createState).not.toHaveBeenCalled();
   });
 
@@ -148,7 +147,7 @@ describe('OAuthService', () => {
   it('exchangeLoginCode 无效码 → 抛错', async () => {
     const { svc, social } = deps();
     social.consumeLoginCode.mockResolvedValueOnce(null);
-    await expect(svc.exchangeLoginCode('bad')).rejects.toThrow('OAUTH_EXCHANGE_EXPIRED');
+    await expect(svc.exchangeLoginCode('bad')).rejects.toMatchObject({ i18nKey: 'oauth.exchange_expired' });
   });
 
   it('handleCallback 不吞会话签发失败', async () => {
@@ -171,22 +170,22 @@ describe('redirect 放行（desktop loopback）', () => {
     const { svc } = deps();
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'http://evil.com:51789/callback' }),
-    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+    ).rejects.toMatchObject({ i18nKey: 'oauth.redirect_not_allowed' });
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'http://127.0.0.1:51789/steal' }),
-    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+    ).rejects.toMatchObject({ i18nKey: 'oauth.redirect_not_allowed' });
   });
   it('desktop 拒绝子域名劫持（subdomain hijack）', async () => {
     const { svc } = deps();
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'http://127.0.0.1.evil.com/callback' }),
-    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+    ).rejects.toMatchObject({ i18nKey: 'oauth.redirect_not_allowed' });
   });
   it('desktop 拒绝非 http scheme（ftp）', async () => {
     const { svc } = deps();
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'ftp://127.0.0.1:51789/callback' }),
-    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+    ).rejects.toMatchObject({ i18nKey: 'oauth.redirect_not_allowed' });
   });
 });
 
@@ -213,7 +212,8 @@ describe('OAuthService 绑定/解绑', () => {
   it('unlink 保留最后凭证 → 抛错', async () => {
     const { svc, identity } = deps();
     identity.hasOtherCredential = vi.fn().mockResolvedValue(false);
-    await expect(svc.unlink('u1', 'github', 'proof-1', 'session-1')).rejects.toThrow('OAUTH_CANNOT_UNLINK_LAST_CREDENTIAL');
+    await expect(svc.unlink('u1', 'github', 'proof-1', 'session-1'))
+      .rejects.toMatchObject({ i18nKey: 'oauth.cannot_unlink_last_credential' });
   });
 
   it('unlink 仍有其它凭证 → 删除', async () => {

@@ -1,0 +1,3 @@
+common.request_success: "リクエストに成功しました"
+common.internal_error: "サーバー内部エラーが発生しました"
+common.invalid_params: "パラメーターが正しくありません"

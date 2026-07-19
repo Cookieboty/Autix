@@ -1,9 +1,9 @@
 import {
   Injectable,
-  NotFoundException,
-  BadRequestException,
+  HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { PointsSource } from '../../platform/prisma/generated';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { CampaignRewardService } from '../campaign/campaign-reward.service';
@@ -21,7 +21,7 @@ export class InviteService {
     private readonly inviteRepository: InviteRepository,
     private readonly systemSettingsService: SystemSettingsService,
     private readonly campaignRewardService: CampaignRewardService,
-  ) {}
+  ) { }
 
   async getOrCreateCode(userId: string) {
     if (!(await this.isInviteSharingEnabled())) return null;
@@ -49,13 +49,13 @@ export class InviteService {
     if (!(await this.isInviteSharingEnabled())) return null;
 
     const code = await this.inviteRepository.findCodeByCode(inviteCode);
-    if (!code) throw new NotFoundException('邀请码不存在');
+    if (!code) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'invite.code_not_found');
     if (code.userId === inviteeUserId) {
-      throw new BadRequestException('不能邀请自己');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'invite.cannot_invite_self');
     }
 
     const alreadyRecorded = await this.inviteRepository.findRecordByInvitee(inviteeUserId);
-    if (alreadyRecorded) throw new BadRequestException('该用户已被邀请过');
+    if (alreadyRecorded) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'invite.already_invited');
 
     // FIX-2: 注册阶段只记录、不发奖励（rewarded:false）。
     // 奖励改为在被邀请人通过邮箱激活 / 管理员审批后由 settlePendingInvitationReward 结算，

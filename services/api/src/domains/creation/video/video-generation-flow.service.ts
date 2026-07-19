@@ -33,6 +33,7 @@ import {
   resolveSucceededGenerationFailureReason,
   resolveSucceededGenerationVideo,
   resolveVideoGenerationRequestLimits,
+  resolveVideoRouting,
   toPrismaInputJson,
   type VideoGenerationClipParams as ClipParams,
   splitQueuedGenerationsForPolling,
@@ -262,7 +263,13 @@ export class VideoGenerationFlowService {
     // 计划 4：提交路径切到声明式协议引擎，不再经 SeedanceApiService。
     // preset 从服务端解析的 modelConfig.metadata.protocolKey 路由；resolveVideoPreset
     // 对缺失/未注册的 key fail-loud（前置门禁已确认生产视频模型都有 protocolKey）。
-    const preset = resolveVideoPreset(readProtocolKey(modelConfig.metadata));
+    // Wan 2.7 是一个模型，上游按素材角色分派到 t2v/i2v/ref —— routing 据素材覆盖 preset 与 model ID。
+    const routing = resolveVideoRouting(modelConfig.metadata, modelConfig.model, materials.map((m) => m.role));
+    if (routing.maxDurationSeconds != null && requestLimits.durationSeconds > routing.maxDurationSeconds)
+      throw new BadRequestException(
+        `该生成模式最长 ${routing.maxDurationSeconds}s，当前请求 ${requestLimits.durationSeconds}s`,
+      );
+    const preset = routing.preset;
     const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
       preset,
@@ -270,8 +277,8 @@ export class VideoGenerationFlowService {
       apiKey,
       // FIX-3: 始终使用服务端解析/鉴权过的模型，忽略客户端传入的 params.model，
       // 防止"选便宜模型过鉴权、用 params.model 偷换为贵模型"导致跑贵付便宜。
-      // toUnifiedVideoParams 不投影 model，这条不变量天然成立。
-      model: modelConfig.model,
+      // toUnifiedVideoParams 不投影 model，这条不变量天然成立。Wan 家族的 routing.model 亦服务端权威。
+      model: routing.model,
       prompt: resolvedPrompt,
       materials,
       params: toUnifiedVideoParams(params),
@@ -836,14 +843,24 @@ export class VideoGenerationFlowService {
     const resolvedPrompt = resolveStoryboardVideoPrompt({ clips, params });
     const storyboardMaterials = clips.flatMap((clip) => clip.materials ?? []);
     // 计划 4：提交路径切到声明式协议引擎，不再经 SeedanceApiService（同 generateClip）。
-    const preset = resolveVideoPreset(readProtocolKey(modelConfig.metadata));
+    // Wan 2.7 家族按素材角色派发 preset + model ID（同 generateClip）。
+    const routing = resolveVideoRouting(
+      modelConfig.metadata,
+      modelConfig.model,
+      storyboardMaterials.map((m) => m.role),
+    );
+    if (routing.maxDurationSeconds != null && requestLimits.durationSeconds > routing.maxDurationSeconds)
+      throw new BadRequestException(
+        `该生成模式最长 ${routing.maxDurationSeconds}s，当前请求 ${requestLimits.durationSeconds}s`,
+      );
+    const preset = routing.preset;
     const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
       preset,
       baseUrl: resolveEngineBaseUrl(baseUrl),
       apiKey,
       // FIX-3: 服务端解析过的模型，不采信 params.model（同 generateClip）。
-      model: modelConfig.model,
+      model: routing.model,
       prompt: resolvedPrompt,
       materials: storyboardMaterials,
       params: toUnifiedVideoParams(params),

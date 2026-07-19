@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, HttpStatus, ConflictException, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { OAuthProviderRegistry } from './oauth-provider.registry';
 import { AccountResolutionService } from './account-resolution.service';
@@ -13,6 +13,7 @@ import { NormalizedProfile } from './provider.types';
 import { encryptProviderTokens } from './encrypt-tokens';
 import { OAuthConfigService } from './oauth-config.service';
 import { StepUpService, PURPOSE_TO_EMAIL_OTP_ENUM } from '../step-up/step-up.service';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import type { StepUpPurpose, StartStepUpResult } from '@autix/domain';
 
 const DEFAULT_ROLE_CODE = 'USER';
@@ -63,13 +64,13 @@ export class OAuthService {
 
   private async assertRedirectAllowed(redirectUri: string, clientType: string) {
     let target: URL;
-    try { target = new URL(redirectUri); } catch { throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED'); }
+    try { target = new URL(redirectUri); } catch { throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.redirect_not_allowed'); }
 
     if (clientType === 'desktop') {
       const isLoopback = target.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(target.hostname);
       const isStepUpPath = /^\/step-up\/[0-9a-f]{32}$/.test(target.pathname);
       if (isLoopback && (target.pathname === '/callback' || isStepUpPath)) return;
-      throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.redirect_not_allowed');
     }
 
     // 防开放重定向：解析 URL 后做严格 origin + pathname 精确匹配（不是 startsWith，
@@ -80,12 +81,12 @@ export class OAuthService {
       try { a = new URL(entry); } catch { return false; }
       return a.origin === target.origin && a.pathname === target.pathname;
     });
-    if (!ok) throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED');
+    if (!ok) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.redirect_not_allowed');
   }
 
   async createAuthorization(input: AuthorizeInput): Promise<{ authorizeUrl: string; state: string; expiresAt: string }> {
-    if (!(await this.registry.isLaunched(input.provider))) throw new BadRequestException('OAUTH_PROVIDER_NOT_LAUNCHED');
-    if (!(await this.registry.isEnabled(input.provider))) throw new BadRequestException('OAUTH_PROVIDER_DISABLED');
+    if (!(await this.registry.isLaunched(input.provider))) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.provider_not_launched');
+    if (!(await this.registry.isEnabled(input.provider))) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.provider_disabled');
     const provider = this.registry.getInstance(input.provider);
     await this.assertRedirectAllowed(input.redirectUri, input.clientType);
     const state = crypto.randomBytes(24).toString('base64url');
@@ -161,7 +162,7 @@ export class OAuthService {
 
   async handleCallback(input: CallbackInput): Promise<CallbackResult> {
     const st = await this.social.consumeState(input.state);
-    if (!st || st.provider !== input.provider) throw new BadRequestException('OAUTH_STATE_INVALID');
+    if (!st || st.provider !== input.provider) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.state_invalid');
 
     if (input.error || !input.code) {
       return { redirectUri: st.redirectUri, errorCode: 'OAUTH_PROVIDER_DENIED' };
@@ -205,7 +206,7 @@ export class OAuthService {
     }
 
     const system = await this.identity.findSystemByCode(st.systemCode);
-    if (!system) throw new BadRequestException('系统不存在');
+    if (!system) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.system.not_found');
 
     const outcome = await this.resolution.resolve(profile, {
       systemId: system.id, defaultRoleCode: DEFAULT_ROLE_CODE,
@@ -230,7 +231,7 @@ export class OAuthService {
     }
 
     const user = await this.identity.findLoginUserById(outcome.userId);
-    if (!user) throw new BadRequestException('用户不存在');
+    if (!user) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.user.not_found');
     const { sessionId } = await this.authService.issueSessionForUser(user, {
       ip: input.ip,
       userAgent: input.userAgent,
@@ -246,7 +247,7 @@ export class OAuthService {
 
   async exchangeLoginCode(code: string): Promise<LoginResult> {
     const row = await this.social.consumeLoginCode(code);
-    if (!row) throw new BadRequestException('OAUTH_EXCHANGE_EXPIRED');
+    if (!row) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.exchange_expired');
     return this.authService.buildLoginResultFromSession(row.sessionId);
   }
 
@@ -282,7 +283,7 @@ export class OAuthService {
     // 防止仅持有被劫持会话者删除受害者的登录方式。
     await this.stepUp.verifyAndConsumeProof(proof, userId, 'unlink-provider', sessionId);
     const ok = await this.identity.hasOtherCredential(userId, provider);
-    if (!ok) throw new BadRequestException('OAUTH_CANNOT_UNLINK_LAST_CREDENTIAL');
+    if (!ok) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.cannot_unlink_last_credential');
     await this.identity.deleteUserAccount(userId, provider);
   }
 

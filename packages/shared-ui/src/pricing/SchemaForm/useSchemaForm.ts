@@ -1,8 +1,15 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { ParamsSchema } from '@autix/domain/pricing';
-import { clampOnChange, fillDefaults, resolveSchemaTransition, type ClampMessage } from './schema-form-logic';
+import {
+  clampOnChange,
+  fillDefaults,
+  resolveSchemaTransition,
+  type ClampMessage,
+  type ClampMessageTranslator,
+} from './schema-form-logic';
 
 export interface UseSchemaFormResult {
   params: Record<string, unknown>;
@@ -29,6 +36,12 @@ export function useSchemaForm(
   );
   const [message, setMessage] = useState<ClampMessage | undefined>(undefined);
 
+  const tConstraint = useTranslations('schemaForm.constraint');
+  const translate = useCallback<ClampMessageTranslator>(
+    (key, values) => tConstraint(key, values),
+    [tConstraint],
+  );
+
   // 模型切换：schema 引用变化时跑迁移。用 React 官方"渲染期间根据 prop 调整
   // state"模式（state 记一份"上一个 schema"，而不是 ref）——不能用
   // useEffect + schema 依赖，因为迁移结果必须在同一次渲染里可用于表单，与
@@ -51,11 +64,11 @@ export function useSchemaForm(
   const setParam = useCallback(
     (field: string, value: unknown) => {
       if (!schema) return;
-      const result = clampOnChange(schema, params, field, value);
+      const result = clampOnChange(schema, params, field, value, translate);
       setParams(result.params);
       setMessage(result.message);
     },
-    [schema, params],
+    [schema, params, translate],
   );
 
   const replaceParams = useCallback((next: Record<string, unknown>) => {

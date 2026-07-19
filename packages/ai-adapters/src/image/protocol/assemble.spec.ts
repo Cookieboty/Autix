@@ -259,6 +259,21 @@ describe('assembleImageRequest — generate-json-url (doubao seedream)', () => {
     expect((a.body as any).image).toHaveLength(14);
     expect(a.applied.coercions.some((c) => /maxImages/.test(c))).toBe(true);
   });
+
+  // size = (比例 × 档位) 复合成单个像素串——Ark 只收一个 size，没有 aspect_ratio/resolution 字段。
+  it('composes size = WxH from aspectRatio × resolution, and sends no aspect_ratio/resolution', () => {
+    const a = assembleImageRequest({
+      preset: doubaoImagesV1, operation: 'generate' as const,
+      baseUrl: 'https://gw.example/v1', apiKey: 'k', model: 'doubao-seedream-4-5',
+      prompt: 'p', count: 1, params: { aspectRatio: '9:16', resolution: '2K' },
+    });
+    expect((a.body as any).size).toBe('1600x2848');
+    expect((a.body as any).aspect_ratio).toBeUndefined();
+    expect((a.body as any).resolution).toBeUndefined();
+    expect(a.applied.params.size).toBe('1600x2848');
+    // 源参数被复合消费，不算「dropped」
+    expect(a.applied.coercions.join(' ')).not.toMatch(/aspectRatio|resolution/);
+  });
 });
 
 describe('assembleImageRequest — multipart', () => {

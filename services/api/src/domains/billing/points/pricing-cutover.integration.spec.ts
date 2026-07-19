@@ -55,32 +55,9 @@ describe('pricing cutover — server-side authority', () => {
   });
 });
 
-describe('pricing cutover — snapshot immutability', () => {
-  it('a price change to the live schema does not affect a hold created before the change', () => {
-    const snapshotAtOrderTime = {
-      schemaVersion: 1,
-      modelConfigId: 'model-1',
-      modelSchema: PRICING_SCHEMA, // quality high = 350
-      taskFixedSchema: null,
-      multiplier: 1,
-      discountFactor: 1,
-      discountCode: null,
-      params: { quality: 'high' },
-    };
-
-    // 模拟管理员把 high 从 350 改到 900 —— 但快照是值拷贝，不受影响。
-    const liveSchemaAfterAdminChange = {
-      terms: [
-        { id: 'base', op: 'add' as const, const: 1 },
-        { id: 'quality', op: 'mul' as const, table: { param: 'quality', values: { low: 15, high: 900 } } },
-      ],
-    };
-    expect(liveSchemaAfterAdminChange).not.toBe(PRICING_SCHEMA);
-
-    const settled = quoteTaskFromSnapshot(snapshotAtOrderTime, {});
-    expect(settled.total).toBe(350);
-  });
-});
+// 「改价不影响已建立的快照」由 services/task-pricing-estimator.service.spec.ts:550
+// 覆盖——那里在调用返回后真的 mutate 源 schema 再断言快照不变。此处曾有一份同名测试，
+// 但它全程没有发生任何改价（构造两个互不相干的字面量再断言二者不同），已删除。
 
 describe('pricing cutover — ajv rejects out-of-range params', () => {
   it('rejects an enum value outside the declared set', async () => {

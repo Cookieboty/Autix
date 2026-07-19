@@ -17,3 +17,4 @@ export {
   poyoHappyHorse11,
 } from './protocol/presets/vendors';
 export { validateVideoProtocolConfig, type ConfigViolation } from './protocol/validate-config';
+export { resolveWanMode, type WanMode, type WanDispatch } from './protocol/wan-dispatch';

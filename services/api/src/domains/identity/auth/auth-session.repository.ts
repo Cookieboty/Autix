@@ -1,5 +1,6 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 type CreateSessionInput = {
   userId: string;
@@ -18,7 +19,7 @@ type RotateRefreshTokenInput = {
 
 @Injectable()
 export class AuthSessionRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   create(input: CreateSessionInput) {
     return this.prisma.$transaction(async (tx) => {
@@ -26,7 +27,7 @@ export class AuthSessionRepository {
         SELECT "status" FROM "users" WHERE "id" = ${input.userId} FOR UPDATE
       `;
       if (!users[0] || !['ACTIVE', 'PENDING'].includes(users[0].status)) {
-        throw new UnauthorizedException('账户不可用');
+        throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
       }
       const session = await tx.userSession.create({
         data: {
@@ -75,7 +76,7 @@ export class AuthSessionRepository {
         FOR UPDATE OF u
       `;
       if (!users[0] || !['ACTIVE', 'PENDING'].includes(users[0].status)) {
-        throw new UnauthorizedException('账户不可用');
+        throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.account.unavailable');
       }
       return tx.userSession.update({
         where: { id: input.sessionId },

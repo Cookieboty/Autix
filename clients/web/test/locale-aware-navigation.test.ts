@@ -17,6 +17,18 @@ function filesUsing(sym: string): string[] {
 }
 
 /**
+ * 硬跳转的扫描范围必须包含 packages/ —— 原扫描只覆盖 `app components`，
+ * 而真实的丢 locale 硬跳发生在 packages/shared-ui 里，长期在护栏视野之外。
+ */
+const HARD_NAV_SCAN_DIRS = ['app', 'components', 'lib', '../../packages/shared-ui/src'];
+
+function filesUnderScan(sym: string): string[] {
+  const dirs = HARD_NAV_SCAN_DIRS.join(' ');
+  return execSync(`grep -rl "${sym}" ${dirs} || true`, { encoding: 'utf8' })
+    .trim().split('\n').filter(Boolean);
+}
+
+/**
  * 剥离行注释、块注释、JSX 注释，避免死代码/注释掉的代码触发下面的正则误报
  * （或反过来，被人为改写成绕过正则的样子）。
  */
@@ -73,6 +85,30 @@ describe('locale-aware navigation', () => {
       const rawRouter = /useRouter[^;]*from\s*'next\/navigation'/.test(src);
       return intlPath && rawRouter;
     });
+    expect(offenders).toEqual([]);
+  });
+
+  it('不用 window.location.* 硬跳到裸字面量路径', () => {
+    // as-needed 下裸路径 == 英文，硬跳裸字面量就是把用户切成英文。中间件的裸路径
+    // 兜底会把它捞回来（见 locale-stickiness.test.ts），但那要多一次 302 + 整页重载；
+    // 而且依赖兜底等于把不变量的责任又推回调用点。一律走 getNavigation()/intl router。
+    //
+    // 只匹配以 `/` 开头的字符串/模板字面量：变量形式（如 OAuth 的 authorizeUrl、
+    // platform.ts 里已被中间件兜底的 `= path`）不在此列。
+    // locale 中立端点：URL 被第三方登记，必须保持裸路径。加前缀反而会引入双前缀 404，
+    // 见 lib/proxy-handler.ts 的 LOCALE_NEUTRAL_PREFIXES 与 oauth/callback/page.tsx:25-41。
+    const LOCALE_NEUTRAL_FILES = new Set(['app/[locale]/oauth/popup-callback/page.tsx']);
+
+    const offenders: string[] = [];
+    for (const f of filesUnderScan('window.location')) {
+      if (LOCALE_NEUTRAL_FILES.has(f)) continue;
+      const src = readStripped(f);
+      for (const m of src.matchAll(
+        /window\.location\.(?:assign|replace)\(\s*[`'"]\/|window\.location\.href\s*=\s*[`'"]\//g,
+      )) {
+        offenders.push(`${f}: ${m[0]}`);
+      }
+    }
     expect(offenders).toEqual([]);
   });
 

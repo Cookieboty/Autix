@@ -69,7 +69,10 @@ describe('AuthIdentityRepository OAuth methods', () => {
         emailVerified: true, emailPlaceholder: false,
         account: { provider: 'google', providerAccountId: 'sub-1' },
       }),
-    ).rejects.toThrow('该系统未配置默认用户角色(USER)，无法完成账号创建');
+    ).rejects.toMatchObject({
+      i18nKey: 'auth.registration.default_role_missing',
+      code: 'REGISTRATION_ROLE_MISSING',
+    });
     expect(tx.userRole.create).not.toHaveBeenCalled();
   });
 });

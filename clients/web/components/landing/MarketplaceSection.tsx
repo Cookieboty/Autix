@@ -3,10 +3,6 @@
 import { Link } from '@/i18n/navigation';
 import { motion } from 'framer-motion';
 import {
-  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
-  // Sparkles,
-  // Wrench,
-  // Bot,
   ImageIcon,
   Video,
   ArrowRight,
@@ -31,25 +27,6 @@ interface CategoryCard {
 }
 
 const CATEGORIES: CategoryCard[] = [
-  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
-  // {
-  //   slug: 'skills',
-  //   titleKey: 'mktSkillsTitle',
-  //   descKey: 'mktSkillsDesc',
-  //   icon: Sparkles,
-  // },
-  // {
-  //   slug: 'mcp',
-  //   titleKey: 'mktMcpTitle',
-  //   descKey: 'mktMcpDesc',
-  //   icon: Wrench,
-  // },
-  // {
-  //   slug: 'agents',
-  //   titleKey: 'mktAgentsTitle',
-  //   descKey: 'mktAgentsDesc',
-  //   icon: Bot,
-  // },
   {
     slug: 'image-templates',
     titleKey: 'mktImageTitle',

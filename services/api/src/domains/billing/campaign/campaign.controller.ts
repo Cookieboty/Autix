@@ -1,14 +1,15 @@
 import {
   Body,
-  BadRequestException,
   Controller,
   Get,
+  HttpStatus,
   Param,
   Post,
   Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import {
   CurrentUser,
@@ -27,7 +28,7 @@ import type { AuthUser } from '@autix/domain';
 @UseGuards(JwtAuthGuard)
 @Controller('campaigns')
 export class CampaignController {
-  constructor(private readonly campaignRewardService: CampaignRewardService) {}
+  constructor(private readonly campaignRewardService: CampaignRewardService) { }
 
   @Get('active')
   async activeCampaigns() {
@@ -68,7 +69,7 @@ export class CampaignController {
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin/campaigns')
 export class AdminCampaignController {
-  constructor(private readonly campaignRewardService: CampaignRewardService) {}
+  constructor(private readonly campaignRewardService: CampaignRewardService) { }
 
   @Get()
   async listCampaigns() {
@@ -106,7 +107,7 @@ export class AdminCampaignController {
     @Body() body: { userId?: string },
   ) {
     const actorId = getCurrentUserId(user);
-    if (!body.userId) throw new BadRequestException('userId 必填');
+    if (!body.userId) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.user_id_required');
     return this.campaignRewardService.grantOnce(id, body.userId ?? '', actorId);
   }
 }

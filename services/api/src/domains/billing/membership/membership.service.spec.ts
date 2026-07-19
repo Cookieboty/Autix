@@ -1,8 +1,3 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
 import { MembershipService, type VideoEntitlement } from './membership.service';
 
 // P2-D1: 视频闸门覆盖 —— 未订阅 / 未配置视频权益时必须拒绝 seedance 调用
@@ -29,7 +24,12 @@ describe('MembershipService.video gating', () => {
         resolution: '720p',
         durationSeconds: 5,
       }),
-    ).toThrow(ForbiddenException);
+    ).toThrow(
+      expect.objectContaining({
+        i18nKey: 'video_entitlement.membership_required',
+        code: 'VIDEO_MEMBERSHIP_REQUIRED',
+      }),
+    );
   });
 
   it('已订阅但 seedance 未开通时同样拒绝', async () => {
@@ -49,13 +49,12 @@ describe('MembershipService.video gating', () => {
         resolution: '480p',
         durationSeconds: 5,
       }),
-    ).toThrow(/未开通视频生成/);
-    expect(() =>
-      service.assertVideoEntitlement(ent, {
-        resolution: '480p',
-        durationSeconds: 5,
+    ).toThrow(
+      expect.objectContaining({
+        i18nKey: 'video_entitlement.membership_required',
+        code: 'VIDEO_MEMBERSHIP_REQUIRED',
       }),
-    ).toThrow(ForbiddenException);
+    );
   });
 
   it('已订阅但分辨率/时长超额 -> 拒绝', () => {
@@ -74,13 +73,23 @@ describe('MembershipService.video gating', () => {
         resolution: '1080p',
         durationSeconds: 5,
       }),
-    ).toThrow(/分辨率/);
+    ).toThrow(
+      expect.objectContaining({
+        i18nKey: 'video_entitlement.resolution_exceeded',
+        code: 'VIDEO_MEMBERSHIP_LIMIT_EXCEEDED',
+      }),
+    );
     expect(() =>
       service.assertVideoEntitlement(entitlement, {
         resolution: '720p',
         durationSeconds: 10,
       }),
-    ).toThrow(/秒/);
+    ).toThrow(
+      expect.objectContaining({
+        i18nKey: 'video_entitlement.duration_exceeded',
+        code: 'VIDEO_MEMBERSHIP_LIMIT_EXCEEDED',
+      }),
+    );
   });
 });
 
@@ -176,7 +185,7 @@ describe('MembershipService.admin writes', () => {
         price: '19.90',
         points: 11000,
       }),
-    ).rejects.toThrow('会员计划仅支持连续订阅');
+    ).rejects.toMatchObject({ i18nKey: 'membership.plan_must_be_subscription' });
     expect(repository.createPlan).not.toHaveBeenCalled();
   });
 
@@ -193,7 +202,7 @@ describe('MembershipService.admin writes', () => {
         price: '59.70',
         points: 11000,
       }),
-    ).rejects.toThrow('会员计划仅支持月付或年付');
+    ).rejects.toMatchObject({ i18nKey: 'membership.plan_billing_cycle_invalid' });
     expect(repository.createPlan).not.toHaveBeenCalled();
   });
 
@@ -214,9 +223,9 @@ describe('MembershipService.admin writes', () => {
     const { repository, service } = buildAdminWriteService();
     repository.updateLevel.mockRejectedValueOnce({ code: 'P2002' });
 
-    await expect(service.updateLevel('level-1', { level: 3 })).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(service.updateLevel('level-1', { level: 3 })).rejects.toMatchObject({
+      i18nKey: 'membership.tier_level_taken',
+    });
     expect(repository.updateLevel).toHaveBeenCalledTimes(1);
   });
 });
@@ -244,9 +253,9 @@ describe('MembershipService.subscription self-service', () => {
     it('无有效会员时拒绝，且不触碰 Stripe / DB', async () => {
       const { service, repository, stripe } = buildService(null);
 
-      await expect(service.cancelAtPeriodEnd('u1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.cancelAtPeriodEnd('u1')).rejects.toMatchObject({
+        i18nKey: 'membership.no_active_cancellable',
+      });
       expect(stripe.cancelSubscriptionAtPeriodEnd).not.toHaveBeenCalled();
       expect(repository.cancelUserMembershipAtPeriodEnd).not.toHaveBeenCalled();
     });
@@ -257,9 +266,9 @@ describe('MembershipService.subscription self-service', () => {
         stripeSubscriptionId: 'sub_1',
       });
 
-      await expect(service.cancelAtPeriodEnd('u1')).rejects.toThrow(
-        '当前没有可取消的有效会员',
-      );
+      await expect(service.cancelAtPeriodEnd('u1')).rejects.toMatchObject({
+        i18nKey: 'membership.no_active_cancellable',
+      });
       expect(repository.cancelUserMembershipAtPeriodEnd).not.toHaveBeenCalled();
     });
 
@@ -317,9 +326,9 @@ describe('MembershipService.subscription self-service', () => {
     it('无 stripeCustomerId 时拒绝，且不调用 Stripe', async () => {
       const { service, stripe } = buildService({ stripeCustomerId: null });
 
-      await expect(service.createBillingPortal('u1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.createBillingPortal('u1')).rejects.toMatchObject({
+        i18nKey: 'membership.no_billing_management',
+      });
       expect(stripe.createBillingPortalSession).not.toHaveBeenCalled();
     });
 

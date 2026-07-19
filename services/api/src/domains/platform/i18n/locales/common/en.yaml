@@ -1,0 +1,3 @@
+common.request_success: "Success"
+common.internal_error: "Internal server error"
+common.invalid_params: "Invalid parameters"

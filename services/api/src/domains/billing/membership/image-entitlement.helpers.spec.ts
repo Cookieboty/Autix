@@ -1,4 +1,3 @@
-import { ForbiddenException } from '@nestjs/common';
 import {
   assertImageConcurrency,
   assertImageEntitlement,
@@ -88,17 +87,28 @@ describe('assertImageEntitlement', () => {
 
   it('rejects when image generation is disabled for the level', () => {
     expect(() => assertImageEntitlement({ ...base, enabled: false }, { size: '512x512' })).toThrow(
-      ForbiddenException,
+      expect.objectContaining({
+        i18nKey: 'image_entitlement.membership_required',
+        code: 'IMAGE_MEMBERSHIP_REQUIRED',
+      }),
     );
   });
 
   it('rejects when the requested resolution exceeds the tier cap', () => {
-    expect(() => assertImageEntitlement(base, { size: '2048x2048' })).toThrow(ForbiddenException);
+    expect(() => assertImageEntitlement(base, { size: '2048x2048' })).toThrow(
+      expect.objectContaining({
+        i18nKey: 'image_entitlement.resolution_exceeded',
+        code: 'IMAGE_MEMBERSHIP_LIMIT_EXCEEDED',
+      }),
+    );
   });
 
   it('rejects a quality not in the allowed list', () => {
     expect(() => assertImageEntitlement(base, { size: '1024x1024', quality: 'hd' })).toThrow(
-      ForbiddenException,
+      expect.objectContaining({
+        i18nKey: 'image_entitlement.quality_not_supported',
+        code: 'IMAGE_MEMBERSHIP_LIMIT_EXCEEDED',
+      }),
     );
   });
 

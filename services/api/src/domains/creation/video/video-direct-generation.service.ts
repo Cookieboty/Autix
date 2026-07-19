@@ -14,17 +14,16 @@ import {
   normalizeVideoGenerationClipParamsForModel,
   redactProviderRequest,
   resolveVideoGenerationRequestLimits,
+  resolveVideoRouting,
   type VideoGenerationClipParams as ClipParams,
 } from './video-generation-flow.helpers';
 import {
   assembleVideoRequest,
-  resolveVideoPreset,
   submitVideoTask,
   videoSubmitUrl,
   VideoUpstreamError,
   type VideoMaterialInput,
 } from '@autix/ai-adapters/video';
-import { readProtocolKey } from '@autix/domain/model';
 import { toUnifiedVideoParams, type VideoMaterialRole, type VideoModelHint } from '@autix/domain/video';
 
 export interface DirectVideoMaterialInput {
@@ -104,14 +103,24 @@ export class VideoDirectGenerationService {
       durationSeconds: limits.durationSeconds,
     });
 
-    const preset = resolveVideoPreset(readProtocolKey(modelConfig.metadata));
+    // Wan 2.7 家族按素材角色派发 preset + model ID（同 generateClip）。
+    const routing = resolveVideoRouting(
+      modelConfig.metadata,
+      modelConfig.model,
+      input.materials.map((m) => m.role),
+    );
+    if (routing.maxDurationSeconds != null && limits.durationSeconds > routing.maxDurationSeconds)
+      throw new BadRequestException(
+        `该生成模式最长 ${routing.maxDurationSeconds}s，当前请求 ${limits.durationSeconds}s`,
+      );
+    const preset = routing.preset;
     const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
       preset,
       baseUrl: baseUrl?.trim()?.replace(/\/+$/, '') || 'https://ark.cn-beijing.volces.com',
       apiKey,
-      // FIX-3：始终使用服务端解析/鉴权过的模型，忽略客户端传入的 params.model。
-      model: modelConfig.model,
+      // FIX-3：始终使用服务端解析/鉴权过的模型，忽略客户端传入的 params.model。Wan routing.model 同为服务端权威。
+      model: routing.model,
       prompt,
       materials: input.materials as VideoMaterialInput[],
       params: toUnifiedVideoParams(params),

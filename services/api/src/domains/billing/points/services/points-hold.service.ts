@@ -1,4 +1,6 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import type { ErrorCode } from '@autix/domain';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { quoteTaskFromSnapshot } from '@autix/domain/pricing';
 import { PointsRepository } from '../repositories/points.repository';
 import { PointsLedgerService } from './points-ledger.service';
@@ -39,7 +41,7 @@ export class PointsHoldService {
   constructor(
     private readonly pointsRepo: PointsRepository,
     private readonly ledgerService: PointsLedgerService,
-  ) {}
+  ) { }
 
   /**
    * FIX-10: 回收孤儿 hold——任务崩溃/未落库导致 hold 长期 PENDING/PROCESSING，
@@ -106,8 +108,11 @@ export class PointsHoldService {
           amount: item.amount,
         });
         if (updated === 0) {
-          throw new BadRequestException(
-            `INSUFFICIENT_GRANT: grant=${item.grant.id} required=${item.amount}`,
+          throw new I18nHttpException(
+            HttpStatus.BAD_REQUEST,
+            'points.hold_grant_insufficient',
+            { grantId: item.grant.id, required: item.amount },
+            { code: 'INSUFFICIENT_GRANT' as ErrorCode },
           );
         }
         await this.pointsRepo.createHoldItemWithinTx(
@@ -122,7 +127,7 @@ export class PointsHoldService {
         input.amount,
       );
       if (updatedPoints === 0) {
-        throw new BadRequestException('积分余额不足');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.balance_insufficient');
       }
       const points = await this.pointsRepo.findBalanceWithinTx(tx, userId);
 
@@ -160,17 +165,17 @@ export class PointsHoldService {
     const claimed = await this.pointsRepo.claimHoldForProcessingWithinTx(tx, holdId);
     if (claimed === 0) {
       const existing = await this.pointsRepo.findHoldWithItemsWithinTx(tx, holdId);
-      if (!existing) throw new BadRequestException('积分冻结不存在');
+      if (!existing) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_not_found');
       if (isConfirmTerminalStatus(existing.status)) {
         return { confirmed: false, hold: existing };
       }
-      throw new BadRequestException('当前冻结状态不能确认扣费');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_status_invalid_for_capture');
     }
 
     const hold = await this.pointsRepo.findHoldWithItemsWithinTx(tx, holdId);
-    if (!hold) throw new BadRequestException('积分冻结不存在');
+    if (!hold) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_not_found');
     if (hold.status !== PointHoldStatus.PROCESSING) {
-      throw new BadRequestException('当前冻结状态不能确认扣费');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_status_invalid_for_capture');
     }
 
     const confirmation = buildHoldConfirmationPlan({
@@ -187,8 +192,11 @@ export class PointsHoldService {
         itemConsumption.refundAmount,
       );
       if (updatedGrant === 0) {
-        throw new BadRequestException(
-          `INSUFFICIENT_FROZEN_GRANT: grant=${itemConsumption.item.grantId} required=${itemConsumption.item.amount}`,
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'points.hold_amount_invalid',
+          { grantId: itemConsumption.item.grantId, required: itemConsumption.item.amount },
+          { code: 'INSUFFICIENT_FROZEN_GRANT' as ErrorCode },
         );
       }
     }
@@ -201,7 +209,7 @@ export class PointsHoldService {
       consumedByType: confirmation.consumedByType,
     });
     if (updatedPoints === 0) {
-      throw new BadRequestException('积分冻结余额不足');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_balance_insufficient');
     }
     const points = await this.pointsRepo.findBalanceWithinTx(tx, hold.userId);
 
@@ -229,7 +237,7 @@ export class PointsHoldService {
       }),
     );
     if (updatedRecord === 0) {
-      throw new BadRequestException('积分冻结流水不存在');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_not_found');
     }
 
     return { confirmed: true, hold: updatedHold, balance: points.balance };
@@ -249,25 +257,28 @@ export class PointsHoldService {
     const claimed = await this.pointsRepo.claimHoldForProcessingWithinTx(tx, holdId);
     if (claimed === 0) {
       const existing = await this.pointsRepo.findHoldWithItemsWithinTx(tx, holdId);
-      if (!existing) throw new BadRequestException('积分冻结不存在');
+      if (!existing) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_not_found');
       if (isRefundTerminalStatus(existing.status)) {
         return { refunded: false, amount: 0, hold: existing };
       }
-      throw new BadRequestException('当前冻结状态不能退款');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_status_invalid_for_refund');
     }
 
     const hold = await this.pointsRepo.findHoldWithItemsWithinTx(tx, holdId);
-    if (!hold) throw new BadRequestException('积分冻结不存在');
+    if (!hold) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_not_found');
     if (hold.status !== PointHoldStatus.PROCESSING) {
-      throw new BadRequestException('当前冻结状态不能退款');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_status_invalid_for_refund');
     }
 
     const amount = sumHoldItemAmount(hold.items);
     for (const item of hold.items) {
       const updatedGrant = await this.pointsRepo.refundHeldGrantItemWithinTx(tx, item);
       if (updatedGrant === 0) {
-        throw new BadRequestException(
-          `INSUFFICIENT_FROZEN_GRANT: grant=${item.grantId} required=${item.amount}`,
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'points.hold_amount_invalid',
+          { grantId: item.grantId, required: item.amount },
+          { code: 'INSUFFICIENT_FROZEN_GRANT' as ErrorCode },
         );
       }
     }
@@ -278,7 +289,7 @@ export class PointsHoldService {
       amount,
     );
     if (updatedPoints === 0) {
-      throw new BadRequestException('积分冻结余额不足');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_balance_insufficient');
     }
     const points = await this.pointsRepo.findBalanceWithinTx(tx, hold.userId);
 
@@ -293,7 +304,7 @@ export class PointsHoldService {
       buildRefundRecordUpdateData({ balance: points.balance, reason }),
     );
     if (updatedRecord === 0) {
-      throw new BadRequestException('积分冻结流水不存在');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_not_found');
     }
 
     return { refunded: true, amount, hold: updatedHold, balance: points.balance };
@@ -326,7 +337,7 @@ export class PointsHoldService {
     const hold = tx
       ? await this.pointsRepo.findHoldByIdWithinTx(tx, holdId)
       : await this.pointsRepo.findHoldById(holdId);
-    if (!hold) throw new BadRequestException('积分冻结不存在');
+    if (!hold) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.hold_not_found');
 
     // Missing or unparseable snapshot must throw here, never fall back to
     // re-estimating from the live DB — that fallback is exactly the disease this

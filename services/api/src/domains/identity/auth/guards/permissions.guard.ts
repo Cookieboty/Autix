@@ -1,7 +1,8 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, HttpStatus } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { AuthUser } from '@autix/domain';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -26,7 +27,7 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!hasPermission) {
-      throw new ForbiddenException('权限不足');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.permission.denied');
     }
     return true;
   }

@@ -47,15 +47,46 @@ const COMMON = {
 } satisfies Omit<ProtocolPreset, 'key' | 'paramBindings'>;
 
 /**
- * 火山 Seedream —— 统一参数与原生字段同名，直接落。
+ * 火山 Seedream 的 `size` —— 和 gpt-image 一样是 (比例 × 档位) 查表得像素串。
+ *
+ * Ark `/images/generations` 只收**单个** `size` 字段（可为档位 `2K` 或像素 `WxH`，不可混用），
+ * 没有独立的 `aspect_ratio` / `resolution` 字段。要让输出同时尊重用户选的**比例**和计价用的
+ * **档位**，唯一的形态是发 `WxH`——按官方文档「方式 1」的 (档位 × 比例) → 像素参考表拼出。
+ *
+ * 4.5（2K/4K）与 5.0-lite（2K/3K/4K）的同档位映射值一致，故合成一张覆盖 2K/3K/4K × 8 比例。
+ * 每个模型的 schema 只选自己支持的档位，规则 8 逐模型校验组合覆盖。
+ */
+const SEEDREAM_SIZE: Record<string, string> = {
+  '1:1@2K': '2048x2048', '4:3@2K': '2304x1728', '3:4@2K': '1728x2304', '16:9@2K': '2848x1600',
+  '9:16@2K': '1600x2848', '3:2@2K': '2496x1664', '2:3@2K': '1664x2496', '21:9@2K': '3136x1344',
+  '1:1@3K': '3072x3072', '4:3@3K': '3456x2592', '3:4@3K': '2592x3456', '16:9@3K': '4096x2304',
+  '9:16@3K': '2304x4096', '3:2@3K': '3744x2496', '2:3@3K': '2496x3744', '21:9@3K': '4704x2016',
+  '1:1@4K': '4096x4096', '4:3@4K': '4704x3520', '3:4@4K': '3520x4704', '16:9@4K': '5504x3040',
+  '9:16@4K': '3040x5504', '3:2@4K': '4992x3328', '2:3@4K': '3328x4992', '21:9@4K': '6240x2656',
+};
+
+/**
+ * Seedream `size`（方式 2）的硬性约束：总像素 ∈ [3.68M, 16.77M]、长短边 ∈ [1/16, 16]。
+ * 和 gpt-image **不同**：没有 16 倍数、也没有最长边上限——故 maxEdge/edgeMultipleOf 不声明。
+ */
+const SEEDREAM_SIZE_CONSTRAINTS = {
+  maxRatio: 16,
+  minPixels: 3_686_400,
+  maxPixels: 16_777_216,
+} as const;
+
+/**
+ * 火山 Seedream 4.5 / 5.0-lite —— `size` 是 (比例 × 档位) 复合，不是同名直落。
  */
 export const doubaoImagesV1: ProtocolPreset = {
   ...COMMON,
   key: 'doubao-images@v1',
   referenceMode: { kind: 'generate-json-url', path: 'image', container: 'scalar-or-array', item: 'url-string', maxImages: 14 },
   paramBindings: {
-    aspectRatio: { path: 'aspect_ratio' },
-    resolution: { path: 'resolution' },
+    size: {
+      path: 'size', composeFrom: ['aspectRatio', 'resolution'], join: '@',
+      valueMap: SEEDREAM_SIZE, pixelSizeConstraints: SEEDREAM_SIZE_CONSTRAINTS,
+    },
     safetyChecker: { path: 'enable_safety_checker' },
   },
 };
@@ -147,13 +178,15 @@ export const minimaxImagesV1: ProtocolPreset = {
 const GPT_IMAGE_SIZE: Record<string, string> = {
   '1:1@1K': '1024x1024',
   '1:1@2K': '2048x2048',
-  '1:1@4K': '4096x4096',
+  // 4K 正方形不存在：像素上限 8,294,400 ⇒ 正方形最大边 = √8294400 = 2880（2880 恰是 16 的倍数）。
+  '1:1@4K': '2880x2880',
   '3:2@1K': '1536x1024',
-  '3:2@2K': '2048x1365',
-  '3:2@4K': '3840x2560',
+  // 2K/4K 的 3:2、2:3 边长必须是 16 的倍数，且 4K 档要压在像素上限内（3840x2560=9.83M 超限）。
+  '3:2@2K': '2016x1344',
+  '3:2@4K': '3504x2336',
   '2:3@1K': '1024x1536',
-  '2:3@2K': '1365x2048',
-  '2:3@4K': '2560x3840',
+  '2:3@2K': '1344x2016',
+  '2:3@4K': '2336x3504',
   '16:9@1K': '1536x864',
   '16:9@2K': '2048x1152',
   '16:9@4K': '3840x2160',
@@ -161,6 +194,19 @@ const GPT_IMAGE_SIZE: Record<string, string> = {
   '9:16@2K': '1152x2048',
   '9:16@4K': '2160x3840',
 };
+
+/**
+ * gpt-image-2 端点对 `size` 的硬性约束（上游契约，不通用于别家）。声明在 size 绑定上，
+ * 由跨配置校验器（规则 9）对 GPT_IMAGE_SIZE 的**每个值**逐条校验——防止再往表里写进
+ * 上游会 400 的尺寸（超边 / 非 16 倍数 / 超像素上限），在运行期变成偶发 400。
+ */
+const GPT_IMAGE_SIZE_CONSTRAINTS = {
+  maxEdge: 3840,
+  edgeMultipleOf: 16,
+  maxRatio: 3,
+  minPixels: 655_360,
+  maxPixels: 8_294_400,
+} as const;
 
 /**
  * OpenAI GPT Image —— 唯一收像素尺寸的一家。
@@ -175,7 +221,10 @@ export const openaiImagesV1: ProtocolPreset = {
   // 去掉它对 generate/edit 两条路径都安全。
   referenceMode: { kind: 'edit-multipart' },
   paramBindings: {
-    size: { path: 'size', composeFrom: ['aspectRatio', 'resolution'], join: '@', valueMap: GPT_IMAGE_SIZE },
+    size: {
+      path: 'size', composeFrom: ['aspectRatio', 'resolution'], join: '@',
+      valueMap: GPT_IMAGE_SIZE, pixelSizeConstraints: GPT_IMAGE_SIZE_CONSTRAINTS,
+    },
     quality: { path: 'quality' },
     background: { path: 'background' },
     outputFormat: { path: 'output_format' },

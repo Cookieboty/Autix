@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -37,7 +38,7 @@ export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly registrationStatusSync: UserRegistrationStatusSyncService,
-  ) {}
+  ) { }
 
   async create(dto: CreateUserDto, currentUser: AuthUser) {
     const existingUser = await this.userRepository.findByUsernameOrEmail(
@@ -46,7 +47,7 @@ export class UserService {
     );
 
     if (existingUser) {
-      throw new ConflictException('用户名或邮箱已存在');
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'user.username_or_email_taken');
     }
 
     // Determine target system and role
@@ -62,7 +63,7 @@ export class UserService {
       targetSystemId = currentUser.currentSystemId;
       targetRoleCode = 'USER';
     } else {
-      throw new BadRequestException('无法确定目标系统');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'system.target_unknown');
     }
 
     // Find the target role
@@ -71,7 +72,7 @@ export class UserService {
       targetRoleCode,
     );
     if (!targetRole) {
-      throw new BadRequestException(`系统中不存在角色: ${targetRoleCode}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'role.not_in_system', { roleCode: targetRoleCode });
     }
 
     const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 12) : undefined;
@@ -127,10 +128,10 @@ export class UserService {
     const user = await this.userRepository.findByIdWithPermissions(id);
 
     if (!user) {
-      throw new NotFoundException('用户不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'user.not_found');
     }
     if (user.status === 'DELETED' && !currentUser.isSuperAdmin) {
-      throw new NotFoundException('用户不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'user.not_found');
     }
 
     // System-scoped access check
@@ -139,7 +140,7 @@ export class UserService {
         (ur) => ur.role.systemId === currentUser.currentSystemId,
       );
       if (!hasSystemRole) {
-        throw new ForbiddenException('无权访问该用户');
+        throw new I18nHttpException(HttpStatus.FORBIDDEN, 'user.forbidden');
       }
     }
 
@@ -167,7 +168,7 @@ export class UserService {
       const existingUser = await this.userRepository.findConflictForUpdate(id, updateData);
 
       if (existingUser) {
-        throw new ConflictException('用户名或邮箱已存在');
+        throw new I18nHttpException(HttpStatus.CONFLICT, 'user.username_or_email_taken');
       }
     }
 
@@ -180,7 +181,7 @@ export class UserService {
     this.assertActorOutranksTarget(currentUser, target);
 
     if (id === currentUser.id) {
-      throw new ForbiddenException('不能删除自己');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'user.cannot_delete_self');
     }
 
     await this.userRepository.delete(id);
@@ -213,7 +214,7 @@ export class UserService {
     this.assertActorOutranksTarget(currentUser, target);
 
     if (id === currentUser.id) {
-      throw new ForbiddenException('不能修改自己的状态');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'user.cannot_modify_own_status');
     }
 
     await this.userRepository.updateStatusAndSyncRegistration(id, dto.status, (tx) =>
@@ -239,7 +240,7 @@ export class UserService {
 
     // 安全：非超管不得修改自己的角色（与 remove/updateStatus 的自我保护一致），防止自我提权。
     if (!currentUser.isSuperAdmin && userId === currentUser.id) {
-      throw new ForbiddenException('不能修改自己的角色');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'user.cannot_modify_own_role');
     }
 
     // System admin can only assign roles in their current system
@@ -248,7 +249,7 @@ export class UserService {
         (sr) => sr.systemId !== currentUser.currentSystemId,
       );
       if (invalidSystem) {
-        throw new ForbiddenException('无权分配其他系统的角色');
+        throw new I18nHttpException(HttpStatus.FORBIDDEN, 'role.cross_system_forbidden');
       }
     }
 
@@ -259,7 +260,7 @@ export class UserService {
 
   async updateLanguage(userId: string, language: string): Promise<{ language: string }> {
     if (!isSupportedLang(language)) {
-      throw new BadRequestException(`Unsupported language: ${language}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'user.unsupported_language', { language });
     }
     await this.userRepository.updateLanguage(userId, language);
     return { language };
@@ -304,7 +305,7 @@ export class UserService {
 
   private assertMutable(status: string): void {
     if (status === 'DELETED') {
-      throw new ConflictException({ code: 'USER_DELETED', message: '已删除用户为只读记录' });
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'user.deleted_read_only', undefined, { code: 'USER_DELETED' });
     }
   }
 
@@ -318,7 +319,7 @@ export class UserService {
     target: { isSuperAdmin?: boolean },
   ): void {
     if (!currentUser.isSuperAdmin && target.isSuperAdmin) {
-      throw new ForbiddenException('无权操作更高权限的用户');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'user.higher_privilege_forbidden');
     }
   }
 }
