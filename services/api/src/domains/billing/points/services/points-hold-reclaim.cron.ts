@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
+import { runInJobContext } from '../../../platform/common/job-context';
 import { Cron } from '@nestjs/schedule';
 import { PointsHoldService } from './points-hold.service';
 
@@ -8,16 +10,18 @@ import { PointsHoldService } from './points-hold.service';
  */
 @Injectable()
 export class PointsHoldReclaimCron {
-  private readonly logger = new Logger(PointsHoldReclaimCron.name);
+  private readonly logger = new AppLogger(PointsHoldReclaimCron.name);
 
   constructor(private readonly pointsHoldService: PointsHoldService) {}
 
   @Cron('*/10 * * * *')
   async reclaimOrphanedHolds() {
-    try {
-      await this.pointsHoldService.reclaimOrphanedHolds();
-    } catch (error) {
-      this.logger.error('reclaim orphaned holds failed', error as Error);
-    }
+    return runInJobContext({ name: 'billing.pointsHoldReclaim', logger: this.logger }, async () => {
+      try {
+        await this.pointsHoldService.reclaimOrphanedHolds();
+      } catch (error) {
+        this.logger.error('reclaim orphaned holds failed', error as Error);
+      }
+    });
   }
 }

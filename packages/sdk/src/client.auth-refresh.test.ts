@@ -146,4 +146,109 @@ describe('auth refresh helpers', () => {
     expect(second.status).toBe(200);
     expect(post).toHaveBeenCalledTimes(1);
   });
+
+  // 评审 P2 回归：401 重试必须重新生成 X-Request-Id（一次 HTTP 请求 = 一个 request ID），
+  // 且不能因为调用方预置了小写 x-request-id 而被沿用；同时会话级 X-Correlation-Id 必须
+  // 在重试请求里原样保留，服务端才能把两次请求聚合到同一会话。
+  describe('401 retry preserves per-request X-Request-Id / X-Correlation-Id (评审 P2)', () => {
+    it('第一次和重试的 X-Request-Id 不同', async () => {
+      createAuthHarness();
+      const requestIds: Array<string | null> = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+          const headers = new Headers(init?.headers);
+          requestIds.push(headers.get('X-Request-Id'));
+          return new Response(null, {
+            status: requestIds.length === 1 ? 401 : 200,
+          });
+        }),
+      );
+      const axios = await import('axios');
+      vi.spyOn(axios.default, 'post').mockResolvedValue({
+        status: 200,
+        data: {
+          success: true,
+          data: { accessToken: 'new-access', refreshToken: 'refresh-2' },
+        },
+      });
+
+      const res = await authFetch('https://api.example.test/api/tick');
+
+      expect(res.status).toBe(200);
+      expect(requestIds).toHaveLength(2);
+      expect(requestIds[0]).toBeTruthy();
+      expect(requestIds[1]).toBeTruthy();
+      expect(requestIds[1]).not.toBe(requestIds[0]);
+    });
+
+    it('调用方预置小写 x-request-id 时，重试会删除预置值并生成新的 X-Request-Id', async () => {
+      // 这是 P2 修复的核心：buildAuthHeaders 里的 `!nextHeaders.has(REQUEST_ID_HEADER)`
+      // 会因预置值存在而拒绝写入新 ID；重试前必须先克隆 headers 并删掉预置 request-id。
+      createAuthHarness();
+      const requestIds: Array<string | null> = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+          const headers = new Headers(init?.headers);
+          requestIds.push(headers.get('X-Request-Id'));
+          return new Response(null, {
+            status: requestIds.length === 1 ? 401 : 200,
+          });
+        }),
+      );
+      const axios = await import('axios');
+      vi.spyOn(axios.default, 'post').mockResolvedValue({
+        status: 200,
+        data: {
+          success: true,
+          data: { accessToken: 'new-access', refreshToken: 'refresh-2' },
+        },
+      });
+
+      const preset = 'caller-lowercase-req-12345';
+      const res = await authFetch('https://api.example.test/api/tick', {
+        headers: { 'x-request-id': preset },
+      });
+
+      expect(res.status).toBe(200);
+      // 第一次沿用调用方预置（尊重外部链路）。
+      expect(requestIds[0]).toBe(preset);
+      // 重试必须换成新的 ID，不再复用调用方预置值。
+      expect(requestIds[1]).toBeTruthy();
+      expect(requestIds[1]).not.toBe(preset);
+    });
+
+    it('调用方设置的 X-Correlation-Id 在两次请求间保持不变', async () => {
+      // 会话级 ID 用途正好相反：轮询/重试都属于同一会话，应保留供服务端聚合。
+      createAuthHarness();
+      const correlationIds: Array<string | null> = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+          const headers = new Headers(init?.headers);
+          correlationIds.push(headers.get('X-Correlation-Id'));
+          return new Response(null, {
+            status: correlationIds.length === 1 ? 401 : 200,
+          });
+        }),
+      );
+      const axios = await import('axios');
+      vi.spyOn(axios.default, 'post').mockResolvedValue({
+        status: 200,
+        data: {
+          success: true,
+          data: { accessToken: 'new-access', refreshToken: 'refresh-2' },
+        },
+      });
+
+      const corr = 'poll-video-abc-123';
+      const res = await authFetch('https://api.example.test/api/tick', {
+        headers: { 'X-Correlation-Id': corr },
+      });
+
+      expect(res.status).toBe(200);
+      expect(correlationIds).toEqual([corr, corr]);
+    });
+  });
 });

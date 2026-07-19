@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { RiskRepository } from './risk.repository';
 import { scoreUserSignals } from './risk-scoring.helpers';
 
@@ -7,7 +8,7 @@ import { scoreUserSignals } from './risk-scoring.helpers';
  */
 @Injectable()
 export class RiskScoringService {
-  private readonly logger = new Logger(RiskScoringService.name);
+  private readonly logger = new AppLogger(RiskScoringService.name);
 
   constructor(private readonly riskRepository: RiskRepository) {}
 

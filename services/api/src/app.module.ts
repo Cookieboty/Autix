@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { I18nMiddleware } from './domains/platform/i18n/i18n.middleware';
+import { TraceContextMiddleware } from './domains/platform/common/trace-context.middleware';
 import { AdminDomainModule } from './domains/admin/admin-domain.module';
 import { BillingDomainModule } from './domains/billing/billing-domain.module';
 import { CreationDomainModule } from './domains/creation/creation-domain.module';
@@ -43,6 +44,9 @@ import { PlatformDomainModule } from './domains/platform/platform-domain.module'
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(I18nMiddleware).forRoutes('*');
+    // 顺序敏感：TraceContext 必须在最前，才能让后续 middleware / interceptor /
+    // filter / 所有 service 的 AppLogger 都能通过 AsyncLocalStorage 拿到同一
+    // 个 traceId。
+    consumer.apply(TraceContextMiddleware, I18nMiddleware).forRoutes('*');
   }
 }

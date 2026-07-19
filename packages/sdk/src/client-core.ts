@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosHeaders, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import {
   fetchEventSource,
   type FetchEventSourceInit,
@@ -48,6 +48,47 @@ export const LLM_REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
 
 export function normalizeApiBase(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+}
+
+const REQUEST_ID_HEADER = 'X-Request-Id';
+const CORRELATION_ID_HEADER = 'X-Correlation-Id';
+// 导出给业务代码使用（如 shared-store 前端轮询会话，避免各处硬编码字符串）。
+export const HTTP_TRACE_HEADERS = {
+  requestId: REQUEST_ID_HEADER,
+  correlationId: CORRELATION_ID_HEADER,
+} as const;
+
+export function generateRequestId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+/**
+ * 生成一个会话级 correlation ID（默认前缀 `corr-`）。用于把一次用户动作
+ * 触发的多次 HTTP 请求（如轮询、SSE 重连）在服务端日志里串联起来。
+ */
+export function generateCorrelationId(prefix = 'corr'): string {
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `${prefix}-${Date.now().toString(36)}-${rand}`;
+}
+
+function hasHeaderCaseInsensitive(
+  headers: HeadersInit | undefined,
+  name: string,
+): boolean {
+  if (!headers) return false;
+  const lower = name.toLowerCase();
+  if (headers instanceof Headers) return headers.has(name);
+  if (Array.isArray(headers)) {
+    return headers.some(([k]) => k.toLowerCase() === lower);
+  }
+  return Object.keys(headers).some((k) => k.toLowerCase() === lower);
+}
+
+function headersHasRequestId(headers: HeadersInit | undefined): boolean {
+  return hasHeaderCaseInsensitive(headers, REQUEST_ID_HEADER);
 }
 
 function normalizeApiPath(url?: string): string | undefined {
@@ -265,11 +306,15 @@ export async function getValidAccessToken(apiUrl = getApiBaseUrl()): Promise<str
 async function buildAuthHeaders(
   headers: HeadersInit | undefined,
   token: string | null,
+  requestId?: string,
 ): Promise<Headers> {
   const nextHeaders = new Headers(headers);
   if (token) nextHeaders.set('Authorization', `Bearer ${token}`);
   const lang = (await getAuth().getLanguage()) || DEFAULT_LANGUAGE;
   nextHeaders.set('Accept-Language', lang);
+  if (requestId && !nextHeaders.has(REQUEST_ID_HEADER)) {
+    nextHeaders.set(REQUEST_ID_HEADER, requestId);
+  }
   return nextHeaders;
 }
 
@@ -281,9 +326,14 @@ export async function authFetch(
   const apiUrl = options.apiUrl ?? getApiBaseUrl();
   const retryOnUnauthorized = options.retryOnUnauthorized ?? true;
   const token = await getAuth().getAccessToken();
+  // request ID = 单次 HTTP 粒度：调用方带 X-Request-Id 时尊重预设，否则本次生成；
+  // 401 重试会重新生成新 ID（见下方），不复用同一 ID 导致服务端幂等/去重误判。
+  const requestId = headersHasRequestId(init.headers)
+    ? undefined
+    : generateRequestId();
   const response = await fetch(input, {
     ...init,
-    headers: await buildAuthHeaders(init.headers, token),
+    headers: await buildAuthHeaders(init.headers, token, requestId),
   });
 
   if (!retryOnUnauthorized || response.status !== 401) {
@@ -300,9 +350,17 @@ export async function authFetch(
   }
   if (!nextToken) return response;
 
+  // 重试 = 新的一次 HTTP 请求，request ID 必须重新生成。调用方如果在 init.headers 里
+  // 显式预置了 X-Request-Id（比如把请求 ID 和轮询会话都塞进 headers），我们要
+  // 主动删掉预置值，让下面的 generateRequestId() 生效——buildAuthHeaders 里的
+  // `!nextHeaders.has(REQUEST_ID_HEADER)` 会因预置值存在而拒绝写入新 ID（评审 P2）。
+  // correlation ID 若在 init.headers 里由业务代码显式设置过（如轮询会话），
+  // 会随克隆后的 headers 原样透传，不受此处影响。
+  const retryHeaders = new Headers(init.headers);
+  retryHeaders.delete(REQUEST_ID_HEADER);
   return fetch(input, {
     ...init,
-    headers: await buildAuthHeaders(init.headers, nextToken),
+    headers: await buildAuthHeaders(retryHeaders, nextToken, generateRequestId()),
   });
 }
 
@@ -354,9 +412,19 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
     config.url = normalizeApiPath(config.url);
     const auth = getAuth();
     const token = await auth.getAccessToken();
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    // 用 AxiosHeaders.from 规范化后再用 has/set：Axios 内部会把 header 名小写化，
+    // 直接用 config.headers[REQUEST_ID_HEADER] 属性索引会大小写敏感，导致上游已经
+    // 传了 x-request-id 时判断为 false，从而被本地新生成的值覆盖（原评审 P2）。
+    const headers = AxiosHeaders.from(config.headers);
+    if (token) headers.set('Authorization', `Bearer ${token}`);
     const lang = (await auth.getLanguage()) || DEFAULT_LANGUAGE;
-    config.headers['Accept-Language'] = lang;
+    headers.set('Accept-Language', lang);
+    // 每次请求生成新 traceId（axios 401 重试走 instance(original)，
+    // interceptor 会再次执行——这里保留调用方已经放入的 ID，避免覆盖）。
+    if (!headers.has(REQUEST_ID_HEADER)) {
+      headers.set(REQUEST_ID_HEADER, generateRequestId());
+    }
+    config.headers = headers;
     return config;
   });
 
@@ -466,7 +534,12 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
               staleAccessToken: staleAccessToken ?? null,
             });
             if (newToken && original.headers) {
-              original.headers.Authorization = `Bearer ${newToken}`;
+              const retryHeaders = AxiosHeaders.from(original.headers);
+              retryHeaders.set('Authorization', `Bearer ${newToken}`);
+              // 401 重试 = 新的一次 HTTP 请求，request ID 需重新生成；
+              // 但同一会话的 correlation ID 应保留，才能在服务端把首次失败与重试串联。
+              retryHeaders.delete(REQUEST_ID_HEADER);
+              original.headers = retryHeaders;
               return instance(original);
             }
           } catch {

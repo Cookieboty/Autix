@@ -5,13 +5,13 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Logger,
   Param,
   Post,
   UseGuards,
   BadRequestException,
   Query,
 } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
@@ -24,7 +24,7 @@ import { buildGallerySubmissionDto, deriveAspectRatioFromSize } from './image-ge
 @UseGuards(JwtAuthGuard)
 @Controller('image-gen')
 export class ImageGenController {
-  private readonly logger = new Logger(ImageGenController.name);
+  private readonly logger = new AppLogger(ImageGenController.name);
 
   constructor(
     private readonly imageGenerationFlowService: ImageGenerationFlowService,

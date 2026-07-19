@@ -1,4 +1,5 @@
-import { Injectable, HttpStatus, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, HttpStatus, ConflictException } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
 import * as crypto from 'crypto';
 import { OAuthProviderRegistry } from './oauth-provider.registry';
 import { AccountResolutionService } from './account-resolution.service';
@@ -37,7 +38,7 @@ type CallbackResult = {
 
 @Injectable()
 export class OAuthService {
-  private readonly logger = new Logger(OAuthService.name);
+  private readonly logger = new AppLogger(OAuthService.name);
   constructor(
     private readonly registry: OAuthProviderRegistry,
     private readonly resolution: AccountResolutionService,

@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
 import { PointsService } from '../../../billing/points/points.service';
 import { MembershipService } from '../../../billing/membership/membership.service';
 import type { TaskEstimateInput, TaskEstimateResult } from '../../../billing/points/points.service';
@@ -35,7 +36,7 @@ export interface CallBillingEstimateMeta {
 
 @Injectable()
 export class CallBillingService {
-  private readonly logger = new Logger(CallBillingService.name);
+  private readonly logger = new AppLogger(CallBillingService.name);
 
   constructor(
     private readonly repository: LlmRepository,

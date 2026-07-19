@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
+import { runInJobContext } from '../../platform/common/job-context';
 import { Cron } from '@nestjs/schedule';
 import { PointsService } from '../points/points.service';
 import { PointGrantType, PointLedgerEventType, PointsSource, Prisma } from '../../platform/prisma/generated';
@@ -38,7 +40,7 @@ type MonthlySubscriptionCycleResult = {
 
 @Injectable()
 export class MembershipCycleService {
-  private readonly logger = new Logger(MembershipCycleService.name);
+  private readonly logger = new AppLogger(MembershipCycleService.name);
 
   constructor(
     private readonly repository: MembershipRepository,
@@ -47,18 +49,20 @@ export class MembershipCycleService {
 
   @Cron('0 2 * * *')
   async runDailyCycle() {
-    try {
-      const now = new Date();
-      const pendingChanges = await this.applyPendingMembershipChanges(now);
-      const monthlyGrants = await this.grantDueSubscriptionPoints(now);
-      const expiredGrants = await this.pointsService.expireGrants(now);
-      const expiredMemberships = await this.expireMemberships(now);
-      this.logger.log(
-        `membership cycle done: pendingChanges=${pendingChanges.applied}, expiredGrants=${expiredGrants.expiredGrants}, expiredMemberships=${expiredMemberships.expiredMemberships}, cancelledMemberships=${expiredMemberships.cancelledMemberships}, monthlyGrants=${monthlyGrants.grantsCreated}, carryoverGrants=${monthlyGrants.carryoverGrantsCreated}`,
-      );
-    } catch (error) {
-      this.logger.error('membership cycle failed', error);
-    }
+    return runInJobContext({ name: 'billing.membershipCycle', logger: this.logger }, async () => {
+      try {
+        const now = new Date();
+        const pendingChanges = await this.applyPendingMembershipChanges(now);
+        const monthlyGrants = await this.grantDueSubscriptionPoints(now);
+        const expiredGrants = await this.pointsService.expireGrants(now);
+        const expiredMemberships = await this.expireMemberships(now);
+        this.logger.log(
+          `membership cycle done: pendingChanges=${pendingChanges.applied}, expiredGrants=${expiredGrants.expiredGrants}, expiredMemberships=${expiredMemberships.expiredMemberships}, cancelledMemberships=${expiredMemberships.cancelledMemberships}, monthlyGrants=${monthlyGrants.grantsCreated}, carryoverGrants=${monthlyGrants.carryoverGrantsCreated}`,
+        );
+      } catch (error) {
+        this.logger.error('membership cycle failed', error);
+      }
+    });
   }
 
   async applyPendingMembershipChanges(now = new Date()) {

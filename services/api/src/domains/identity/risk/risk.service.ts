@@ -1,4 +1,5 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { RiskRepository } from './risk.repository';
 
@@ -13,7 +14,7 @@ export interface ListFlaggedUsersQuery {
 
 @Injectable()
 export class RiskService {
-  private readonly logger = new Logger(RiskService.name);
+  private readonly logger = new AppLogger(RiskService.name);
 
   constructor(private readonly riskRepository: RiskRepository) { }
 

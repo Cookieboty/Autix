@@ -1,4 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
+import { runInJobContext } from '../../platform/common/job-context';
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
@@ -37,6 +39,7 @@ import {
   toPrismaInputJson,
   type VideoGenerationClipParams as ClipParams,
   splitQueuedGenerationsForPolling,
+  summarizeDurations,
 } from './video-generation-flow.helpers';
 import {
   assembleVideoRequest,
@@ -95,7 +98,7 @@ function toVideoModelHint(modelConfig: {
 
 @Injectable()
 export class VideoGenerationFlowService {
-  private readonly logger = new Logger(VideoGenerationFlowService.name);
+  private readonly logger = new AppLogger(VideoGenerationFlowService.name);
 
   constructor(
     private readonly repository: VideoGenerationRepository,
@@ -112,35 +115,57 @@ export class VideoGenerationFlowService {
 
   @Cron('*/30 * * * * *')
   async pollPendingGenerations() {
+    // 后台任务统一走 runInJobContext：自动生成 job-video.pollPending-<uuid> 作为 traceId，
+    // 自动记录 job start/done/failed 日志。批次内所有 AppLogger 输出自动携带同一 traceId。
+    await runInJobContext(
+      { name: 'video.pollPending', logger: this.logger },
+      () => this.runPollBatch(),
+    );
+  }
+
+  private async runPollBatch() {
+    const batchStartedAt = Date.now();
     const pollWindow = buildQueuedGenerationPollWindow();
 
     const pending = await this.repository.findActiveProviderGenerations();
 
-    if (pending.length === 0) return;
+    if (pending.length === 0) {
+      // 空批次落 debug：Cron 每 30s 触发，1000 任务规模下 info 会刷屏。
+      this.logger.debug?.('poll batch: no pending generations');
+      return;
+    }
 
     const { toExpire, toPoll } = splitQueuedGenerationsForPolling(
       pending,
       pollWindow,
     );
+
     for (const g of toExpire) {
       await this.markExpired(g.id, 'cron: queued 超过 30 分钟未完成');
     }
 
-    if (toPoll.length === 0) return;
+    if (toPoll.length === 0) {
+      this.logger.log(
+        `poll batch summary: expired=${toExpire.length} polled=0 elapsedMs=${Date.now() - batchStartedAt}`,
+      );
+      return;
+    }
 
     const pairs: Array<{
       generation: typeof toPoll[number];
       outcome: VideoTaskOutcome;
     }> = [];
+    let queryFailed = 0;
+    const kindCounts: Record<string, number> = {};
+    const durations: number[] = [];
+    // 慢查询阈值：上游正常 P95 通常在 1~2s；>3s 属异常需要关注但非失败。
+    const SLOW_QUERY_MS = 3000;
 
     for (const g of toPoll) {
+      const queryStartedAt = Date.now();
       try {
         if (!g.providerTaskId) continue;
 
-        // 优先用提交时的快照（不可变）：clip params 生成后仍可改
-        // （video-project.store.ts 的 updateClipParams），若轮询读实时 params，
-        // 用户中途切模型会导致 in-flight 任务被拿新渠道的凭证去查。
-        // 残余 legacy 行（modelConfigId 为 NULL，计划 1 迁移时快照缺失）走受限回退。
         const apiContext = g.modelConfigId
           ? await this.modelResolver.resolveApiContextByModelConfigId(
               g.modelConfigId,
@@ -148,9 +173,6 @@ export class VideoGenerationFlowService {
           : await this.resolveLegacyApiContext(g);
         if (!apiContext) continue;
 
-        // preset 只在拿到经校验的 apiContext 之后再解析：legacy 行的 g.protocolKey
-        // 为 null，resolveVideoPreset(undefined) 会 fail-loud 抛出——resolveLegacyApiContext
-        // 已经确认了实时配置就是 ark-video@v3，这里的默认值因此是安全的，不是猜测。
         const preset = resolveVideoPreset(
           g.protocolKey ?? LEGACY_VIDEO_PROTOCOL_KEY,
         );
@@ -161,10 +183,26 @@ export class VideoGenerationFlowService {
           taskId: g.providerTaskId,
           onWarn: (m) => this.logger.warn(`generation ${g.id}: ${m}`),
         });
+        const elapsedMs = Date.now() - queryStartedAt;
+        durations.push(elapsedMs);
+        kindCounts[outcome.kind] = (kindCounts[outcome.kind] ?? 0) + 1;
+        // 单任务成功轮询降为 debug 级——1000 任务 × 每 30s × 2 条 = 288 万条/天会刷崩日志。
+        // 只对慢查询和状态跃迁的失败态提升级别。
+        if (elapsedMs >= SLOW_QUERY_MS) {
+          this.logger.warn(
+            `poll slow query: generation=${g.id} kind=${outcome.kind} elapsedMs=${elapsedMs}`,
+          );
+        } else {
+          this.logger.debug?.(
+            `poll query ok: generation=${g.id} kind=${outcome.kind} elapsedMs=${elapsedMs}`,
+          );
+        }
         pairs.push({ generation: g, outcome });
       } catch (err) {
+        queryFailed += 1;
+        // 失败保留 warn：这是 SLI 关注点，不能被采样掉。
         this.logger.warn(
-          `pollPendingGenerations: query ${g.id} failed: ${String(err instanceof Error ? err.message : err)}`,
+          `poll query failed: generation=${g.id} elapsedMs=${Date.now() - queryStartedAt} err=${String(err instanceof Error ? err.message : err)}`,
         );
       }
     }
@@ -172,6 +210,16 @@ export class VideoGenerationFlowService {
     if (pairs.length > 0) {
       await this.pollPendingByTaskIds(pairs);
     }
+
+    // 批次聚合 info：这是唯一保留在 info 级的轮询日志，作为长期 SLI。
+    const { p50, p95 } = summarizeDurations(durations);
+    const kindsPart =
+      Object.keys(kindCounts).length > 0
+        ? ` kinds=${Object.entries(kindCounts).map(([k, v]) => `${k}:${v}`).join(',')}`
+        : '';
+    this.logger.log(
+      `poll batch summary: pending=${pending.length} expired=${toExpire.length} polled=${pairs.length} failed=${queryFailed} p50=${p50}ms p95=${p95}ms elapsedMs=${Date.now() - batchStartedAt}${kindsPart}`,
+    );
   }
 
   /**

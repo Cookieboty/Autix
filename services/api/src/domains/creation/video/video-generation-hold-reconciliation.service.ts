@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import {
   PointHoldStatus,
   VideoGenStatus,
@@ -8,7 +9,7 @@ import { PointsService } from '../../billing/points/points.service';
 
 @Injectable()
 export class VideoGenerationHoldReconciliationService {
-  private readonly logger = new Logger(
+  private readonly logger = new AppLogger(
     VideoGenerationHoldReconciliationService.name,
   );
 

@@ -1,5 +1,7 @@
 // services/api/src/sse/sse.service.ts
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { AppLogger } from '../common/app-logger';
+import { runInJobContext } from '../common/job-context';
 import { Interval, Cron } from '@nestjs/schedule';
 import { Response } from 'express';
 import { SseRepository } from './sse.repository';
@@ -16,7 +18,7 @@ export interface TaskEventPayload {
 
 @Injectable()
 export class SseService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(SseService.name);
+  private readonly logger = new AppLogger(SseService.name);
   // Map<userId, Set<Response>> — 一个用户一个 Set，所有 Tab 共用
   private readonly connections = new Map<string, Set<Response>>();
 
@@ -84,35 +86,39 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
    * 定期清理离线用户的 Map entry，防止内存泄漏
    */
   @Interval(300000) // 5 minutes
-  sweepInactiveUsers(): void {
-    let cleaned = 0;
-    for (const [userId, set] of this.connections.entries()) {
-      if (set.size === 0) {
-        this.connections.delete(userId);
-        cleaned++;
+  async sweepInactiveUsers(): Promise<void> {
+    return runInJobContext({ name: 'platform.sseCleanupIdle', logger: this.logger }, async () => {
+      let cleaned = 0;
+      for (const [userId, set] of this.connections.entries()) {
+        if (set.size === 0) {
+          this.connections.delete(userId);
+          cleaned++;
+        }
       }
-    }
-    if (cleaned > 0) {
-      this.logger.log(`swept ${cleaned} inactive user entries`);
-    }
+      if (cleaned > 0) {
+        this.logger.log(`swept ${cleaned} inactive user entries`);
+      }
+    });
   }
 
   @Cron('0 3 * * *') // 每天凌晨 3 点
   async cleanupTaskEvents(): Promise<void> {
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    let totalDeleted = 0;
-    try {
-      while (true) {
-        const result = await this.repository.deleteTaskEventsOlderThan(cutoff);
-        if (result === 0) break;
-        totalDeleted += result;
+    return runInJobContext({ name: 'platform.sseDailyReport', logger: this.logger }, async () => {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      let totalDeleted = 0;
+      try {
+        while (true) {
+          const result = await this.repository.deleteTaskEventsOlderThan(cutoff);
+          if (result === 0) break;
+          totalDeleted += result;
+        }
+      } catch (err) {
+        this.logger.error('Failed to delete task events', err instanceof Error ? err.stack : String(err));
+        return;
       }
-    } catch (err) {
-      this.logger.error('Failed to delete task events', err instanceof Error ? err.stack : String(err));
-      return;
-    }
-    if (totalDeleted > 0) {
-      this.logger.log(`Deleted ${totalDeleted} task events older than 30 days`);
-    }
+      if (totalDeleted > 0) {
+        this.logger.log(`Deleted ${totalDeleted} task events older than 30 days`);
+      }
+    });
   }
 }

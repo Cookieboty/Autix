@@ -1,10 +1,11 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import * as bcrypt from 'bcryptjs';
 import { AdminBootstrapRepository } from './admin-bootstrap.repository';
 
 @Injectable()
 export class AdminBootstrapService implements OnApplicationBootstrap {
-  private readonly logger = new Logger(AdminBootstrapService.name);
+  private readonly logger = new AppLogger(AdminBootstrapService.name);
 
   constructor(private readonly adminBootstrapRepository: AdminBootstrapRepository) {}
 

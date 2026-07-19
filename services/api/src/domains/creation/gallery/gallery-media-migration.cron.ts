@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
+import { runInJobContext } from '../../platform/common/job-context';
 import { Interval } from '@nestjs/schedule';
 import { GalleryMediaMigrationService } from './gallery-media-migration.service';
 
@@ -8,26 +10,28 @@ import { GalleryMediaMigrationService } from './gallery-media-migration.service'
  */
 @Injectable()
 export class GalleryMediaMigrationCron {
-  private readonly logger = new Logger(GalleryMediaMigrationCron.name);
+  private readonly logger = new AppLogger(GalleryMediaMigrationCron.name);
   private running = false;
 
   constructor(private readonly service: GalleryMediaMigrationService) {}
 
   @Interval(60_000)
   async tick(): Promise<void> {
-    if (this.running) return;
-    this.running = true;
-    try {
-      const res = await this.service.migratePendingBatch();
-      if (res.scanned > 0) {
-        this.logger.log(
-          `tick: scanned=${res.scanned} published=${res.published} retry=${res.retry} stranded=${res.stranded}`,
-        );
+    return runInJobContext({ name: 'creation.galleryMediaMigration', logger: this.logger }, async () => {
+      if (this.running) return;
+      this.running = true;
+      try {
+        const res = await this.service.migratePendingBatch();
+        if (res.scanned > 0) {
+          this.logger.log(
+            `tick: scanned=${res.scanned} published=${res.published} retry=${res.retry} stranded=${res.stranded}`,
+          );
+        }
+      } catch (err) {
+        this.logger.error('gallery media migration tick failed', err as Error);
+      } finally {
+        this.running = false;
       }
-    } catch (err) {
-      this.logger.error('gallery media migration tick failed', err as Error);
-    } finally {
-      this.running = false;
-    }
+    });
   }
 }

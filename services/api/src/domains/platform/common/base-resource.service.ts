@@ -1,8 +1,8 @@
 import {
   ForbiddenException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { AppLogger } from './app-logger';
 import {
   ResourceType,
   TemplateStatus,
@@ -50,7 +50,7 @@ export interface RuntimeOverrideDto {
  */
 export abstract class BaseResourceService {
   protected readonly resourceInteractions: ResourceInteractionRepository;
-  private readonly baseResourceLogger = new Logger(BaseResourceService.name);
+  private readonly baseResourceLogger = new AppLogger(BaseResourceService.name);
 
   /**
    * resourceMetrics 是可选的（未注入时 dual-write 静默跳过）：这样手写 new

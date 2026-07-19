@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../common/app-logger';
+import { runInJobContext } from '../common/job-context';
 import { Cron, Interval } from '@nestjs/schedule';
 import { ResourceMetricsService } from './resource-metrics.service';
 import { ResourceViewPipelineService } from './resource-view.pipeline';
@@ -10,7 +12,7 @@ import { ResourceViewPipelineService } from './resource-view.pipeline';
  */
 @Injectable()
 export class ResourceMetricsCron {
-  private readonly logger = new Logger(ResourceMetricsCron.name);
+  private readonly logger = new AppLogger(ResourceMetricsCron.name);
 
   constructor(
     private readonly pipelineService: ResourceViewPipelineService,
@@ -19,23 +21,27 @@ export class ResourceMetricsCron {
 
   @Interval(600_000)
   async aggregateAndRecompute() {
-    try {
-      await this.pipelineService.aggregateDaily();
-      const { updated } = await this.service.recomputeHotScores();
-      this.logger.log(`hot scores recomputed: ${updated}`);
-    } catch (error) {
-      this.logger.error('resource metrics aggregation failed', error as Error);
-    }
+    return runInJobContext({ name: 'platform.resourceMetricsSnapshot', logger: this.logger }, async () => {
+      try {
+        await this.pipelineService.aggregateDaily();
+        const { updated } = await this.service.recomputeHotScores();
+        this.logger.log(`hot scores recomputed: ${updated}`);
+      } catch (error) {
+        this.logger.error('resource metrics aggregation failed', error as Error);
+      }
+    });
   }
 
   @Cron('0 3 * * *')
   async dailyReconciliation() {
-    try {
-      await this.pipelineService.aggregateDaily();
-      const { updated } = await this.service.recomputeHotScores();
-      this.logger.log(`daily reconciliation done, hot scores recomputed: ${updated}`);
-    } catch (error) {
-      this.logger.error('resource metrics daily reconciliation failed', error as Error);
-    }
+    return runInJobContext({ name: 'platform.resourceMetricsAggregate', logger: this.logger }, async () => {
+      try {
+        await this.pipelineService.aggregateDaily();
+        const { updated } = await this.service.recomputeHotScores();
+        this.logger.log(`daily reconciliation done, hot scores recomputed: ${updated}`);
+      } catch (error) {
+        this.logger.error('resource metrics daily reconciliation failed', error as Error);
+      }
+    });
   }
 }

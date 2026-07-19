@@ -1,4 +1,5 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
@@ -42,7 +43,7 @@ type SwitchSystemResult = {
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
+  private readonly logger = new AppLogger(AuthService.name);
 
   constructor(
     private jwtService: JwtService,

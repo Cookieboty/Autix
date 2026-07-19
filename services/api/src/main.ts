@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
-import helmet from 'helmet';
-import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './domains/platform/common/response.interceptor';
 import { AllExceptionsFilter } from './domains/platform/common/all-exceptions.filter';
+import { applyEarlyMiddlewares } from './domains/platform/common/http-bootstrap';
+import { resolveLogLevelsFromEnv } from './domains/platform/common/log-levels';
 import { I18nService } from './domains/platform/i18n/i18n.service';
 
 function captureStripeRawBody(req: unknown, _res: unknown, buf: Buffer) {
@@ -24,7 +24,10 @@ async function bootstrap() {
   const { setGlobalDispatcher, Agent } = await import('undici');
   setGlobalDispatcher(new Agent({ headersTimeout: 0, bodyTimeout: 0 }));
 
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+    logger: resolveLogLevelsFromEnv(),
+  });
   // 代理部署下需配置 trust proxy，否则限流/req.ip 取到的是负载均衡器 IP（所有用户同一桶）。
   // 值须与实际代理层级匹配：盲目信任 X-Forwarded-For 会让客户端伪造 IP 绕过限流，故由 env 显式配置。
   // TRUST_PROXY 取值：数字(信任的代理跳数) | true/false | 逗号分隔的 IP/子网(如 "loopback, uniquelocal")。
@@ -43,15 +46,12 @@ async function bootstrap() {
   app.setGlobalPrefix('api', {
     exclude: [{ path: 'internal/{*splat}', method: RequestMethod.ALL }],
   });
-  app.use(json({ limit: '15mb', verify: captureStripeRawBody }));
-  app.use(urlencoded({ limit: '15mb', extended: true, verify: captureStripeRawBody }));
-  app.use(helmet());
-  const corsOrigin = process.env.CORS_ORIGIN;
-  app.enableCors(
-    corsOrigin
-      ? { origin: corsOrigin.split(',').map((s) => s.trim()), credentials: true }
-      : { origin: 'http://localhost:3000', credentials: true },
-  );
+  // 早期中间件顺序（trace → helmet → CORS → body parser）抽到 http-bootstrap，
+  // 让集成测试和运行时共享同一装配，避免顺序契约在两处漂移（评审 P2）。
+  applyEarlyMiddlewares(app, {
+    corsOrigin: process.env.CORS_ORIGIN,
+    verify: captureStripeRawBody,
+  });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   const i18n = app.get(I18nService);

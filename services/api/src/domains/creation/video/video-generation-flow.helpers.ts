@@ -384,6 +384,26 @@ export function splitQueuedGenerationsForPolling<
   };
 }
 
+/**
+ * 计算轮询单次查询耗时的 p50/p95，用于批次聚合日志。
+ * 空数组返回 0，避免除零；使用 nearest-rank 简化实现（样本量小时够用）。
+ * 拆出来是为了可以在 helpers.spec 里加确定性测试，不需要拉起整个 service。
+ */
+export function summarizeDurations(
+  durations: readonly number[],
+): { p50: number; p95: number } {
+  if (durations.length === 0) return { p50: 0, p95: 0 };
+  const sorted = [...durations].sort((a, b) => a - b);
+  const pick = (p: number): number => {
+    const idx = Math.min(
+      sorted.length - 1,
+      Math.max(0, Math.ceil((p / 100) * sorted.length) - 1),
+    );
+    return sorted[idx] ?? 0;
+  };
+  return { p50: pick(50), p95: pick(95) };
+}
+
 export function buildChainFirstFrameInput(input: {
   clipId: string;
   previousGeneration:

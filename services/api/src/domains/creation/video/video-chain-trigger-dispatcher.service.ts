@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { VideoClipStatus } from '../../platform/prisma/generated';
 import { VideoProjectRepository } from './video-project.repository';
 
@@ -10,7 +11,7 @@ interface ChainGenerationInput {
 
 @Injectable()
 export class VideoChainTriggerDispatcherService {
-  private readonly logger = new Logger(VideoChainTriggerDispatcherService.name);
+  private readonly logger = new AppLogger(VideoChainTriggerDispatcherService.name);
 
   constructor(private readonly repository: VideoProjectRepository) {}
 

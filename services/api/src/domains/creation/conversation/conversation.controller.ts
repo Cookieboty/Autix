@@ -11,8 +11,8 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-  Logger,
 } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
@@ -57,7 +57,7 @@ import {
 @UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('conversations')
 export class ConversationController {
-  private readonly logger = new Logger(ConversationController.name);
+  private readonly logger = new AppLogger(ConversationController.name);
 
   constructor(
     private readonly conversationService: ConversationService,

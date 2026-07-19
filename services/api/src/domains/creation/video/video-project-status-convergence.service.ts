@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import {
   VideoClipStatus,
   VideoProjectStatus,
@@ -7,7 +8,7 @@ import { VideoProjectRepository } from './video-project.repository';
 
 @Injectable()
 export class VideoProjectStatusConvergenceService {
-  private readonly logger = new Logger(
+  private readonly logger = new AppLogger(
     VideoProjectStatusConvergenceService.name,
   );
 

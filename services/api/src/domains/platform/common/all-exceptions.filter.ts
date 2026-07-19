@@ -4,13 +4,15 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { AppLogger } from './app-logger';
 import { Request, Response } from 'express';
 import type { ApiResponse, ApiResponseHint, ErrorCode } from '@autix/domain';
 import { I18nService } from '../i18n/i18n.service';
 import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { DEFAULT_LANGUAGE } from '@autix/i18n';
+import { TraceContext } from './trace-context';
 
 type LocalizedRequest = Request & { lang?: string };
 type HttpExceptionResponse = {
@@ -22,9 +24,64 @@ type HttpExceptionResponse = {
   data?: unknown;
 };
 
+/**
+ * body-parser / raw-body / http-errors 抛出的错误：结构是 `{ status, statusCode, message,
+ * type, expose }`，不是 HttpException 子类。若不识别就会全部 500，早期错误的 4xx 语义
+ * 就丢了（评审 P3：413 payload 超限、非法 JSON 都属于这一类）。
+ *
+ * 判断范围必须收紧（评审 P2）：早期实现只检查 `status/statusCode + message`，会把任意
+ * 携带 `status: 404` 字段的第三方 SDK 异常也当成客户端 HTTP 错误处理——原始 message
+ * 会直接暴露给客户端、被跳过 error 日志。这里改为以下全部满足才识别：
+ *   1) `exception instanceof Error`（排除普通对象、上游 axios/fetch response 结构）。
+ *   2) `status` 是 4xx/5xx **整数**（排除字符串状态或非法值）。
+ *   3) `expose === true`：http-errors 只对"消息可安全暴露给客户端"的错误设置此位。
+ *   4) `type` 命中已知的 body-parser/raw-body 类别白名单，避免第三方错误碰巧同名。
+ * 任一条件不满足就落回 500 兜底路径，同时保留 error 日志。
+ */
+const KNOWN_BODY_PARSER_ERROR_TYPES = new Set<string>([
+  // body-parser 的稳定 type，来自其 README / 源码（json.js / urlencoded.js / read.js）。
+  'entity.parse.failed',
+  'entity.verify.failed',
+  'entity.too.large',
+  'request.aborted',
+  'request.size.invalid',
+  'stream.encoding.set',
+  'stream.not.readable',
+  'parameters.too.many',
+  'charset.unsupported',
+  'encoding.unsupported',
+]);
+
+interface BodyParserErrorLike extends Error {
+  status: number;
+  statusCode?: number;
+  type: string;
+  expose: true;
+}
+
+function isHttpErrorLike(exception: unknown): exception is BodyParserErrorLike {
+  if (!(exception instanceof Error)) return false;
+  const anyErr = exception as unknown as Record<string, unknown>;
+  const status = anyErr.status ?? anyErr.statusCode;
+  if (
+    typeof status !== 'number' ||
+    !Number.isInteger(status) ||
+    status < 400 ||
+    status >= 600
+  ) {
+    return false;
+  }
+  if (anyErr.expose !== true) return false;
+  const type = anyErr.type;
+  if (typeof type !== 'string' || !KNOWN_BODY_PARSER_ERROR_TYPES.has(type)) {
+    return false;
+  }
+  return true;
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger(AllExceptionsFilter.name);
+  private readonly logger = new AppLogger(AllExceptionsFilter.name);
 
   constructor(private readonly i18n: I18nService) { }
 
@@ -88,16 +145,40 @@ export class AllExceptionsFilter implements ExceptionFilter {
           }
         }
       }
+    } else if (isHttpErrorLike(exception)) {
+      // body-parser（非法 JSON → 400、PayloadTooLarge → 413）等 http-errors 会走这里，
+      // 否则会被误判为 500，早期 4xx 语义丢失（评审 P3）。
+      status = exception.status;
+      message = exception.message;
+      code = this.statusToCode(status);
     }
 
-    if (status >= 500 || !(exception instanceof HttpException)) {
+    // 先算 traceId 再写 error 日志：上下文缺失时 wrapper 会生成 err-<uuid> 兜底 ID，
+    // 但如果先打日志再算 ID，那条 error 就没这个 ID，响应体和日志就无法互相关联
+    // （评审 P2）。这里把 ID 塞进 error 消息里，保证同一个字符串一定出现在两侧。
+    const traceId = TraceContext.getTraceId() ?? `err-${randomUUID()}`;
+
+    // 何时打 error 日志：
+    // - status >= 500：真正的服务端异常，必须记录。
+    // - 完全未识别的异常（不是 HttpException 也不是 http-errors）：兜底 500 语义，也记录。
+    // 但 body-parser 400/413 等 http-errors 属于客户端错误，不再当"未捕获异常"打 error。
+    if (
+      status >= 500 ||
+      (!(exception instanceof HttpException) && !isHttpErrorLike(exception))
+    ) {
       this.logger.error(
-        'Unhandled exception',
+        `Unhandled exception traceId=${traceId}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
 
-    const traceId = crypto.randomUUID();
+    // 兜底 traceId 也写到响应头，保证前端/网关能读到；正常路径下 middleware 已设置过，
+    // 这里覆写等价，异常路径下才第一次写入。
+    if (!response.headersSent) {
+      response.setHeader('X-Request-Id', traceId);
+      const correlationId = TraceContext.getCorrelationId();
+      if (correlationId) response.setHeader('X-Correlation-Id', correlationId);
+    }
     const body: ApiResponse<unknown> & { retryAfterMs?: number } = {
       success: false,
       code,
@@ -118,6 +199,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       case 403: return 'FORBIDDEN';
       case 404: return 'NOT_FOUND';
       case 409: return 'CONFLICT';
+      case 413: return 'PAYLOAD_TOO_LARGE';
       case 429: return 'TOO_MANY_REQUESTS';
       default: return 'INTERNAL_ERROR';
     }

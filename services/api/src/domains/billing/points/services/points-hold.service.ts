@@ -1,4 +1,5 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
 import type { ErrorCode } from '@autix/domain';
 import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { quoteTaskFromSnapshot } from '@autix/domain/pricing';
@@ -36,7 +37,7 @@ const ORPHANED_HOLD_TIMEOUT_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class PointsHoldService {
-  private readonly logger = new Logger(PointsHoldService.name);
+  private readonly logger = new AppLogger(PointsHoldService.name);
 
   constructor(
     private readonly pointsRepo: PointsRepository,

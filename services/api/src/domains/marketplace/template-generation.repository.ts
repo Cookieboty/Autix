@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../platform/common/app-logger';
 import { ResourceType, type Prisma } from '../platform/prisma/generated';
 import { PrismaService } from '../platform/prisma/prisma.service';
 import { ResourceMetricsService } from '../platform/resource-metrics/resource-metrics.service';
@@ -35,7 +36,7 @@ type TemplateResourceType = Extract<
 
 @Injectable()
 export class TemplateGenerationRepository {
-  private readonly logger = new Logger(TemplateGenerationRepository.name);
+  private readonly logger = new AppLogger(TemplateGenerationRepository.name);
 
   constructor(
     private readonly prisma: PrismaService,

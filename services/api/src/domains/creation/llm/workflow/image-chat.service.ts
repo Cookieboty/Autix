@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
 import { hasChatCapability } from '@autix/domain';
 import { ModelType } from '../../../platform/prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
@@ -52,7 +53,7 @@ interface ImageAssistantResult {
 
 @Injectable()
 export class ImageChatService {
-  private readonly logger = new Logger(ImageChatService.name);
+  private readonly logger = new AppLogger(ImageChatService.name);
 
   constructor(
     private readonly modelConfigService: ModelConfigService,

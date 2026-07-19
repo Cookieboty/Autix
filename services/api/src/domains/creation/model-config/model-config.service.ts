@@ -2,9 +2,9 @@ import {
   BadRequestException,
   Injectable,
   ForbiddenException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { ModelType, ModelVisibility, Prisma } from '../../platform/prisma/generated';
 import { invalidateModelCache } from '../llm/model.factory';
 import { ModelConfigRepository } from './model-config.repository';
@@ -158,7 +158,7 @@ export function toClientModelConfig(record: object): Record<string, unknown> {
 
 @Injectable()
 export class ModelConfigService {
-  private readonly logger = new Logger(ModelConfigService.name);
+  private readonly logger = new AppLogger(ModelConfigService.name);
 
   constructor(
     private readonly modelConfigRepository: ModelConfigRepository,

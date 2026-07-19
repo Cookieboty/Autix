@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { randomUUID } from 'crypto';
 import { assertSource, type GallerySourcePayload } from '../../creation/gallery/gallery.helpers';
 import {
@@ -64,7 +65,7 @@ function randomPastCreatedAt(): Date {
 
 @Injectable()
 export class BatchJobService {
-  private readonly logger = new Logger(BatchJobService.name);
+  private readonly logger = new AppLogger(BatchJobService.name);
 
   /**
    * 导入 JSON 的字段白名单：只有这些字段会落库。

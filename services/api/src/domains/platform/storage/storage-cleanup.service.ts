@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../common/app-logger';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudflareR2Service } from './cloudflare-r2.service';
 import { hostname } from 'os';
@@ -21,7 +22,7 @@ import { randomUUID } from 'crypto';
  */
 @Injectable()
 export class StorageCleanupService {
-  private readonly logger = new Logger(StorageCleanupService.name);
+  private readonly logger = new AppLogger(StorageCleanupService.name);
   private readonly workerId = `${hostname()}#${process.pid}#${randomUUID().slice(0, 8)}`;
   private readonly leaseSec = 5 * 60;
   private readonly retryBackoffSec = [60, 5 * 60, 30 * 60, 2 * 60 * 60, 12 * 60 * 60];

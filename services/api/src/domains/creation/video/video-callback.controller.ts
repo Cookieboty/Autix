@@ -1,18 +1,18 @@
 import {
   Body,
   Controller,
-  Logger,
   Param,
   Post,
   Query,
 } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { ConfigService } from '@nestjs/config';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 import { handleVideoCallbackRequest } from './video-callback.handler';
 
 @Controller('video/callback')
 export class VideoCallbackController {
-  private readonly logger = new Logger(VideoCallbackController.name);
+  private readonly logger = new AppLogger(VideoCallbackController.name);
 
   constructor(
     private readonly generationFlow: VideoGenerationFlowService,

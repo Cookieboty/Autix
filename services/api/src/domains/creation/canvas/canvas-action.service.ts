@@ -2,8 +2,8 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
 } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import {
   type CanvasActionEstimate,
   type CanvasBoardState,
@@ -38,7 +38,7 @@ export interface CanvasChatGeneratedImage {
 
 @Injectable()
 export class CanvasActionService {
-  private readonly logger = new Logger(CanvasActionService.name);
+  private readonly logger = new AppLogger(CanvasActionService.name);
 
   constructor(
     private readonly boardService: CanvasBoardService,

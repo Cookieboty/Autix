@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../common/app-logger';
 import sharp from 'sharp';
 import { CloudflareR2Service } from './cloudflare-r2.service';
 
@@ -24,7 +25,7 @@ import { CloudflareR2Service } from './cloudflare-r2.service';
  */
 @Injectable()
 export class AvatarImageProcessor {
-  private readonly logger = new Logger(AvatarImageProcessor.name);
+  private readonly logger = new AppLogger(AvatarImageProcessor.name);
 
   private readonly targetSize = 512;
   private readonly webpQuality = 82;

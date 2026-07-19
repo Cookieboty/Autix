@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import {
   TemplateStatus,
   ResourceType,
@@ -43,7 +44,7 @@ export type UpdateImageTemplateDto = Partial<CreateImageTemplateDto>;
 
 @Injectable()
 export class ImageTemplatesService extends BaseResourceService {
-  private readonly logger = new Logger(ImageTemplatesService.name);
+  private readonly logger = new AppLogger(ImageTemplatesService.name);
 
   constructor(
     resourceInteractions: ResourceInteractionRepository,

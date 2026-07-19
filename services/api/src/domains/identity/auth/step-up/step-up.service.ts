@@ -1,4 +1,5 @@
-import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, randomInt, timingSafeEqual } from 'crypto';
@@ -63,7 +64,7 @@ export const PURPOSE_TO_EMAIL_OTP_ENUM: Record<
 
 @Injectable()
 export class StepUpService {
-  private readonly logger = new Logger(StepUpService.name);
+  private readonly logger = new AppLogger(StepUpService.name);
 
   constructor(
     private readonly repository: StepUpRepository,

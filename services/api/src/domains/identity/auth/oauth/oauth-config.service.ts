@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
 import { SystemSettingsService } from '../../../platform/system-settings/system-settings.service';
 
 @Injectable()
 export class OAuthConfigService {
-  private readonly logger = new Logger(OAuthConfigService.name);
+  private readonly logger = new AppLogger(OAuthConfigService.name);
 
   constructor(private readonly settings: SystemSettingsService) {}
 

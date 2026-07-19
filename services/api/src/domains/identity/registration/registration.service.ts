@@ -1,4 +1,5 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { MailService } from '../../platform/mail/mail.service';
 import { AuthUser, MessageResponse } from '@autix/domain';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
@@ -9,7 +10,7 @@ import { InviteService } from '../../billing/invite/invite.service';
 
 @Injectable()
 export class RegistrationService {
-  private readonly logger = new Logger(RegistrationService.name);
+  private readonly logger = new AppLogger(RegistrationService.name);
 
   constructor(
     private registrationRepository: RegistrationRepository,

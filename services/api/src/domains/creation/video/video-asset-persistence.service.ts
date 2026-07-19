@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { safeFetch } from '@autix/ai-adapters/core';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 
 @Injectable()
 export class VideoAssetPersistenceService {
-  private readonly logger = new Logger(VideoAssetPersistenceService.name);
+  private readonly logger = new AppLogger(VideoAssetPersistenceService.name);
 
   constructor(private readonly r2Service: CloudflareR2Service) {}
 

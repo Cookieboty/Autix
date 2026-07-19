@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { ResourceMigrationService } from '../../admin/admin/resource-migration.service';
 import { GalleryRepository } from './gallery.repository';
 import { runWithConcurrency } from './run-with-concurrency';
@@ -59,7 +60,7 @@ export type MigrateBatchResult = {
  */
 @Injectable()
 export class GalleryMediaMigrationService {
-  private readonly logger = new Logger(GalleryMediaMigrationService.name);
+  private readonly logger = new AppLogger(GalleryMediaMigrationService.name);
 
   constructor(
     private readonly repo: GalleryRepository,

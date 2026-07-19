@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { safeFetch } from '@autix/ai-adapters/core';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { isHttpUrl, isInStationMediaUrl } from '../../creation/gallery/gallery.helpers';
@@ -14,7 +15,7 @@ function errorMessage(error: unknown): string {
 
 @Injectable()
 export class ResourceMigrationService {
-  private readonly logger = new Logger(ResourceMigrationService.name);
+  private readonly logger = new AppLogger(ResourceMigrationService.name);
 
   constructor(private readonly r2: CloudflareR2Service) {}
 

@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
+import { runInJobContext } from '../../platform/common/job-context';
 import { Cron } from '@nestjs/schedule';
 import { RiskScoringService } from './risk-scoring.service';
 
@@ -7,17 +9,19 @@ import { RiskScoringService } from './risk-scoring.service';
  */
 @Injectable()
 export class RiskEvaluationCron {
-  private readonly logger = new Logger(RiskEvaluationCron.name);
+  private readonly logger = new AppLogger(RiskEvaluationCron.name);
 
   constructor(private readonly scoringService: RiskScoringService) {}
 
   @Cron('*/30 * * * *')
   async evaluate() {
-    try {
-      const n = await this.scoringService.evaluatePending();
-      if (n > 0) this.logger.log(`risk evaluated users: ${n}`);
-    } catch (error) {
-      this.logger.error('risk evaluation failed', error as Error);
-    }
+    return runInJobContext({ name: 'identity.riskEvaluation', logger: this.logger }, async () => {
+      try {
+        const n = await this.scoringService.evaluatePending();
+        if (n > 0) this.logger.log(`risk evaluated users: ${n}`);
+      } catch (error) {
+        this.logger.error('risk evaluation failed', error as Error);
+      }
+    });
   }
 }

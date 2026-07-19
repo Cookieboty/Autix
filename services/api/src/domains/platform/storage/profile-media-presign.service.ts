@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { AppLogger } from '../common/app-logger';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudflareR2Service } from './cloudflare-r2.service';
 import {
@@ -36,7 +37,7 @@ const MEDIA_KINDS = {
 
 @Injectable()
 export class ProfileMediaPresignService {
-  private readonly logger = new Logger(ProfileMediaPresignService.name);
+  private readonly logger = new AppLogger(ProfileMediaPresignService.name);
 
   constructor(
     private readonly prisma: PrismaService,

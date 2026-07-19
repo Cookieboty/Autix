@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from './app-logger';
+import { runInJobContext } from './job-context';
 import { Cron } from '@nestjs/schedule';
 import { RateLimitRepository } from './rate-limit.repository';
 
@@ -9,19 +11,21 @@ import { RateLimitRepository } from './rate-limit.repository';
  */
 @Injectable()
 export class RateLimitCleanupCron {
-  private readonly logger = new Logger(RateLimitCleanupCron.name);
+  private readonly logger = new AppLogger(RateLimitCleanupCron.name);
 
   constructor(private readonly repo: RateLimitRepository) {}
 
   @Cron('30 3 * * *')
   async runOnce() {
-    try {
-      const deleted = await this.repo.deleteExpired(new Date());
-      if (deleted > 0) {
-        this.logger.log(`rate_limit_counters cleanup: deleted=${deleted}`);
+    return runInJobContext({ name: 'platform.rateLimitCleanup', logger: this.logger }, async () => {
+      try {
+        const deleted = await this.repo.deleteExpired(new Date());
+        if (deleted > 0) {
+          this.logger.log(`rate_limit_counters cleanup: deleted=${deleted}`);
+        }
+      } catch (error) {
+        this.logger.error('rate_limit_counters cleanup crashed', error as Error);
       }
-    } catch (error) {
-      this.logger.error('rate_limit_counters cleanup crashed', error as Error);
-    }
+    });
   }
 }

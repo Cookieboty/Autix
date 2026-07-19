@@ -34,6 +34,7 @@ import {
   resolveVideoGenerateAudio,
   resolveVideoGenerationRequestLimits,
   splitQueuedGenerationsForPolling,
+  summarizeDurations,
   summarizeSeedanceContent,
 } from './video-generation-flow.helpers';
 
@@ -621,5 +622,21 @@ describe('redactProviderRequest', () => {
   it('无 callback_url 时原样返回', () => {
     const body = { model: 'poyo', input: { prompt: 'x' } };
     expect(redactProviderRequest(body)).toBe(body);
+  });
+});
+
+describe('summarizeDurations', () => {
+  it('空数组返回 0/0，避免除零', () => {
+    expect(summarizeDurations([])).toEqual({ p50: 0, p95: 0 });
+  });
+
+  it('单元素时 p50 与 p95 都等于该值', () => {
+    expect(summarizeDurations([200])).toEqual({ p50: 200, p95: 200 });
+  });
+
+  it('对无序输入先排序后按 nearest-rank 取分位', () => {
+    // 1..10 排好序后：p50 -> idx=ceil(5)-1=4 => 5；p95 -> idx=ceil(9.5)-1=9 => 10
+    const durations = [10, 3, 8, 1, 5, 2, 7, 9, 6, 4];
+    expect(summarizeDurations(durations)).toEqual({ p50: 5, p95: 10 });
   });
 });

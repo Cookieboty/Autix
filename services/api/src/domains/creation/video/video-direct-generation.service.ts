@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { randomUUID } from 'crypto';
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
@@ -50,7 +51,7 @@ export interface DirectVideoGenerateInput {
  */
 @Injectable()
 export class VideoDirectGenerationService {
-  private readonly logger = new Logger(VideoDirectGenerationService.name);
+  private readonly logger = new AppLogger(VideoDirectGenerationService.name);
 
   constructor(
     private readonly repository: VideoGenerationRepository,

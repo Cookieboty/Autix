@@ -11,8 +11,8 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
-  Logger,
 } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Request } from 'express';
@@ -30,7 +30,7 @@ type DocumentUploadRequest = Request<unknown, unknown, { filename?: string }>;
 @UseGuards(JwtAuthGuard, LibraryFeatureGuard, MembershipGuard)
 @Controller('documents')
 export class DocumentController {
-  private readonly logger = new Logger(DocumentController.name);
+  private readonly logger = new AppLogger(DocumentController.name);
 
   constructor(
     private readonly documentService: DocumentService,

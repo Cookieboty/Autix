@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../common/app-logger';
 import * as nodemailer from 'nodemailer';
 import type { SendMailOptions, Transporter } from 'nodemailer';
 import type { StepUpPurpose } from '@autix/domain';
@@ -22,7 +23,7 @@ const STEP_UP_PURPOSE_LABELS: Record<StepUpPurpose, string> = {
 
 @Injectable()
 export class MailService {
-  private readonly logger = new Logger(MailService.name);
+  private readonly logger = new AppLogger(MailService.name);
 
   constructor(private readonly systemSettingsService: SystemSettingsService) {}
 

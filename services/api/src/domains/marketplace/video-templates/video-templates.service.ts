@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import {
   TemplateStatus,
   ResourceType,
@@ -50,7 +51,7 @@ export type UpdateVideoTemplateDto = Partial<CreateVideoTemplateDto>;
 
 @Injectable()
 export class VideoTemplatesService extends BaseResourceService {
-  private readonly logger = new Logger(VideoTemplatesService.name);
+  private readonly logger = new AppLogger(VideoTemplatesService.name);
 
   constructor(
     resourceInteractions: ResourceInteractionRepository,

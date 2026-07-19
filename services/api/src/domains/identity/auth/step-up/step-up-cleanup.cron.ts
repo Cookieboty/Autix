@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
+import { runInJobContext } from '../../../platform/common/job-context';
 import { Cron } from '@nestjs/schedule';
 import { StepUpRepository } from './step-up.repository';
 
@@ -9,19 +11,21 @@ import { StepUpRepository } from './step-up.repository';
  */
 @Injectable()
 export class StepUpCleanupCron {
-  private readonly logger = new Logger(StepUpCleanupCron.name);
+  private readonly logger = new AppLogger(StepUpCleanupCron.name);
 
   constructor(private readonly repo: StepUpRepository) {}
 
   @Cron('45 3 * * *')
   async runOnce() {
-    try {
-      const { otps, proofs } = await this.repo.deleteExpiredChallenges(new Date());
-      if (otps > 0 || proofs > 0) {
-        this.logger.log(`step-up cleanup: email_otps=${otps}, step_up_proofs=${proofs}`);
+    return runInJobContext({ name: 'auth.stepUpCleanup', logger: this.logger }, async () => {
+      try {
+        const { otps, proofs } = await this.repo.deleteExpiredChallenges(new Date());
+        if (otps > 0 || proofs > 0) {
+          this.logger.log(`step-up cleanup: email_otps=${otps}, step_up_proofs=${proofs}`);
+        }
+      } catch (error) {
+        this.logger.error('step-up cleanup crashed', error as Error);
       }
-    } catch (error) {
-      this.logger.error('step-up cleanup crashed', error as Error);
-    }
+    });
   }
 }

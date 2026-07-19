@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { OrderService } from '../../billing/order/order.service';
 import { StripePaymentService } from '../../billing/order/stripe-payment.service';
@@ -47,7 +48,7 @@ import {
 
 @Injectable()
 export class AdminService {
-  private readonly auditLogger = new Logger('AdminAudit');
+  private readonly auditLogger = new AppLogger('AdminAudit');
 
   constructor(
     private readonly adminRepository: AdminRepository,

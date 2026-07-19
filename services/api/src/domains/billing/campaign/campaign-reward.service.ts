@@ -1,4 +1,5 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { CampaignStatus, CampaignType, Prisma } from '../../platform/prisma/generated';
 import { PointsService } from '../points/points.service';
@@ -84,7 +85,7 @@ const REGISTRATION_BONUS_CODE = 'REGISTRATION_BONUS';
 
 @Injectable()
 export class CampaignRewardService {
-  private readonly logger = new Logger(CampaignRewardService.name);
+  private readonly logger = new AppLogger(CampaignRewardService.name);
   private fixedCampaignsEnsured: Promise<void> | null = null;
 
   constructor(

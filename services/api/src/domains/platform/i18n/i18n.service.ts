@@ -1,4 +1,5 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { AppLogger } from '../common/app-logger';
 import * as path from 'path';
 import {
   DEFAULT_LANGUAGE,
@@ -14,7 +15,7 @@ export interface I18nRequestLike {
 
 @Injectable()
 export class I18nService implements OnModuleInit {
-  private readonly logger = new Logger(I18nService.name);
+  private readonly logger = new AppLogger(I18nService.name);
   private translations = new Map<string, Record<string, string>>();
 
   onModuleInit() {

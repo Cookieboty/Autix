@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { ModelType, VideoClipStatus, type Prisma } from '../../platform/prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../model-config/model-config.service';
@@ -69,7 +70,7 @@ type PreparedAssistantInvocation = {
 
 @Injectable()
 export class VideoChatService {
-  private readonly logger = new Logger(VideoChatService.name);
+  private readonly logger = new AppLogger(VideoChatService.name);
 
   constructor(
     private readonly modelConfigService: ModelConfigService,

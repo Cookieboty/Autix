@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { AppLogger } from '../../../platform/common/app-logger';
 import {
   MessageRole,
   ModelType,
@@ -150,7 +151,7 @@ interface SummaryInput {
 
 @Injectable()
 export class ImageGenerationFlowService {
-  private readonly logger = new Logger(ImageGenerationFlowService.name);
+  private readonly logger = new AppLogger(ImageGenerationFlowService.name);
 
   constructor(
     private readonly repository: LlmRepository,

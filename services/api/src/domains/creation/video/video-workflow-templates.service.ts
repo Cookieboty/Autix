@@ -2,9 +2,9 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import {
   AgentKind,
   ModelType,
@@ -44,7 +44,7 @@ export interface CreateWorkflowTemplateDto {
 
 @Injectable()
 export class VideoWorkflowTemplatesService {
-  private readonly logger = new Logger(VideoWorkflowTemplatesService.name);
+  private readonly logger = new AppLogger(VideoWorkflowTemplatesService.name);
 
   constructor(
     private readonly repository: VideoWorkflowTemplateRepository,

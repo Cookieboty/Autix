@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../common/app-logger';
+import { runInJobContext } from '../common/job-context';
 import { Interval } from '@nestjs/schedule';
 import { BoostService } from './boost.service';
 
@@ -11,16 +13,18 @@ import { BoostService } from './boost.service';
  */
 @Injectable()
 export class BoostCron {
-  private readonly logger = new Logger(BoostCron.name);
+  private readonly logger = new AppLogger(BoostCron.name);
 
   constructor(private readonly boostService: BoostService) {}
 
   @Interval(600_000)
   async aggregate() {
-    try {
-      await this.boostService.aggregateActiveBoosts();
-    } catch (error) {
-      this.logger.error('boost aggregation failed', error as Error);
-    }
+    return runInJobContext({ name: 'operations.boost', logger: this.logger }, async () => {
+      try {
+        await this.boostService.aggregateActiveBoosts();
+      } catch (error) {
+        this.logger.error('boost aggregation failed', error as Error);
+      }
+    });
   }
 }

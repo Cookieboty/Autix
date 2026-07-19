@@ -21,7 +21,8 @@
  *
  * pgvector 限制: 向量维度 ≤ 16000，MiniLM-L12-v2 输出 384 维，绰绰有余。
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import {
   pipeline,
   mean_pooling,
@@ -41,7 +42,7 @@ type TokenizingFeatureExtractionPipeline = FeatureExtractionPipeline & {
 
 @Injectable()
 export class EmbeddingService {
-  private readonly logger = new Logger(EmbeddingService.name);
+  private readonly logger = new AppLogger(EmbeddingService.name);
   private embedder: TokenizingFeatureExtractionPipeline | null = null;
   private readonly modelName = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
 

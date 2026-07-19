@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { videoProjectApi, type VideoWorkflowTemplate } from '@autix/sdk';
+import { videoProjectApi, type VideoWorkflowTemplate, HTTP_TRACE_HEADERS } from '@autix/sdk';
 
 export interface VideoClipMaterial {
   id: string;
@@ -195,21 +195,31 @@ function errorState(err: unknown) {
   };
 }
 
+function createPollCorrelationId(scope: string): string {
+  // 会话级 correlation ID：一次轮询循环内所有 HTTP 请求（含 401 重试）共享同一 ID，
+  // 服务端可通过 X-Correlation-Id 把这批请求聚合成一次用户动作的日志时间线。
+  // 每次 HTTP 请求本身的 X-Request-Id 由 SDK 独立生成，二者不混用。
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `poll-${scope}-${Date.now().toString(36)}-${rand}`;
+}
+
 async function pollGenerationUntilTerminal(
   projectId: string,
   generationId: string,
   onTick: (g: VideoClipGeneration) => void,
 ): Promise<void> {
+  const correlationId = createPollCorrelationId('gen');
+  const headers = { [HTTP_TRACE_HEADERS.correlationId]: correlationId };
   const start = Date.now();
   while (Date.now() - start < POLL_TIMEOUT_MS) {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
     let hit: VideoClipGeneration | undefined;
     try {
-      const res = await videoProjectApi.refreshGeneration(projectId, generationId);
+      const res = await videoProjectApi.refreshGeneration(projectId, generationId, { headers });
       hit = res.data as unknown as VideoClipGeneration;
     } catch {
       try {
-        const res = await videoProjectApi.getGenerations(projectId);
+        const res = await videoProjectApi.getGenerations(projectId, { headers });
         const list = (res.data ?? []) as unknown as VideoClipGeneration[];
         hit = list.find((x) => x.id === generationId);
       } catch {
@@ -229,6 +239,8 @@ async function pollGenerationsUntilAllTerminal(
   onTick: (g: VideoClipGeneration) => void,
 ): Promise<void> {
   if (generationIds.length === 0) return;
+  const correlationId = createPollCorrelationId('gens');
+  const headers = { [HTTP_TRACE_HEADERS.correlationId]: correlationId };
   const tracking = new Set(generationIds);
   const terminal = new Set<string>();
   const start = Date.now();
@@ -238,7 +250,7 @@ async function pollGenerationsUntilAllTerminal(
     for (const id of tracking) {
       if (terminal.has(id)) continue;
       try {
-        const res = await videoProjectApi.refreshGeneration(projectId, id);
+        const res = await videoProjectApi.refreshGeneration(projectId, id, { headers });
         refreshed.push(res.data as unknown as VideoClipGeneration);
       } catch {
         // Fall back to a single DB snapshot below when refresh is temporarily unavailable.
@@ -255,7 +267,7 @@ async function pollGenerationsUntilAllTerminal(
 
     let list: VideoClipGeneration[] = [];
     try {
-      const res = await videoProjectApi.getGenerations(projectId);
+      const res = await videoProjectApi.getGenerations(projectId, { headers });
       list = (res.data ?? []) as unknown as VideoClipGeneration[];
     } catch {
       continue;

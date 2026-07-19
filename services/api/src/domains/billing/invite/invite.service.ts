@@ -1,8 +1,8 @@
 import {
   Injectable,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { PointsSource } from '../../platform/prisma/generated';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
@@ -15,7 +15,7 @@ const INVITATION_REWARD_CODE = 'INVITATION_REWARD';
 
 @Injectable()
 export class InviteService {
-  private readonly logger = new Logger(InviteService.name);
+  private readonly logger = new AppLogger(InviteService.name);
 
   constructor(
     private readonly inviteRepository: InviteRepository,

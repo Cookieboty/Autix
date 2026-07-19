@@ -1236,7 +1236,7 @@ export const videoProjectApi = {
       `/api/video-projects/${projectId}/generate`,
       {},
     ),
-  getGenerations: (projectId: string) =>
+  getGenerations: (projectId: string, options?: { headers?: Record<string, string> }) =>
     chatApi.get<Array<{
       id: string;
       clipId: string;
@@ -1252,8 +1252,12 @@ export const videoProjectApi = {
       externalStatus?: string | null;
       createdAt: string;
       completedAt?: string | null;
-    }>>(`/api/video-projects/${projectId}/generations`),
-  refreshGeneration: (projectId: string, generationId: string) =>
+    }>>(`/api/video-projects/${projectId}/generations`, { headers: options?.headers }),
+  refreshGeneration: (
+    projectId: string,
+    generationId: string,
+    options?: { headers?: Record<string, string> },
+  ) =>
     chatApi.post<{
       id: string;
       clipId: string;
@@ -1269,7 +1273,11 @@ export const videoProjectApi = {
       externalStatus?: string | null;
       createdAt: string;
       completedAt?: string | null;
-    }>(`/api/video-projects/${projectId}/generations/${generationId}/refresh`, {}),
+    }>(
+      `/api/video-projects/${projectId}/generations/${generationId}/refresh`,
+      {},
+      { headers: options?.headers },
+    ),
   directorChat: (projectId: string, data: {
     message: string;
     modelId?: string;
