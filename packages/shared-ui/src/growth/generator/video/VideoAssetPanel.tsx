@@ -35,10 +35,10 @@ import type { PublicVideoReference } from '../generator-studio-helpers';
 /**
  * 素材选择面板：覆盖在右侧内容区上，三个 tab —— 我的上传 / 我生成的图 / 我生成的视频。
  *
- * 可上传与可选的媒体类型由 `allowedTypes` 决定。后端目前**没有**表达
- * 「某模型接受哪些输入媒体」的字段（13 个视频模型的 paramsSchema 只有
- * duration/ratio/resolution/generate_audio，metadata 只有 protocolKey），
- * 所以调用方暂时传全集；等 schema 补上能力字段后，只需把 allowedTypes 接过去。
+ * 可上传与可选的媒体类型由 `allowedTypes` 决定，来源是模型 paramsSchema 里的
+ * `x-media`（见 domain/video/input-media.ts 与 video-model-rules.ts）。
+ * 10 个视频模型里只有 Seedance 两档和 Wan 2.7 真的接视频/音频输入，其余只接图片 ——
+ * 给不接的模型开出上传入口，用户传上去必然失败。
  */
 
 export type AssetPanelTab = 'uploads' | 'imageGen' | 'videoGen';
@@ -50,6 +50,13 @@ const TYPE_ACCEPT: Record<MediaType, string> = {
 };
 
 type MediaType = 'image' | 'video' | 'audio';
+
+/** 类型展示名复用筛选器已有词条（理由见 VideoSidebar 同名常量）。 */
+const MEDIA_TYPE_LABEL_KEY = {
+  image: 'assetFilterImages',
+  video: 'assetFilterVideos',
+  audio: 'assetFilterAudio',
+} as const;
 
 /** 默认允许的媒体类型。必须是模块级常量：写成参数默认值的数组字面量每次 render
  *  都是新引用，会让依赖它的 useCallback/useEffect 无限重跑（拉取永远停不下来）。 */
@@ -69,7 +76,10 @@ const TYPE_FILTERS: Array<{
     { value: 'audio', labelKey: 'assetFilterAudio', Icon: Music },
   ];
 
-/** 音频时长上限（秒）；超过要先裁剪再上传 */
+/** 各类型时长上限的空缺省值。模块级常量：写成参数默认值的对象字面量每次 render 都是新引用。 */
+const EMPTY_MAX_SECONDS: Partial<Record<MediaType, number>> = {};
+
+/** 音频时长上限（秒）的兜底值；模型声明了 maxSeconds 时以声明为准。超过要先裁剪再上传。 */
 const MAX_AUDIO_SECONDS = 15;
 
 /**
@@ -147,6 +157,7 @@ function AssetTile({
   onDelete,
   deleting,
   canDelete,
+  videoMaxSeconds,
 }: {
   asset: MaterialAsset;
   selected: boolean;
@@ -157,6 +168,8 @@ function AssetTile({
   deleting: boolean;
   /** 只有「我的上传」允许删除；生成记录不在这里管理 */
   canDelete: boolean;
+  /** 视频时长上限（秒）；undefined = 该模型没有时长限制，不标红 */
+  videoMaxSeconds?: number;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -165,7 +178,8 @@ function AssetTile({
   const [videoPlaying, setVideoPlaying] = useState(false);
   /** 视频时长，来自 <video preload="metadata"> 的元数据回调（不额外发请求） */
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
-  const videoTooLong = videoDuration != null && videoDuration > MAX_VIDEO_SECONDS;
+  const videoTooLong =
+    videoMaxSeconds != null && videoDuration != null && videoDuration > videoMaxSeconds;
   const isAudio = asset.type === 'audio';
   const cover = asset.thumbnailUrl ?? (asset.type === 'image' ? asset.url : undefined);
 
@@ -347,19 +361,32 @@ export function VideoAssetPanel({
   onChangeRefs,
   uploadLimit,
   allowedTypes = DEFAULT_ALLOWED_TYPES,
+  maxSecondsOf = EMPTY_MAX_SECONDS,
+  maxOf,
 }: {
   open: boolean;
   onClose: () => void;
   selectedRefs: PublicVideoReference[];
   onChangeRefs: (next: PublicVideoReference[]) => void;
   uploadLimit: number;
-  /** 允许上传/选择的媒体类型；等后端补能力字段后由模型 schema 决定 */
+  /** 允许上传/选择的媒体类型，由模型 paramsSchema 的 x-media 决定（见 video-model-rules）。 */
   allowedTypes?: MediaType[];
+  /**
+   * 各类型的单个素材时长上限（秒）。缺省 = 上游没写限制，不拦。
+   * 此前这里是两个写死的 15 —— 那其实是 Seedance 的规则，对别的模型没有意义。
+   */
+  maxSecondsOf?: Partial<Record<MediaType, number>>;
+  /** 各类型的数量上限，用于选中时的分类型拦截。 */
+  maxOf?: Record<MediaType, number>;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const loadMaterials = useMaterialStore((s) => s.loadMaterials);
   const uploadMaterialFiles = useMaterialStore((s) => s.uploadMaterialFiles);
   const deleteMaterial = useMaterialStore((s) => s.deleteMaterial);
+
+  /** 该模型的有效时长上限：模型声明优先，没声明就退回历史默认（Seedance 的 15s）。 */
+  const videoMaxSeconds = maxSecondsOf.video ?? MAX_VIDEO_SECONDS;
+  const audioMaxSeconds = maxSecondsOf.audio ?? MAX_AUDIO_SECONDS;
 
   const [tab, setTab] = useState<AssetPanelTab>('uploads');
   const [assets, setAssets] = useState<MaterialAsset[]>([]);
@@ -372,6 +399,8 @@ export function VideoAssetPanel({
   const [trimQueue, setTrimQueue] = useState<File[]>([]);
   /** 刚选中的超长视频名；非空时在卡片顶部显示提示 */
   const [tooLongName, setTooLongName] = useState<string | null>(null);
+  /** 某一类已选满时的提示。存类型 key（image/video/audio）而不是本地化后的名字 —— 后者拿不回上限数值。 */
+  const [typeFull, setTypeFull] = useState<MediaType | null>(null);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -491,14 +520,27 @@ export function VideoAssetPanel({
     if (selectedIds.has(key)) {
       onChangeRefs(selectedRefs.filter((ref) => (ref.sourceId ?? ref.id) !== key));
       setTooLongName(null);
+      setTypeFull(null);
       return;
     }
     // 超长视频不允许选中：裁剪需要 ffmpeg 级能力，前后端都不具备，
     // 与其让它进生成请求再被上游拒掉，不如在这里拦住并说明原因。
-    if (asset.type === 'video' && durationSec != null && durationSec > MAX_VIDEO_SECONDS) {
+    if (asset.type === 'video' && durationSec != null && durationSec > videoMaxSeconds) {
       setTooLongName(asset.title || asset.id);
       return;
     }
+    // 分类型的数量上限：不同模型对图/视频/音频各有各的上限（Seedance 图 9 / 视频 3 / 音频 3，
+    // Grok 1.5 恰好 1 张图）。只看总数会让用户在「还没到总上限」时把某一类塞爆，
+    // 请求发出去才被上游拒。
+    const perTypeMax = maxOf?.[asset.type as MediaType];
+    if (perTypeMax !== undefined) {
+      const selectedOfType = selectedRefs.filter((ref) => ref.mediaType === asset.type).length;
+      if (selectedOfType >= perTypeMax) {
+        setTypeFull(asset.type as MediaType);
+        return;
+      }
+    }
+    setTypeFull(null);
     setTooLongName(null);
     const sourceType: PublicVideoReference['sourceType'] =
       tab === 'uploads' ? 'library' : tab === 'imageGen' ? 'image_generation' : 'video_generation';
@@ -564,7 +606,7 @@ export function VideoAssetPanel({
       if (inferMaterialType(file) === 'audio') {
         const seconds = await readAudioDuration(file).catch(() => 0);
         // 读不出时长（编码不支持）就按原样传，交给后端校验，不要卡住用户
-        if (seconds > MAX_AUDIO_SECONDS) {
+        if (seconds > audioMaxSeconds) {
           overLong.push(file);
           continue;
         }
@@ -677,11 +719,28 @@ export function VideoAssetPanel({
         ) : null}
 
         {/* 超长视频提示：不阻断选择，只告知需要自行处理 */}
+        {typeFull ? (
+          <div className="mb-2.5 flex items-start gap-2 rounded-[14px] bg-warning-soft px-3 py-2 text-xs font-semibold text-warning">
+            <AlertTriangle className="mt-px size-3.5 shrink-0" />
+            <span className="min-w-0 flex-1">
+              {t('mediaTypeFull', { type: t(MEDIA_TYPE_LABEL_KEY[typeFull]), max: maxOf?.[typeFull] ?? 0 })}
+            </span>
+            <button
+              type="button"
+              aria-label={t('close')}
+              onClick={() => setTypeFull(null)}
+              className="shrink-0 cursor-pointer opacity-70 transition hover:opacity-100"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ) : null}
+
         {tooLongName ? (
           <div className="mb-2.5 flex items-start gap-2 rounded-[14px] bg-warning-soft px-3 py-2 text-xs font-semibold text-warning">
             <AlertTriangle className="mt-px size-3.5 shrink-0" />
             <span className="min-w-0 flex-1">
-              {t('videoTooLong', { seconds: MAX_VIDEO_SECONDS, name: tooLongName })}
+              {t('videoTooLong', { seconds: videoMaxSeconds, name: tooLongName })}
             </span>
             <button
               type="button"
@@ -738,6 +797,7 @@ export function VideoAssetPanel({
                 onDelete={() => void handleDelete(asset)}
                 deleting={deletingId === asset.id}
                 canDelete={tab === 'uploads'}
+                videoMaxSeconds={videoMaxSeconds}
               />
             ))}
 
@@ -754,7 +814,7 @@ export function VideoAssetPanel({
       {/* 超长音频裁剪：队列取第一个，处理完出队，队列空了自动关闭 */}
       <AudioTrimDialog
         file={trimQueue[0] ?? null}
-        maxSeconds={MAX_AUDIO_SECONDS}
+        maxSeconds={audioMaxSeconds}
         onCancel={() => setTrimQueue((queue) => queue.slice(1))}
         onConfirm={(trimmed) => {
           setTrimQueue((queue) => queue.slice(1));

@@ -8,6 +8,7 @@
  */
 
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
+import { VIDEO_INPUT_MEDIA_KEY, type VideoInputMediaCapability } from '@autix/domain/video';
 
 /**
  * type + capabilities 决定 presetKeyFor 的归类（→ text / image / video preset）；
@@ -325,6 +326,82 @@ export const IMAGE_MODEL_CONFIGS: Record<
 const JSON_SCHEMA_DRAFT_VIDEO = 'https://json-schema.org/draft/2020-12/schema';
 
 /**
+ * 各视频模型的**输入媒体能力**（写进 paramsSchema['x-media']，见 @autix/domain 的
+ * input-media.ts）。取值逐条对照上游文档，凡是文档没有明确写支持的，一律按不支持处理
+ * —— 保守方向是把入口关掉，而不是让用户传上去再失败。
+ *
+ * 关键事实（2026-07 文档）：10 个模型里只有 Seedance 两档和 Wan 2.7 接视频/音频输入，
+ * VEO 全系、Grok 两款、Happy Horse 两款都只接图片。
+ */
+
+/** Seedance 2.0 / Fast：图 1-9、视频≤3 段、音频≤3 段；三种图片用法互斥。 */
+const seedanceInputMedia: VideoInputMediaCapability = {
+  image: { max: 9, roles: ['first_frame', 'last_frame', 'reference_image'] },
+  // 文档：每段 [2,15] 秒且总时长 ≤15 秒；mp4/mov，单文件 ≤50MB
+  video: { max: 3, maxSeconds: 15, totalSeconds: 15 },
+  // 文档：每段 [2,15] 秒且总时长 ≤15 秒；wav/mp3，单文件 ≤15MB
+  audio: { max: 3, maxSeconds: 15, totalSeconds: 15 },
+  // 「含图像的 3 种场景互斥，不能在同一任务中混用」
+  imageModes: [['first_frame'], ['first_frame', 'last_frame'], ['reference_image']],
+};
+
+/** VEO 3.1 fast/quality：最多 3 图（首尾帧 2 图 或 参考 3 图），不接视频/音频输入。 */
+const veoInputMedia: VideoInputMediaCapability = {
+  image: { max: 3, roles: ['first_frame', 'last_frame', 'reference_image'] },
+  imageModes: [['first_frame'], ['first_frame', 'last_frame'], ['reference_image']],
+};
+
+/** VEO 3.1 lite：最多 2 图，且**没有参考模式**（只支持单图 / 首尾帧）。 */
+const veoLiteInputMedia: VideoInputMediaCapability = {
+  image: { max: 2, roles: ['first_frame', 'last_frame'] },
+  imageModes: [['first_frame'], ['first_frame', 'last_frame']],
+};
+
+/** Wan 2.7：image_urls 1-2（[0] 起始、[1] 结束）+ 参考图；接参考视频与音频。 */
+const wanInputMedia: VideoInputMediaCapability = {
+  image: { max: 2, roles: ['first_frame', 'last_frame', 'reference_image'] },
+  video: { max: 1 },
+  audio: { max: 1 },
+};
+
+/** Grok Imagine：最多 1 张图（image-to-video 时必填），无视频/音频输入。 */
+const grokImagineInputMedia: VideoInputMediaCapability = {
+  image: { max: 1, roles: ['first_frame'] },
+};
+
+/** Grok Imagine Video 1.5：**恰好 1 张**图（minItems=maxItems=1），无视频/音频。 */
+const grokV15InputMedia: VideoInputMediaCapability = {
+  image: { max: 1, exact: 1, roles: ['first_frame'] },
+};
+
+/** Happy Horse / 1.1：单首帧 或 参考图 1-9，二者互斥；不接视频/音频（video-edit v1 未接）。 */
+const happyHorseInputMedia: VideoInputMediaCapability = {
+  image: { max: 9, roles: ['first_frame', 'reference_image'] },
+  imageModes: [['first_frame'], ['reference_image']],
+};
+
+/** 把输入媒体能力挂到 paramsSchema 上（键名走 domain 常量，避免两边各写一遍字符串）。 */
+export function withInputMedia(
+  schema: ParamsSchema,
+  media: VideoInputMediaCapability,
+): ParamsSchema {
+  return { ...schema, [VIDEO_INPUT_MEDIA_KEY]: media } as ParamsSchema;
+}
+
+export const VIDEO_INPUT_MEDIA_BY_MODEL: Record<string, VideoInputMediaCapability> = {
+  'doubao-seedance-2.0': seedanceInputMedia,
+  'doubao-seedance-2.0-fast': seedanceInputMedia,
+  'veo3.1-fast-official': veoInputMedia,
+  'veo3.1-quality-official': veoInputMedia,
+  'veo3.1-lite-official': veoLiteInputMedia,
+  'wan2.7-video': wanInputMedia,
+  'grok-imagine': grokImagineInputMedia,
+  'grok-imagine-video-1.5': grokV15InputMedia,
+  'happy-horse': happyHorseInputMedia,
+  'happy-horse-1.1': happyHorseInputMedia,
+};
+
+/**
  * VEO 的 per-model paramsSchema。**每个模型按自己的 schema 渲染**（不复用
  * buildVideoParamsSchema / 全局 VIDEO_ASPECT_RATIO_VALUES）：aspect_ratio 只有
  * 16:9/9:16/auto，duration 只有 4/6/8，sound(generate_audio) 作计价+wire 参数。
@@ -429,7 +506,9 @@ const grokV15ParamsSchema: ParamsSchema = {
   required: ['resolution', 'duration'],
   properties: {
     resolution: { type: 'string', enum: ['480p', '720p'], default: '720p', 'x-ui': { role: 'both', control: 'chips', order: 10, labelKey: 'pricing.params.resolution' } },
-    duration: { type: 'integer', enum: [6, 10], default: 6, 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+    // 文档：1-15 秒整数，默认 6。原先写死 enum [6,10]，白白砍掉了 13 档。
+    // 计价是 perUnit × duration，任意整数都算得出来，放开无风险。
+    duration: { type: 'integer', minimum: 1, maximum: 15, default: 6, 'x-ui': { role: 'both', control: 'stepper', order: 30, labelKey: 'pricing.params.duration' } },
   },
 } as ParamsSchema;
 const grokV15Pricing: PricingSchema = {
@@ -451,7 +530,9 @@ function happyHorseParamsSchema(ratios: string[]): ParamsSchema {
     properties: {
       resolution: { type: 'string', enum: ['720p', '1080p'], default: '1080p', 'x-ui': { role: 'both', control: 'chips', order: 10, labelKey: 'pricing.params.resolution' } },
       ratio: { type: 'string', enum: ratios, default: '16:9', 'x-ui': { role: 'wire', control: 'chips', order: 20, labelKey: 'pricing.params.ratio' } },
-      duration: { type: 'integer', enum: [5, 10, 15], default: 5, 'x-ui': { role: 'both', control: 'chips', order: 30, labelKey: 'pricing.params.duration' } },
+      // 文档：3-15 秒整数，默认 5。原先写死 [5,10,15]，砍掉了中间所有档位。
+      // 计价 = 分辨率单价 × duration，连续值同样算得出来。
+      duration: { type: 'integer', minimum: 3, maximum: 15, default: 5, 'x-ui': { role: 'both', control: 'stepper', order: 30, labelKey: 'pricing.params.duration' } },
     },
   } as ParamsSchema;
 }
@@ -469,18 +550,18 @@ export const VIDEO_MODEL_CONFIGS: Record<
   string,
   { paramsSchema: ParamsSchema; pricingSchema: PricingSchema }
 > = {
-  'veo3.1-fast-official': { paramsSchema: veoParamsSchema(['720p', '1080p', '4k']), pricingSchema: veoGroupedPricing(25, 37.5, 75, 87.5) },
-  'veo3.1-lite-official': { paramsSchema: veoParamsSchema(['720p', '1080p']), pricingSchema: veoLitePricing },
-  'veo3.1-quality-official': { paramsSchema: veoParamsSchema(['720p', '1080p', '4k']), pricingSchema: veoGroupedPricing(60, 120, 120, 180) },
+  'veo3.1-fast-official': { paramsSchema: withInputMedia(veoParamsSchema(['720p', '1080p', '4k']), VIDEO_INPUT_MEDIA_BY_MODEL['veo3.1-fast-official']!), pricingSchema: veoGroupedPricing(25, 37.5, 75, 87.5) },
+  'veo3.1-lite-official': { paramsSchema: withInputMedia(veoParamsSchema(['720p', '1080p']), VIDEO_INPUT_MEDIA_BY_MODEL['veo3.1-lite-official']!), pricingSchema: veoLitePricing },
+  'veo3.1-quality-official': { paramsSchema: withInputMedia(veoParamsSchema(['720p', '1080p', '4k']), VIDEO_INPUT_MEDIA_BY_MODEL['veo3.1-quality-official']!), pricingSchema: veoGroupedPricing(60, 120, 120, 180) },
   // Wan 2.7：t2v 5/10/15 有比例；i2v 无比例；ref/edit 5/10 有比例。
   // 合成为一个模型：paramsSchema 取各模式的**并集**（aspect_ratio + duration 全档 5/10/15）。
   // aspect_ratio 在 i2v 模式由 preset 忽略（图定比例）；duration 15 仅 t2v/i2v 合法，ref 上限 10
   // 由 resolveVideoRouting 在打上游前按推断模式拦截，避免上游偶发 400。
-  'wan2.7-video': { paramsSchema: wanParamsSchema([5, 10, 15], true), pricingSchema: wanPricing },
+  'wan2.7-video': { paramsSchema: withInputMedia(wanParamsSchema([5, 10, 15], true), VIDEO_INPUT_MEDIA_BY_MODEL['wan2.7-video']!), pricingSchema: wanPricing },
   // Grok Imagine（整段计价）+ Grok Imagine Video 1.5（每秒×分辨率 + 输入图）。
-  'grok-imagine': { paramsSchema: grokImagineParamsSchema, pricingSchema: grokImaginePricing },
-  'grok-imagine-video-1.5': { paramsSchema: grokV15ParamsSchema, pricingSchema: grokV15Pricing },
+  'grok-imagine': { paramsSchema: withInputMedia(grokImagineParamsSchema, VIDEO_INPUT_MEDIA_BY_MODEL['grok-imagine']!), pricingSchema: grokImaginePricing },
+  'grok-imagine-video-1.5': { paramsSchema: withInputMedia(grokV15ParamsSchema, VIDEO_INPUT_MEDIA_BY_MODEL['grok-imagine-video-1.5']!), pricingSchema: grokV15Pricing },
   // Happy Horse（1.0 aspect 5 档；1.1 aspect 9 档）。
-  'happy-horse': { paramsSchema: happyHorseParamsSchema(['16:9', '9:16', '1:1', '4:3', '3:4']), pricingSchema: happyHorsePricing(40, 80) },
-  'happy-horse-1.1': { paramsSchema: happyHorseParamsSchema(['21:9', '16:9', '4:3', '1:1', '3:4', '4:5', '5:4', '9:16', '9:21']), pricingSchema: happyHorsePricing(55, 70) },
+  'happy-horse': { paramsSchema: withInputMedia(happyHorseParamsSchema(['16:9', '9:16', '1:1', '4:3', '3:4']), VIDEO_INPUT_MEDIA_BY_MODEL['happy-horse']!), pricingSchema: happyHorsePricing(40, 80) },
+  'happy-horse-1.1': { paramsSchema: withInputMedia(happyHorseParamsSchema(['21:9', '16:9', '4:3', '1:1', '3:4', '4:5', '5:4', '9:16', '9:21']), VIDEO_INPUT_MEDIA_BY_MODEL['happy-horse-1.1']!), pricingSchema: happyHorsePricing(55, 70) },
 };

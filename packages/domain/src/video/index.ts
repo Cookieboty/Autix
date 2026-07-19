@@ -1,5 +1,6 @@
 export * from './material-role';
 export * from './capabilities';
+export * from './input-media';
 export * from './params';
 
 export interface VideoWorkflowClipDefinition {

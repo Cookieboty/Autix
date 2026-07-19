@@ -396,7 +396,10 @@
         "deleteVideoConfirmTitle": "Удалить видео: {count}",
         "deleteVideoConfirmDescription": "Будет безвозвратно удалено генераций: {count}, вместе с видео. Отменить нельзя.",
         "play": "Воспроизвести",
-        "pause": "Пауза"
+        "pause": "Пауза",
+        "mediaTypeFull": "Эта модель принимает не более {max} файлов типа «{type}»",
+        "ratioFromImage": "Формат по изображению",
+        "ratioFromImageHint": "Эта модель берёт соотношение сторон из первого кадра, поэтому настройка здесь не действует."
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

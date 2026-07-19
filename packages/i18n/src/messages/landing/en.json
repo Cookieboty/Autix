@@ -719,7 +719,10 @@
         "deleteVideoConfirmTitle": "Delete {count} video(s)",
         "deleteVideoConfirmDescription": "This permanently deletes {count} generation(s) and their videos. This cannot be undone.",
         "play": "Play",
-        "pause": "Pause"
+        "pause": "Pause",
+        "mediaTypeFull": "Up to {max} {type} file(s) for this model",
+        "ratioFromImage": "Ratio from image",
+        "ratioFromImageHint": "This model takes the aspect ratio from your first frame, so the ratio setting has no effect."
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

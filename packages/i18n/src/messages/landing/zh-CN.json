@@ -719,7 +719,10 @@
         "deleteVideoConfirmTitle": "删除 {count} 个视频",
         "deleteVideoConfirmDescription": "将永久删除 {count} 条生成记录及其视频，此操作不可撤销。",
         "play": "播放",
-        "pause": "暂停"
+        "pause": "暂停",
+        "mediaTypeFull": "该模型最多可选 {max} 个{type}",
+        "ratioFromImage": "比例随图",
+        "ratioFromImageHint": "该模型以首帧图片的画幅为准，此处的比例设置不会生效。"
       },
       "privateFirst": "默认私有",
       "createPrivately": "当前页创作",

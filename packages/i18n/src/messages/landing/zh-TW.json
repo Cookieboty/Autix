@@ -396,7 +396,10 @@
         "deleteVideoConfirmTitle": "刪除 {count} 個影片",
         "deleteVideoConfirmDescription": "將永久刪除 {count} 筆生成記錄及其影片，此操作無法復原。",
         "play": "播放",
-        "pause": "暫停"
+        "pause": "暫停",
+        "mediaTypeFull": "該模型最多可選 {max} 個{type}",
+        "ratioFromImage": "比例隨圖",
+        "ratioFromImageHint": "該模型以首幀圖片的畫幅為準，此處的比例設定不會生效。"
       },
       "privateFirst": "預設私有",
       "createPrivately": "目前頁創作",

@@ -719,7 +719,10 @@
         "deleteVideoConfirmTitle": "Supprimer {count} vidéo(s)",
         "deleteVideoConfirmDescription": "Cela supprime définitivement {count} génération(s) et leurs vidéos. Irréversible.",
         "play": "Lire",
-        "pause": "Suspendre"
+        "pause": "Suspendre",
+        "mediaTypeFull": "Ce modèle accepte au maximum {max} fichier(s) {type}",
+        "ratioFromImage": "Format selon l'image",
+        "ratioFromImageHint": "Ce modèle reprend le format de votre première image ; ce réglage n'a donc aucun effet."
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

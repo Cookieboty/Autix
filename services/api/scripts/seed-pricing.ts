@@ -9,7 +9,14 @@ import {
   type PricingSchema,
 } from '@autix/domain/pricing';
 import { buildVideoParamsSchema } from './seed-pricing.schemas';
-import { SEED_MODELS, DEFAULT_MULTIPLIER, IMAGE_MODEL_CONFIGS, VIDEO_MODEL_CONFIGS } from './seed-pricing.models';
+import {
+  SEED_MODELS,
+  DEFAULT_MULTIPLIER,
+  IMAGE_MODEL_CONFIGS,
+  VIDEO_MODEL_CONFIGS,
+  VIDEO_INPUT_MEDIA_BY_MODEL,
+  withInputMedia,
+} from './seed-pricing.models';
 import { createPrismaClient } from './db';
 
 
@@ -181,7 +188,13 @@ function paramsSchemaFor(
   key: ModelPresetKey,
   model: { provider?: string | null; model: string; metadata: unknown },
 ): ParamsSchema {
-  if (key === 'video') return buildVideoParamsSchema(model);
+  if (key === 'video') {
+    // VIDEO_MODEL_CONFIGS 里的模型已在各自 schema 上挂好 x-media；走这条通用路径的
+    // （seedance 系）在这里补挂，保证所有视频模型都带输入媒体能力声明。
+    const media = VIDEO_INPUT_MEDIA_BY_MODEL[model.model];
+    const schema = buildVideoParamsSchema(model);
+    return media ? withInputMedia(schema, media) : schema;
+  }
   return MODEL_PRESETS[key].paramsSchema;
 }
 

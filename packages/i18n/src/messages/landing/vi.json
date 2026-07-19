@@ -396,7 +396,10 @@
         "deleteVideoConfirmTitle": "Xoá {count} video",
         "deleteVideoConfirmDescription": "Sẽ xoá vĩnh viễn {count} bản ghi tạo và video của chúng. Không thể hoàn tác.",
         "play": "Phát",
-        "pause": "Tạm dừng"
+        "pause": "Tạm dừng",
+        "mediaTypeFull": "Mô hình này chỉ nhận tối đa {max} tệp {type}",
+        "ratioFromImage": "Tỷ lệ theo ảnh",
+        "ratioFromImageHint": "Mô hình này lấy tỷ lệ khung hình từ ảnh đầu tiên, nên thiết lập ở đây không có tác dụng."
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

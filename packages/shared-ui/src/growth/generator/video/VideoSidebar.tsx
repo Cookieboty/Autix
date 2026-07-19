@@ -36,6 +36,11 @@ import {
 } from './VideoParamMenus';
 import { AspectRatioIcon } from '../image/ImageParamMenus';
 import { VideoAssetPanel } from './VideoAssetPanel';
+import {
+  resolveVideoMediaLimits,
+  restrictVideoDurations,
+  videoRatioApplies,
+} from './video-model-rules';
 import { PromptMentionInput, type PromptMentionItem } from './PromptMentionInput';
 import { AudioWaveThumb } from './AudioWaveThumb';
 import { Dialog, DialogContent, DialogTitle } from '../../../ui/dialog';
@@ -51,6 +56,24 @@ function limitPublicVideoReferences(refs: PublicVideoReference[], limit: number)
   if (limit <= 0) return [];
   return refs.slice(-limit);
 }
+
+/**
+ * 媒体类型的展示名。直接复用资产面板筛选器里那三条已译好的词条，不另开
+ * mediaType.* —— 「Image」「Audio」在法语、「Video」在越南语本来就与英文同形，
+ * 新增词条只会被 i18n ratchet 判成未翻译。
+ */
+const MEDIA_TYPE_LABEL_KEY = {
+  image: 'assetFilterImages',
+  video: 'assetFilterVideos',
+  audio: 'assetFilterAudio',
+} as const;
+
+/** 上传卡上的媒体类型图标。按模型实际接受的类型过滤后展示，顺序固定。 */
+const UPLOAD_MEDIA_CHIPS = [
+  { key: 'image' as const, Icon: ImageIcon },
+  { key: 'video' as const, Icon: Video },
+  { key: 'audio' as const, Icon: Music },
+];
 
 export function VideoSidebar({
   assetPanelHost,
@@ -228,7 +251,15 @@ export function VideoSidebar({
     : selectedTextModel?.name ?? t('optimizeModel');
   const model = selectedModelValue ?? initialModel ?? undefined;
   const modelLabel = selectedModel?.name ?? videoCapability.displayName;
-  const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
+  /**
+   * 该模型接受什么输入媒体，全部由 paramsSchema 的 x-media 决定（见 video-model-rules）。
+   * 此前这里对所有模型一律给出「图片/视频/音频」三个入口，而 10 个视频模型里只有
+   * Seedance 两档和 Wan 2.7 真的接视频/音频 —— 其余模型用户传上去必然失败。
+   */
+  const mediaLimits = useMemo(() => resolveVideoMediaLimits(paramsSchema), [paramsSchema]);
+  const uploadLimit = mediaLimits.totalMax > 0
+    ? mediaLimits.totalMax
+    : getVideoReferenceUploadLimit(selectedModel);
   const hasVideoRefs = selectedVideoRefs.length > 0;
   // @ 提及列表：按媒体类型分别从 1 开始编号 —— Image 1/2/3、Video 1/2、Audio 1。
   // 编号跟随选中顺序，移除某一项后其后的会重排（与用户看到的缩略图顺序保持一致）。
@@ -246,7 +277,33 @@ export function VideoSidebar({
       };
     });
   }, [selectedVideoRefs]);
-  const durationOptions = videoParams.durations;
+  /** 已选图片数：条件约束（VEO 首尾帧/参考模式、Seedance 首帧覆盖比例）要用它。 */
+  const selectedImageCount = useMemo(
+    () => selectedVideoRefs.filter((ref) => (ref.mediaType ?? 'image') === 'image').length,
+    [selectedVideoRefs],
+  );
+  const paramContext = useMemo(
+    () => ({ resolution, imageCount: selectedImageCount }),
+    [resolution, selectedImageCount],
+  );
+  /**
+   * schema 给的候选时长再套一层上游条件约束（VEO lite 选 1080p 或给了首尾帧 → 只能 8 秒，
+   * 参考模式 3 图 → 只能 8 秒）。这类「A 影响 B 的取值域」schema 表达不了，见 video-model-rules。
+   */
+  const durationOptions = useMemo(
+    () => restrictVideoDurations(selectedModel?.model, videoParams.durations, paramContext),
+    [selectedModel?.model, videoParams.durations, paramContext],
+  );
+  /** 画幅比在当前上下文是否真的生效（Seedance/Grok 给了图后由图定比例）。 */
+  const ratioEffective = videoRatioApplies(selectedModel?.model, paramContext);
+  // 约束收窄后当前时长可能不在候选里（例：先选了 4s 再切到 1080p）。留着不动会把一个
+  // 上游必拒的值发出去，所以就地夹到最接近的合法值。
+  useEffect(() => {
+    if (durationOptions.length > 0 && !durationOptions.includes(duration)) {
+      setDuration(durationOptions[0]!);
+    }
+  }, [durationOptions, duration]);
+
   const ratioOptions = useMemo(
     () =>
       videoParams.ratios.map((value) => {
@@ -501,11 +558,9 @@ export function VideoSidebar({
           ) : (
             <>
               <span className="relative mb-2 inline-flex items-center justify-center -space-x-1.5">
-                {[
-                  { key: 'image', Icon: ImageIcon },
-                  { key: 'video', Icon: Video },
-                  { key: 'music', Icon: Music },
-                ].map(({ key, Icon }, index) => (
+                {UPLOAD_MEDIA_CHIPS.filter((chip) =>
+                  mediaLimits.allowedTypes.includes(chip.key),
+                ).map(({ key, Icon }, index) => (
                   <span
                     key={key}
                     className="growth-media-chip grid size-9 place-items-center rounded-full text-foreground/70 transition group-hover:text-foreground"
@@ -516,7 +571,10 @@ export function VideoSidebar({
                 ))}
               </span>
               <span className="relative text-sm font-semibold leading-none text-foreground/60">{t('uploadMedia')}</span>
-              <span className="relative mt-1 block text-xs font-medium text-foreground/42">{t('uploadMediaHint')}</span>
+              <span className="relative mt-1 block text-xs font-medium text-foreground/42">
+                {/* 分隔符用中点：它是标点不是文案，各语言同形，进 i18n 只会被判成「未翻译」 */}
+                {mediaLimits.allowedTypes.map((type) => t(MEDIA_TYPE_LABEL_KEY[type])).join(' · ')}
+              </span>
             </>
           )}
         </button>
@@ -662,6 +720,20 @@ export function VideoSidebar({
               }
               if (key === 'ratio') {
                 if (ratioOptions.length === 0) return null;
+                // 上游会用首帧图的比例覆盖这个参数。禁用而不是藏掉：参数还在但点了没用
+                // 比凭空消失更让人困惑，禁用态能顺带把「为什么」说清楚。
+                if (!ratioEffective) {
+                  return (
+                    <span
+                      key={key}
+                      title={t('ratioFromImageHint')}
+                      className="inline-flex min-h-6 w-auto cursor-not-allowed items-center gap-1.5 rounded-[7px] bg-black/30 px-1.5 py-0 text-[11px] font-bold leading-none text-foreground/40"
+                    >
+                      <span className="shrink-0"><AspectRatioIcon value={ratio} /></span>
+                      <span className="min-w-0 truncate leading-none">{t('ratioFromImage')}</span>
+                    </span>
+                  );
+                }
                 return (
                   <VideoOptionParamMenu
                     key={key}
@@ -753,6 +825,9 @@ export function VideoSidebar({
             selectedRefs={selectedVideoRefs}
             onChangeRefs={setSelectedVideoRefs}
             uploadLimit={uploadLimit}
+            allowedTypes={mediaLimits.allowedTypes}
+            maxSecondsOf={mediaLimits.maxSecondsOf}
+            maxOf={mediaLimits.maxOf}
           />,
           assetPanelHost,
         )

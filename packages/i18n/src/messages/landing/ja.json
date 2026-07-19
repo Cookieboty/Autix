@@ -396,7 +396,10 @@
         "deleteVideoConfirmTitle": "{count} 件の動画を削除",
         "deleteVideoConfirmDescription": "{count} 件の生成記録と動画を完全に削除します。元に戻せません。",
         "play": "再生",
-        "pause": "一時停止"
+        "pause": "一時停止",
+        "mediaTypeFull": "このモデルは{type}を最大 {max} 件まで選択できます",
+        "ratioFromImage": "画像に追従",
+        "ratioFromImageHint": "このモデルは先頭フレーム画像の比率を使うため、ここでの比率設定は反映されません。"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
