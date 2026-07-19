@@ -231,12 +231,15 @@ function AssetTile({
             className="hidden"
           />
         </div>
-      ) : cover ? (
-        <img src={cover} alt={asset.title ?? ''} className="size-full object-cover" />
       ) : asset.type === 'video' ? (
+        // 视频必须始终渲染 <video>，即使有封面也只能当 poster 用：
+        // 走 <img> 分支会让 onLoadedMetadata 永不触发 → videoDuration 恒为 null →
+        // 时长角标不显示、15s 上限拦截失效、播放按钮拿不到 ref 点了没反应。
+        // 生成视频的 thumbnailUrl 由后端填充，此前必然命中这个坑。
         <video
           ref={videoRef}
           src={asset.url}
+          poster={cover}
           muted
           playsInline
           preload="metadata"
@@ -248,6 +251,8 @@ function AssetTile({
           }}
           className="size-full object-cover"
         />
+      ) : cover ? (
+        <img src={cover} alt={asset.title ?? ''} className="size-full object-cover" />
       ) : (
         <span className="grid size-full place-items-center text-foreground/30">
           <VideoIcon className="size-6" />
@@ -371,6 +376,14 @@ export function VideoAssetPanel({
   const [filterOpen, setFilterOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  /** 取数请求序号，用于丢弃「后发先至」的过期结果 */
+  const fetchSeqRef = useRef(0);
+  /**
+   * selectedRefs 的最新快照。上传/删除都在 await 之后才回写选中集，
+   * 直接用闭包捕获的值会把这期间用户新选的素材静默丢掉。
+   */
+  const selectedRefsRef = useRef(selectedRefs);
+  selectedRefsRef.current = selectedRefs;
 
   // 调用方若传内联数组同样会每次变引用，这里用字符串 key 归一后再派生
   const allowedKey = allowedTypes.join(',');
@@ -393,6 +406,11 @@ export function VideoAssetPanel({
   }, [tab, tabs]);
 
   const fetchAssets = useCallback(async () => {
+    // 请求序号：快速切 tab / 改筛选时，先发的请求可能后返回。没有这道判断的话，
+    // 旧结果会覆盖新结果，而 canDelete、sourceType 都按「当前」tab 计算 ——
+    // 于是生成素材上冒出删除按钮、选中的素材被打上错误的来源类型。
+    const requestId = ++fetchSeqRef.current;
+    const isStale = () => requestId !== fetchSeqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -408,6 +426,7 @@ export function VideoAssetPanel({
             ? { librarySource: 'GENERATION' as const, type: 'image' as const, pageSize: 60 }
             : { librarySource: 'GENERATION' as const, type: 'video' as const, pageSize: 60 };
       const list = await loadMaterials(params);
+      if (isStale()) return;
       // 再按当前模型允许的类型兜一层：后端返回里可能有模型不接受的类型
       setAssets(
         tab === 'uploads'
@@ -415,10 +434,12 @@ export function VideoAssetPanel({
           : list,
       );
     } catch {
+      if (isStale()) return;
       setError('load');
       setAssets([]);
     } finally {
-      setLoading(false);
+      // 只有最新那次请求才有资格收起骨架屏
+      if (!isStale()) setLoading(false);
     }
   }, [allowed, loadMaterials, tab, typeFilter]);
 
@@ -427,15 +448,16 @@ export function VideoAssetPanel({
     void fetchAssets();
   }, [fetchAssets, open]);
 
-  // Esc 关闭
+  // Esc 关闭。与外部点击同样要让位给子弹框：Radix Dialog 处理 Escape 后
+  // 不阻止原生事件继续冒泡，不加这道判断的话按 Esc 会把预览/裁剪框和面板一起关掉。
   useEffect(() => {
-    if (!open) return;
+    if (!open || previewAsset || trimQueue.length > 0) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, open]);
+  }, [onClose, open, previewAsset, trimQueue.length]);
 
   // 点击面板外部关闭。
   // 用 mousedown 而非 click：click 要等 mouseup，期间若目标元素被重渲染移除，
@@ -491,7 +513,7 @@ export function VideoAssetPanel({
     try {
       await deleteMaterial(asset.id);
       setAssets((current) => current.filter((item) => item.id !== asset.id));
-      onChangeRefs(selectedRefs.filter((ref) => (ref.sourceId ?? ref.id) !== asset.id));
+      onChangeRefs(selectedRefsRef.current.filter((ref) => (ref.sourceId ?? ref.id) !== asset.id));
     } catch {
       setError('load');
     } finally {
@@ -510,7 +532,7 @@ export function VideoAssetPanel({
       );
       // 上传即选中，省一次点击
       const refs = created.map((asset) => assetToReference(asset, 'library'));
-      onChangeRefs([...selectedRefs, ...refs].slice(-uploadLimit));
+      onChangeRefs([...selectedRefsRef.current, ...refs].slice(-uploadLimit));
       await fetchAssets();
     } catch (error) {
       // 非会员被后端 403 拦下 → 直接唤起付费弹框，不在面板里显示一句干巴巴的报错
@@ -551,7 +573,8 @@ export function VideoAssetPanel({
     }
 
     if (direct.length > 0) await uploadFiles(direct);
-    if (overLong.length > 0) setTrimQueue(overLong);
+    // 追加而非覆盖：上一批还没裁完时又选了新文件，覆盖会让剩余的永久丢失
+    if (overLong.length > 0) setTrimQueue((queue) => [...queue, ...overLong]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 

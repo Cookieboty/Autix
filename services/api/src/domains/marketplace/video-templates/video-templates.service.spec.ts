@@ -240,99 +240,24 @@ describe('VideoTemplatesService — 公开可见守卫 (status=APPROVED && sourc
     await expect(service.recordView('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
   });
 
-  it('createGeneration: 目标非公开可见(PENDING) → NotFoundException, 不冻结积分', async () => {
-    const { service, points } = createMocks();
-    await expect(
-      service.createGeneration('tpl-pending', 'u1', {
-        modelUsed: 'seedance-pro',
-        variables: { subject: 'shoe' },
-      }),
-    ).rejects.toThrow(NotFoundException);
-    expect(points.createHold).not.toHaveBeenCalled();
-  });
-
-  it('createGeneration: 目标为 SYSTEM 来源 → NotFoundException', async () => {
-    const { service } = createMocks();
-    await expect(
-      service.createGeneration('tpl-system', 'u1', {
-        modelUsed: 'seedance-pro',
-        variables: { subject: 'shoe' },
-      }),
-    ).rejects.toThrow(NotFoundException);
-  });
-});
-
-describe('VideoTemplatesService.createGeneration billing', () => {
-  it('freezes configurable template video points with duration and confirms after record creation', async () => {
+  it('createGeneration: 已停用 → 501，且在任何扣费动作之前抛出', async () => {
+    // 这条链路写的是 video_generations（第一代表，全仓无 update），
+    // 行永远停在 pending，但积分已 confirmHold 真实扣掉——收钱不交货。
+    // 停用契约的关键不是「抛错」，而是「抛在 createHold 之前」。
     const { service, points, generations } = createMocks();
-
-    const gen = await service.createGeneration('tpl-1', 'u1', {
-      modelUsed: 'seedance-pro',
-      modelConfigId: 'model-1',
-      variables: { subject: 'shoe' },
-      referenceImage: 'https://img.test/ref.png',
-    });
-
-    expect(points.estimateCost).toHaveBeenCalledWith({
-      taskType: 'video_generation',
-      modelConfigId: 'model-1',
-      params: { referenceImages: 1, duration: 5 },
-      membershipLevel: 2,
-    });
-
-    const holdArgs = points.createHold.mock.calls[0][1];
-    expect(holdArgs).toEqual(
-      expect.objectContaining({
-        taskType: 'video_generation',
-        amount: 1600,
-        taskId: gen.id,
-        pricingSnapshot: { ruleId: 'rule-video' },
-      }),
-    );
-    expect(holdArgs).not.toHaveProperty('refundPolicySnapshot');
-
-    expect(generations.createVideoGeneration).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: gen.id,
-        resolvedPrompt: 'Animate shoe',
-      }),
-    );
-    expect(points.confirmHold).toHaveBeenCalledWith('hold-1');
-  });
-
-  it('omits modelConfigId from the estimate call when the generation has none', async () => {
-    const { service, points } = createMocks();
-
-    await service.createGeneration('tpl-1', 'u1', {
-      modelUsed: 'seedance-pro',
-      variables: { subject: 'shoe' },
-    });
-
-    const estimateArgs = points.estimateCost.mock.calls[0][0];
-    expect(estimateArgs).not.toHaveProperty('modelConfigId');
-    expect(estimateArgs).toEqual({
-      taskType: 'video_generation',
-      params: { referenceImages: 0, duration: 5 },
-      membershipLevel: 2,
-    });
-  });
-
-  it('refunds the hold when generation record creation fails', async () => {
-    const { service, generations, points } = createMocks();
-    generations.createVideoGeneration.mockRejectedValue(new Error('db fail'));
 
     await expect(
       service.createGeneration('tpl-1', 'u1', {
         modelUsed: 'seedance-pro',
+        modelConfigId: 'model-1',
         variables: { subject: 'shoe' },
       }),
-    ).rejects.toThrow('db fail');
+    ).rejects.toMatchObject({ status: 501 });
 
-    expect(points.refundHold).toHaveBeenCalledWith(
-      'hold-1',
-      'video template generation creation failed',
-    );
+    expect(points.estimateCost).not.toHaveBeenCalled();
+    expect(points.createHold).not.toHaveBeenCalled();
     expect(points.confirmHold).not.toHaveBeenCalled();
+    expect(generations.createVideoGeneration).not.toHaveBeenCalled();
   });
 });
 

@@ -2,6 +2,25 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, GalleryKind, GallerySource, GalleryStatus, ResourceType, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
+/**
+ * video_clip_generations.params 里的参考图提取。
+ *
+ * clip 表没有 image_generations.referenceImage 那样的独立列，输入媒体统一放在
+ * params.content[]（火山 Seedance 协议形状：{ type: 'image_url', image_url: { url } }）。
+ * 拿不到就返回 null——参考图快照本就是保守默认为空的可选字段。
+ */
+function extractFirstReferenceImage(params: unknown): string | null {
+  const content = (params as { content?: unknown } | null)?.content;
+  if (!Array.isArray(content)) return null;
+  for (const item of content) {
+    const entry = item as { type?: unknown; image_url?: { url?: unknown } };
+    if (entry?.type === 'image_url' && typeof entry.image_url?.url === 'string') {
+      return entry.image_url.url;
+    }
+  }
+  return null;
+}
+
 /** gallery_posts / gallery_reports 的数据访问层。所有状态迁移由 service 层用 assertTransition 校验后再调用这里。 */
 @Injectable()
 export class GalleryRepository {
@@ -348,18 +367,40 @@ export class GalleryRepository {
     });
   }
 
-  findVideoGenerationOwner(id: string) {
-    return this.prisma.video_generations.findUnique({
+  /**
+   * 视频投稿归属校验 —— 查的是 video_clip_generations（现役表）。
+   *
+   * 此前查的是 video_generations（第一代表）：该表全仓不存在任何 update，行永远
+   * 停在 status='pending'、generatedVideos 恒为空数组，所以视频投稿从未真正成功过
+   * （归属校验必然拿到空 mediaUrls）。/ai/video 直连、工作台分镜、聊天生成三条现役
+   * 链路写的都是 clip 表，这里改为对齐它。
+   *
+   * 列名差异在此消化，对上仍返回与 image 侧同构的形状（modelUsed / generatedVideos），
+   * 让 GalleryService.assertOwnership 无需分支：
+   * - modelUsed ← model
+   * - generatedVideos ← videoUrl 单元素数组（clip 表一行一视频，未完成则为空数组）
+   * - referenceImage ← params.content[] 里第一个 image_url（clip 表无独立参考图列）
+   */
+  async findVideoGenerationOwner(id: string) {
+    const row = await this.prisma.video_clip_generations.findUnique({
       where: { id },
       select: {
         userId: true,
         resolvedPrompt: true,
-        modelUsed: true,
-        referenceImage: true,
-        // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
-        generatedVideos: true,
+        model: true,
+        videoUrl: true,
+        params: true,
       },
     });
+    if (!row) return null;
+    return {
+      userId: row.userId,
+      resolvedPrompt: row.resolvedPrompt,
+      modelUsed: row.model,
+      referenceImage: extractFirstReferenceImage(row.params),
+      // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
+      generatedVideos: row.videoUrl ? [row.videoUrl] : [],
+    };
   }
 
   /**

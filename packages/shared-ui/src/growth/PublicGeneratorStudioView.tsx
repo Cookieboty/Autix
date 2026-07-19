@@ -131,10 +131,17 @@ export function PublicGeneratorStudioView({
   );
   const videoParamsSchema = selectedVideoTaskModel?.paramsSchema as unknown as ParamsSchema | undefined;
   const videoPricingSchema = selectedVideoTaskModel?.pricingSchema as unknown as PricingSchema | undefined;
-  const videoPricingContext = {
-    multiplier: selectedVideoTaskModel?.multiplier ?? 1,
-    discountFactor: selectedVideoTaskModel?.discountFactor ?? 1,
-  };
+  // 必须 memo：裸对象字面量每次渲染都是新引用，VideoSidebar 里以它为依赖的
+  // 估价 effect 会每渲染重跑一次 computeTaskEstimate。目前靠 setState 的值相等
+  // bailout 兜住没炸，但只要 total 出现一次 NaN（NaN !== NaN，永不 bailout）
+  // 就会变成无限渲染循环。
+  const videoPricingContext = useMemo(
+    () => ({
+      multiplier: selectedVideoTaskModel?.multiplier ?? 1,
+      discountFactor: selectedVideoTaskModel?.discountFactor ?? 1,
+    }),
+    [selectedVideoTaskModel?.multiplier, selectedVideoTaskModel?.discountFactor],
+  );
 
   useEffect(() => {
     if (kind !== 'image') {

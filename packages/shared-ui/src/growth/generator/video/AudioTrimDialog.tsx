@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, Pause, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogTitle } from '../../../ui/dialog';
-import { buildPeaks, decodeAudioFile, formatClock, trimAudioToWav } from './audio-trim';
+import { buildPeaks, decodeAudioFile, formatClock, getAudioContext, trimAudioToWav } from './audio-trim';
 
 /**
  * 波形按「每秒固定几根条」铺开，宽度用像素算死。
@@ -103,7 +103,9 @@ export function AudioTrimDialog({
       stopPlayback();
       return;
     }
-    const context = new AudioContext();
+    // 必须复用单例：每次播放 new 一个且从不 close，Chrome 每文档约 6 个上限，
+    // 播放/暂停切换 6 次后第 7 次直接抛 NotSupportedError，播放功能永久失效。
+    const context = getAudioContext();
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(context.destination);

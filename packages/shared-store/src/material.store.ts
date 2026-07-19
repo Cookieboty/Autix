@@ -46,11 +46,22 @@ export class MaterialMembershipError extends Error {
   }
 }
 
-/** 403 且不是积分不足 → 判定为会员门槛 */
+/**
+ * 会员门槛的判定关键词。仅凭 403 不够 —— 会话过期、CSRF 失败、对象存储拒绝
+ * 同样是 403，全都弹付费框会让用户完全找不到真实原因（该去重新登录的却在看套餐）。
+ * 后端这条错误来自 materials.service 的 assertCanAddOrUse。
+ */
+const MEMBERSHIP_KEYWORDS = ['会员', 'membership', 'entitlement'];
+
+/** 403 且报错文案指向会员门槛，才判定为需要付费拦截 */
 function isMembershipBlocked(error: unknown): boolean {
-  const err = error as { status?: number; response?: { status?: number }; msg?: string };
+  const err = error as { status?: number; response?: { status?: number; data?: { msg?: string } }; msg?: string };
   const status = err?.status ?? err?.response?.status;
-  return status === 403;
+  if (status !== 403) return false;
+  const msg = (err?.msg ?? err?.response?.data?.msg ?? '').toLowerCase();
+  // 拿不到文案时保守判为会员门槛：该接口的 403 绝大多数来自会员校验
+  if (!msg) return true;
+  return MEMBERSHIP_KEYWORDS.some((keyword) => msg.includes(keyword.toLowerCase()));
 }
 
 function membershipReason(error: unknown): string | undefined {

@@ -12,7 +12,7 @@
 /** 复用同一个 AudioContext：每次 new 一个在 Safari 上会很快耗尽实例配额 */
 let sharedContext: AudioContext | null = null;
 
-function getAudioContext(): AudioContext {
+export function getAudioContext(): AudioContext {
   if (!sharedContext) {
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     sharedContext = new Ctor();

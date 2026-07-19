@@ -90,6 +90,11 @@ export function VideoGeneratorStudio({
   // 组件卸载标记：轮询 while 循环里用来提前退出，避免卸载后仍触发 setState。
   const unmountedRef = useRef(false);
   useEffect(() => {
+    // 挂载时必须复位：React 18 dev 的 StrictMode 会 mount→unmount→remount，
+    // 只在 cleanup 里置 true 的话第二次挂载后它永远是 true，轮询循环第一次判断
+    // 就 return —— 开发环境下刷新页面后进行中的任务永远不会转成 completed，
+    // 很容易被误判成后端问题。
+    unmountedRef.current = false;
     return () => {
       unmountedRef.current = true;
     };

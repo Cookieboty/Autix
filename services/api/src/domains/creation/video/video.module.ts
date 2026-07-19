@@ -6,6 +6,7 @@ import { ModelConfigModule } from '../model-config/model-config.module';
 import { AuthModule } from '../../identity/auth/auth.module';
 import { MembershipModule } from '../../billing/membership/membership.module';
 import { RiskModule } from '../risk/risk.module';
+import { GalleryModule } from '../gallery/gallery.module';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
 import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
 import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
@@ -38,6 +39,9 @@ import { VideoGenController } from './video-gen.controller';
     AuthModule,
     MembershipModule,
     RiskModule,
+    // history 要附广场帖状态，需要 GalleryService；GalleryModule 非 @Global，
+    // 不显式 import 的话 Nest 在 bootstrap 阶段就解析不出依赖、整个进程起不来。
+    GalleryModule,
   ],
   controllers: [
     VideoProjectController,

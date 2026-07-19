@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import {
   TemplateStatus,
   ResourceType,
@@ -19,6 +19,7 @@ import { ResourceMetricsService } from '../../platform/resource-metrics/resource
 import { FavoriteLibraryService } from '../../creation/materials/favorite-library.service';
 import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 import { TemplateGenerationRepository } from '../template-generation.repository';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 export interface CreateVideoTemplateDto {
   title: string;
@@ -225,81 +226,22 @@ export class VideoTemplatesService extends BaseResourceService {
       modelConfigId?: string;
     },
   ) {
-    const tpl = (await this.requirePublicVisible(templateId)) as {
-      prompt: string;
-      title?: string;
-      durationSec?: number | null;
-      defaultParams?: Record<string, unknown> | null;
-    };
-    const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
-    const generationId = randomUUID();
-
-    // 自有模型不再免费：模板生成视频一律计费。
-    let holdId: string | null = null;
-    {
-      const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(userId);
-      const estimate = await this.estimateTemplateGenerationCost({
-        taskType: 'video_generation',
-        modelConfigId: data.modelConfigId,
-        duration: tpl.durationSec ?? undefined,
-        resolution: typeof tpl.defaultParams?.resolution === 'string'
-          ? tpl.defaultParams.resolution
-          : undefined,
-        referenceImages: data.referenceImage ? 1 : 0,
-        membershipLevel,
-      });
-
-      if (estimate.amount > 0) {
-        const { hold } = await this.pointsService.createHold(userId, {
-          taskType: estimate.taskType,
-          taskId: generationId,
-          amount: estimate.amount,
-          pricingSnapshot: estimate.pricingSnapshot,
-          metadata: this.toJson({
-            templateId,
-            modelUsed: data.modelUsed,
-            variables: data.variables,
-            durationSec: tpl.durationSec ?? null,
-            referenceImage: data.referenceImage ?? null,
-          }),
-          remark: `video-template-generation: ${tpl.title ?? templateId}`,
-        });
-        holdId = hold.id;
-      }
-    }
-
-    try {
-      const gen = await this.generations.createVideoGeneration({
-        id: generationId,
-        templateId,
-        userId,
-        modelUsed: data.modelUsed,
-        resolvedPrompt,
-        variables: this.toJson(data.variables),
-        referenceImage: data.referenceImage,
-      });
-
-      if (holdId) {
-        await this.pointsService.confirmHold(holdId);
-      }
-      return gen;
-    } catch (err) {
-      if (holdId) {
-        try {
-          await this.pointsService.refundHold(
-            holdId,
-            'video template generation creation failed',
-          );
-        } catch (refundErr) {
-          this.logger.warn(
-            `视频模板生成冻结退回失败 hold=${holdId}: ${String(
-              refundErr instanceof Error ? refundErr.message : refundErr,
-            )}`,
-          );
-        }
-      }
-      throw err;
-    }
+    // 停用：这条链路会扣费但永远不产出。
+    //
+    // 它把记录写进 video_generations（第一代表），而该表**全仓不存在任何 update**
+    // —— 行以 status='pending' 建立后永远停在那里，generatedVideos 恒为空数组。
+    // 与此同时 :253 createHold + :283 confirmHold 已经真实扣了积分，且是确认而非退还。
+    // 结构上它也接不了回调：没有 providerTaskId / protocolKey 两列。
+    //
+    // 视频生成的现役实现是 video_clip_generations（/ai/video 直连、工作台分镜、
+    // 聊天生成三条链路全走它）。要恢复模板生成，应改调 VideoGenerationFlowService
+    // 并给 clip 表补 templateId 列，而不是复活这张表。
+    //
+    // 在那之前先拦在扣费之前，宁可不可用也不能收钱不交货。
+    throw new I18nHttpException(
+      HttpStatus.NOT_IMPLEMENTED,
+      'video.template_generation_unavailable',
+    );
   }
 
   async findGeneration(id: string, userId: string) {
