@@ -7,6 +7,7 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+import { buildGenerationMaterialRows } from '../materials/generation-library';
 
 @Injectable()
 export class VideoGenerationRepository {
@@ -188,6 +189,42 @@ export class VideoGenerationRepository {
     });
   }
 
+  /**
+   * 完成的生成视频同步进素材库，让 /asset 与素材选择面板能聚合到生成内容。
+   * 三个完成入口（直连 / 分镜 / 项目）共用；必须在各自的完成事务内调用 ——
+   * 生成记录与其素材要么一起可见、要么都不落库，避免素材库出现悬挂行。
+   *
+   * skipDuplicates 配合 partial unique index 保证幂等：回调重投、回填重跑都不会重复。
+   */
+  private async persistGeneratedVideoAsset(
+    tx: Prisma.TransactionClient,
+    input: {
+      userId: string;
+      generationId: string;
+      videoUrl: string;
+      lastFrameUrl: string | null;
+      durationSec: number | null;
+      prompt: string;
+      model: string;
+      createdAt: Date;
+    },
+  ) {
+    await tx.material_assets.createMany({
+      data: buildGenerationMaterialRows({
+        userId: input.userId,
+        generationId: input.generationId,
+        urls: [input.videoUrl],
+        prompt: input.prompt,
+        kind: 'video',
+        // 封面走末帧：视频没有自带缩略图，素材库/选择面板拿它当 poster
+        thumbnailUrl: input.lastFrameUrl,
+        createdAt: input.createdAt,
+        metadata: { modelUsed: input.model, durationSec: input.durationSec },
+      }),
+      skipDuplicates: true,
+    });
+  }
+
   async markGenerationCompletedAndConfirmHold(
     input: {
       generationId: string;
@@ -204,7 +241,7 @@ export class VideoGenerationRepository {
       const confirmation = await confirmHold(tx);
       confirmedUserId = confirmation.userId;
 
-      await tx.video_clip_generations.update({
+      const generation = await tx.video_clip_generations.update({
         where: { id: input.generationId },
         data: {
           status: VideoGenStatus.completed,
@@ -216,6 +253,21 @@ export class VideoGenerationRepository {
           completedAt: new Date(),
         },
       });
+
+      // generation 理论上必然有值（update 命中才走到这里），但完成回调是外部触发的关键路径：
+      // 落库失败不该把整笔生成连同扣费确认一起回滚，故缺字段时跳过而非抛错。
+      if (generation) {
+        await this.persistGeneratedVideoAsset(tx, {
+          userId: confirmation.userId,
+          generationId: input.generationId,
+          videoUrl: input.videoUrl,
+          lastFrameUrl: input.lastFrameUrl,
+          durationSec: input.durationSec,
+          prompt: generation.resolvedPrompt,
+          model: generation.model,
+          createdAt: generation.createdAt,
+        });
+      }
 
       await tx.video_clips.update({
         where: { id: input.clipId },
@@ -241,7 +293,7 @@ export class VideoGenerationRepository {
       const confirmation = await confirmHold(tx);
       confirmedUserId = confirmation.userId;
 
-      await tx.video_clip_generations.update({
+      const generation = await tx.video_clip_generations.update({
         where: { id: input.generationId },
         data: {
           status: VideoGenStatus.completed,
@@ -253,6 +305,21 @@ export class VideoGenerationRepository {
           completedAt: new Date(),
         },
       });
+
+      // generation 理论上必然有值（update 命中才走到这里），但完成回调是外部触发的关键路径：
+      // 落库失败不该把整笔生成连同扣费确认一起回滚，故缺字段时跳过而非抛错。
+      if (generation) {
+        await this.persistGeneratedVideoAsset(tx, {
+          userId: confirmation.userId,
+          generationId: input.generationId,
+          videoUrl: input.videoUrl,
+          lastFrameUrl: input.lastFrameUrl,
+          durationSec: input.durationSec,
+          prompt: generation.resolvedPrompt,
+          model: generation.model,
+          createdAt: generation.createdAt,
+        });
+      }
 
       await tx.video_clips.updateMany({
         where: { projectId: input.projectId },
@@ -475,7 +542,7 @@ export class VideoGenerationRepository {
       const confirmation = await confirmHold(tx);
       confirmedUserId = confirmation.userId;
 
-      await tx.video_clip_generations.update({
+      const generation = await tx.video_clip_generations.update({
         where: { id: input.generationId },
         data: {
           status: VideoGenStatus.completed,
@@ -487,6 +554,21 @@ export class VideoGenerationRepository {
           completedAt: new Date(),
         },
       });
+
+      // generation 理论上必然有值（update 命中才走到这里），但完成回调是外部触发的关键路径：
+      // 落库失败不该把整笔生成连同扣费确认一起回滚，故缺字段时跳过而非抛错。
+      if (generation) {
+        await this.persistGeneratedVideoAsset(tx, {
+          userId: confirmation.userId,
+          generationId: input.generationId,
+          videoUrl: input.videoUrl,
+          lastFrameUrl: input.lastFrameUrl,
+          durationSec: input.durationSec,
+          prompt: generation.resolvedPrompt,
+          model: generation.model,
+          createdAt: generation.createdAt,
+        });
+      }
     });
     return confirmedUserId;
   }
