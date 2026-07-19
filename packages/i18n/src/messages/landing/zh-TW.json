@@ -849,7 +849,8 @@
         "favorites": "收藏",
         "image": "圖片",
         "video": "影片",
-        "uploads": "我的上傳"
+        "uploads": "我的上傳",
+        "audio": "音訊"
       },
       "empty": {
         "title": "你的素材會出現在這裡",
@@ -888,7 +889,8 @@
         "moveFailed": "移動素材失敗",
         "deleteFailed": "刪除素材失敗",
         "save": "儲存",
-        "more": "更多"
+        "more": "更多",
+        "publish": "發布到廣場"
       },
       "bulk": {
         "download": "下載",

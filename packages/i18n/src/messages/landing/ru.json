@@ -849,7 +849,8 @@
         "favorites": "Favorites",
         "image": "Image",
         "video": "Video",
-        "uploads": "Загрузки"
+        "uploads": "Загрузки",
+        "audio": "Аудио"
       },
       "empty": {
         "title": "Your assets will appear here",
@@ -888,7 +889,8 @@
         "moveFailed": "Could not move asset",
         "deleteFailed": "Could not delete asset",
         "save": "Save",
-        "more": "More"
+        "more": "More",
+        "publish": "Опубликовать"
       },
       "bulk": {
         "download": "Download",

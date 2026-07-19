@@ -1172,7 +1172,8 @@
         "favorites": "收藏",
         "image": "图片",
         "video": "视频",
-        "uploads": "我的上传"
+        "uploads": "我的上传",
+        "audio": "音频"
       },
       "empty": {
         "title": "你的素材会出现在这里",
@@ -1211,7 +1212,8 @@
         "moveFailed": "移动素材失败",
         "deleteFailed": "删除素材失败",
         "save": "保存",
-        "more": "更多"
+        "more": "更多",
+        "publish": "发布到广场"
       },
       "bulk": {
         "download": "下载",

@@ -849,7 +849,8 @@
         "favorites": "Favorites",
         "image": "Image",
         "video": "Video",
-        "uploads": "アップロード"
+        "uploads": "アップロード",
+        "audio": "音声"
       },
       "empty": {
         "title": "Your assets will appear here",
@@ -888,7 +889,8 @@
         "moveFailed": "Could not move asset",
         "deleteFailed": "Could not delete asset",
         "save": "Save",
-        "more": "More"
+        "more": "More",
+        "publish": "ギャラリーに公開"
       },
       "bulk": {
         "download": "Download",

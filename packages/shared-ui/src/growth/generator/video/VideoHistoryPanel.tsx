@@ -18,6 +18,7 @@ import { downloadImageFile } from '../image/image-history-media';
 import { resolveGalleryShareUrl } from '../image/gallery-share-link';
 import { DeleteGenerationsDialog } from '../image/DeleteGenerationsDialog';
 import { useLocalizePath } from '../../../navigation';
+import { galleryHoverPlayHandlers } from '../../GalleryMediaThumb';
 import { buildVideoActionMenuItems } from './video-action-items';
 import { PublicVideoDetailDialog } from './PublicVideoDetailDialog';
 import { VideoEmptyShowcase } from './VideoEmptyShowcase';
@@ -305,6 +306,9 @@ export function VideoHistoryPanel({
               return (
                 <div
                   key={cell.key}
+                  // 悬浮播放绑在容器上（与首页/广场同一套）：卡片被一层 absolute inset-0
+                  // 的点击热区盖着，绑在 <video> 上的 onMouseEnter 一次都不会触发。
+                  {...galleryHoverPlayHandlers()}
                   className={`group relative min-w-0 overflow-hidden border-solid border-white bg-secondary transition-all duration-75 ${selected ? 'border-[3px]' : 'border-0'}`}
                   style={{ width, height: row.height }}
                 >
@@ -328,14 +332,6 @@ export function VideoHistoryPanel({
                         if (element && element.readyState >= 1) rememberNaturalRatio(item.id, element);
                       }}
                       onLoadedMetadata={(event) => rememberNaturalRatio(item.id, event.currentTarget)}
-                      // 播放交互只有悬浮一种：移入静音循环播放，移开暂停归零。
-                      // 不放显式播放按钮 —— 一屏十几张卡，每张挂一个按钮太抢视线，
-                      // 想认真看的走详情弹窗（那里有完整 controls）。
-                      onMouseEnter={(event) => void event.currentTarget.play().catch(() => undefined)}
-                      onMouseLeave={(event) => {
-                        event.currentTarget.pause();
-                        event.currentTarget.currentTime = 0;
-                      }}
                     />
                   )}
 

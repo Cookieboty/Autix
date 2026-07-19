@@ -263,6 +263,21 @@ export function AssetLibraryView({
   );
 
   /** 发布选中素材到广场：靠 sourceId 反解 generationId，走 FROM_GENERATION 投稿。 */
+  /** 单条投稿（右键菜单）。复用批量那套：一条也走同一个计划器与同一套提示。 */
+  const handlePublishOne = useCallback(
+    async (asset: MaterialAsset) => {
+      setPublishing(true);
+      try {
+        const { succeeded, failed } = await publishAssetsToGallery([asset]);
+        if (succeeded > 0) toast.success(t('bulk.publishOk', { count: succeeded }));
+        if (failed > 0) toast.error(t('bulk.publishFailed', { count: failed }));
+      } finally {
+        setPublishing(false);
+      }
+    },
+    [t],
+  );
+
   const handlePublishAll = useCallback(async () => {
     setPublishing(true);
     try {
@@ -289,8 +304,12 @@ export function AssetLibraryView({
         void handleToggleFolder(asset, folder, next),
       onCreateFolder: handleCreateFolderWith,
       onDelete: (asset: MaterialAsset) => void handleDelete([asset.id]),
+      onPublish: (asset: MaterialAsset) => void handlePublishOne(asset),
+      publishing,
     }),
     [
+      handlePublishOne,
+      publishing,
       handleCreateFolderWith,
       handleDelete,
       handleDownload,

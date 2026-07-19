@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   Layers,
   Loader2,
+  Music,
   Pencil,
   Plus,
   Search,
@@ -49,7 +50,7 @@ const NAV_MUTED = '#737475';
 const NAV_HOVER = 'rgba(255,255,255,0.72)';
 const NAV_ACTIVE = '#ffffff';
 
-type BucketKey = 'all' | 'favorites' | 'uploads' | 'image' | 'video';
+type BucketKey = 'all' | 'favorites' | 'uploads' | 'image' | 'video' | 'audio';
 
 const BUCKETS: Array<{ key: BucketKey; icon: ComponentType<{ className?: string }> }> = [
   { key: 'all', icon: Layers },
@@ -57,10 +58,15 @@ const BUCKETS: Array<{ key: BucketKey; icon: ComponentType<{ className?: string 
   { key: 'favorites', icon: Heart },
 ];
 
-/** 「Type」分组：只有图片与视频。音频暂无生成链路（仓库里没有音频生成表/接口），不列。 */
-const TYPES: Array<{ key: Extract<BucketKey, 'image' | 'video'>; icon: ComponentType<{ className?: string }> }> = [
+/**
+ * 「Type」分组。音频**没有生成链路**（仓库里没有音频生成表/接口），但用户上传的
+ * 参考音频同样落在素材库里 —— 不列出来的话那些音频只能在 All 里混着找。
+ * 计数早就由后端 /materials/counts 提供（audio 字段一直在），前端此前只是没用。
+ */
+const TYPES: Array<{ key: Extract<BucketKey, 'image' | 'video' | 'audio'>; icon: ComponentType<{ className?: string }> }> = [
   { key: 'image', icon: ImageIcon },
   { key: 'video', icon: Video },
+  { key: 'audio', icon: Music },
 ];
 
 function workspaceName(user: ReturnType<typeof useAuthStore.getState>['user']) {
