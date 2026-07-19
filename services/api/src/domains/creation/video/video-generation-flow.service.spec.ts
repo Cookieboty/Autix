@@ -287,6 +287,10 @@ function makeService(options: {
       });
       return result.publicUrl;
     }),
+    // 末帧同样转存 R2：供应商链接 24h 过期，直接存库会让素材库封面与链式生成输入图集体失效。
+    persistProviderImage: vi.fn(async (sourceUrl?: string) =>
+      sourceUrl ? 'https://cdn.test/frames/last.jpg' : null,
+    ),
   };
   const membershipService = {
     resolveVideoEntitlements: vi.fn(async () => ({

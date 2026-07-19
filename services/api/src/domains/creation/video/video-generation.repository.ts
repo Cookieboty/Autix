@@ -230,7 +230,7 @@ export class VideoGenerationRepository {
       });
     } catch (error) {
       this.logger.error(
-        `生成视频同步素材库失败 generation=${input.generationId}: ${(error as Error).message}`,
+        `material sync failed for generation=${input.generationId}: ${(error as Error).message}`,
       );
     }
   }

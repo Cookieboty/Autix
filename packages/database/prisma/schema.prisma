@@ -117,7 +117,6 @@ model User {
   mcpServers                     mcp_servers[]                @relation("McpServerAuthor")
   agents                         agents[]                     @relation("AgentAuthor")
   imageGenerations               image_generations[]          @relation("ImageGenerationUser")
-  videoGenerations               video_generations[]          @relation("VideoGenerationUser")
   resourceAcquisitions           user_resource_acquisitions[] @relation("ResourceAcquisitionUser")
   resourceLikes                  resource_likes[]             @relation("ResourceLikeUser")
   resourceFavorites              resource_favorites[]         @relation("ResourceFavoriteUser")
@@ -863,7 +862,6 @@ model video_templates {
   reviewedBy   User?               @relation("VideoTemplateReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   systemKey    String?
 
-  generations video_generations[]
   author      User                @relation("VideoTemplateAuthor", fields: [authorId], references: [id], onDelete: Restrict)
 
   @@unique([authorId, systemKey])
@@ -1041,25 +1039,6 @@ model image_generations {
   @@index([userId])
 }
 
-model video_generations {
-  id              String          @id @default(cuid())
-  templateId      String
-  template        video_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User            @relation("VideoGenerationUser", fields: [userId], references: [id], onDelete: Cascade)
-  modelUsed       String          @db.VarChar(100)
-  resolvedPrompt  String
-  variables       Json?
-  referenceImage  String?
-  generatedVideos String[]        @default([])
-  status          String          @default("pending")
-  error           String?
-  durationMs      Int?
-  createdAt       DateTime        @default(now())
-
-  @@index([templateId])
-  @@index([userId])
-}
 
 // 图片/视频共用一张多轮记录表（polymorphic：用 generationType + generationId 关联）
 model generation_turns {

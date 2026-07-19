@@ -517,10 +517,17 @@ export class VideoGenerationFlowService {
         return;
       }
 
+      // 末帧同样要转存：它会成为素材库封面与链式生成的输入图，留供应商链接等于留 24h 死链。
+      // 失败落 null 而不是失败整次生成——少张封面 ≠ 视频没生成出来。
+      const persistedLastFrameUrl = await this.videoAssets.persistProviderImage(
+        legacy.lastFrameUrl ?? undefined,
+        generation.id,
+      );
       const completedInput = buildCompletedGenerationInput({
         generation,
         outcome: legacy,
         videoUrl: videoResolution.videoUrl,
+        lastFrameUrl: persistedLastFrameUrl,
       });
       if (isStoryboardProjectGeneration) {
         await this.repository.markProjectGenerationCompletedAndConfirmHold(

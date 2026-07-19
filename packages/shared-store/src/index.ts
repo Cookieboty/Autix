@@ -72,7 +72,6 @@ export * from './image-workbench.actions';
 export * from './pricing.actions';
 export * from './pricing-admin.actions';
 export * from './pricing-admin.queries';
-export * from './video-generation.store';
 export * from './video-project.store';
 export * from './draw-board.actions';
 export * from './video-workbench.actions';

@@ -17,7 +17,6 @@ function createPrismaMock() {
     video_templates: modelMock(),
     user_resource_acquisitions: { count: vi.fn().mockResolvedValue(0) },
     image_generations: { findMany: vi.fn().mockResolvedValue([]) },
-    video_generations: { findMany: vi.fn().mockResolvedValue([]) },
   };
 }
 
@@ -64,9 +63,6 @@ describe('MarketplaceQueryRepository', () => {
       },
     };
     expect(prisma.image_generations.findMany).toHaveBeenCalledWith(
-      expectedArgs,
-    );
-    expect(prisma.video_generations.findMany).toHaveBeenCalledWith(
       expectedArgs,
     );
   });

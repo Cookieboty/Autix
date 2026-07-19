@@ -2,22 +2,61 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, GalleryKind, GallerySource, GalleryStatus, ResourceType, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
+/** 生成参数里的画幅比。直连在 params.options.ratio，分镜/项目在 params.ratio。 */
+function extractRatio(params: unknown): string | null {
+  const bag = params as { ratio?: unknown; options?: { ratio?: unknown } } | null;
+  const ratio = bag?.options?.ratio ?? bag?.ratio;
+  return typeof ratio === 'string' && ratio !== 'adaptive' ? ratio : null;
+}
+
+/** params.materials[] 里被视作「参考图」的 role（与 video-project.service 的 role 联合类型对齐）。 */
+const REFERENCE_IMAGE_ROLES = new Set(['first_frame', 'last_frame', 'reference_image']);
+
 /**
  * video_clip_generations.params 里的参考图提取。
  *
- * clip 表没有 image_generations.referenceImage 那样的独立列，输入媒体统一放在
- * params.content[]（火山 Seedance 协议形状：{ type: 'image_url', image_url: { url } }）。
- * 拿不到就返回 null——参考图快照本就是保守默认为空的可选字段。
+ * clip 表没有 image_generations.referenceImage 那样的独立列，输入媒体在 params 里，
+ * 而 params 的形状**逐链路不同**：
+ * - 直连（/ai/video）：buildDirectGenerationParamsSnapshot 产出
+ *   `{ schemaVersion, mode:'direct', options, materials, providerRequest }`，
+ *   参考图在 `materials[]`（`{ role, url }`），providerRequest 里另有一份协议态的
+ *   `content[]`（`{ type:'image_url', image_url:{ url } }`）。
+ * - 分镜 / 项目：normalizeClipParams 产出的模板参数记录（duration/ratio/... ），
+ *   不带输入媒体 —— 这类生成的参考图挂在 clip.materials 关系上，不在 params 里。
+ *
+ * 所以先读 materials[]，再退到 providerRequest.content[]，都拿不到就返回 null
+ * （参考图快照本就是保守默认为空的可选字段）。
+ *
+ * 注意别再写成读顶层 `params.content[]` —— 那个形状在生产上根本不存在，
+ * 会让视频投稿的参考图快照静默恒为 null。
  */
 function extractFirstReferenceImage(params: unknown): string | null {
-  const content = (params as { content?: unknown } | null)?.content;
-  if (!Array.isArray(content)) return null;
-  for (const item of content) {
-    const entry = item as { type?: unknown; image_url?: { url?: unknown } };
-    if (entry?.type === 'image_url' && typeof entry.image_url?.url === 'string') {
-      return entry.image_url.url;
+  const bag = params as { materials?: unknown; providerRequest?: { content?: unknown } } | null;
+
+  const materials = bag?.materials;
+  if (Array.isArray(materials)) {
+    for (const item of materials) {
+      const entry = item as { role?: unknown; url?: unknown };
+      if (
+        typeof entry?.role === 'string' &&
+        REFERENCE_IMAGE_ROLES.has(entry.role) &&
+        typeof entry.url === 'string'
+      ) {
+        return entry.url;
+      }
     }
   }
+
+  const content = bag?.providerRequest?.content;
+  if (Array.isArray(content)) {
+    for (const item of content) {
+      const entry = item as { type?: unknown; image_url?: { url?: unknown } };
+      if (entry?.type === 'image_url' && typeof entry.image_url?.url === 'string') {
+        return entry.image_url.url;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -391,7 +430,8 @@ export class GalleryRepository {
    * 让 GalleryService.assertOwnership 无需分支：
    * - modelUsed ← model
    * - generatedVideos ← videoUrl 单元素数组（clip 表一行一视频，未完成则为空数组）
-   * - referenceImage ← params.content[] 里第一个 image_url（clip 表无独立参考图列）
+   * - referenceImage ← params 里的输入图（见 extractFirstReferenceImage）
+   * - coverImage ← thumbnailUrl ?? lastFrameUrl（图片侧没有这个概念，故为视频独有）
    */
   async findVideoGenerationOwner(id: string) {
     const row = await this.prisma.video_clip_generations.findUnique({
@@ -401,6 +441,9 @@ export class GalleryRepository {
         resolvedPrompt: true,
         model: true,
         videoUrl: true,
+        thumbnailUrl: true,
+        lastFrameUrl: true,
+        durationSec: true,
         params: true,
       },
     });
@@ -412,6 +455,13 @@ export class GalleryRepository {
       referenceImage: extractFirstReferenceImage(row.params),
       // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
       generatedVideos: row.videoUrl ? [row.videoUrl] : [],
+      // 视频封面必须单独给：图片投稿的 coverImage 取 mediaUrls[0] 天然成立，
+      // 视频的 mediaUrls[0] 是 mp4，拿去当 <img src> / <video poster> 只会是一片空白。
+      coverImage: row.thumbnailUrl ?? row.lastFrameUrl,
+      // 展示字段也从生成记录取：这两个此前直接采信 DTO，是这条投稿链路上唯一
+      // 没被服务端快照覆盖的口子（用户传 aspectRatio:'999:1' 就能让详情页显示伪造尺寸）。
+      aspectRatio: extractRatio(row.params),
+      durationSec: row.durationSec,
     };
   }
 

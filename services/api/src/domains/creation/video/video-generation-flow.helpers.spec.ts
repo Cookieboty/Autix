@@ -509,13 +509,15 @@ describe('video generation flow helpers', () => {
           durationSec: 6,
         },
         videoUrl: 'https://cdn.test/video.mp4',
+        lastFrameUrl: 'https://cdn.test/last.jpg',
       }),
+      // 末帧取转存后的 R2 地址，**不是** outcome 里那个 24h 就过期的供应商链接
     ).toEqual({
       generationId: 'gen-1',
       clipId: 'clip-1',
       externalStatus: 'succeeded',
       videoUrl: 'https://cdn.test/video.mp4',
-      lastFrameUrl: 'https://provider.test/last.png',
+      lastFrameUrl: 'https://cdn.test/last.jpg',
       durationSec: 6,
     });
 

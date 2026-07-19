@@ -908,23 +908,6 @@ export interface ImageGeneration {
   turns?: GenerationTurn[];
 }
 
-export interface VideoGeneration {
-  id: string;
-  templateId: string;
-  template?: Pick<VideoTemplate, 'title' | 'coverImage' | 'category' | 'prompt' | 'variables'>;
-  userId: string;
-  modelUsed: string;
-  resolvedPrompt: string;
-  variables?: Record<string, string>;
-  referenceImage?: string;
-  generatedVideos: string[];
-  status: string;
-  error?: string;
-  durationMs?: number;
-  createdAt: string;
-  turns?: GenerationTurn[];
-}
-
 export type TemplateGeneration = ImageGeneration;
 
 export interface GenerationTurn {
@@ -987,17 +970,9 @@ export const imageTemplateApi = {
     ),
 };
 
-export const videoTemplateApi = {
-  ...makeResourceApi<VideoTemplate>('video-templates'),
-  createGeneration: (
-    templateId: string,
-    data: { modelUsed: string; variables: Record<string, string>; referenceImage?: string },
-  ) =>
-    chatApi.post<VideoGeneration>(
-      `/api/marketplace/video-templates/${templateId}/generations`,
-      data,
-    ),
-};
+// 模板视频生成没有 createGeneration：那条链路写的是已删除的 video_generations 表，
+// 会扣费但永不产出，路由已随表一并移除。现役视频生成走 videoGenApi（clip 表）。
+export const videoTemplateApi = makeResourceApi<VideoTemplate>('video-templates');
 
 export const skillApi = makeResourceApi<Skill>('skills');
 export const mcpApi = makeResourceApi<McpServer>('mcp');
@@ -1016,18 +991,6 @@ export const imageGenerationApi = {
     chatApi.post<GenerationTurn>(`/api/generations/image/${id}/turns`, data),
   myGenerations: (params?: { page?: number; pageSize?: number }) =>
     chatApi.get<PaginatedResult<ImageGeneration>>('/api/generations/image/my', { params }),
-};
-
-export const videoGenerationApi = {
-  getById: (id: string) =>
-    chatApi.get<VideoGeneration>(`/api/generations/video/${id}`),
-  addTurn: (
-    id: string,
-    data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
-  ) =>
-    chatApi.post<GenerationTurn>(`/api/generations/video/${id}/turns`, data),
-  myGenerations: (params?: { page?: number; pageSize?: number }) =>
-    chatApi.get<PaginatedResult<VideoGeneration>>('/api/generations/video/my', { params }),
 };
 
 export const generationApi = imageGenerationApi;

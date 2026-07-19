@@ -1,4 +1,4 @@
-import { ForbiddenException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import {
   TemplateStatus,
   ResourceType,
@@ -7,19 +7,13 @@ import {
   VideoTemplateSource,
   type Prisma,
 } from '../../platform/prisma/generated';
-import { randomUUID } from 'crypto';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
-import { PointsService } from '../../billing/points/points.service';
-import { MembershipService } from '../../billing/membership/membership.service';
-import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { assertInStationMediaUrls } from '../../creation/gallery/gallery.helpers';
 import { BaseResourceService, type ListResourceQuery } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
 import { FavoriteLibraryService } from '../../creation/materials/favorite-library.service';
 import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
-import { TemplateGenerationRepository } from '../template-generation.repository';
-import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 export interface CreateVideoTemplateDto {
   title: string;
@@ -51,16 +45,10 @@ export type UpdateVideoTemplateDto = Partial<CreateVideoTemplateDto>;
 
 @Injectable()
 export class VideoTemplatesService extends BaseResourceService {
-  private readonly logger = new Logger(VideoTemplatesService.name);
-
   constructor(
     resourceInteractions: ResourceInteractionRepository,
     private readonly resources: MarketplaceResourceCrudRepository,
     private readonly r2: CloudflareR2Service,
-    private readonly pointsService: PointsService,
-    private readonly modelConfigService: ModelConfigService,
-    private readonly generations: TemplateGenerationRepository,
-    private readonly membershipService: MembershipService,
     private readonly metrics: ResourceMetricsService,
     private readonly favoriteLibrary: FavoriteLibraryService,
   ) {
@@ -214,100 +202,6 @@ export class VideoTemplatesService extends BaseResourceService {
       materialSlots: materialSlots ? this.toJson(materialSlots) : undefined,
       status: TemplateStatus.PENDING,
     });
-  }
-
-  async createGeneration(
-    templateId: string,
-    userId: string,
-    data: {
-      modelUsed: string;
-      variables: Record<string, string>;
-      referenceImage?: string;
-      modelConfigId?: string;
-    },
-  ) {
-    // 停用：这条链路会扣费但永远不产出。
-    //
-    // 它把记录写进 video_generations（第一代表），而该表**全仓不存在任何 update**
-    // —— 行以 status='pending' 建立后永远停在那里，generatedVideos 恒为空数组。
-    // 与此同时 :253 createHold + :283 confirmHold 已经真实扣了积分，且是确认而非退还。
-    // 结构上它也接不了回调：没有 providerTaskId / protocolKey 两列。
-    //
-    // 视频生成的现役实现是 video_clip_generations（/ai/video 直连、工作台分镜、
-    // 聊天生成三条链路全走它）。要恢复模板生成，应改调 VideoGenerationFlowService
-    // 并给 clip 表补 templateId 列，而不是复活这张表。
-    //
-    // 在那之前先拦在扣费之前，宁可不可用也不能收钱不交货。
-    throw new I18nHttpException(
-      HttpStatus.NOT_IMPLEMENTED,
-      'video.template_generation_unavailable',
-    );
-  }
-
-  async findGeneration(id: string, userId: string) {
-    const gen = await this.generations.findVideoGeneration(id);
-    if (!gen) throw new ForbiddenException('生成记录不存在');
-    if (gen.userId !== userId) throw new ForbiddenException('无权访问');
-
-    const turns = await this.generations.findTurns(ResourceType.VIDEO_TEMPLATE, id);
-    return { ...gen, turns };
-  }
-
-  async addTurn(
-    generationId: string,
-    data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
-  ) {
-    return this.generations.addTurn(
-      ResourceType.VIDEO_TEMPLATE,
-      generationId,
-      data,
-    );
-  }
-
-  async findMyGenerations(userId: string, page = 1, pageSize = 20) {
-    return this.generations.findVideoGenerationsByUser(userId, page, pageSize);
-  }
-
-  resolvePrompt(
-    promptTemplate: string,
-    variables: Record<string, string>,
-  ): string {
-    let resolved = promptTemplate;
-    for (const [key, value] of Object.entries(variables)) {
-      resolved = resolved.replaceAll(`{{${key}}}`, value);
-    }
-    return resolved;
-  }
-
-  private async estimateTemplateGenerationCost(input: {
-    taskType: string;
-    modelConfigId?: string;
-    duration?: number;
-    resolution?: string;
-    referenceImages?: number;
-    membershipLevel?: number;
-  }): Promise<{
-    taskType: string;
-    amount: number;
-    pricingSnapshot?: Prisma.InputJsonValue;
-  }> {
-    // 原生化后视频计价参数即火山原生名 duration（perUnit duration）。旧写 seconds →
-    // estimateCost 取不到值 → 模板视频每秒费归零、少收费。
-    const params: Record<string, unknown> = { referenceImages: input.referenceImages ?? 0 };
-    if (input.duration !== undefined) params.duration = input.duration;
-    if (input.resolution !== undefined) params.resolution = input.resolution;
-
-    const estimate = await this.pointsService.estimateCost({
-      taskType: input.taskType,
-      ...(input.modelConfigId ? { modelConfigId: input.modelConfigId } : {}),
-      params,
-      membershipLevel: input.membershipLevel,
-    });
-    return {
-      taskType: estimate.taskType,
-      amount: estimate.estimatedCost,
-      pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-    };
   }
 
   private toJson(value: unknown): Prisma.InputJsonValue {
