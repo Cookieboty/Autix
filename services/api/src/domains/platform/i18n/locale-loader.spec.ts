@@ -53,4 +53,13 @@ describe('loadLocaleTree', () => {
     writeFileSync(join(dir, 'en.yaml'), '');
     expect(loadLocaleTree(dir).get('en')).toEqual({});
   });
+
+  it('同一语言的两个子目录文件出现重复 key 时抛出异常，而不是静默覆盖', () => {
+    mkdirSync(join(dir, 'identity'));
+    mkdirSync(join(dir, 'billing'));
+    writeFileSync(join(dir, 'identity', 'en.yaml'), 'auth.denied: "Denied"\n');
+    writeFileSync(join(dir, 'billing', 'en.yaml'), 'auth.denied: "Duplicate"\n');
+
+    expect(() => loadLocaleTree(dir)).toThrow(/auth\.denied/);
+  });
 });
