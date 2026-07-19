@@ -18,6 +18,12 @@
 - `package.json` 中的 scripts 由 pnpm 执行；TypeScript 脚本通过 `tsx` 运行。
 - 测试统一使用 Vitest（`pnpm run test` / `pnpm exec vitest run <file>`）。
 - 新增命令、文档示例、验证说明都以 pnpm 为准。
+- **npm/pnpm scripts 必须跨平台**：`scripts` 字段在 Windows 会走 `cmd.exe`，在 macOS/Linux 会走 `/bin/sh`。禁止在 `scripts` 里直接写 shell-only 或平台专属命令，包括但不限于 `rm -rf`、`cp -R`、`mkdir -p`、`find`、`lsof`、`xargs`、`for/while` 循环、命令替换 `` `...` `` / `$()`、单引号包裹的 glob（`'**/*.foo'`）等。以下为标准替代方案，其它场景优先复用同类成熟包，不再自建脚本：
+    - 删除文件/目录（含 glob）：`rimraf <path>` 或 `rimraf --glob "<pattern>"`
+    - 拷贝/移动/mkdir 等 coreutils：`shx cp -R`、`shx mv`、`shx mkdir -p` 等
+    - 端口清理：`kill-port <port> [<port> ...]`
+    - 设置环境变量：`cross-env KEY=VAL <cmd>`（客户端已使用）
+    - 复杂多步编排：抽成 `tsx scripts/<name>.ts` 独立文件，用 `execa` 或 `node:child_process` 编排，不要往 `scripts` 字段里堆管道
 
 ## Git 与内部文档
 

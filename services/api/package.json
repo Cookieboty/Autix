@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "dotenv -e ../../.env -- nest start --watch",
-    "build": "rm -rf dist *.tsbuildinfo && nest build",
+    "build": "rimraf dist && rimraf --glob \"*.tsbuildinfo\" && nest build",
     "start": "dotenv -e ../../.env -- node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json --noEmit",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json --noEmit",
@@ -87,6 +87,7 @@
     "@types/uuid": "^11.0.0",
     "playwright": "^1.61.1",
     "prisma": "^7.7.0",
+    "rimraf": "^6.1.3",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vitest": "^4.1.7"
