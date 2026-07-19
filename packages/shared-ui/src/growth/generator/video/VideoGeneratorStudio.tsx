@@ -283,8 +283,13 @@ export function VideoGeneratorStudio({
         }
         await new Promise((resolve) => setTimeout(resolve, VIDEO_POLL_INTERVAL_MS));
       }
-      await reloadHistory();
     } finally {
+      // 无论成功、失败还是轮询超时都要重拉历史。
+      //
+      // 原来 reloadHistory() 写在 try 末尾：生成失败会在上面 throw 出去，这一行根本
+      // 走不到 —— 失败的那条任务不会进列表，用户只看到占位块消失、什么都没留下，
+      // 得刷新页面才看见那条 failed 记录。轮询到上限退出（既没完成也没失败）同理。
+      await reloadHistory();
       setGenerating(false);
       setPendingGeneration(null);
     }

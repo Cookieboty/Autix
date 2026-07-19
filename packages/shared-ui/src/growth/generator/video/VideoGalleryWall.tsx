@@ -7,6 +7,7 @@ import type { GalleryFeedItem } from '@autix/shared-store';
 import type { TemplateDensity } from '../generator-studio-helpers';
 import { AuthorAvatar } from '../../AuthorAvatar';
 import { formatMetricCount } from '../metric-format';
+import { galleryHoverPlayHandlers } from '../../GalleryMediaThumb';
 import { VideoEmptyShowcase } from './VideoEmptyShowcase';
 
 /**
@@ -124,7 +125,6 @@ function VideoGalleryCard({
   onMeasureRatio?: (postId: string, ratio: number) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const videoRef = useRef<HTMLVideoElement | null>(null);
   const { post } = item;
   const cover = post.coverImage ?? undefined;
   const src = post.mediaUrls[0];
@@ -141,6 +141,9 @@ function VideoGalleryCard({
 
   return (
     <article
+      // 悬浮播放绑容器：与首页/个人主页同一套（galleryHoverPlayHandlers），
+      // 绑在 video 或热区上各写一份早晚会漂
+      {...galleryHoverPlayHandlers()}
       className="group relative w-full overflow-hidden rounded-[10px] bg-black/40"
       // 比例来自真实视频元数据（onLoadedMetadata 回传后由父级校正），
       // 拿不到时才退回投稿快照里的 aspectRatio —— 与 history 同一原则：
@@ -149,7 +152,6 @@ function VideoGalleryCard({
     >
       {src ? (
         <video
-          ref={videoRef}
           src={src}
           poster={cover}
           muted
@@ -174,15 +176,6 @@ function VideoGalleryCard({
         type="button"
         aria-label={post.title ?? post.prompt ?? 'video'}
         onClick={() => onOpen?.(item)}
-        onMouseEnter={() => {
-          void videoRef.current?.play().catch(() => undefined);
-        }}
-        onMouseLeave={() => {
-          const el = videoRef.current;
-          if (!el) return;
-          el.pause();
-          el.currentTime = 0;
-        }}
         className="absolute inset-0 z-10 cursor-pointer"
       />
 
