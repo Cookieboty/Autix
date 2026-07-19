@@ -14,7 +14,7 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "Đăng nhập",
       "signInOrRegister": "Đăng nhập / Đăng ký",
       "freePlan": "Free Plan",
       "credits": "Credits",
@@ -24,7 +24,8 @@
       "upgrade": "Upgrade",
       "viewProfile": "View profile",
       "manageAccount": "Manage account",
-      "signOut": "Sign Out"
+      "signOut": "Sign Out",
+      "signUp": "Đăng ký"
     },
     "footer": {
       "description": "Public growth pages for AI images, videos, presets, creators, and shareable collections.",
@@ -499,24 +500,6 @@
         "0": "Duyệt và lưu cảm hứng",
         "1": "Bản nháp riêng tư và xuất bản cơ bản",
         "2": "Phù hợp cho dùng thử nhẹ"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "Gói Dùng Thử",
-          "description": "Bổ sung tín dụng nhẹ cho các dự án một lần"
-        },
-        "standard": {
-          "name": "Gói Tiêu Chuẩn",
-          "description": "Bổ sung tín dụng cho các nhà sáng tạo tích cực"
-        },
-        "pro": {
-          "name": "Gói Pro",
-          "description": "Bổ sung tần suất cao, yêu cầu thành viên đang hoạt động"
-        },
-        "team": {
-          "name": "Gói Nhóm",
-          "description": "Bổ sung tín dụng nhóm với quyền thương mại theo cấp thành viên"
-        }
       },
       "creditsMo": "{count} tín dụng/tháng",
       "fixedCredits": "Cố định {count} tín dụng/tháng",

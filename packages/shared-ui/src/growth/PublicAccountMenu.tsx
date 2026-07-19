@@ -26,6 +26,13 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { MembershipUpgradeView } from '../membership/MembershipUpgradeView';
+import { cn } from '../ui/utils';
+import {
+  GROWTH_DIALOG_CONTENT,
+  GROWTH_DIALOG_DESCRIPTION,
+  GROWTH_DIALOG_HEADER,
+  GROWTH_DIALOG_TITLE,
+} from './dialog-styles';
 
 function displayName(user: ReturnType<typeof useAuthStore.getState>['user']) {
   return user?.realName || user?.username || user?.email || 'Amux';
@@ -194,16 +201,30 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
 
   if (!isAuthenticated || !user) {
     return (
-      <button
-        type="button"
-        onClick={() => openAuthModal({ mode: 'entry' })}
-        className={`inline-flex cursor-pointer items-center justify-center rounded-full border border-growth-accent/45 bg-growth-accent/12 font-black text-growth-accent growth-signin-glow transition hover:border-growth-accent hover:bg-growth-accent hover:text-background ${
-          compact ? 'min-h-7 px-3 text-[13px]' : 'min-h-10 px-4 text-sm'
-        }`}
-        aria-label={t('signInOrRegister')}
-      >
-        {t('signInOrRegister')}
-      </button>
+      <div className="flex shrink-0 items-center gap-2">
+        <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
+        {/* 登录走弹窗（不打断当前浏览），注册直接进独立页面 */}
+        {/* 样式与导航里的 Pricing / Assets 入口一致（growth-nav-btn + pillSize） */}
+        <button
+          type="button"
+          onClick={() => openAuthModal({ mode: 'entry' })}
+          className={cn(
+            'growth-nav-btn inline-flex cursor-pointer items-center gap-2 font-semibold text-growth-accent transition-all duration-300',
+            compact ? 'min-h-7 px-2.5 text-[13px]' : 'min-h-9 px-3 text-sm',
+          )}
+        >
+          {t('signIn')}
+        </button>
+        <Link
+          href="/register"
+          className={cn(
+            'inline-flex cursor-pointer items-center justify-center rounded-lg bg-growth-accent font-bold text-background transition hover:brightness-110',
+            compact ? 'min-h-7 px-3 text-[13px]' : 'min-h-9 px-4 text-sm',
+          )}
+        >
+          {t('signUp')}
+        </Link>
+      </div>
     );
   }
 
@@ -341,13 +362,13 @@ export function PublicAccountMenu({ compact = false }: { compact?: boolean } = {
         </div>
       </DropdownMenuContent>
       <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-        <DialogContent className="flex max-h-[86vh] flex-col gap-0 overflow-hidden border-border bg-popover p-0 text-popover-foreground sm:max-w-[980px]">
-          <DialogHeader className="shrink-0 border-b border-border px-5 py-4">
-            <DialogTitle className="flex items-center gap-2">
-              <Crown className="h-4 w-4 text-primary" />
+        <DialogContent className={cn(GROWTH_DIALOG_CONTENT, 'max-h-[86vh] sm:max-w-[980px]')}>
+          <DialogHeader className={GROWTH_DIALOG_HEADER}>
+            <DialogTitle className={GROWTH_DIALOG_TITLE}>
+              <Crown className="size-4 text-growth-accent" />
               {tMembership('upgradeMembership')}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className={GROWTH_DIALOG_DESCRIPTION}>
               {tMembership('choosePlan')}
             </DialogDescription>
           </DialogHeader>

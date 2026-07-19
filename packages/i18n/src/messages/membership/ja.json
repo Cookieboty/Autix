@@ -297,7 +297,12 @@
     "packagesHeading": "ポイントパック",
     "plansHeading": "メンバーシッププラン",
     "currentLevel": "現在のプラン",
-    "levelFree": "無料"
+    "levelFree": "無料",
+    "footnote": "価格には VAT および現地税は含まれず、決済時に計算されます。クレジットパックはプランと併用できますが、会員限定特典は含まれません。",
+    "shortfallSummary": "この操作には {required} クレジットが必要です。残高 {available}、{shortfall} 不足しています。",
+    "unlockFeature": "{name} をアンロック",
+    "unlockFeatureDesc": "プランをアップグレードするかクレジットを追加すると、{name} で生成を続けられます",
+    "unlockGeneric": "生成枠をアンロック"
   },
   "pricing": {
     "params": {

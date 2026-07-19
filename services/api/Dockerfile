@@ -4,7 +4,7 @@ FROM node:22-slim AS builder
 RUN corepack enable pnpm
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/domain/package.json packages/domain/
@@ -41,7 +41,7 @@ FROM node:22-slim AS prod-deps
 RUN corepack enable pnpm
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/domain/package.json packages/domain/
@@ -66,14 +66,13 @@ RUN corepack enable pnpm && \
 WORKDIR /app
 
 COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/.npmrc ./
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
 COPY --from=builder /app/packages/database/prisma.config.ts ./packages/database/prisma.config.ts
 COPY --from=builder /app/packages/database/dist ./packages/database/dist
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /app/packages/database/scripts ./packages/database/scripts
-COPY --from=prod-deps /app/packages/database/node_modules ./packages/database/node_modules
 
 COPY --from=builder /app/packages/domain/package.json ./packages/domain/package.json
 COPY --from=builder /app/packages/domain/dist ./packages/domain/dist
@@ -85,7 +84,6 @@ COPY --from=builder /app/packages/ai-adapters/dist ./packages/ai-adapters/dist
 COPY --from=builder /app/services/api/dist ./services/api/dist
 COPY --from=builder /app/services/api/scripts ./services/api/scripts
 COPY --from=builder /app/services/api/package.json ./services/api/package.json
-COPY --from=prod-deps /app/services/api/node_modules ./services/api/node_modules
 
 # Workspace packages: ensure node_modules links point to actual dist content
 RUN mkdir -p node_modules/@autix && \
@@ -102,13 +100,26 @@ RUN mkdir -p node_modules/@autix && \
 # The prisma CLI version is derived from the @prisma/client actually installed:
 # Prisma refuses to run when the two drift, and hardcoding a version here would
 # silently rot the moment the lockfile resolves a new patch.
-RUN PRISMA_VERSION="$(node -p "require('/app/packages/database/node_modules/@prisma/client/package.json').version")" && \
+#
+# PNPM_HOME 必须显式设置且进 PATH：pnpm 的 `add -g` 会先校验全局 bin 目录是否
+# 在 PATH 中，不在就直接报错退出（"Run pnpm setup to update your shell
+# configuration"）。容器里没有交互式 shell 配置，只能在这里声明。Bun 时代没有
+# 这一步，是 pnpm 迁移遗留。
+ENV PNPM_HOME=/usr/local/share/pnpm
+# 注意是 ${PNPM_HOME}/bin 而非 ${PNPM_HOME}：pnpm 11 的全局 bin 目录在 PNPM_HOME
+# 下面的 bin 子目录，报错信息里的路径就是这么给的。
+ENV PATH="${PNPM_HOME}/bin:${PATH}"
+RUN PRISMA_VERSION="$(node -p "require('/app/node_modules/@prisma/client/package.json').version")" && \
     TSX_VERSION="$(node -p "require('/app/package.json').devDependencies.tsx")" && \
     DOTENV_VERSION="$(node -p "require('/app/package.json').devDependencies['dotenv-cli']")" && \
     pnpm add -g "prisma@${PRISMA_VERSION}" "tsx@${TSX_VERSION}" "dotenv-cli@${DOTENV_VERSION}"
 
 ENV NODE_ENV=production
 ENV NODE_PATH=/app/node_modules
+
+# 注：`pnpm run` 前的依赖一致性校验（runDepsStatusCheck）会因本镜像手工拼装的
+# node_modules 而中止启动，关闭它的设置在 pnpm-workspace.yaml 的
+# verifyDepsBeforeRun —— pnpm 11 只从那里读，环境变量不生效。
 WORKDIR /app/services/api
 RUN echo '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["./dist/*"]}}}' > tsconfig.json
 EXPOSE 4100

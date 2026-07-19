@@ -30,6 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         </Suspense>
         <InsufficientPointsGate
           onNavigateOrder={(orderId: string) => router.push(`/membership/orders/${orderId}`)}
+          onNavigatePricing={() => router.push('/pricing')}
         />
         <Toaster />
       </ThemeProvider>

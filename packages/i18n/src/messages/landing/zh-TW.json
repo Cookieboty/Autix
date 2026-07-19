@@ -24,7 +24,8 @@
       "upgrade": "升級",
       "viewProfile": "個人中心",
       "manageAccount": "帳號管理",
-      "signOut": "登出"
+      "signOut": "登出",
+      "signUp": "註冊"
     },
     "footer": {
       "description": "面向 AI 圖片、影片、預設、創作者和可分享集合的公開增長頁面。",
@@ -499,24 +500,6 @@
         "0": "公開瀏覽與收藏靈感",
         "1": "私有草稿與基礎發布",
         "2": "適合低頻試用"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "試用包",
-          "description": "適合一次性專案的輕量積分補充"
-        },
-        "standard": {
-          "name": "標準包",
-          "description": "為活躍創作者補充積分"
-        },
-        "pro": {
-          "name": "專業包",
-          "description": "高頻補充，需保持有效會員資格"
-        },
-        "team": {
-          "name": "團隊包",
-          "description": "團隊積分補充，商業授權隨會員等級適用"
-        }
       },
       "creditsMo": "{count} 點數/月",
       "fixedCredits": "每月固定 {count} 點數",

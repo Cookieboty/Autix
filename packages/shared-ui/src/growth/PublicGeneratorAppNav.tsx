@@ -78,7 +78,7 @@ export function PublicGeneratorAppNav({
   const comingSoonLabel = typeof navMessages?.comingSoon === 'string'
     ? (navMessages.comingSoon as string)
     : NAV_LABEL_FALLBACKS.comingSoon;
-  const navItems = buildGeneratorNavItems(kind).map((item) => {
+  const navItems = buildGeneratorNavItems(kind, pathname === '/').map((item) => {
     const badgeLabel =
       item.badge === 'soon'
         ? (typeof navMessages?.launchingSoon === 'string'

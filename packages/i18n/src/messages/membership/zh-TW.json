@@ -297,7 +297,12 @@
     "packagesHeading": "點數包",
     "plansHeading": "會員方案",
     "currentLevel": "當前會員",
-    "levelFree": "免費用戶"
+    "levelFree": "免費用戶",
+    "footnote": "價格不含加值稅及當地稅費，將於結帳時計算。會員權益與積分包可疊加使用，積分包不含會員專屬權益。",
+    "shortfallSummary": "本次需要 {required} 積分，目前餘額 {available}，還差 {shortfall}",
+    "unlockFeature": "解鎖 {name}",
+    "unlockFeatureDesc": "升級會員或補充積分，即可繼續使用 {name} 生成",
+    "unlockGeneric": "解鎖更多創作額度"
   },
   "pricing": {
     "params": {

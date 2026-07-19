@@ -297,7 +297,12 @@
     "packagesHeading": "Points packs",
     "plansHeading": "Membership plans",
     "currentLevel": "Current plan",
-    "levelFree": "Free"
+    "levelFree": "Free",
+    "footnote": "Prices exclude VAT and local taxes, calculated at checkout. Credit packs stack with your plan but do not include member-only benefits.",
+    "shortfallSummary": "This action needs {required} credits. You have {available}, short by {shortfall}.",
+    "unlockFeature": "Unlock {name}",
+    "unlockFeatureDesc": "Upgrade your plan or top up credits to keep generating with {name}",
+    "unlockGeneric": "Unlock more generations"
   },
   "pricing": {
     "params": {

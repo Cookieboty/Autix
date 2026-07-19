@@ -347,7 +347,8 @@
       "upgrade": "升级",
       "viewProfile": "个人中心",
       "manageAccount": "账号管理",
-      "signOut": "退出登录"
+      "signOut": "退出登录",
+      "signUp": "注册"
     },
     "footer": {
       "description": "面向 AI 图片、视频、预设、创作者和可分享集合的公开增长页面。",
@@ -822,24 +823,6 @@
         "0": "公开浏览和收藏灵感",
         "1": "私有草稿与基础发布",
         "2": "适合低频试用"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "试用包",
-          "description": "适合一次性项目的轻量积分补充"
-        },
-        "standard": {
-          "name": "标准包",
-          "description": "为活跃创作者补充积分"
-        },
-        "pro": {
-          "name": "专业包",
-          "description": "高频补充，需保持有效会员资格"
-        },
-        "team": {
-          "name": "团队包",
-          "description": "团队积分补充，商业授权随会员等级适用"
-        }
       },
       "creditsMo": "{count} 积分/月",
       "fixedCredits": "每月固定 {count} 积分",

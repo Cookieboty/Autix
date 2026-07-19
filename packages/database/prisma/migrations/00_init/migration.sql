@@ -1,8 +1,14 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateExtension
 CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'DISABLED', 'LOCKED', 'PENDING');
+CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'DISABLED', 'LOCKED', 'PENDING', 'DELETED');
+
+-- CreateEnum
+CREATE TYPE "SocialLoginFlow" AS ENUM ('LOGIN', 'LINK', 'REAUTH');
 
 -- CreateEnum
 CREATE TYPE "PermissionAction" AS ENUM ('CREATE', 'READ', 'UPDATE', 'DELETE', 'EXPORT', 'IMPORT');
@@ -18,6 +24,9 @@ CREATE TYPE "ClientStatus" AS ENUM ('ACTIVE', 'DISABLED');
 
 -- CreateEnum
 CREATE TYPE "RegistrationStatus" AS ENUM ('PENDING_ACTIVATION', 'PENDING', 'APPROVED', 'REJECTED');
+
+-- CreateEnum
+CREATE TYPE "RiskLevel" AS ENUM ('L0', 'L1', 'L2', 'L3');
 
 -- CreateEnum
 CREATE TYPE "ArtifactType" AS ENUM ('MARKDOWN', 'CODE', 'DOCUMENT', 'TABLE', 'CHART');
@@ -38,7 +47,7 @@ CREATE TYPE "TaskStatus" AS ENUM ('pending', 'processing', 'done', 'error');
 CREATE TYPE "BatchJobType" AS ENUM ('IMPORT', 'APPROVE', 'REJECT', 'REVISE', 'DELETE');
 
 -- CreateEnum
-CREATE TYPE "ResourceType" AS ENUM ('SKILL', 'MCP', 'AGENT', 'IMAGE_TEMPLATE', 'VIDEO_TEMPLATE');
+CREATE TYPE "ResourceType" AS ENUM ('SKILL', 'MCP', 'AGENT', 'IMAGE_TEMPLATE', 'VIDEO_TEMPLATE', 'GALLERY_POST');
 
 -- CreateEnum
 CREATE TYPE "RuntimeReq" AS ENUM ('CLOUD', 'DESKTOP_ONLY', 'EITHER');
@@ -48,6 +57,12 @@ CREATE TYPE "DetectionSrc" AS ENUM ('AUTO', 'AUTHOR', 'ADMIN');
 
 -- CreateEnum
 CREATE TYPE "TemplateStatus" AS ENUM ('PENDING', 'IN_REVIEW', 'APPROVED', 'REJECTED', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "ImageTemplateSource" AS ENUM ('ADMIN_CREATED', 'GALLERY_CONVERSION', 'SYSTEM');
+
+-- CreateEnum
+CREATE TYPE "VideoTemplateSource" AS ENUM ('ADMIN_CREATED', 'SYSTEM');
 
 -- CreateEnum
 CREATE TYPE "McpTransport" AS ENUM ('stdio', 'sse', 'http');
@@ -83,13 +98,7 @@ CREATE TYPE "PointLedgerEventType" AS ENUM ('subscription_grant', 'points_purcha
 CREATE TYPE "PointHoldStatus" AS ENUM ('PENDING', 'PROCESSING', 'CONFIRMED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'CANCELLED', 'BLOCKED', 'EXPIRED');
 
 -- CreateEnum
-CREATE TYPE "PricingBaseUnit" AS ENUM ('image', 'second', 'task', 'message', 'token', 'tool_call');
-
--- CreateEnum
-CREATE TYPE "PricingComponentType" AS ENUM ('base', 'fixed_extra', 'per_image', 'per_second', 'input_token_per_1k', 'output_token_per_1k', 'context_token_per_1k', 'per_tool_call', 'per_mcp_call', 'per_skill_call', 'per_batch', 'per_reference_image', 'reasoning_multiplier', 'reference_image_multiplier', 'video_input_multiplier', 'audio_input_multiplier', 'priority_multiplier');
-
--- CreateEnum
-CREATE TYPE "CampaignType" AS ENUM ('CONTINUOUS_USE', 'INVITATION', 'FEEDBACK', 'CUSTOM');
+CREATE TYPE "CampaignType" AS ENUM ('CONTINUOUS_USE', 'INVITATION', 'FEEDBACK', 'REGISTRATION', 'QUEST', 'CUSTOM');
 
 -- CreateEnum
 CREATE TYPE "CampaignStatus" AS ENUM ('DRAFT', 'ACTIVE', 'PAUSED', 'ARCHIVED');
@@ -130,6 +139,42 @@ CREATE TYPE "VideoMaterialSourceType" AS ENUM ('upload', 'image_generation', 'vi
 -- CreateEnum
 CREATE TYPE "VideoGenStatus" AS ENUM ('pending', 'queued', 'running', 'completed', 'failed', 'expired');
 
+-- CreateEnum
+CREATE TYPE "MaterialLibrarySource" AS ENUM ('UPLOAD', 'FAVORITE', 'HISTORY', 'GENERATION');
+
+-- CreateEnum
+CREATE TYPE "GalleryKind" AS ENUM ('IMAGE', 'VIDEO');
+
+-- CreateEnum
+CREATE TYPE "GalleryStatus" AS ENUM ('DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED', 'HIDDEN', 'REMOVED', 'UNPUBLISHED');
+
+-- CreateEnum
+CREATE TYPE "GallerySource" AS ENUM ('USER_UPLOAD', 'FROM_GENERATION', 'FROM_TEMPLATE', 'ADMIN_CURATED');
+
+-- CreateEnum
+CREATE TYPE "FeaturedSlotKind" AS ENUM ('RESOURCE', 'CUSTOM');
+
+-- CreateEnum
+CREATE TYPE "BoostReason" AS ENUM ('MANUAL', 'CAMPAIGN', 'EDITORIAL_PICK', 'CORRECTION');
+
+-- CreateEnum
+CREATE TYPE "GalleryReportStatus" AS ENUM ('PENDING', 'RESOLVED', 'DISMISSED');
+
+-- CreateEnum
+CREATE TYPE "EmailOtpPurpose" AS ENUM ('STEP_UP_CHANGE_PASSWORD', 'STEP_UP_SET_PASSWORD', 'STEP_UP_CHANGE_EMAIL', 'STEP_UP_DELETE_ACCOUNT', 'STEP_UP_UNLINK_PROVIDER', 'EMAIL_CHANGE_CONFIRM');
+
+-- CreateEnum
+CREATE TYPE "PendingUploadPurpose" AS ENUM ('AVATAR', 'BANNER', 'GENERIC');
+
+-- CreateEnum
+CREATE TYPE "PendingUploadStatus" AS ENUM ('PENDING', 'CONSUMED', 'EXPIRED');
+
+-- CreateEnum
+CREATE TYPE "StorageCleanupTaskStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'SKIPPED_STILL_REFERENCED', 'DEAD');
+
+-- CreateEnum
+CREATE TYPE "StorageCleanupReason" AS ENUM ('UPLOAD_EXPIRED', 'AVATAR_REPLACED', 'AVATAR_CLEARED', 'AVATAR_ORIGINAL_REPLACED', 'BANNER_REPLACED', 'BANNER_CLEARED', 'USER_DELETED', 'ACCOUNT_DELETED', 'ADMIN_AVATAR_REPLACED', 'PENDING_UPLOAD_EXPIRED', 'MANUAL');
+
 -- CreateTable
 CREATE TABLE "systems" (
     "id" TEXT NOT NULL,
@@ -150,18 +195,64 @@ CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "emailVerified" BOOLEAN NOT NULL DEFAULT true,
+    "pendingEmail" TEXT,
     "password" TEXT,
     "realName" TEXT,
+    "nickname" VARCHAR(60),
+    "description" VARCHAR(500),
+    "headline" VARCHAR(80),
+    "location" VARCHAR(80),
+    "socialX" VARCHAR(200),
+    "socialInstagram" VARCHAR(200),
+    "socialYoutube" VARCHAR(200),
+    "socialTiktok" VARCHAR(200),
     "avatar" TEXT,
+    "avatarStorageKey" TEXT,
+    "bannerImage" TEXT,
+    "bannerStorageKey" TEXT,
     "phone" TEXT,
     "language" TEXT DEFAULT 'zh-CN',
+    "autoPublish" BOOLEAN NOT NULL DEFAULT false,
     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "isSuperAdmin" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "lastLoginAt" TIMESTAMP(3),
+    "deletedAt" TIMESTAMP(3),
+    "signupIp" TEXT,
+    "signupDeviceId" TEXT,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "user_risk_profiles" (
+    "userId" TEXT NOT NULL,
+    "level" "RiskLevel" NOT NULL DEFAULT 'L0',
+    "score" INTEGER NOT NULL DEFAULT 0,
+    "manualOverride" BOOLEAN NOT NULL DEFAULT false,
+    "topSignals" JSONB,
+    "evaluatedAt" TIMESTAMP(3),
+    "blockedAt" TIMESTAMP(3),
+    "blockedReason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "user_risk_profiles_pkey" PRIMARY KEY ("userId")
+);
+
+-- CreateTable
+CREATE TABLE "user_risk_events" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "severity" INTEGER NOT NULL DEFAULT 0,
+    "detail" JSONB,
+    "actorId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_risk_events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -283,6 +374,41 @@ CREATE TABLE "user_accounts" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "user_accounts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "social_login_states" (
+    "id" TEXT NOT NULL,
+    "state" TEXT NOT NULL,
+    "nonce" TEXT,
+    "codeVerifier" TEXT,
+    "provider" TEXT NOT NULL,
+    "systemCode" TEXT NOT NULL,
+    "clientType" TEXT NOT NULL,
+    "redirectUri" TEXT NOT NULL,
+    "inviteCode" TEXT,
+    "deviceId" TEXT,
+    "linkUserId" TEXT,
+    "flow" "SocialLoginFlow" NOT NULL DEFAULT 'LOGIN',
+    "purpose" "EmailOtpPurpose",
+    "sessionId" TEXT,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "social_login_states_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "social_login_codes" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "sessionId" TEXT NOT NULL,
+    "used" BOOLEAN NOT NULL DEFAULT false,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "social_login_codes_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -439,7 +565,10 @@ CREATE TABLE "model_configs" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "capabilities" TEXT[] DEFAULT ARRAY['text']::TEXT[],
-    "pointCostWeight" DECIMAL(6,2) NOT NULL DEFAULT 1.0,
+    "paramsSchema" JSONB,
+    "pricingSchema" JSONB,
+    "schemaVersion" INTEGER NOT NULL DEFAULT 1,
+    "description" JSONB NOT NULL DEFAULT '{}',
 
     CONSTRAINT "model_configs_pkey" PRIMARY KEY ("id")
 );
@@ -451,6 +580,53 @@ CREATE TABLE "model_config_membership_levels" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "model_config_membership_levels_pkey" PRIMARY KEY ("modelConfigId","levelId")
+);
+
+-- CreateTable
+CREATE TABLE "task_definitions" (
+    "id" TEXT NOT NULL,
+    "taskType" VARCHAR(64) NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "category" VARCHAR(20) NOT NULL,
+    "fixedCostSchema" JSONB,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "sort" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "task_definitions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "task_model_bindings" (
+    "taskType" VARCHAR(64) NOT NULL,
+    "modelConfigId" TEXT NOT NULL,
+    "multiplier" DECIMAL(6,3) NOT NULL DEFAULT 1.0,
+    "isDefault" BOOLEAN NOT NULL DEFAULT false,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "sort" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "task_model_bindings_pkey" PRIMARY KEY ("taskType","modelConfigId")
+);
+
+-- CreateTable
+CREATE TABLE "pricing_discounts" (
+    "id" TEXT NOT NULL,
+    "code" VARCHAR(64) NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "factor" DECIMAL(6,3) NOT NULL,
+    "scope" JSONB NOT NULL DEFAULT '{}',
+    "stackable" BOOLEAN NOT NULL DEFAULT false,
+    "priority" INTEGER NOT NULL DEFAULT 0,
+    "effectiveFrom" TIMESTAMP(3),
+    "effectiveTo" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "pricing_discounts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -498,47 +674,6 @@ CREATE TABLE "batch_jobs" (
 );
 
 -- CreateTable
-CREATE TABLE "arena_sessions" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "title" TEXT NOT NULL DEFAULT '新对比',
-    "selectedModelIds" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "arena_sessions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "arena_turns" (
-    "id" TEXT NOT NULL,
-    "sessionId" TEXT NOT NULL,
-    "userMessage" TEXT NOT NULL,
-    "images" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "arena_turns_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "arena_responses" (
-    "id" TEXT NOT NULL,
-    "turnId" TEXT NOT NULL,
-    "modelConfigId" TEXT NOT NULL,
-    "content" TEXT NOT NULL DEFAULT '',
-    "images" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "durationMs" INTEGER,
-    "promptTokens" INTEGER,
-    "completionTokens" INTEGER,
-    "totalTokens" INTEGER,
-    "status" TEXT NOT NULL DEFAULT 'pending',
-    "error" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "arena_responses_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "image_templates" (
     "id" TEXT NOT NULL,
     "title" VARCHAR(200) NOT NULL,
@@ -560,18 +695,16 @@ CREATE TABLE "image_templates" (
     "authorId" TEXT NOT NULL,
     "useCount" INTEGER NOT NULL DEFAULT 0,
     "likeCount" INTEGER NOT NULL DEFAULT 0,
-    "favoriteCount" INTEGER NOT NULL DEFAULT 0,
     "isHot" BOOLEAN NOT NULL DEFAULT false,
-    "originalUrl" TEXT,
-    "authorName" VARCHAR(200),
-    "authorUrl" TEXT,
-    "sourcePlatform" VARCHAR(100),
-    "externalId" VARCHAR(100),
-    "externalSlug" TEXT,
-    "externalMetadata" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "publishedAt" TIMESTAMP(3),
+    "sourceType" "ImageTemplateSource" NOT NULL DEFAULT 'ADMIN_CREATED',
+    "sourceGalleryPostId" TEXT,
+    "createdById" TEXT NOT NULL,
+    "reviewedById" TEXT,
+    "reviewedAt" TIMESTAMP(3),
+    "systemKey" TEXT,
 
     CONSTRAINT "image_templates_pkey" PRIMARY KEY ("id")
 );
@@ -601,18 +734,15 @@ CREATE TABLE "video_templates" (
     "authorId" TEXT NOT NULL,
     "useCount" INTEGER NOT NULL DEFAULT 0,
     "likeCount" INTEGER NOT NULL DEFAULT 0,
-    "favoriteCount" INTEGER NOT NULL DEFAULT 0,
     "isHot" BOOLEAN NOT NULL DEFAULT false,
-    "originalUrl" TEXT,
-    "authorName" VARCHAR(200),
-    "authorUrl" TEXT,
-    "sourcePlatform" VARCHAR(100),
-    "externalId" VARCHAR(100),
-    "externalSlug" TEXT,
-    "externalMetadata" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "publishedAt" TIMESTAMP(3),
+    "sourceType" "VideoTemplateSource" NOT NULL DEFAULT 'ADMIN_CREATED',
+    "createdById" TEXT NOT NULL,
+    "reviewedById" TEXT,
+    "reviewedAt" TIMESTAMP(3),
+    "systemKey" TEXT,
 
     CONSTRAINT "video_templates_pkey" PRIMARY KEY ("id")
 );
@@ -736,6 +866,8 @@ CREATE TABLE "image_generations" (
     "variables" JSONB,
     "referenceImage" TEXT,
     "generatedImages" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "width" INTEGER,
+    "height" INTEGER,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "error" TEXT,
     "durationMs" INTEGER,
@@ -1083,41 +1215,6 @@ CREATE TABLE "point_hold_items" (
 );
 
 -- CreateTable
-CREATE TABLE "generation_pricing_rules" (
-    "id" TEXT NOT NULL,
-    "taskType" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "baseUnit" "PricingBaseUnit" NOT NULL DEFAULT 'task',
-    "priority" INTEGER NOT NULL DEFAULT 0,
-    "conditions" JSONB,
-    "refundPolicy" JSONB,
-    "metadata" JSONB,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "effectiveFrom" TIMESTAMP(3),
-    "effectiveTo" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "generation_pricing_rules_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "generation_pricing_rule_components" (
-    "id" TEXT NOT NULL,
-    "ruleId" TEXT NOT NULL,
-    "componentType" "PricingComponentType" NOT NULL,
-    "unitCost" DECIMAL(10,2),
-    "multiplier" DECIMAL(6,2),
-    "config" JSONB,
-    "sort" INTEGER NOT NULL DEFAULT 0,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "generation_pricing_rule_components_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "campaigns" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
@@ -1173,19 +1270,6 @@ CREATE TABLE "user_activity_streaks" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "user_activity_streaks_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "amux_credentials" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "host" VARCHAR(500) NOT NULL,
-    "oat" VARCHAR(500) NOT NULL,
-    "amuxUserId" INTEGER NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "amux_credentials_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1336,14 +1420,16 @@ CREATE TABLE "video_clip_materials" (
 -- CreateTable
 CREATE TABLE "video_clip_generations" (
     "id" TEXT NOT NULL,
-    "clipId" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
+    "clipId" TEXT,
+    "projectId" TEXT,
     "userId" TEXT NOT NULL,
     "variantLabel" VARCHAR(50),
     "model" VARCHAR(100) NOT NULL,
     "resolvedPrompt" TEXT NOT NULL,
     "params" JSONB NOT NULL,
-    "seedanceTaskId" VARCHAR(200),
+    "providerTaskId" VARCHAR(200),
+    "protocolKey" VARCHAR(64),
+    "modelConfigId" TEXT,
     "status" "VideoGenStatus" NOT NULL DEFAULT 'pending',
     "videoUrl" TEXT,
     "lastFrameUrl" TEXT,
@@ -1364,20 +1450,37 @@ CREATE TABLE "material_assets" (
     "userId" TEXT NOT NULL,
     "type" VARCHAR(24) NOT NULL,
     "title" VARCHAR(200) NOT NULL,
-    "url" TEXT NOT NULL,
+    "url" TEXT,
     "thumbnailUrl" TEXT,
     "mimeType" VARCHAR(120),
     "size" INTEGER,
     "storageKey" VARCHAR(500),
     "sourceType" VARCHAR(40) NOT NULL,
+    "librarySource" "MaterialLibrarySource" NOT NULL,
+    "sourceResourceType" "ResourceType",
     "sourceId" TEXT,
     "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "metadata" JSONB,
+    "folderId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "material_assets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "material_folders" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "icon" VARCHAR(16),
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "material_folders_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1411,6 +1514,358 @@ CREATE TABLE "admin_audit_logs" (
     CONSTRAINT "admin_audit_logs_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "canvas_boards" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "coverStorageKey" TEXT,
+    "visibility" TEXT NOT NULL DEFAULT 'private',
+    "status" TEXT NOT NULL DEFAULT 'active',
+    "revision" INTEGER NOT NULL DEFAULT 1,
+    "latestStateUpdatedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "canvas_boards_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "canvas_board_snapshots" (
+    "id" TEXT NOT NULL,
+    "boardId" TEXT NOT NULL,
+    "version" INTEGER NOT NULL,
+    "state" JSONB NOT NULL,
+    "thumbnailStorageKey" TEXT,
+    "pinned" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "canvas_board_snapshots_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "canvas_board_actions" (
+    "id" TEXT NOT NULL,
+    "boardId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "actionType" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "idempotencyKey" TEXT,
+    "inputNodeIds" JSONB,
+    "outputNodeIds" JSONB,
+    "placeholderNodeIds" JSONB,
+    "request" JSONB,
+    "result" JSONB,
+    "error" TEXT,
+    "estimatedCost" INTEGER,
+    "relatedHoldId" TEXT,
+    "relatedTaskId" TEXT,
+    "relatedEntityType" TEXT,
+    "relatedEntityId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "canvas_board_actions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "canvas_board_asset_refs" (
+    "id" TEXT NOT NULL,
+    "boardId" TEXT NOT NULL,
+    "refType" TEXT NOT NULL,
+    "refId" TEXT,
+    "storageKey" TEXT,
+    "externalUrl" TEXT,
+    "nodeId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "canvas_board_asset_refs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "gallery_posts" (
+    "id" TEXT NOT NULL,
+    "kind" "GalleryKind" NOT NULL,
+    "title" VARCHAR(200),
+    "description" TEXT,
+    "category" VARCHAR(50) NOT NULL,
+    "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "coverImage" TEXT,
+    "mediaUrls" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "aspectRatio" VARCHAR(20),
+    "durationSec" INTEGER,
+    "prompt" TEXT,
+    "model" VARCHAR(100),
+    "width" INTEGER,
+    "height" INTEGER,
+    "referenceImage" TEXT,
+    "sourceType" "GallerySource" NOT NULL DEFAULT 'USER_UPLOAD',
+    "imageTemplateId" TEXT,
+    "videoTemplateId" TEXT,
+    "imageGenerationId" TEXT,
+    "videoGenerationId" TEXT,
+    "status" "GalleryStatus" NOT NULL DEFAULT 'PENDING',
+    "reviewedById" TEXT,
+    "reviewedAt" TIMESTAMP(3),
+    "rejectReason" VARCHAR(500),
+    "isFeatured" BOOLEAN NOT NULL DEFAULT false,
+    "isPinned" BOOLEAN NOT NULL DEFAULT false,
+    "authorId" TEXT NOT NULL,
+    "mediaMigrated" BOOLEAN NOT NULL DEFAULT true,
+    "mediaMigrationAttempts" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "publishedAt" TIMESTAMP(3),
+
+    CONSTRAINT "gallery_posts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "gallery_comments" (
+    "id" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
+    "userId" TEXT,
+    "parentId" TEXT,
+    "content" VARCHAR(2000) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "gallery_comments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "gallery_reports" (
+    "id" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
+    "reporterId" TEXT,
+    "reason" VARCHAR(500) NOT NULL,
+    "status" "GalleryReportStatus" NOT NULL DEFAULT 'PENDING',
+    "resolvedById" TEXT,
+    "resolvedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "gallery_reports_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "resource_metrics" (
+    "resourceType" "ResourceType" NOT NULL,
+    "resourceId" TEXT NOT NULL,
+    "pvCount" INTEGER NOT NULL DEFAULT 0,
+    "uvCount" INTEGER NOT NULL DEFAULT 0,
+    "viewCount" INTEGER NOT NULL DEFAULT 0,
+    "likeCount" INTEGER NOT NULL DEFAULT 0,
+    "favoriteCount" INTEGER NOT NULL DEFAULT 0,
+    "commentCount" INTEGER NOT NULL DEFAULT 0,
+    "shareCount" INTEGER NOT NULL DEFAULT 0,
+    "referenceCount" INTEGER NOT NULL DEFAULT 0,
+    "citationCount" INTEGER NOT NULL DEFAULT 0,
+    "downloadCount" INTEGER NOT NULL DEFAULT 0,
+    "hotScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "hotScoreVersion" TEXT,
+    "boostScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "boostExpiresAt" TIMESTAMP(3),
+    "firstSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastActivityAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "resource_metrics_pkey" PRIMARY KEY ("resourceType","resourceId")
+);
+
+-- CreateTable
+CREATE TABLE "resource_view_events" (
+    "id" TEXT NOT NULL,
+    "resourceType" "ResourceType" NOT NULL,
+    "resourceId" TEXT NOT NULL,
+    "scope" VARCHAR(20) NOT NULL,
+    "viewerKey" VARCHAR(80) NOT NULL,
+    "userId" TEXT,
+    "visitorId" VARCHAR(64),
+    "sessionId" VARCHAR(64),
+    "minuteBucket" INTEGER NOT NULL,
+    "dayBucket" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "resource_view_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "resource_download_events" (
+    "id" TEXT NOT NULL,
+    "resourceType" "ResourceType" NOT NULL,
+    "resourceId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "resource_download_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "resource_uv_days" (
+    "resourceType" "ResourceType" NOT NULL,
+    "resourceId" TEXT NOT NULL,
+    "viewerKey" VARCHAR(80) NOT NULL,
+    "dayBucket" INTEGER NOT NULL,
+    "firstScope" VARCHAR(20) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "resource_uv_days_pkey" PRIMARY KEY ("resourceType","resourceId","viewerKey","dayBucket")
+);
+
+-- CreateTable
+CREATE TABLE "resource_metric_daily_stats" (
+    "resourceType" "ResourceType" NOT NULL,
+    "resourceId" TEXT NOT NULL,
+    "dayBucket" INTEGER NOT NULL,
+    "pvCount" INTEGER NOT NULL DEFAULT 0,
+    "uvCount" INTEGER NOT NULL DEFAULT 0,
+    "viewCount" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "resource_metric_daily_stats_pkey" PRIMARY KEY ("resourceType","resourceId","dayBucket")
+);
+
+-- CreateTable
+CREATE TABLE "resource_reference_events" (
+    "id" TEXT NOT NULL,
+    "resourceType" "ResourceType" NOT NULL,
+    "resourceId" TEXT NOT NULL,
+    "refType" VARCHAR(30) NOT NULL,
+    "refUserId" TEXT,
+    "refPayload" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "resource_reference_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "resource_boosts" (
+    "id" TEXT NOT NULL,
+    "resourceType" "ResourceType" NOT NULL,
+    "resourceId" TEXT NOT NULL,
+    "boostScore" DOUBLE PRECISION NOT NULL,
+    "reason" "BoostReason" NOT NULL DEFAULT 'MANUAL',
+    "note" VARCHAR(500),
+    "startsAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "endsAt" TIMESTAMP(3) NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdById" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "resource_boosts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "featured_slots" (
+    "id" TEXT NOT NULL,
+    "placement" VARCHAR(40) NOT NULL,
+    "kind" "FeaturedSlotKind" NOT NULL,
+    "resourceType" "ResourceType",
+    "resourceId" TEXT,
+    "overrideTitle" VARCHAR(200),
+    "overrideDescription" VARCHAR(500),
+    "overrideCoverImage" TEXT,
+    "overrideCoverVideo" TEXT,
+    "overrideCtaText" VARCHAR(50),
+    "overrideCtaHref" VARCHAR(500),
+    "position" INTEGER NOT NULL DEFAULT 0,
+    "isEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "startsAt" TIMESTAMP(3),
+    "endsAt" TIMESTAMP(3),
+    "createdById" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "featured_slots_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "email_otps" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT,
+    "emailHash" VARCHAR(128) NOT NULL,
+    "codeHash" TEXT NOT NULL,
+    "purpose" "EmailOtpPurpose" NOT NULL,
+    "sessionId" TEXT NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "maxAttempts" INTEGER NOT NULL DEFAULT 5,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "consumedAt" TIMESTAMP(3),
+    "invalidatedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "email_otps_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "step_up_proofs" (
+    "jti" VARCHAR(64) NOT NULL,
+    "userId" TEXT NOT NULL,
+    "sessionId" VARCHAR(128) NOT NULL,
+    "purpose" "EmailOtpPurpose" NOT NULL,
+    "kind" VARCHAR(32) NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "consumedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "step_up_proofs_pkey" PRIMARY KEY ("jti")
+);
+
+-- CreateTable
+CREATE TABLE "pending_uploads" (
+    "id" TEXT NOT NULL,
+    "ownerUserId" TEXT NOT NULL,
+    "storageKey" TEXT NOT NULL,
+    "storageBucket" TEXT,
+    "contentType" VARCHAR(80),
+    "sizeBytes" INTEGER,
+    "purpose" "PendingUploadPurpose" NOT NULL DEFAULT 'AVATAR',
+    "status" "PendingUploadStatus" NOT NULL DEFAULT 'PENDING',
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "consumedAt" TIMESTAMP(3),
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "pending_uploads_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "storage_cleanup_tasks" (
+    "id" TEXT NOT NULL,
+    "storageKey" VARCHAR(500) NOT NULL,
+    "storageBucket" TEXT,
+    "ownerUserId" TEXT,
+    "reason" "StorageCleanupReason" NOT NULL,
+    "status" "StorageCleanupTaskStatus" NOT NULL DEFAULT 'PENDING',
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "maxAttempts" INTEGER NOT NULL DEFAULT 6,
+    "lastError" TEXT,
+    "scheduledAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "nextRetryAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lockedAt" TIMESTAMP(3),
+    "lockedBy" TEXT,
+    "leaseExpiresAt" TIMESTAMP(3),
+    "completedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "storage_cleanup_tasks_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "rate_limit_counters" (
+    "dimension" VARCHAR(200) NOT NULL,
+    "bucketStart" TIMESTAMP(3) NOT NULL,
+    "count" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "rate_limit_counters_pkey" PRIMARY KEY ("dimension","bucketStart")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "systems_code_key" ON "systems"("code");
 
@@ -1419,6 +1874,12 @@ CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "user_risk_profiles_level_score_idx" ON "user_risk_profiles"("level", "score");
+
+-- CreateIndex
+CREATE INDEX "user_risk_events_userId_createdAt_idx" ON "user_risk_events"("userId", "createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_systemId_code_key" ON "roles"("systemId", "code");
@@ -1452,6 +1913,18 @@ CREATE INDEX "user_accounts_userId_idx" ON "user_accounts"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_accounts_provider_providerAccountId_key" ON "user_accounts"("provider", "providerAccountId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "social_login_states_state_key" ON "social_login_states"("state");
+
+-- CreateIndex
+CREATE INDEX "social_login_states_expiresAt_idx" ON "social_login_states"("expiresAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "social_login_codes_code_key" ON "social_login_codes"("code");
+
+-- CreateIndex
+CREATE INDEX "social_login_codes_expiresAt_idx" ON "social_login_codes"("expiresAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "oauth_clients_clientId_key" ON "oauth_clients"("clientId");
@@ -1520,6 +1993,24 @@ CREATE INDEX "model_configs_visibility_idx" ON "model_configs"("visibility");
 CREATE INDEX "model_config_membership_levels_levelId_idx" ON "model_config_membership_levels"("levelId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "task_definitions_taskType_key" ON "task_definitions"("taskType");
+
+-- CreateIndex
+CREATE INDEX "task_definitions_isActive_idx" ON "task_definitions"("isActive");
+
+-- CreateIndex
+CREATE INDEX "task_model_bindings_modelConfigId_idx" ON "task_model_bindings"("modelConfigId");
+
+-- CreateIndex
+CREATE INDEX "task_model_bindings_taskType_isActive_idx" ON "task_model_bindings"("taskType", "isActive");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "pricing_discounts_code_key" ON "pricing_discounts"("code");
+
+-- CreateIndex
+CREATE INDEX "pricing_discounts_isActive_effectiveFrom_effectiveTo_idx" ON "pricing_discounts"("isActive", "effectiveFrom", "effectiveTo");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "system_settings_key_key" ON "system_settings"("key");
 
 -- CreateIndex
@@ -1535,13 +2026,7 @@ CREATE INDEX "batch_jobs_userId_createdAt_idx" ON "batch_jobs"("userId", "create
 CREATE INDEX "batch_jobs_status_idx" ON "batch_jobs"("status");
 
 -- CreateIndex
-CREATE INDEX "arena_sessions_userId_idx" ON "arena_sessions"("userId");
-
--- CreateIndex
-CREATE INDEX "arena_turns_sessionId_idx" ON "arena_turns"("sessionId");
-
--- CreateIndex
-CREATE INDEX "arena_responses_turnId_idx" ON "arena_responses"("turnId");
+CREATE UNIQUE INDEX "image_templates_sourceGalleryPostId_key" ON "image_templates"("sourceGalleryPostId");
 
 -- CreateIndex
 CREATE INDEX "image_templates_authorId_idx" ON "image_templates"("authorId");
@@ -1562,6 +2047,15 @@ CREATE INDEX "image_templates_publishedAt_idx" ON "image_templates"("publishedAt
 CREATE INDEX "image_templates_isHot_idx" ON "image_templates"("isHot");
 
 -- CreateIndex
+CREATE INDEX "image_templates_sourceType_idx" ON "image_templates"("sourceType");
+
+-- CreateIndex
+CREATE INDEX "image_templates_createdById_idx" ON "image_templates"("createdById");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "image_templates_authorId_systemKey_key" ON "image_templates"("authorId", "systemKey");
+
+-- CreateIndex
 CREATE INDEX "video_templates_authorId_idx" ON "video_templates"("authorId");
 
 -- CreateIndex
@@ -1578,6 +2072,15 @@ CREATE INDEX "video_templates_publishedAt_idx" ON "video_templates"("publishedAt
 
 -- CreateIndex
 CREATE INDEX "video_templates_isHot_idx" ON "video_templates"("isHot");
+
+-- CreateIndex
+CREATE INDEX "video_templates_sourceType_idx" ON "video_templates"("sourceType");
+
+-- CreateIndex
+CREATE INDEX "video_templates_createdById_idx" ON "video_templates"("createdById");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "video_templates_authorId_systemKey_key" ON "video_templates"("authorId", "systemKey");
 
 -- CreateIndex
 CREATE INDEX "skills_authorId_idx" ON "skills"("authorId");
@@ -1781,6 +2284,9 @@ CREATE INDEX "point_grants_userId_grantType_idx" ON "point_grants"("userId", "gr
 CREATE INDEX "point_grants_sourceEvent_sourceId_idx" ON "point_grants"("sourceEvent", "sourceId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "point_grants_userId_sourceEvent_sourceId_key" ON "point_grants"("userId", "sourceEvent", "sourceId");
+
+-- CreateIndex
 CREATE INDEX "point_holds_userId_status_idx" ON "point_holds"("userId", "status");
 
 -- CreateIndex
@@ -1791,24 +2297,6 @@ CREATE INDEX "point_hold_items_holdId_idx" ON "point_hold_items"("holdId");
 
 -- CreateIndex
 CREATE INDEX "point_hold_items_grantId_idx" ON "point_hold_items"("grantId");
-
--- CreateIndex
-CREATE INDEX "generation_pricing_rules_taskType_isActive_idx" ON "generation_pricing_rules"("taskType", "isActive");
-
--- CreateIndex
-CREATE INDEX "generation_pricing_rules_priority_idx" ON "generation_pricing_rules"("priority");
-
--- CreateIndex
-CREATE INDEX "generation_pricing_rules_effectiveFrom_effectiveTo_idx" ON "generation_pricing_rules"("effectiveFrom", "effectiveTo");
-
--- CreateIndex
-CREATE UNIQUE INDEX "generation_pricing_rules_taskType_name_key" ON "generation_pricing_rules"("taskType", "name");
-
--- CreateIndex
-CREATE INDEX "generation_pricing_rule_components_ruleId_isActive_idx" ON "generation_pricing_rule_components"("ruleId", "isActive");
-
--- CreateIndex
-CREATE INDEX "generation_pricing_rule_components_componentType_idx" ON "generation_pricing_rule_components"("componentType");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "campaigns_code_key" ON "campaigns"("code");
@@ -1833,9 +2321,6 @@ CREATE INDEX "user_activity_streaks_userId_updatedAt_idx" ON "user_activity_stre
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_activity_streaks_userId_streakType_key" ON "user_activity_streaks"("userId", "streakType");
-
--- CreateIndex
-CREATE UNIQUE INDEX "amux_credentials_userId_key" ON "amux_credentials"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "agent_workflows_agentId_key" ON "agent_workflows"("agentId");
@@ -1901,7 +2386,7 @@ CREATE INDEX "video_clip_generations_projectId_idx" ON "video_clip_generations"(
 CREATE INDEX "video_clip_generations_userId_createdAt_idx" ON "video_clip_generations"("userId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "video_clip_generations_seedanceTaskId_idx" ON "video_clip_generations"("seedanceTaskId");
+CREATE INDEX "video_clip_generations_protocolKey_providerTaskId_idx" ON "video_clip_generations"("protocolKey", "providerTaskId");
 
 -- CreateIndex
 CREATE INDEX "material_assets_userId_createdAt_idx" ON "material_assets"("userId", "createdAt");
@@ -1911,6 +2396,18 @@ CREATE INDEX "material_assets_userId_type_idx" ON "material_assets"("userId", "t
 
 -- CreateIndex
 CREATE INDEX "material_assets_userId_deletedAt_idx" ON "material_assets"("userId", "deletedAt");
+
+-- CreateIndex
+CREATE INDEX "material_assets_userId_folderId_deletedAt_idx" ON "material_assets"("userId", "folderId", "deletedAt");
+
+-- CreateIndex
+CREATE INDEX "material_assets_userId_librarySource_deletedAt_createdAt_idx" ON "material_assets"("userId", "librarySource", "deletedAt", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "material_assets_userId_librarySource_sourceResourceType_sou_key" ON "material_assets"("userId", "librarySource", "sourceResourceType", "sourceId");
+
+-- CreateIndex
+CREATE INDEX "material_folders_userId_deletedAt_sortOrder_idx" ON "material_folders"("userId", "deletedAt", "sortOrder");
 
 -- CreateIndex
 CREATE INDEX "video_workflow_templates_authorId_idx" ON "video_workflow_templates"("authorId");
@@ -1929,6 +2426,162 @@ CREATE INDEX "admin_audit_logs_actorId_createdAt_idx" ON "admin_audit_logs"("act
 
 -- CreateIndex
 CREATE INDEX "admin_audit_logs_createdAt_idx" ON "admin_audit_logs"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "canvas_boards_userId_updatedAt_idx" ON "canvas_boards"("userId", "updatedAt");
+
+-- CreateIndex
+CREATE INDEX "canvas_board_snapshots_boardId_createdAt_idx" ON "canvas_board_snapshots"("boardId", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "canvas_board_snapshots_boardId_version_key" ON "canvas_board_snapshots"("boardId", "version");
+
+-- CreateIndex
+CREATE INDEX "canvas_board_actions_boardId_createdAt_idx" ON "canvas_board_actions"("boardId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "canvas_board_actions_userId_status_idx" ON "canvas_board_actions"("userId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "canvas_board_actions_boardId_idempotencyKey_key" ON "canvas_board_actions"("boardId", "idempotencyKey");
+
+-- CreateIndex
+CREATE INDEX "canvas_board_asset_refs_boardId_refType_idx" ON "canvas_board_asset_refs"("boardId", "refType");
+
+-- CreateIndex
+CREATE INDEX "canvas_board_asset_refs_refType_refId_idx" ON "canvas_board_asset_refs"("refType", "refId");
+
+-- CreateIndex
+CREATE INDEX "gallery_posts_status_publishedAt_id_idx" ON "gallery_posts"("status", "publishedAt" DESC, "id" DESC);
+
+-- CreateIndex
+CREATE INDEX "gallery_posts_status_kind_publishedAt_id_idx" ON "gallery_posts"("status", "kind", "publishedAt" DESC, "id" DESC);
+
+-- CreateIndex
+CREATE INDEX "gallery_posts_category_idx" ON "gallery_posts"("category");
+
+-- CreateIndex
+CREATE INDEX "gallery_posts_isFeatured_idx" ON "gallery_posts"("isFeatured");
+
+-- CreateIndex
+CREATE INDEX "gallery_posts_authorId_idx" ON "gallery_posts"("authorId");
+
+-- CreateIndex
+CREATE INDEX "gallery_posts_imageTemplateId_idx" ON "gallery_posts"("imageTemplateId");
+
+-- CreateIndex
+CREATE INDEX "gallery_posts_videoTemplateId_idx" ON "gallery_posts"("videoTemplateId");
+
+-- CreateIndex
+CREATE INDEX "gallery_posts_mediaMigrated_mediaMigrationAttempts_idx" ON "gallery_posts"("mediaMigrated", "mediaMigrationAttempts");
+
+-- CreateIndex
+CREATE INDEX "gallery_comments_postId_createdAt_idx" ON "gallery_comments"("postId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "gallery_comments_userId_idx" ON "gallery_comments"("userId");
+
+-- CreateIndex
+CREATE INDEX "gallery_reports_status_createdAt_idx" ON "gallery_reports"("status", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "gallery_reports_postId_idx" ON "gallery_reports"("postId");
+
+-- CreateIndex
+CREATE INDEX "resource_metrics_resourceType_hotScore_resourceId_idx" ON "resource_metrics"("resourceType", "hotScore" DESC, "resourceId" DESC);
+
+-- CreateIndex
+CREATE INDEX "resource_metrics_resourceType_pvCount_idx" ON "resource_metrics"("resourceType", "pvCount" DESC);
+
+-- CreateIndex
+CREATE INDEX "resource_metrics_resourceType_likeCount_idx" ON "resource_metrics"("resourceType", "likeCount" DESC);
+
+-- CreateIndex
+CREATE INDEX "resource_metrics_boostExpiresAt_idx" ON "resource_metrics"("boostExpiresAt");
+
+-- CreateIndex
+CREATE INDEX "resource_view_events_resourceType_resourceId_dayBucket_idx" ON "resource_view_events"("resourceType", "resourceId", "dayBucket");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "resource_view_events_resourceType_resourceId_viewerKey_minu_key" ON "resource_view_events"("resourceType", "resourceId", "viewerKey", "minuteBucket", "scope");
+
+-- CreateIndex
+CREATE INDEX "resource_download_events_resourceType_resourceId_createdAt_idx" ON "resource_download_events"("resourceType", "resourceId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "resource_download_events_userId_createdAt_idx" ON "resource_download_events"("userId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "resource_uv_days_resourceType_resourceId_dayBucket_idx" ON "resource_uv_days"("resourceType", "resourceId", "dayBucket");
+
+-- CreateIndex
+CREATE INDEX "resource_metric_daily_stats_dayBucket_idx" ON "resource_metric_daily_stats"("dayBucket");
+
+-- CreateIndex
+CREATE INDEX "resource_reference_events_resourceType_resourceId_createdAt_idx" ON "resource_reference_events"("resourceType", "resourceId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "resource_boosts_resourceType_resourceId_isActive_idx" ON "resource_boosts"("resourceType", "resourceId", "isActive");
+
+-- CreateIndex
+CREATE INDEX "resource_boosts_endsAt_idx" ON "resource_boosts"("endsAt");
+
+-- CreateIndex
+CREATE INDEX "featured_slots_placement_isEnabled_position_idx" ON "featured_slots"("placement", "isEnabled", "position");
+
+-- CreateIndex
+CREATE INDEX "featured_slots_resourceType_resourceId_idx" ON "featured_slots"("resourceType", "resourceId");
+
+-- CreateIndex
+CREATE INDEX "featured_slots_startsAt_endsAt_idx" ON "featured_slots"("startsAt", "endsAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "featured_slots_placement_position_key" ON "featured_slots"("placement", "position");
+
+-- CreateIndex
+CREATE INDEX "email_otps_userId_sessionId_purpose_idx" ON "email_otps"("userId", "sessionId", "purpose");
+
+-- CreateIndex
+CREATE INDEX "email_otps_emailHash_purpose_idx" ON "email_otps"("emailHash", "purpose");
+
+-- CreateIndex
+CREATE INDEX "email_otps_expiresAt_idx" ON "email_otps"("expiresAt");
+
+-- CreateIndex
+CREATE INDEX "step_up_proofs_userId_sessionId_purpose_idx" ON "step_up_proofs"("userId", "sessionId", "purpose");
+
+-- CreateIndex
+CREATE INDEX "step_up_proofs_expiresAt_idx" ON "step_up_proofs"("expiresAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "pending_uploads_storageKey_key" ON "pending_uploads"("storageKey");
+
+-- CreateIndex
+CREATE INDEX "pending_uploads_ownerUserId_status_idx" ON "pending_uploads"("ownerUserId", "status");
+
+-- CreateIndex
+CREATE INDEX "pending_uploads_expiresAt_status_idx" ON "pending_uploads"("expiresAt", "status");
+
+-- CreateIndex
+CREATE INDEX "storage_cleanup_tasks_status_nextRetryAt_idx" ON "storage_cleanup_tasks"("status", "nextRetryAt");
+
+-- CreateIndex
+CREATE INDEX "storage_cleanup_tasks_status_leaseExpiresAt_idx" ON "storage_cleanup_tasks"("status", "leaseExpiresAt");
+
+-- CreateIndex
+CREATE INDEX "storage_cleanup_tasks_storageKey_idx" ON "storage_cleanup_tasks"("storageKey");
+
+-- CreateIndex
+CREATE INDEX "storage_cleanup_tasks_ownerUserId_idx" ON "storage_cleanup_tasks"("ownerUserId");
+
+-- CreateIndex
+CREATE INDEX "rate_limit_counters_bucketStart_idx" ON "rate_limit_counters"("bucketStart");
+
+-- AddForeignKey
+ALTER TABLE "user_risk_profiles" ADD CONSTRAINT "user_risk_profiles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_risk_events" ADD CONSTRAINT "user_risk_events_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "roles" ADD CONSTRAINT "roles_systemId_fkey" FOREIGN KEY ("systemId") REFERENCES "systems"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -2012,19 +2665,31 @@ ALTER TABLE "model_config_membership_levels" ADD CONSTRAINT "model_config_member
 ALTER TABLE "model_config_membership_levels" ADD CONSTRAINT "model_config_membership_levels_modelConfigId_fkey" FOREIGN KEY ("modelConfigId") REFERENCES "model_configs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "task_model_bindings" ADD CONSTRAINT "task_model_bindings_taskType_fkey" FOREIGN KEY ("taskType") REFERENCES "task_definitions"("taskType") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "task_model_bindings" ADD CONSTRAINT "task_model_bindings_modelConfigId_fkey" FOREIGN KEY ("modelConfigId") REFERENCES "model_configs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "task_events" ADD CONSTRAINT "task_events_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "arena_sessions" ADD CONSTRAINT "arena_sessions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "image_templates" ADD CONSTRAINT "image_templates_sourceGalleryPostId_fkey" FOREIGN KEY ("sourceGalleryPostId") REFERENCES "gallery_posts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "arena_turns" ADD CONSTRAINT "arena_turns_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "arena_sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "image_templates" ADD CONSTRAINT "image_templates_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "arena_responses" ADD CONSTRAINT "arena_responses_turnId_fkey" FOREIGN KEY ("turnId") REFERENCES "arena_turns"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "image_templates" ADD CONSTRAINT "image_templates_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "image_templates" ADD CONSTRAINT "image_templates_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "video_templates" ADD CONSTRAINT "video_templates_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "video_templates" ADD CONSTRAINT "video_templates_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "video_templates" ADD CONSTRAINT "video_templates_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -2117,9 +2782,6 @@ ALTER TABLE "point_hold_items" ADD CONSTRAINT "point_hold_items_holdId_fkey" FOR
 ALTER TABLE "point_hold_items" ADD CONSTRAINT "point_hold_items_grantId_fkey" FOREIGN KEY ("grantId") REFERENCES "point_grants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "generation_pricing_rule_components" ADD CONSTRAINT "generation_pricing_rule_components_ruleId_fkey" FOREIGN KEY ("ruleId") REFERENCES "generation_pricing_rules"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "campaign_rewards" ADD CONSTRAINT "campaign_rewards_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "campaigns"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -2127,9 +2789,6 @@ ALTER TABLE "campaign_rewards" ADD CONSTRAINT "campaign_rewards_userId_fkey" FOR
 
 -- AddForeignKey
 ALTER TABLE "user_activity_streaks" ADD CONSTRAINT "user_activity_streaks_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "amux_credentials" ADD CONSTRAINT "amux_credentials_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "agent_workflows" ADD CONSTRAINT "agent_workflows_agentId_fkey" FOREIGN KEY ("agentId") REFERENCES "agents"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -2180,4 +2839,35 @@ ALTER TABLE "video_clip_generations" ADD CONSTRAINT "video_clip_generations_clip
 ALTER TABLE "material_assets" ADD CONSTRAINT "material_assets_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "material_assets" ADD CONSTRAINT "material_assets_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "material_folders"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "material_folders" ADD CONSTRAINT "material_folders_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "video_workflow_templates" ADD CONSTRAINT "video_workflow_templates_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas_boards" ADD CONSTRAINT "canvas_boards_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas_board_snapshots" ADD CONSTRAINT "canvas_board_snapshots_boardId_fkey" FOREIGN KEY ("boardId") REFERENCES "canvas_boards"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas_board_actions" ADD CONSTRAINT "canvas_board_actions_boardId_fkey" FOREIGN KEY ("boardId") REFERENCES "canvas_boards"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas_board_asset_refs" ADD CONSTRAINT "canvas_board_asset_refs_boardId_fkey" FOREIGN KEY ("boardId") REFERENCES "canvas_boards"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "gallery_posts" ADD CONSTRAINT "gallery_posts_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "email_otps" ADD CONSTRAINT "email_otps_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "step_up_proofs" ADD CONSTRAINT "step_up_proofs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pending_uploads" ADD CONSTRAINT "pending_uploads_ownerUserId_fkey" FOREIGN KEY ("ownerUserId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

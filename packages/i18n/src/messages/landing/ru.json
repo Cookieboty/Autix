@@ -14,7 +14,7 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "Вход",
       "signInOrRegister": "Вход / Регистрация",
       "freePlan": "Free Plan",
       "credits": "Credits",
@@ -24,7 +24,8 @@
       "upgrade": "Upgrade",
       "viewProfile": "View profile",
       "manageAccount": "Manage account",
-      "signOut": "Sign Out"
+      "signOut": "Sign Out",
+      "signUp": "Регистрация"
     },
     "footer": {
       "description": "Public growth pages for AI images, videos, presets, creators, and shareable collections.",
@@ -499,24 +500,6 @@
         "0": "Просматривать и сохранять вдохновение",
         "1": "Приватные черновики и базовая публикация",
         "2": "Подходит для нечастого использования"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "Пробный пакет",
-          "description": "Небольшое пополнение кредитов для разовых проектов"
-        },
-        "standard": {
-          "name": "Стандартный пакет",
-          "description": "Пополнение кредитов для активных авторов"
-        },
-        "pro": {
-          "name": "Про-пакет",
-          "description": "Частое пополнение, требуется активная подписка"
-        },
-        "team": {
-          "name": "Командный пакет",
-          "description": "Командное пополнение с коммерческими правами по уровню подписки"
-        }
       },
       "creditsMo": "{count} кредитов/мес.",
       "fixedCredits": "Фиксировано {count} кредитов/мес.",

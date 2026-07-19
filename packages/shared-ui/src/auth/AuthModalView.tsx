@@ -45,7 +45,6 @@ export function AuthModalView({
   onRequiresActivation,
   onSendResetEmail,
   oauthProviders,
-  oauthComingSoon,
   onOAuthLogin,
   oauthLoadingProvider,
   oauthError,
@@ -75,7 +74,6 @@ export function AuthModalView({
         onForgotPassword={() => onModeChange('forgot')}
         onRegister={() => onModeChange('register')}
         oauthProviders={oauthProviders}
-        oauthComingSoon={oauthComingSoon}
         onOAuthLogin={onOAuthLogin}
         oauthLoadingProvider={oauthLoadingProvider}
         oauthError={oauthError}
@@ -86,7 +84,7 @@ export function AuthModalView({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-h-[calc(100svh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-md border-0 bg-transparent p-0 text-white ring-0 sm:w-[min(1180px,calc(100vw-2rem))] sm:max-w-[1180px]"
+        className="max-h-[calc(100svh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-[28px] border-0 bg-transparent p-0 text-white ring-0 sm:w-[min(1160px,calc(100vw-2rem))] sm:max-w-[1160px]"
       >
         <DialogTitle className="sr-only">Sign in to Amux Studio</DialogTitle>
         <DialogDescription className="sr-only">

@@ -297,7 +297,12 @@
     "packagesHeading": "Gói điểm",
     "plansHeading": "Gói thành viên",
     "currentLevel": "Gói hiện tại",
-    "levelFree": "Miễn phí"
+    "levelFree": "Miễn phí",
+    "footnote": "Giá chưa bao gồm VAT và thuế địa phương, sẽ được tính khi thanh toán. Gói tín dụng cộng dồn với gói thành viên nhưng không bao gồm quyền lợi riêng của thành viên.",
+    "shortfallSummary": "Thao tác này cần {required} tín dụng. Bạn có {available}, còn thiếu {shortfall}.",
+    "unlockFeature": "Mở khóa {name}",
+    "unlockFeatureDesc": "Nâng cấp gói hoặc nạp thêm tín dụng để tiếp tục tạo với {name}",
+    "unlockGeneric": "Mở khóa thêm lượt tạo"
   },
   "pricing": {
     "params": {

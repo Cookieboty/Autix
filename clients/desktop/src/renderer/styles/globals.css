@@ -453,3 +453,34 @@ button, a, [role='button'] {
   background: var(--secondary);
   font-size: 0.8rem;
 }
+
+/* ── 计费/会员模块共用设计令牌 ──────────────────────────────
+ * shared-ui 的 membership / pricing 视图（MembershipUpgradeView、
+ * MembershipPackagesView 及各计费弹框）统一对标 web 端 /pricing 页，
+ * 依赖以下 growth-* 令牌与工具类。取值与 clients/web/app/globals.css 保持一致。 */
+:root {
+  --growth-accent: #d1fe17;
+  --growth-accent-hover: oklch(0.96 0.19 122);
+  --growth-plan-top: #ff2f87;
+}
+
+@theme inline {
+  --color-growth-accent: var(--growth-accent);
+  --color-growth-accent-hover: var(--growth-accent-hover);
+}
+
+/* 计费周期切换（PlanCards.tsx / MembershipUpgradeView.tsx） */
+.growth-billing-tab {
+  background-color: transparent;
+  color: color-mix(in srgb, var(--color-foreground) 66%, transparent);
+}
+
+.growth-billing-tab-active {
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+}
+
+/* 计费弹框外壳投影（对标导航头像下拉） */
+.growth-dropdown-shadow {
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.55);
+}

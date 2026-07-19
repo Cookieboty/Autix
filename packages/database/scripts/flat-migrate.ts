@@ -133,6 +133,19 @@ async function resolveFailedMigrations(client: pg.Client) {
       if (isAlreadyExistsError(msg)) {
         await markAsApplied(client, migration_name, checksum);
         console.log(`✅ [flat-migrate] baselined (schema already exists): ${migration_name}`);
+      } else if (isMissingObjectError(msg) && isPureTeardown(sql)) {
+        // 纯拆除迁移抱怨对象不存在 ⇒ 拆除已经发生过（典型成因：有人对同一个库跑过
+        // `prisma db push`，schema 同步掉了表，但 _prisma_migrations 不会记录）。
+        // 这里与 already-exists 分支对称：那边是建表类迁移的幂等，这边是删表类的。
+        //
+        // 只在「全部语句都是 DROP / ALTER ... DROP」时成立 —— 一条只删东西的迁移
+        // 抱怨东西不存在，语义上就是已完成。若放宽到任意迁移，真正因为缺前置表而
+        // 失败的迁移会被静默跳过，掩盖真问题。
+        //
+        // 残留清理不归这里管：cutover 链里 db:deploy 之后就是 db:reconcile
+        // （prisma db push），会把本条迁移中尚未删掉的其余对象一并同步掉。
+        await markAsApplied(client, migration_name, checksum);
+        console.log(`✅ [flat-migrate] baselined (teardown already applied): ${migration_name}`);
       } else {
         await client.query(
           `DELETE FROM "_prisma_migrations" WHERE migration_name = $1`,
@@ -146,6 +159,30 @@ async function resolveFailedMigrations(client: pg.Client) {
 
 function isAlreadyExistsError(message: string): boolean {
   return /already exists|duplicate key|relation .+ already exists/i.test(message);
+}
+
+function isMissingObjectError(message: string): boolean {
+  return /does not exist/i.test(message);
+}
+
+/**
+ * 该迁移是否只做拆除（全部语句为 `DROP ...` 或 `ALTER TABLE ... DROP ...`）。
+ *
+ * 用于判断 "does not exist" 是否等价于「已经做过了」。含任何建表/加列语句的迁移
+ * 不适用 —— 那种情况下的 "does not exist" 往往说明前置迁移没跑成功，必须暴露出来。
+ */
+function isPureTeardown(sql: string): boolean {
+  const statements = sql
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split(';')
+    .map((s) => s.replace(/^\s*--.*$/gm, '').trim())
+    .filter(Boolean);
+
+  if (statements.length === 0) return false;
+
+  return statements.every(
+    (s) => /^drop\s/i.test(s) || /^alter\s+table\s+[\s\S]+?\sdrop\s/i.test(s),
+  );
 }
 
 async function markAsApplied(client: pg.Client, migrationName: string, checksum: string) {

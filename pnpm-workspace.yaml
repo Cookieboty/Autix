@@ -11,6 +11,19 @@ packages:
 # Next/Turbopack dev watchers walk a far larger graph.
 nodeLinker: hoisted
 
+# 关闭 `pnpm run` 前的 node_modules/lockfile 一致性校验。
+#
+# 生产镜像（services/api/Dockerfile）里的 node_modules 是手工拼装的：根目录来自
+# `--prod --filter @autix/api...`，外加几条指向各包 dist 的软链。这与「完整
+# workspace 安装」的预期天然不符，pnpm 判定需要清空重装，而容器里没有 TTY 可供
+# 确认，直接中止：ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY。容器 CMD 里的
+# db:prepare-cutover 串了 6 个 pnpm run，每个都会触发。
+#
+# 与 nodeLinker 同理，pnpm 11 只从本文件读该设置 —— 在 Dockerfile 里设
+# npm_config_verify_deps_before_run 环境变量是无效的（已验证）。因此只能配在这里，
+# 代价是本地开发也不再自动提示依赖过期，改动 package.json 后需自行 pnpm install。
+verifyDepsBeforeRun: false
+
 # Postinstall scripts pnpm is allowed to run. Everything here either downloads a
 # native binary or generates an engine; without it the package is inert.
 allowBuilds:

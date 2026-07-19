@@ -226,7 +226,7 @@ export function assertPlaceholdersMatch(
       if (translated === undefined) continue; // 缺键由 assertAligned 负责报告
       const want = extract(baseValue);
       const got = extract(translated);
-      if (want.join(' ') === got.join(' ')) continue;
+      if (want.join('\u0000') === got.join('\u0000')) continue;
       const lost = want.filter((a) => !got.includes(a));
       const added = got.filter((a) => !want.includes(a));
       const detail = [

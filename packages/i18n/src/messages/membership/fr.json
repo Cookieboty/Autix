@@ -297,7 +297,12 @@
     "packagesHeading": "Packs de points",
     "plansHeading": "Plans d'abonnement",
     "currentLevel": "Formule actuelle",
-    "levelFree": "Gratuit"
+    "levelFree": "Gratuit",
+    "footnote": "Les prix excluent la TVA et les taxes locales, calculées au paiement. Les packs de crédits se cumulent avec votre forfait mais n'incluent pas les avantages réservés aux membres.",
+    "shortfallSummary": "Cette action nécessite {required} crédits. Vous en avez {available}, il en manque {shortfall}.",
+    "unlockFeature": "Débloquer {name}",
+    "unlockFeatureDesc": "Passez à un forfait supérieur ou rechargez vos crédits pour continuer avec {name}",
+    "unlockGeneric": "Débloquez plus de générations"
   },
   "pricing": {
     "params": {

@@ -14,7 +14,7 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "ログイン",
       "signInOrRegister": "ログイン/登録",
       "freePlan": "Free Plan",
       "credits": "Credits",
@@ -24,7 +24,8 @@
       "upgrade": "Upgrade",
       "viewProfile": "View profile",
       "manageAccount": "Manage account",
-      "signOut": "Sign Out"
+      "signOut": "Sign Out",
+      "signUp": "新規登録"
     },
     "footer": {
       "description": "Public growth pages for AI images, videos, presets, creators, and shareable collections.",
@@ -499,24 +500,6 @@
         "0": "公開作品を閲覧・収集",
         "1": "非公開ドラフトと基本公開",
         "2": "ライトユーザー向け"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "トライアルパック",
-          "description": "単発プロジェクト向けの軽量クレジット補充"
-        },
-        "standard": {
-          "name": "スタンダードパック",
-          "description": "アクティブクリエイター向けクレジット補充"
-        },
-        "pro": {
-          "name": "プロパック",
-          "description": "高頻度補充、アクティブなメンバーシップが必要"
-        },
-        "team": {
-          "name": "チームパック",
-          "description": "メンバーシップランクに応じた商用権付きチームクレジット補充"
-        }
       },
       "creditsMo": "{count} クレジット/月",
       "fixedCredits": "毎月 {count} クレジット固定",

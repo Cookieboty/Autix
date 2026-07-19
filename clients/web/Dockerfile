@@ -4,7 +4,7 @@ FROM node:22-alpine AS builder
 RUN corepack enable pnpm
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/domain/package.json packages/domain/
@@ -31,6 +31,13 @@ RUN pnpm --filter @autix/domain build
 COPY packages/shared-store/ packages/shared-store/
 COPY packages/shared-ui/ packages/shared-ui/
 COPY clients/web/ clients/web/
+
+# 构建期必需：lib/i18n/site-url.ts 的 `export const SITE_URL = resolveSiteUrl()`
+# 在模块加载时就求值，而 app/[locale]/layout.tsx 用它做 metadataBase。Next 收集
+# 页面数据时会加载这些模块，NODE_ENV=production 下缺这个变量直接 throw。
+# 因此站点域名是烤进镜像的 —— 测试与生产是两个不同的镜像，靠分支各自的 tag 区分。
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 
 RUN pnpm --filter @autix/web build
 

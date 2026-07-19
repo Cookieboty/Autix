@@ -337,7 +337,7 @@
     },
     "accountMenu": {
       "accountMenu": "Account menu",
-      "signIn": "Sign in",
+      "signIn": "Connexion",
       "signInOrRegister": "Connexion / Inscription",
       "freePlan": "Free Plan",
       "credits": "Credits",
@@ -347,7 +347,8 @@
       "upgrade": "Upgrade",
       "viewProfile": "View profile",
       "manageAccount": "Manage account",
-      "signOut": "Sign Out"
+      "signOut": "Sign Out",
+      "signUp": "Inscription"
     },
     "footer": {
       "description": "Public growth pages for AI images, videos, presets, creators, and shareable collections.",
@@ -822,24 +823,6 @@
         "0": "Parcourir et collecter l'inspiration",
         "1": "Brouillons privés et publication basique",
         "2": "Idéal pour les essais occasionnels"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "Pack Découverte",
-          "description": "Complément de crédits léger pour des projets ponctuels"
-        },
-        "standard": {
-          "name": "Pack Standard",
-          "description": "Complétez vos crédits en tant que créateur actif"
-        },
-        "pro": {
-          "name": "Pack Pro",
-          "description": "Recharge haute fréquence, réservée aux membres actifs"
-        },
-        "team": {
-          "name": "Pack Équipe",
-          "description": "Complément d'équipe avec droits commerciaux selon le niveau d'abonnement"
-        }
       },
       "creditsMo": "{count} crédits/mois",
       "fixedCredits": "Montant fixe de {count} crédits/mois",

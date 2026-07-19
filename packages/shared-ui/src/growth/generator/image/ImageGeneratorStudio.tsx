@@ -9,6 +9,7 @@ import {
   galleryActions,
   publicGalleryActions,
   publicGeneratorActions,
+  setBillingGateContext,
   useAuthStore,
   useUiStore,
   type GalleryFeedItem,
@@ -432,6 +433,8 @@ export function ImageGeneratorStudio({
       ...prev,
     ]);
     changeMode('history');
+    // 被计费拦截时弹框要说清「解锁的是哪个模型」，HTTP 层拿不到这个上下文
+    setBillingGateContext({ featureName: selectedModel?.name ?? payload.model });
     try {
       const data = await publicGeneratorActions.generateImage({
         model: payload.model,

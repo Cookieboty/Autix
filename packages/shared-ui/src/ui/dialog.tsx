@@ -47,23 +47,45 @@ function DialogOverlay({
   )
 }
 
+/**
+ * `default` 为居中卡片；`fullscreen` 铺满视口、无圆角、内容自身滚动，
+ * 用于需要整页承载的场景（如计费拦截页）。默认值保持 `default`，
+ * 既有调用方行为不变。
+ */
+type DialogContentVariant = "default" | "fullscreen"
+
+const DIALOG_CONTENT_VARIANTS: Record<DialogContentVariant, string> = {
+  default:
+    "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl bg-popover p-6 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+  fullscreen:
+    "fixed inset-0 z-50 flex w-screen max-w-none flex-col overflow-y-auto bg-background text-sm text-foreground duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+}
+
 function DialogContent({
   className,
+  overlayClassName,
   children,
   showCloseButton = true,
+  variant = "default",
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  variant?: DialogContentVariant
+  /** 透传给遮罩层；全屏场景通常要盖掉默认的半透明 + 模糊 */
+  overlayClassName?: string
 }) {
+  const isFullscreen = variant === "fullscreen"
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay
+        className={cn(
+          isFullscreen && "bg-background supports-backdrop-filter:backdrop-blur-none",
+          overlayClassName
+        )}
+      />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl bg-popover p-6 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-          className
-        )}
+        className={cn(DIALOG_CONTENT_VARIANTS[variant], className)}
         {...props}
       >
         {children}
@@ -71,7 +93,12 @@ function DialogContent({
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button
               variant="ghost"
-              className="absolute top-4 right-4 bg-secondary"
+              className={cn(
+                "absolute top-4 right-4 bg-secondary",
+                // 全屏内容自身滚动，关闭键必须钉在视口而不是随内容滚走
+                isFullscreen &&
+                  "fixed top-5 right-5 z-10 rounded-full bg-transparent hover:bg-secondary"
+              )}
               size="icon-sm"
             >
               <XIcon

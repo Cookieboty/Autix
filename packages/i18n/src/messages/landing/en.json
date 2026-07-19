@@ -347,7 +347,8 @@
       "upgrade": "Upgrade",
       "viewProfile": "View profile",
       "manageAccount": "Manage account",
-      "signOut": "Sign Out"
+      "signOut": "Sign Out",
+      "signUp": "Sign up"
     },
     "footer": {
       "description": "Public growth pages for AI images, videos, presets, creators, and shareable collections.",
@@ -822,24 +823,6 @@
         "0": "Browse and collect inspiration",
         "1": "Private drafts and basic publishing",
         "2": "Best for light testing"
-      },
-      "topupFallback": {
-        "trial": {
-          "name": "Trial Pack",
-          "description": "Lightweight credit supplement for one-off projects"
-        },
-        "standard": {
-          "name": "Standard Pack",
-          "description": "Supplement credits for active creators"
-        },
-        "pro": {
-          "name": "Pro Pack",
-          "description": "High-frequency supplement, requires active membership"
-        },
-        "team": {
-          "name": "Team Pack",
-          "description": "Team credit supplement with commercial rights per membership tier"
-        }
       },
       "creditsMo": "{count} credits/mo.",
       "fixedCredits": "Fixed amount of {count} credits/mo",
