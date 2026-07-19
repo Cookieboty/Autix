@@ -1326,6 +1326,8 @@ export interface DirectVideoGenerationDto {
   error: string | null;
   options: Record<string, unknown>;
   materials: Array<{ role: string; url: string; sourceType?: string; name?: string | null }>;
+  /** 该生成当前活着的广场帖（无活帖则不附），用于历史里的状态徽章与下架/重发。 */
+  galleryPost?: ImageGenerationGalleryPost;
   createdAt: string;
 }
 

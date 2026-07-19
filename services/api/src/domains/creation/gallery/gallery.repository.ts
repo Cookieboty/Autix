@@ -79,6 +79,24 @@ export class GalleryRepository {
     });
   }
 
+  /** 同上，按视频生成 id 批量取活帖（video workbench history 用）。 */
+  findActivePostsByVideoGenerationIds(
+    videoGenerationIds: string[],
+    authorId: string,
+  ): Promise<
+    Array<{ id: string; status: GalleryStatus; rejectReason: string | null; videoGenerationId: string | null }>
+  > {
+    if (videoGenerationIds.length === 0) return Promise.resolve([]);
+    return this.prisma.gallery_posts.findMany({
+      where: {
+        videoGenerationId: { in: videoGenerationIds },
+        authorId,
+        status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
+      },
+      select: { id: true, status: true, rejectReason: true, videoGenerationId: true },
+    });
+  }
+
   update(id: string, data: Prisma.gallery_postsUncheckedUpdateInput) {
     return this.prisma.gallery_posts.update({ where: { id }, data });
   }

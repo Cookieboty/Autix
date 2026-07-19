@@ -540,6 +540,19 @@ export class GalleryService {
     );
   }
 
+  /** 同上，按视频生成 id 取活帖。 */
+  async findActivePostsByVideoGenerationIds(authorId: string, videoGenerationIds: string[]) {
+    const posts = await this.repo.findActivePostsByVideoGenerationIds(videoGenerationIds, authorId);
+    return new Map(
+      posts
+        .filter((post) => !!post.videoGenerationId)
+        .map((post) => [
+          post.videoGenerationId as string,
+          { id: post.id, status: post.status, rejectReason: post.rejectReason },
+        ]),
+    );
+  }
+
   /**
    * GET /gallery/feed：公开热度 Feed（首页图片/视频画廊消费）。
    * 只返回 PUBLISHED 作品，按 kind 分流（IMAGE/VIDEO），并附带互动指标（无指标行则补零）。
