@@ -32,6 +32,32 @@ export interface MaterialUploadInput {
   sourceType?: MaterialAssetSourceType;
 }
 
+/**
+ * 素材上传被会员门槛挡下。
+ *
+ * 后端在 `createUploadUrl` 和 `create` 两处都会 `assertCanAddOrUse`，非会员抛 403
+ * `需要有效会员才能使用素材`。SDK 的积分不足拦截器只认「积分不足 / insufficient points」
+ * 这几个关键词，接不住会员错误，所以在这里显式识别并抛成专用错误，由调用方唤起付费弹框。
+ */
+export class MaterialMembershipError extends Error {
+  constructor(public readonly reason?: string) {
+    super(reason ?? 'membership required');
+    this.name = 'MaterialMembershipError';
+  }
+}
+
+/** 403 且不是积分不足 → 判定为会员门槛 */
+function isMembershipBlocked(error: unknown): boolean {
+  const err = error as { status?: number; response?: { status?: number }; msg?: string };
+  const status = err?.status ?? err?.response?.status;
+  return status === 403;
+}
+
+function membershipReason(error: unknown): string | undefined {
+  const err = error as { msg?: string; response?: { data?: { msg?: string } } };
+  return err?.msg ?? err?.response?.data?.msg;
+}
+
 export class MaterialUploadError extends Error {
   constructor(public readonly fileName: string) {
     super(fileName);
@@ -92,11 +118,18 @@ export const useMaterialStore = create<MaterialState>((set) => ({
     const created: MaterialAsset[] = [];
     for (const input of files) {
       const contentType = inferContentType(input.file);
-      const presign = await materialsApi.uploadUrl({
-        fileName: input.file.name,
-        contentType,
-        ...(input.folder ? { folder: input.folder } : {}),
-      });
+      let presign;
+      try {
+        presign = await materialsApi.uploadUrl({
+          fileName: input.file.name,
+          contentType,
+          ...(input.folder ? { folder: input.folder } : {}),
+        });
+      } catch (error) {
+        // 会员门槛在拿预签名这一步就会拦下，不用等到 create
+        if (isMembershipBlocked(error)) throw new MaterialMembershipError(membershipReason(error));
+        throw error;
+      }
       const uploadRes = await uploadToPresignedUrl(presign.data.uploadUrl, input.file, {
         contentType,
       });
@@ -104,7 +137,9 @@ export const useMaterialStore = create<MaterialState>((set) => ({
       const title =
         (input.title ?? input.file.name.replace(/\.[^.]+$/, '')) ||
         input.file.name;
-      const res = await materialsApi.create({
+      let res;
+      try {
+        res = await materialsApi.create({
         type: input.type,
         title,
         url: presign.data.publicUrl,
@@ -119,7 +154,11 @@ export const useMaterialStore = create<MaterialState>((set) => ({
         storageKey: presign.data.key,
         sourceType: input.sourceType ?? 'upload',
         folderId: input.folderId ?? null,
-      });
+        });
+      } catch (error) {
+        if (isMembershipBlocked(error)) throw new MaterialMembershipError(membershipReason(error));
+        throw error;
+      }
       created.push(res.data);
     }
     set((state) => ({ items: [...created, ...state.items] }));

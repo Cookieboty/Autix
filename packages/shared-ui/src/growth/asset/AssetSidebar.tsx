@@ -12,6 +12,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Upload,
   Video,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -48,10 +49,11 @@ const NAV_MUTED = '#737475';
 const NAV_HOVER = 'rgba(255,255,255,0.72)';
 const NAV_ACTIVE = '#ffffff';
 
-type BucketKey = 'all' | 'favorites' | 'image' | 'video';
+type BucketKey = 'all' | 'favorites' | 'uploads' | 'image' | 'video';
 
 const BUCKETS: Array<{ key: BucketKey; icon: ComponentType<{ className?: string }> }> = [
   { key: 'all', icon: Layers },
+  { key: 'uploads', icon: Upload },
   { key: 'favorites', icon: Heart },
 ];
 

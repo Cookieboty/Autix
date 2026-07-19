@@ -26,7 +26,7 @@ const ASSET_PAGE_SIZE = 40;
  */
 
 /** /asset 的分桶：URL 上的一段，决定往素材库带哪组筛选。 */
-export type AssetBucket = 'all' | 'favorites' | 'image' | 'video';
+export type AssetBucket = 'all' | 'favorites' | 'uploads' | 'image' | 'video';
 
 export interface AssetLibraryQuery {
   bucket: AssetBucket;
@@ -50,6 +50,10 @@ function bucketParams(bucket: AssetBucket) {
       return { type: 'video' as const, excludeFavorites: true };
     case 'favorites':
       return { librarySource: 'FAVORITE' as const };
+    // 用户主动上传的素材（工具里传的参考图/视频/音频，以及素材库页的上传）。
+    // 后端在 POST /materials 里把 librarySource 硬写为 UPLOAD，故只按它筛即可。
+    case 'uploads':
+      return { librarySource: 'UPLOAD' as const };
     case 'all':
     default:
       return { excludeFavorites: true };
