@@ -41,7 +41,9 @@ export function PublicHomeView({ home }: { home?: PublicHomeData | null }) {
         <HomeGallerySection
           title={t('home.videoGalleryTitle')}
           subtitle={t('home.videoGallerySubtitle')}
-          viewAllHref="/gallery?kind=VIDEO"
+          /* 与 image 对称：视频广场是 /ai/video 右栏的一个 tab。
+             原来指向 /gallery?kind=VIDEO —— 那个索引路由根本不存在（只有 /gallery/[id]），点了 404。 */
+          viewAllHref="/ai/video?mode=gallery"
           source="video"
         />
 
