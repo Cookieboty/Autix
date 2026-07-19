@@ -60,12 +60,13 @@ export function videoModelHref(name: string): string {
 
 /**
  * 导航 Video 下拉的 Features（key 对应 `publicGrowth.videoNavFlyout` 文案）。
- * gallery 项走 `?tab=gallery`——video 页的广场是右栏的一个 tab，
- * 与 image 页的 `?mode=gallery` 不是同一个参数，各自按自己页面的约定来。
+ * gallery 项与 image 页**共用同一个 `?mode=gallery` 参数** —— 早期 video 用的是
+ * `?tab=gallery`，两边规则不一致会让用户在两个页面间来回切时发现地址栏规律对不上，
+ * 已统一。这里若漏改，点进去只会落到默认的 history tab。
  */
 export const VIDEO_NAV_FEATURES = [
   { key: 'createVideo', href: '/ai/video' },
-  { key: 'gallery', href: '/ai/video?tab=gallery' },
+  { key: 'gallery', href: '/ai/video?mode=gallery' },
 ] as const;
 
 export type VideoNavFeatureKey = (typeof VIDEO_NAV_FEATURES)[number]['key'];
