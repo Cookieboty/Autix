@@ -15,14 +15,19 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { computeTaskEstimate, type ParamsSchema, type PricingSchema } from '@autix/domain/pricing';
-import { authActions, useAuthStore, type ModelConfigItem } from '@autix/shared-store';
+import {
+  authActions,
+  MaterialMembershipError,
+  openBillingGate,
+  useAuthStore,
+  useMaterialStore,
+  type ModelConfigItem,
+} from '@autix/shared-store';
 import { MagneticButton, SpotlightPanel } from '../../GrowthInteractions';
 import { translateSchemaKey, useSchemaForm } from '../../../pricing';
 import {
   getImageReferenceUploadLimit,
 } from '../../generator-image-presenters';
-import { readFilesAsDataUrls } from '../media-inputs';
-import { OfferStrip } from '../parts';
 import type { PublicUploadedReference } from '../generator-studio-helpers';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../ui/tooltip';
 import { ImageModelParamMenu } from './ImageParamMenus';
@@ -124,6 +129,7 @@ export function ImageComposer({
   }, [autoPublish]);
   const [uploadedRefs, setUploadedRefs] = useState<PublicUploadedReference[]>([]);
   const [uploading, setUploading] = useState(false);
+  const uploadMaterialFiles = useMaterialStore((s) => s.uploadMaterialFiles);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -252,21 +258,29 @@ export function ImageComposer({
 
     setUploading(true);
     try {
-      const urls = await readFilesAsDataUrls(imageFiles);
-      const stamp = Date.now();
+      // 上传到 R2 并登记进素材库，参考图因此可在 /asset 的 Uploads 里复用。
+      // 之前是 readFilesAsDataUrls 转 base64：用完即丢，且大图会把请求体撑爆。
+      const created = await uploadMaterialFiles(
+        imageFiles.map((file) => ({ type: 'image' as const, file, sourceType: 'upload' as const })),
+      );
       setUploadedRefs((current) =>
         limitPublicUploadedReferences(
           [
             ...current,
-            ...urls.map((url, index) => ({
-              id: `upload-${stamp}-${index}`,
-              url,
-              name: imageFiles[index]?.name ?? t('uploadImage'),
+            ...created.map((asset, index) => ({
+              id: asset.id,
+              url: asset.url,
+              name: asset.title || imageFiles[index]?.name || t('uploadImage'),
             })),
           ],
           uploadLimit,
         ),
       );
+    } catch (error) {
+      // 非会员会在预签名那一步被 403 拦下 → 唤起付费弹框，交互与其它计费拦截一致
+      if (error instanceof MaterialMembershipError) {
+        openBillingGate({ msg: error.reason ?? t('uploadImage') });
+      }
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -319,11 +333,9 @@ export function ImageComposer({
 
   return (
     <div className="pointer-events-auto relative mx-auto w-full max-w-6xl px-4">
-      <OfferStrip
-        label={t('imageOffer')}
-        premium={t('premiumPlans')}
-        className="mx-auto mb-2 max-w-6xl"
-      />
+      {/* 引导付费条幅（OfferStrip）暂时摘掉，原因同 video 侧：无会员门槛（付费用户
+          也会看到），且折扣数字是前端常量、与后端扣费用的 discountFactor 不同源。
+          补齐这两点后再放回来。 */}
       <SpotlightPanel className="growth-panel-shadow mx-auto rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(32,34,37,0.88),rgba(24,26,29,0.92))] p-[22px] backdrop-blur-[32px]">
         <div className="grid items-stretch gap-3 md:grid-cols-[1fr_174px]">
           <div className="min-w-0">

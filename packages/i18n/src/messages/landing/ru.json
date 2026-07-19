@@ -352,7 +352,54 @@
         "publish": "Опубликовать",
         "lastViewed": "Последний просмотр",
         "copyShareLink": "Копировать ссылку на работу",
-        "copiedShareLinkToast": "Ссылка скопирована"
+        "copiedShareLinkToast": "Ссылка скопирована",
+        "galleryEmptyTitle": "Пока нет видео",
+        "galleryEmptyDescription": "Здесь появятся видео, опубликованные сообществом.",
+        "assetTabUploads": "Загрузки",
+        "assetTabImageGen": "Генерации изображений",
+        "assetTabVideoGen": "Генерации видео",
+        "assetLoadFailed": "Не удалось загрузить",
+        "assetUploadFailed": "Ошибка загрузки",
+        "assetEmpty": "Пока пусто",
+        "assetDelete": "Удалить",
+        "assetPreview": "Просмотр",
+        "assetFilter": "Фильтр",
+        "assetFilterBy": "Фильтр по типу",
+        "assetFilterAll": "Все",
+        "assetFilterImages": "Изображения",
+        "assetFilterVideos": "Видео",
+        "assetFilterAudio": "Аудио",
+        "remove": "Убрать",
+        "assetMore": "Ещё",
+        "mentionEmpty": "Сначала выберите материалы",
+        "trimAudioTitle": "Обрезать аудио",
+        "trimAudioHint": "Выберите нужный фрагмент (до {seconds} с)",
+        "trimAudioSave": "Сохранить",
+        "trimAudioCancel": "Отмена",
+        "trimAudioPlay": "Воспроизвести",
+        "trimAudioPause": "Пауза",
+        "trimAudioDecodeFailed": "Не удалось прочитать аудиофайл",
+        "trimAudioHandleStart": "Начало",
+        "trimAudioHandleEnd": "Конец",
+        "videoTooLong": "{name} длиннее {seconds} с и не может быть использовано. Обрежьте и загрузите снова.",
+        "bannerGeneral": "Универсальный",
+        "copyVideoUrl": "Копировать ссылку на видео",
+        "deleteVideo": "Удалить видео",
+        "videoDetail": "Детали видео",
+        "videoRatio": "Соотношение сторон",
+        "videoResolution": "Разрешение",
+        "videoDuration": "Длительность",
+        "secondsValue": "{seconds} с",
+        "publishSubmittedVideoToast": "Отправлено на модерацию: {count}",
+        "deletedVideoToast": "Удалено видео: {count}",
+        "deleteVideoBlockedToast": "Это видео в галерее. Сначала отзовите или снимите с публикации",
+        "deleteVideoConfirmTitle": "Удалить видео: {count}",
+        "deleteVideoConfirmDescription": "Будет безвозвратно удалено генераций: {count}, вместе с видео. Отменить нельзя.",
+        "play": "Воспроизвести",
+        "pause": "Пауза",
+        "mediaTypeFull": "Эта модель принимает не более {max} файлов типа «{type}»",
+        "ratioFromImage": "Формат по изображению",
+        "ratioFromImageHint": "Эта модель берёт соотношение сторон из первого кадра, поэтому настройка здесь не действует."
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -801,7 +848,9 @@
         "all": "All Assets",
         "favorites": "Favorites",
         "image": "Image",
-        "video": "Video"
+        "video": "Video",
+        "uploads": "Загрузки",
+        "audio": "Аудио"
       },
       "empty": {
         "title": "Your assets will appear here",
@@ -814,7 +863,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "Имя файла",
+        "uploader": "Загрузил"
       },
       "fit": {
         "toCover": "Fill card",
@@ -840,7 +891,10 @@
         "moveFailed": "Could not move asset",
         "deleteFailed": "Could not delete asset",
         "save": "Save",
-        "more": "More"
+        "more": "More",
+        "publish": "Опубликовать",
+        "play": "Воспроизвести",
+        "pause": "Пауза"
       },
       "bulk": {
         "download": "Download",
@@ -885,8 +939,17 @@
       "createImageDesc": "Генерация ИИ-изображений",
       "editImage": "Редактировать изображение",
       "editImageDesc": "Изменение и доработка изображений",
-      "gallery": "Галерея",
-      "galleryDesc": "Смотреть работы сообщества"
+      "gallery": "Галерея изображений",
+      "galleryDesc": "Изображения сообщества"
+    },
+    "videoNavFlyout": {
+      "models": "Модели",
+      "loading": "Загрузка моделей…",
+      "features": "Возможности",
+      "createVideo": "Создать видео",
+      "createVideoDesc": "Генерация видео с ИИ",
+      "gallery": "Галерея видео",
+      "galleryDesc": "Видео сообщества"
     }
   },
   "landing": {

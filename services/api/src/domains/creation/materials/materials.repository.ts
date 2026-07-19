@@ -43,6 +43,10 @@ export class MaterialsRepository {
         where: { ...where, librarySource: 'FAVORITE' },
       }),
       this.prisma.material_assets.count({ where: own }),
+      // 用户上传分桶。走 @@index([userId, librarySource, deletedAt, createdAt])
+      this.prisma.material_assets.count({
+        where: { ...where, librarySource: 'UPLOAD' },
+      }),
     ]);
   }
 

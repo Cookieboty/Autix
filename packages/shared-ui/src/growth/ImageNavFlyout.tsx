@@ -5,8 +5,8 @@ import { ImagePlus, LayoutGrid, Wand2, type LucideIcon } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-store';
 import { ModelVendorIcon } from '../brand';
-import { Link } from '../navigation';
 import { Popover, PopoverAnchor, PopoverContent } from '../ui/popover';
+import { NavFlyoutRow } from './NavFlyoutRow';
 import { resolveModelDescription } from './generator/model-description';
 import {
   IMAGE_NAV_FEATURES,
@@ -26,44 +26,6 @@ const FEATURE_ICONS: Record<ImageNavFeatureKey, LucideIcon> = {
   gallery: LayoutGrid,
 };
 
-function FlyoutRow({
-  href,
-  icon,
-  title,
-  desc,
-  badge,
-  onNavigate,
-}: {
-  href: string;
-  icon: ReactNode;
-  title: string;
-  desc?: string;
-  badge?: ReactNode;
-  onNavigate: () => void;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      className="group flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-white/[0.04]"
-    >
-      <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/8 bg-white/5 text-foreground/70">
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold text-foreground transition-colors group-hover:text-growth-accent">
-            {title}
-          </span>
-          {badge}
-        </span>
-        {desc ? (
-          <span className="mt-0.5 block truncate text-xs text-foreground/45">{desc}</span>
-        ) : null}
-      </span>
-    </Link>
-  );
-}
 
 /**
  * 导航「Image」悬浮下拉：点击照常进入 /ai/image；悬浮弹出 Features（Create / Edit / Gallery）
@@ -130,7 +92,7 @@ export function ImageNavFlyout({ children }: { children: ReactNode }) {
           {IMAGE_NAV_FEATURES.map((feature) => {
             const Icon = FEATURE_ICONS[feature.key];
             return (
-              <FlyoutRow
+              <NavFlyoutRow
                 key={feature.key}
                 href={feature.href}
                 icon={<Icon className="size-5" />}
@@ -151,7 +113,7 @@ export function ImageNavFlyout({ children }: { children: ReactNode }) {
             </div>
           ) : (
             models.map((model) => (
-              <FlyoutRow
+              <NavFlyoutRow
                 key={model.id}
                 href={imageModelHref(model.name)}
                 // 默认灰度弱化，悬浮该行时恢复厂商品牌彩色（Gemini/ByteDance 图标本身带色）

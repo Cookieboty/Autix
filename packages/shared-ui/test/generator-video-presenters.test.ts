@@ -50,7 +50,8 @@ describe('resolveVideoCapabilityFromModelConfig', () => {
     const cap = resolveVideoCapabilityFromModelConfig(model);
 
     expect(cap.displayName).toBe('Seedance 2.0 Fast');
-    expect(cap.resolutions).toEqual(['480p', '720p']);
+    // fast 档按上游文档只有 720p（此前表里多给的 480p 上游并不支持，选中即失败）
+    expect(cap.resolutions).toEqual(['720p']);
   });
 });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Download, Ellipsis, Eye, ImageIcon, RefreshCw, Share2, Trash2, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { ImageActionMenu } from './ImageActionMenu';
 import { buildImageActionMenuItems } from './image-action-items';
 import { resolveGalleryShareUrl } from './gallery-share-link';
 import { useLocalizePath } from '../../../navigation';
+import { buildJustifiedRows, useElementWidth } from '../justified-rows';
 
 export type PendingImageGenerationCard = {
   id: string;
@@ -42,53 +43,6 @@ const HISTORY_ROW_HEIGHT: Record<TemplateDensity, number> = {
   dense: 340,
   xdense: 260,
 };
-
-const HISTORY_GAP = 3;
-
-/**
- * justified 行打包：按目标行高贪心分行；每满一行再按容器宽度反算实际行高，
- * 使整行正好铺满宽度 —— 每张图始终按真实比例展示（不裁切），窗口缩小时整体等比缩小。
- */
-function buildJustifiedRows<T extends { ratio: number }>(
-  cells: T[],
-  containerWidth: number,
-  targetHeight: number,
-): Array<{ cells: T[]; height: number }> {
-  if (containerWidth <= 0 || cells.length === 0) return [];
-  const rows: Array<{ cells: T[]; height: number }> = [];
-  let row: T[] = [];
-  let ratioSum = 0;
-  for (const cell of cells) {
-    row.push(cell);
-    ratioSum += cell.ratio;
-    const naturalWidth = ratioSum * targetHeight + (row.length - 1) * HISTORY_GAP;
-    if (naturalWidth >= containerWidth) {
-      const available = containerWidth - (row.length - 1) * HISTORY_GAP;
-      rows.push({ cells: row, height: available / ratioSum });
-      row = [];
-      ratioSum = 0;
-    }
-  }
-  // 末行不拉伸，保持目标行高（左对齐、右侧留白）
-  if (row.length) rows.push({ cells: row, height: targetHeight });
-  return rows;
-}
-
-/** 订阅元素宽度（ResizeObserver，callback ref 以适配元素延迟挂载），用于 justified 行高计算 */
-function useElementWidth<T extends HTMLElement>() {
-  const [width, setWidth] = useState(0);
-  const observerRef = useRef<ResizeObserver | null>(null);
-  const ref = useCallback((el: T | null) => {
-    observerRef.current?.disconnect();
-    observerRef.current = null;
-    if (!el) return;
-    setWidth(el.clientWidth);
-    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
-    observer.observe(el);
-    observerRef.current = observer;
-  }, []);
-  return { ref, width };
-}
 
 function imageKey(itemId: string, image: PublicImageHistoryImage): string {
   return `${itemId}::${image.generationId ?? ''}::${image.index}`;

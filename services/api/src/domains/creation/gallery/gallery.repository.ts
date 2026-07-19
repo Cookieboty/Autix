@@ -2,6 +2,64 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, GalleryKind, GallerySource, GalleryStatus, ResourceType, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
+/** 生成参数里的画幅比。直连在 params.options.ratio，分镜/项目在 params.ratio。 */
+function extractRatio(params: unknown): string | null {
+  const bag = params as { ratio?: unknown; options?: { ratio?: unknown } } | null;
+  const ratio = bag?.options?.ratio ?? bag?.ratio;
+  return typeof ratio === 'string' && ratio !== 'adaptive' ? ratio : null;
+}
+
+/** params.materials[] 里被视作「参考图」的 role（与 video-project.service 的 role 联合类型对齐）。 */
+const REFERENCE_IMAGE_ROLES = new Set(['first_frame', 'last_frame', 'reference_image']);
+
+/**
+ * video_clip_generations.params 里的参考图提取。
+ *
+ * clip 表没有 image_generations.referenceImage 那样的独立列，输入媒体在 params 里，
+ * 而 params 的形状**逐链路不同**：
+ * - 直连（/ai/video）：buildDirectGenerationParamsSnapshot 产出
+ *   `{ schemaVersion, mode:'direct', options, materials, providerRequest }`，
+ *   参考图在 `materials[]`（`{ role, url }`），providerRequest 里另有一份协议态的
+ *   `content[]`（`{ type:'image_url', image_url:{ url } }`）。
+ * - 分镜 / 项目：normalizeClipParams 产出的模板参数记录（duration/ratio/... ），
+ *   不带输入媒体 —— 这类生成的参考图挂在 clip.materials 关系上，不在 params 里。
+ *
+ * 所以先读 materials[]，再退到 providerRequest.content[]，都拿不到就返回 null
+ * （参考图快照本就是保守默认为空的可选字段）。
+ *
+ * 注意别再写成读顶层 `params.content[]` —— 那个形状在生产上根本不存在，
+ * 会让视频投稿的参考图快照静默恒为 null。
+ */
+function extractFirstReferenceImage(params: unknown): string | null {
+  const bag = params as { materials?: unknown; providerRequest?: { content?: unknown } } | null;
+
+  const materials = bag?.materials;
+  if (Array.isArray(materials)) {
+    for (const item of materials) {
+      const entry = item as { role?: unknown; url?: unknown };
+      if (
+        typeof entry?.role === 'string' &&
+        REFERENCE_IMAGE_ROLES.has(entry.role) &&
+        typeof entry.url === 'string'
+      ) {
+        return entry.url;
+      }
+    }
+  }
+
+  const content = bag?.providerRequest?.content;
+  if (Array.isArray(content)) {
+    for (const item of content) {
+      const entry = item as { type?: unknown; image_url?: { url?: unknown } };
+      if (entry?.type === 'image_url' && typeof entry.image_url?.url === 'string') {
+        return entry.image_url.url;
+      }
+    }
+  }
+
+  return null;
+}
+
 /** gallery_posts / gallery_reports 的数据访问层。所有状态迁移由 service 层用 assertTransition 校验后再调用这里。 */
 @Injectable()
 export class GalleryRepository {
@@ -57,6 +115,18 @@ export class GalleryRepository {
     });
   }
 
+  /** 同上，按视频生成 id 查活帖（规则逐字一致，见 findActivePostByImageGenerationId）。 */
+  findActivePostByVideoGenerationId(videoGenerationId: string, authorId: string) {
+    return this.prisma.gallery_posts.findFirst({
+      where: {
+        videoGenerationId,
+        authorId,
+        status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
+      },
+      select: { id: true, status: true },
+    });
+  }
+
   /**
    * 按一组来源生成记录批量查活帖——与 findActivePostByImageGenerationId 同一条规则
    * （status NOT IN (REMOVED, DRAFT)），一次 findMany，供 workbench history 整页回传
@@ -76,6 +146,24 @@ export class GalleryRepository {
         status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
       },
       select: { id: true, status: true, rejectReason: true, imageGenerationId: true },
+    });
+  }
+
+  /** 同上，按视频生成 id 批量取活帖（video workbench history 用）。 */
+  findActivePostsByVideoGenerationIds(
+    videoGenerationIds: string[],
+    authorId: string,
+  ): Promise<
+    Array<{ id: string; status: GalleryStatus; rejectReason: string | null; videoGenerationId: string | null }>
+  > {
+    if (videoGenerationIds.length === 0) return Promise.resolve([]);
+    return this.prisma.gallery_posts.findMany({
+      where: {
+        videoGenerationId: { in: videoGenerationIds },
+        authorId,
+        status: { notIn: [GalleryStatus.REMOVED, GalleryStatus.DRAFT] },
+      },
+      select: { id: true, status: true, rejectReason: true, videoGenerationId: true },
     });
   }
 
@@ -330,18 +418,51 @@ export class GalleryRepository {
     });
   }
 
-  findVideoGenerationOwner(id: string) {
-    return this.prisma.video_generations.findUnique({
+  /**
+   * 视频投稿归属校验 —— 查的是 video_clip_generations（现役表）。
+   *
+   * 此前查的是 video_generations（第一代表）：该表全仓不存在任何 update，行永远
+   * 停在 status='pending'、generatedVideos 恒为空数组，所以视频投稿从未真正成功过
+   * （归属校验必然拿到空 mediaUrls）。/ai/video 直连、工作台分镜、聊天生成三条现役
+   * 链路写的都是 clip 表，这里改为对齐它。
+   *
+   * 列名差异在此消化，对上仍返回与 image 侧同构的形状（modelUsed / generatedVideos），
+   * 让 GalleryService.assertOwnership 无需分支：
+   * - modelUsed ← model
+   * - generatedVideos ← videoUrl 单元素数组（clip 表一行一视频，未完成则为空数组）
+   * - referenceImage ← params 里的输入图（见 extractFirstReferenceImage）
+   * - coverImage ← thumbnailUrl ?? lastFrameUrl（图片侧没有这个概念，故为视频独有）
+   */
+  async findVideoGenerationOwner(id: string) {
+    const row = await this.prisma.video_clip_generations.findUnique({
       where: { id },
       select: {
         userId: true,
         resolvedPrompt: true,
-        modelUsed: true,
-        referenceImage: true,
-        // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
-        generatedVideos: true,
+        model: true,
+        videoUrl: true,
+        thumbnailUrl: true,
+        lastFrameUrl: true,
+        durationSec: true,
+        params: true,
       },
     });
+    if (!row) return null;
+    return {
+      userId: row.userId,
+      resolvedPrompt: row.resolvedPrompt,
+      modelUsed: row.model,
+      referenceImage: extractFirstReferenceImage(row.params),
+      // Task 4.5：FROM_GENERATION 投稿的 mediaUrls 从这里派生，不采信 DTO。
+      generatedVideos: row.videoUrl ? [row.videoUrl] : [],
+      // 视频封面必须单独给：图片投稿的 coverImage 取 mediaUrls[0] 天然成立，
+      // 视频的 mediaUrls[0] 是 mp4，拿去当 <img src> / <video poster> 只会是一片空白。
+      coverImage: row.thumbnailUrl ?? row.lastFrameUrl,
+      // 展示字段也从生成记录取：这两个此前直接采信 DTO，是这条投稿链路上唯一
+      // 没被服务端快照覆盖的口子（用户传 aspectRatio:'999:1' 就能让详情页显示伪造尺寸）。
+      aspectRatio: extractRatio(row.params),
+      durationSec: row.durationSec,
+    };
   }
 
   /**

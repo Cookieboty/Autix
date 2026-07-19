@@ -254,6 +254,13 @@ export interface ModelConfigItem {
   isDefault: boolean;
   capabilities: string[];
   visibility: string;
+  /**
+   * 该模型的参数 schema。`/api/models/public/available` 对**每个**模型都整行返回，
+   * 所以模型列表里就能读到分辨率枚举 / 时长范围 / 是否支持音频，无需再逐个请求。
+   * （此前类型里漏了，前端误以为只有选中模型才有 schema。）
+   */
+  paramsSchema?: ParamsSchema | null;
+  schemaVersion?: number;
   baseUrl?: string | null;
   apiKey?: string | null;
   allowedMembershipLevels?: Array<{
@@ -425,6 +432,8 @@ export type MaterialSourceState = 'available' | 'unpublished' | 'blocked' | 'mis
 export interface MaterialCounts {
   all: number;
   favorites: number;
+  /** 用户上传（librarySource='UPLOAD'） */
+  uploads: number;
   image: number;
   video: number;
   audio: number;
@@ -899,23 +908,6 @@ export interface ImageGeneration {
   turns?: GenerationTurn[];
 }
 
-export interface VideoGeneration {
-  id: string;
-  templateId: string;
-  template?: Pick<VideoTemplate, 'title' | 'coverImage' | 'category' | 'prompt' | 'variables'>;
-  userId: string;
-  modelUsed: string;
-  resolvedPrompt: string;
-  variables?: Record<string, string>;
-  referenceImage?: string;
-  generatedVideos: string[];
-  status: string;
-  error?: string;
-  durationMs?: number;
-  createdAt: string;
-  turns?: GenerationTurn[];
-}
-
 export type TemplateGeneration = ImageGeneration;
 
 export interface GenerationTurn {
@@ -978,17 +970,9 @@ export const imageTemplateApi = {
     ),
 };
 
-export const videoTemplateApi = {
-  ...makeResourceApi<VideoTemplate>('video-templates'),
-  createGeneration: (
-    templateId: string,
-    data: { modelUsed: string; variables: Record<string, string>; referenceImage?: string },
-  ) =>
-    chatApi.post<VideoGeneration>(
-      `/api/marketplace/video-templates/${templateId}/generations`,
-      data,
-    ),
-};
+// 模板视频生成没有 createGeneration：那条链路写的是已删除的 video_generations 表，
+// 会扣费但永不产出，路由已随表一并移除。现役视频生成走 videoGenApi（clip 表）。
+export const videoTemplateApi = makeResourceApi<VideoTemplate>('video-templates');
 
 export const skillApi = makeResourceApi<Skill>('skills');
 export const mcpApi = makeResourceApi<McpServer>('mcp');
@@ -1007,18 +991,6 @@ export const imageGenerationApi = {
     chatApi.post<GenerationTurn>(`/api/generations/image/${id}/turns`, data),
   myGenerations: (params?: { page?: number; pageSize?: number }) =>
     chatApi.get<PaginatedResult<ImageGeneration>>('/api/generations/image/my', { params }),
-};
-
-export const videoGenerationApi = {
-  getById: (id: string) =>
-    chatApi.get<VideoGeneration>(`/api/generations/video/${id}`),
-  addTurn: (
-    id: string,
-    data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
-  ) =>
-    chatApi.post<GenerationTurn>(`/api/generations/video/${id}/turns`, data),
-  myGenerations: (params?: { page?: number; pageSize?: number }) =>
-    chatApi.get<PaginatedResult<VideoGeneration>>('/api/generations/video/my', { params }),
 };
 
 export const generationApi = imageGenerationApi;
@@ -1317,6 +1289,8 @@ export interface DirectVideoGenerationDto {
   error: string | null;
   options: Record<string, unknown>;
   materials: Array<{ role: string; url: string; sourceType?: string; name?: string | null }>;
+  /** 该生成当前活着的广场帖（无活帖则不附），用于历史里的状态徽章与下架/重发。 */
+  galleryPost?: ImageGenerationGalleryPost;
   createdAt: string;
 }
 

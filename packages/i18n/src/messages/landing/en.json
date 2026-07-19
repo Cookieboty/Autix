@@ -675,7 +675,54 @@
         "publish": "Publish",
         "lastViewed": "Last viewed",
         "copyShareLink": "Copy link to post",
-        "copiedShareLinkToast": "Post link copied"
+        "copiedShareLinkToast": "Post link copied",
+        "galleryEmptyTitle": "No videos yet",
+        "galleryEmptyDescription": "Published videos from the community will show up here.",
+        "assetTabUploads": "Uploads",
+        "assetTabImageGen": "Image Generations",
+        "assetTabVideoGen": "Video Generations",
+        "assetLoadFailed": "Failed to load assets",
+        "assetUploadFailed": "Upload failed",
+        "assetEmpty": "Nothing here yet",
+        "assetDelete": "Delete",
+        "assetPreview": "Preview",
+        "assetFilter": "Filter",
+        "assetFilterBy": "Filter by",
+        "assetFilterAll": "All media",
+        "assetFilterImages": "Images",
+        "assetFilterVideos": "Videos",
+        "assetFilterAudio": "Audio",
+        "remove": "Remove",
+        "assetMore": "More",
+        "mentionEmpty": "Select assets first",
+        "trimAudioTitle": "Trim audio",
+        "trimAudioHint": "Choose the segment you want to use (max {seconds}s)",
+        "trimAudioSave": "Save",
+        "trimAudioCancel": "Cancel",
+        "trimAudioPlay": "Play",
+        "trimAudioPause": "Pause",
+        "trimAudioDecodeFailed": "Cannot read this audio file",
+        "trimAudioHandleStart": "Adjust start",
+        "trimAudioHandleEnd": "Adjust end",
+        "videoTooLong": "{name} is longer than {seconds}s and can’t be used. Trim it first, then upload again.",
+        "bannerGeneral": "General",
+        "copyVideoUrl": "Copy video link",
+        "deleteVideo": "Delete video",
+        "videoDetail": "Video detail",
+        "videoRatio": "Aspect ratio",
+        "videoResolution": "Resolution",
+        "videoDuration": "Duration",
+        "secondsValue": "{seconds}s",
+        "publishSubmittedVideoToast": "Submitted {count} video(s) for review",
+        "deletedVideoToast": "Deleted {count} video(s)",
+        "deleteVideoBlockedToast": "This video is in the gallery. Withdraw or unpublish it first",
+        "deleteVideoConfirmTitle": "Delete {count} video(s)",
+        "deleteVideoConfirmDescription": "This permanently deletes {count} generation(s) and their videos. This cannot be undone.",
+        "play": "Play",
+        "pause": "Pause",
+        "mediaTypeFull": "Up to {max} {type} file(s) for this model",
+        "ratioFromImage": "Ratio from image",
+        "ratioFromImageHint": "This model takes the aspect ratio from your first frame, so the ratio setting has no effect."
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -1124,7 +1171,9 @@
         "all": "All Assets",
         "favorites": "Favorites",
         "image": "Image",
-        "video": "Video"
+        "video": "Video",
+        "uploads": "Uploads",
+        "audio": "Audio"
       },
       "empty": {
         "title": "Your assets will appear here",
@@ -1137,7 +1186,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "File name",
+        "uploader": "Uploaded by"
       },
       "fit": {
         "toCover": "Fill card",
@@ -1163,7 +1214,10 @@
         "moveFailed": "Could not move asset",
         "deleteFailed": "Could not delete asset",
         "save": "Save",
-        "more": "More"
+        "more": "More",
+        "publish": "Publish",
+        "play": "Play",
+        "pause": "Pause"
       },
       "bulk": {
         "download": "Download",
@@ -1208,8 +1262,17 @@
       "createImageDesc": "Generate AI images",
       "editImage": "Edit Image",
       "editImageDesc": "Modify and refine images",
-      "gallery": "Gallery",
-      "galleryDesc": "Explore community creations"
+      "gallery": "Image Gallery",
+      "galleryDesc": "Explore community images"
+    },
+    "videoNavFlyout": {
+      "models": "Models",
+      "loading": "Loading models…",
+      "features": "Features",
+      "createVideo": "Create Video",
+      "createVideoDesc": "Generate AI videos",
+      "gallery": "Video Gallery",
+      "galleryDesc": "Explore community videos"
     }
   }
 }

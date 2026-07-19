@@ -14,11 +14,12 @@ import {
   type ModelConfigItem,
 } from '@autix/shared-store';
 import type { ParamsSchema, PricingSchema } from '@autix/domain/pricing';
-import type { PublicGrowthMediaItem } from '../../types';
 import { VideoSidebar } from './VideoSidebar';
 import { VideoHowItWorks } from './VideoHowItWorks';
 import type { PublicVideoGenerationPayload } from './public-video-generation';
 import type { PendingVideoGenerationCard } from './VideoHistoryPanel';
+import type { StudioMode } from '../generator-studio-helpers';
+import { buildStudioSearch, parseStudioMode } from '../image/gallery-url';
 
 /** 轮询终态：completed/failed/expired 都收敛为「结束」，非 completed 的按失败处理。 */
 const TERMINAL_VIDEO_STATUSES = new Set(['completed', 'failed', 'expired']);
@@ -29,7 +30,6 @@ const VIDEO_POLL_MAX_ATTEMPTS = 120;
 const VIDEO_POLL_INTERVAL_MS = 3000;
 
 export function VideoGeneratorStudio({
-  items,
   initialModel,
   videoModels,
   selectedModel,
@@ -40,8 +40,9 @@ export function VideoGeneratorStudio({
   pricingSchema,
   pricingContext,
   onModelChange,
+  initialMode = 'history',
+  syncUrl = false,
 }: {
-  items: PublicGrowthMediaItem[];
   initialModel?: string | null;
   videoModels: ModelConfigItem[];
   selectedModel: ModelConfigItem | null;
@@ -52,9 +53,46 @@ export function VideoGeneratorStudio({
   pricingSchema: PricingSchema | undefined;
   pricingContext: { multiplier: number; discountFactor: number };
   onModelChange: (modelId: string) => void;
+  /**
+   * 初始 Tab，由服务端从 `?mode=` 解析后传入（见 ai/video/page.tsx）。
+   *
+   * 必须走服务端而不是在客户端读 location.search：后者 SSR 时读不到，首帧渲染成
+   * 「history 选中」，客户端再变成 gallery —— 属性不一致，React 明确不会修补，
+   * 表现就是直接打开 ?mode=gallery 时内容是广场、Gallery 那个 tab 却是灰的。
+   */
+  initialMode?: StudioMode;
+  /** 把 Tab 写进地址栏。Web 端开；桌面端 HashRouter 地址栏不可见，开了没意义。 */
+  syncUrl?: boolean;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const [tab, setTab] = useState<'history' | 'howItWorks'>('howItWorks');
+  // Tab 以本地 state 为准、URL 只是镜像 —— 与 /ai/image 完全同一套（含 ?mode= 参数名）。
+  //
+  // 此前这里读的是 shared-ui 那个 useSearchParams shim + router.replace，有两个毛病：
+  // 1) shim 在 useState 初始化里读 window.location.search，SSR 读不到 → hydration 不匹配；
+  // 2) 它只监听 popstate，而 router.replace 不触发 popstate → 点 tab 后 tab 值根本不变，
+  //    表现为「切换 tab 没反应、也不加载对应数据」。
+  const [tab, setTabState] = useState<StudioMode>(initialMode);
+  const setTab = useCallback(
+    (next: StudioMode) => {
+      setTabState(next);
+      if (!syncUrl || typeof window === 'undefined') return;
+      // 原生 History API 而不是 router.replace：后者会走一趟服务端、整页重挂载，
+      // 正在生成的任务和输入框内容都会没。切 Tab 只要地址栏变，不要导航。
+      const search = buildStudioSearch(window.location.search, next);
+      window.history.replaceState(null, '', `${window.location.pathname}${search}`);
+    },
+    [syncUrl],
+  );
+  // 浏览器前进/后退：地址栏里的 ?mode= 是 Tab 的真相来源
+  useEffect(() => {
+    if (!syncUrl || typeof window === 'undefined') return;
+    const handlePopState = () => setTabState(parseStudioMode(window.location.search));
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [syncUrl]);
+  // 素材面板的挂载宿主（右栏容器）。用 state 而非 ref：ref 变化不触发重渲染，
+  // portal 目标拿不到就永远渲染不出来。
+  const [assetPanelHost, setAssetPanelHost] = useState<HTMLDivElement | null>(null);
   const [generating, setGenerating] = useState(false);
   const [pendingGeneration, setPendingGeneration] = useState<PendingVideoGenerationCard | null>(null);
   const [textModels, setTextModels] = useState<ModelConfigItem[]>([]);
@@ -73,6 +111,11 @@ export function VideoGeneratorStudio({
   // 组件卸载标记：轮询 while 循环里用来提前退出，避免卸载后仍触发 setState。
   const unmountedRef = useRef(false);
   useEffect(() => {
+    // 挂载时必须复位：React 18 dev 的 StrictMode 会 mount→unmount→remount，
+    // 只在 cleanup 里置 true 的话第二次挂载后它永远是 true，轮询循环第一次判断
+    // 就 return —— 开发环境下刷新页面后进行中的任务永远不会转成 completed，
+    // 很容易被误判成后端问题。
+    unmountedRef.current = false;
     return () => {
       unmountedRef.current = true;
     };
@@ -140,10 +183,15 @@ export function VideoGeneratorStudio({
     }
   }, [historyItems, isAuthenticated]);
 
-  const handleDeleteHistory = async (id: string) => {
-    await publicGeneratorActions.deleteVideoHistory(id);
-    await reloadHistory();
+  /**
+   * 历史「Recreate」：把该次生成的提示词推回侧边栏输入框，并切到 history 之外无需动作
+   * （用户就在这个页面上，直接改了输入框即可）。token 递增让连点两次也能生效。
+   */
+  const [injectedPrompt, setInjectedPrompt] = useState<{ text: string; token: number } | undefined>();
+  const applyPrompt = (text: string) => {
+    setInjectedPrompt((prev) => ({ text, token: (prev?.token ?? 0) + 1 }));
   };
+  const handleRecreate = (item: DirectVideoGenerationDto) => applyPrompt(item.prompt);
 
   useEffect(() => {
     // 优化模型列表用登录后的通用/对话模型（公开模型接口通常不含 chat 模型）；
@@ -235,22 +283,29 @@ export function VideoGeneratorStudio({
         }
         await new Promise((resolve) => setTimeout(resolve, VIDEO_POLL_INTERVAL_MS));
       }
-      await reloadHistory();
     } finally {
+      // 无论成功、失败还是轮询超时都要重拉历史。
+      //
+      // 原来 reloadHistory() 写在 try 末尾：生成失败会在上面 throw 出去，这一行根本
+      // 走不到 —— 失败的那条任务不会进列表，用户只看到占位块消失、什么都没留下，
+      // 得刷新页面才看见那条 failed 记录。轮询到上限退出（既没完成也没失败）同理。
+      await reloadHistory();
       setGenerating(false);
       setPendingGeneration(null);
     }
   };
 
+  // lg 起吃满滚动容器高度：右栏据此做「自身滚动 + 顶栏悬浮」，外层滚动条不再出现
   return (
-    <div className="relative min-h-[calc(100svh-104px)]">
+    <div className="relative min-h-[calc(100svh-104px)] lg:h-full lg:min-h-0">
       {/* 背景由 PublicGeneratorStudioView 的全屏固定底层统一提供，此处不再自带背景，避免滑动时错位漏底 */}
-      <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-3 px-4 py-3 lg:flex-row lg:px-6">
-        {/* Keep the original DOM (form first, display second) so the display stays
-            a direct flex child. Only flip the desktop visual order: form → right,
-            display → left. Mobile keeps the form on top (source order). */}
-        <div className="lg:order-2 lg:w-[320px] lg:shrink-0">
+      {/* 与导航核心内容同宽：max-w-[1920px] + px-3/md:px-5。
+          只留上内边距：右栏内容卡片要一直贴到视口底部，有下内边距就会露出一条缝。 */}
+      <div className="relative z-10 mx-auto flex max-w-[1920px] flex-col gap-4 px-3 pb-3 pt-3 md:px-5 lg:h-full lg:pb-0 lg:flex-row">
+        {/* 编辑区在左、引导/历史区在右；移动端编辑区在上（同 DOM 顺序） */}
+        <div className="lg:w-[320px] lg:shrink-0">
           <VideoSidebar
+            assetPanelHost={assetPanelHost}
             initialModel={initialModel}
             videoModels={videoModels}
             selectedModel={selectedModel}
@@ -269,17 +324,22 @@ export function VideoGeneratorStudio({
             onTextModelChange={setSelectedTextModelId}
             optimizing={optimizing}
             onOptimizePrompt={handleOptimizePrompt}
+            injectedPrompt={injectedPrompt}
           />
         </div>
+        {/* 右栏包一层定位容器：素材面板 portal 到这里，正好覆盖右侧内容区 */}
+        <div ref={setAssetPanelHost} className="relative min-w-0 flex-1 lg:h-full">
         <VideoHowItWorks
-          items={items}
           activeTab={tab}
           pendingGeneration={pendingGeneration}
           onTabChange={setTab}
           historyItems={historyItems}
           historyLoading={historyLoading}
-          onDeleteHistory={handleDeleteHistory}
+          onRecreate={handleRecreate}
+          onHistoryChanged={() => void reloadHistory()}
+          onRecreatePrompt={applyPrompt}
         />
+        </div>
       </div>
     </div>
   );

@@ -352,7 +352,54 @@
         "publish": "Đăng",
         "lastViewed": "Xem gần nhất",
         "copyShareLink": "Sao chép liên kết tác phẩm",
-        "copiedShareLinkToast": "Đã sao chép liên kết"
+        "copiedShareLinkToast": "Đã sao chép liên kết",
+        "galleryEmptyTitle": "Chưa có video",
+        "galleryEmptyDescription": "Video do cộng đồng đăng sẽ hiển thị ở đây.",
+        "assetTabUploads": "Tải lên",
+        "assetTabImageGen": "Ảnh đã tạo",
+        "assetTabVideoGen": "Video đã tạo",
+        "assetLoadFailed": "Tải tài nguyên thất bại",
+        "assetUploadFailed": "Tải lên thất bại",
+        "assetEmpty": "Chưa có gì ở đây",
+        "assetDelete": "Xóa",
+        "assetPreview": "Xem trước",
+        "assetFilter": "Lọc",
+        "assetFilterBy": "Lọc theo",
+        "assetFilterAll": "Tất cả",
+        "assetFilterImages": "Hình ảnh",
+        "assetFilterVideos": "Video",
+        "assetFilterAudio": "Âm thanh",
+        "remove": "Gỡ bỏ",
+        "assetMore": "Thêm",
+        "mentionEmpty": "Hãy chọn tài nguyên trước",
+        "trimAudioTitle": "Cắt âm thanh",
+        "trimAudioHint": "Chọn đoạn bạn muốn dùng (tối đa {seconds}s)",
+        "trimAudioSave": "Lưu",
+        "trimAudioCancel": "Hủy",
+        "trimAudioPlay": "Phát",
+        "trimAudioPause": "Tạm dừng",
+        "trimAudioDecodeFailed": "Không đọc được tệp âm thanh này",
+        "trimAudioHandleStart": "Chỉnh điểm đầu",
+        "trimAudioHandleEnd": "Chỉnh điểm cuối",
+        "videoTooLong": "{name} dài hơn {seconds}s nên không dùng được. Hãy cắt rồi tải lên lại.",
+        "bannerGeneral": "Chung",
+        "copyVideoUrl": "Sao chép liên kết video",
+        "deleteVideo": "Xoá video",
+        "videoDetail": "Chi tiết video",
+        "videoRatio": "Tỷ lệ khung hình",
+        "videoResolution": "Độ phân giải",
+        "videoDuration": "Thời lượng",
+        "secondsValue": "{seconds} giây",
+        "publishSubmittedVideoToast": "Đã gửi {count} video để duyệt",
+        "deletedVideoToast": "Đã xoá {count} video",
+        "deleteVideoBlockedToast": "Video này đang ở thư viện. Hãy rút lại hoặc gỡ đăng trước",
+        "deleteVideoConfirmTitle": "Xoá {count} video",
+        "deleteVideoConfirmDescription": "Sẽ xoá vĩnh viễn {count} bản ghi tạo và video của chúng. Không thể hoàn tác.",
+        "play": "Phát",
+        "pause": "Tạm dừng",
+        "mediaTypeFull": "Mô hình này chỉ nhận tối đa {max} tệp {type}",
+        "ratioFromImage": "Tỷ lệ theo ảnh",
+        "ratioFromImageHint": "Mô hình này lấy tỷ lệ khung hình từ ảnh đầu tiên, nên thiết lập ở đây không có tác dụng."
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -801,7 +848,9 @@
         "all": "All Assets",
         "favorites": "Favorites",
         "image": "Image",
-        "video": "Video"
+        "video": "Video",
+        "uploads": "Tải lên",
+        "audio": "Âm thanh"
       },
       "empty": {
         "title": "Your assets will appear here",
@@ -814,7 +863,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "Tên tệp",
+        "uploader": "Người tải lên"
       },
       "fit": {
         "toCover": "Fill card",
@@ -840,7 +891,10 @@
         "moveFailed": "Could not move asset",
         "deleteFailed": "Could not delete asset",
         "save": "Save",
-        "more": "More"
+        "more": "More",
+        "publish": "Đăng lên thư viện",
+        "play": "Phát",
+        "pause": "Tạm dừng"
       },
       "bulk": {
         "download": "Download",
@@ -885,8 +939,17 @@
       "createImageDesc": "Tạo ảnh bằng AI",
       "editImage": "Chỉnh sửa ảnh",
       "editImageDesc": "Sửa và tinh chỉnh ảnh",
-      "gallery": "Thư viện",
-      "galleryDesc": "Khám phá tác phẩm cộng đồng"
+      "gallery": "Thư viện ảnh",
+      "galleryDesc": "Khám phá ảnh cộng đồng"
+    },
+    "videoNavFlyout": {
+      "models": "Mô hình",
+      "loading": "Đang tải mô hình…",
+      "features": "Tính năng",
+      "createVideo": "Tạo video",
+      "createVideoDesc": "Tạo video bằng AI",
+      "gallery": "Thư viện video",
+      "galleryDesc": "Khám phá video cộng đồng"
     }
   },
   "landing": {

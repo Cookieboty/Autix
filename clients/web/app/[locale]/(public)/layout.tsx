@@ -43,14 +43,16 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   // 直接由 next/navigation 的 pathname 推导并传给导航（SSR/首帧即正确），
   // 避免导航内部依赖自定义适配器 usePathname 时首帧误判成首页背景、产生一瞬闪烁。
   const navKind = isImage ? 'image' : isVideo ? 'video' : 'home';
-  const navVariant = isFunctionPage ? 'fluid' : 'contained';
+  // video 工作台：导航核心内容与工作区同宽（studio = 定宽居中 + 始终收缩）；image 暂维持全宽 fluid
+  const navVariant = isVideo ? 'studio' : isImage ? 'fluid' : 'contained';
 
   return (
     <div
       className={
+        // 背景交给全局默认（body 的 --background），此处不再铺不透明底色
         lockViewport
-          ? 'flex h-svh flex-col overflow-hidden bg-background text-foreground'
-          : 'min-h-svh bg-background text-foreground'
+          ? 'flex h-svh flex-col overflow-hidden text-foreground'
+          : 'min-h-svh text-foreground'
       }
     >
       {/* 横幅在导航条上方（持久、可关闭）；功能页 shrink-0 固定，营销页随文档滚动。

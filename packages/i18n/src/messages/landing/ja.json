@@ -352,7 +352,54 @@
         "publish": "公開する",
         "lastViewed": "最後に表示",
         "copyShareLink": "作品リンクをコピー",
-        "copiedShareLinkToast": "作品リンクをコピーしました"
+        "copiedShareLinkToast": "作品リンクをコピーしました",
+        "galleryEmptyTitle": "動画はまだありません",
+        "galleryEmptyDescription": "コミュニティが公開した動画がここに表示されます。",
+        "assetTabUploads": "アップロード",
+        "assetTabImageGen": "画像生成",
+        "assetTabVideoGen": "動画生成",
+        "assetLoadFailed": "素材の読み込みに失敗しました",
+        "assetUploadFailed": "アップロードに失敗しました",
+        "assetEmpty": "まだ何もありません",
+        "assetDelete": "削除",
+        "assetPreview": "拡大表示",
+        "assetFilter": "フィルタ",
+        "assetFilterBy": "種類で絞り込み",
+        "assetFilterAll": "すべて",
+        "assetFilterImages": "画像",
+        "assetFilterVideos": "動画",
+        "assetFilterAudio": "音声",
+        "remove": "削除",
+        "assetMore": "その他",
+        "mentionEmpty": "先に素材を選択してください",
+        "trimAudioTitle": "音声をトリミング",
+        "trimAudioHint": "使用する区間を選択（最長 {seconds} 秒）",
+        "trimAudioSave": "保存",
+        "trimAudioCancel": "キャンセル",
+        "trimAudioPlay": "再生",
+        "trimAudioPause": "一時停止",
+        "trimAudioDecodeFailed": "この音声ファイルを読み込めません",
+        "trimAudioHandleStart": "開始位置を調整",
+        "trimAudioHandleEnd": "終了位置を調整",
+        "videoTooLong": "{name} は {seconds} 秒を超えているため使用できません。トリミングして再アップロードしてください。",
+        "bannerGeneral": "汎用",
+        "copyVideoUrl": "動画リンクをコピー",
+        "deleteVideo": "動画を削除",
+        "videoDetail": "動画の詳細",
+        "videoRatio": "アスペクト比",
+        "videoResolution": "解像度",
+        "videoDuration": "長さ",
+        "secondsValue": "{seconds}秒",
+        "publishSubmittedVideoToast": "{count} 件の動画を審査に提出しました",
+        "deletedVideoToast": "{count} 件の動画を削除しました",
+        "deleteVideoBlockedToast": "この動画はギャラリーにあります。先に取り下げるか非公開にしてください",
+        "deleteVideoConfirmTitle": "{count} 件の動画を削除",
+        "deleteVideoConfirmDescription": "{count} 件の生成記録と動画を完全に削除します。元に戻せません。",
+        "play": "再生",
+        "pause": "一時停止",
+        "mediaTypeFull": "このモデルは{type}を最大 {max} 件まで選択できます",
+        "ratioFromImage": "画像に追従",
+        "ratioFromImageHint": "このモデルは先頭フレーム画像の比率を使うため、ここでの比率設定は反映されません。"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -801,7 +848,9 @@
         "all": "All Assets",
         "favorites": "Favorites",
         "image": "Image",
-        "video": "Video"
+        "video": "Video",
+        "uploads": "アップロード",
+        "audio": "音声"
       },
       "empty": {
         "title": "Your assets will appear here",
@@ -814,7 +863,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "ファイル名",
+        "uploader": "アップロード者"
       },
       "fit": {
         "toCover": "Fill card",
@@ -840,7 +891,10 @@
         "moveFailed": "Could not move asset",
         "deleteFailed": "Could not delete asset",
         "save": "Save",
-        "more": "More"
+        "more": "More",
+        "publish": "ギャラリーに公開",
+        "play": "再生",
+        "pause": "一時停止"
       },
       "bulk": {
         "download": "Download",
@@ -885,8 +939,17 @@
       "createImageDesc": "AI画像を生成",
       "editImage": "画像を編集",
       "editImageDesc": "画像を修正・調整",
-      "gallery": "ギャラリー",
-      "galleryDesc": "コミュニティの作品を見る"
+      "gallery": "画像ギャラリー",
+      "galleryDesc": "コミュニティの画像を見る"
+    },
+    "videoNavFlyout": {
+      "models": "モデル",
+      "loading": "モデルを読み込み中…",
+      "features": "機能",
+      "createVideo": "動画を生成",
+      "createVideoDesc": "AI で動画を生成",
+      "gallery": "動画ギャラリー",
+      "galleryDesc": "コミュニティの動画を見る"
     }
   },
   "landing": {

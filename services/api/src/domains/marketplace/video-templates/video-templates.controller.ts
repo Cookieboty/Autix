@@ -88,60 +88,6 @@ export class VideoTemplatesController {
     return this.service.unfavorite(userId, id);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/generations')
-  createGeneration(
-    @CurrentUser() user: AuthUser,
-    @Param('id') templateId: string,
-    @Body()
-    body: {
-      modelUsed: string;
-      variables: Record<string, string>;
-      referenceImage?: string;
-      modelConfigId?: string;
-    },
-  ) {
-    const userId = getCurrentUserId(user);
-    return this.service.createGeneration(templateId, userId, body);
-  }
-}
-
-@UseGuards(JwtAuthGuard)
-@Controller('generations/video')
-export class VideoGenerationController {
-  constructor(private readonly service: VideoTemplatesService) {}
-
-  @Get('my')
-  myGenerations(
-    @CurrentUser() user: AuthUser,
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
-  ) {
-    const userId = getCurrentUserId(user);
-    return this.service.findMyGenerations(
-      userId,
-      page ? +page : undefined,
-      pageSize ? +pageSize : undefined,
-    );
-  }
-
-  @Get(':id')
-  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    const userId = getCurrentUserId(user);
-    return this.service.findGeneration(id, userId);
-  }
-
-  @Post(':id/turns')
-  async addTurn(
-    @CurrentUser() user: AuthUser,
-    @Param('id') generationId: string,
-    @Body()
-    body: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
-  ) {
-    const userId = getCurrentUserId(user);
-    await this.service.findGeneration(generationId, userId);
-    return this.service.addTurn(generationId, body);
-  }
 }
 
 @UseGuards(JwtAuthGuard, AdminGuard)

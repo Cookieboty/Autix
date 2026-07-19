@@ -90,48 +90,6 @@ describe('TemplateGenerationRepository', () => {
     );
   });
 
-  it('creates a video generation and increments template use count atomically', async () => {
-    const { prisma, tx } = createPrisma();
-    const resourceMetrics = createResourceMetrics();
-    const repository = new TemplateGenerationRepository(
-      prisma as never,
-      resourceMetrics as never,
-    );
-
-    await repository.createVideoGeneration({
-      id: 'gen-2',
-      templateId: 'tpl-2',
-      userId: 'u1',
-      modelUsed: 'seedance-pro',
-      resolvedPrompt: 'Animate shoe',
-      variables: { subject: 'shoe' } as never,
-    });
-
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(tx.video_generations.create).toHaveBeenCalledWith({
-      data: {
-        id: 'gen-2',
-        templateId: 'tpl-2',
-        userId: 'u1',
-        modelUsed: 'seedance-pro',
-        resolvedPrompt: 'Animate shoe',
-        variables: { subject: 'shoe' },
-        referenceImage: undefined,
-        status: 'pending',
-      },
-    });
-    expect(tx.video_templates.update).toHaveBeenCalledWith({
-      where: { id: 'tpl-2' },
-      data: { useCount: { increment: 1 } },
-    });
-    expect(resourceMetrics.recordReference).toHaveBeenCalledWith(
-      ResourceType.VIDEO_TEMPLATE,
-      'tpl-2',
-      'use_template',
-      'u1',
-    );
-  });
-
   it('uses resource type when appending generation turns', async () => {
     const { prisma } = createPrisma();
     prisma.generation_turns.create.mockResolvedValue({ id: 'turn-1' });

@@ -2,7 +2,7 @@
 /**
  * backfill-generation-materials.ts
  *
- * One-time backfill: 把历史的 image_generations / video_generations 产物补进
+ * One-time backfill: 把历史的 image_generations / video_clip_generations 产物补进
  * material_assets（librarySource='GENERATION'）。
  *
  * 背景：生成内容进素材库是从「生成流程内联写入」那次改动才开始的
@@ -86,20 +86,32 @@ async function backfillImages() {
   console.log(`\n  image_generations: scanned=${scanned} ${DRY_RUN ? 'would insert' : 'inserted'}=${inserted}`);
 }
 
-async function backfillVideos() {
+/**
+ * video_clip_generations 的存量补齐。
+ *
+ * /ai/video 的直连生成、分镜与项目生成都落在这张表。它写素材库是从「三个完成入口
+ * 内联写入」那次改动才开始的，之前的存量只能靠这里补。
+ * （早期还有一张 video_generations 流水表，从未产出过内容，已随死链路一并删除。）
+ *
+ * 单条记录只有一个产物（videoUrl），封面取 lastFrameUrl —— 与运行时写入路径
+ * （VideoGenerationRepository.persistGeneratedVideoAsset）保持一致的行形状。
+ */
+async function backfillClipVideos() {
   let cursor: string | undefined;
   let scanned = 0;
   let inserted = 0;
 
   for (;;) {
-    const rows = await prisma.video_generations.findMany({
-      where: { status: 'completed' },
+    const rows = await prisma.video_clip_generations.findMany({
+      where: { status: 'completed', videoUrl: { not: null } },
       select: {
         id: true,
         userId: true,
         resolvedPrompt: true,
-        generatedVideos: true,
-        modelUsed: true,
+        videoUrl: true,
+        lastFrameUrl: true,
+        durationSec: true,
+        model: true,
         createdAt: true,
       },
       orderBy: { id: 'asc' },
@@ -114,11 +126,12 @@ async function backfillVideos() {
       buildGenerationMaterialRows({
         userId: row.userId,
         generationId: row.id,
-        urls: row.generatedVideos,
+        urls: [row.videoUrl as string],
         prompt: row.resolvedPrompt,
         kind: 'video',
+        thumbnailUrl: row.lastFrameUrl,
         createdAt: row.createdAt,
-        metadata: { modelUsed: row.modelUsed },
+        metadata: { modelUsed: row.model, durationSec: row.durationSec },
       }),
     );
 
@@ -131,16 +144,18 @@ async function backfillVideos() {
     } else {
       inserted += data.length;
     }
-    process.stdout.write(`  video_generations: scanned=${scanned} rows=${inserted}\r`);
+    process.stdout.write(`  video_clip_generations: scanned=${scanned} rows=${inserted}\r`);
   }
 
-  console.log(`\n  video_generations: scanned=${scanned} ${DRY_RUN ? 'would insert' : 'inserted'}=${inserted}`);
+  console.log(
+    `\n  video_clip_generations: scanned=${scanned} ${DRY_RUN ? 'would insert' : 'inserted'}=${inserted}`,
+  );
 }
 
 async function main() {
   console.log(`backfill generation → material_assets${DRY_RUN ? ' (dry run)' : ''}`);
   await backfillImages();
-  await backfillVideos();
+  await backfillClipVideos();
   console.log('done.');
 }
 

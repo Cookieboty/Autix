@@ -98,17 +98,19 @@ type VideoModelCapabilityBase = Pick<
   Partial<VideoModelCapability>;
 
 const VIDEO_MODEL_CAPABILITY_BASES: Record<VideoModelKind, VideoModelCapabilityBase> = {
-  // Seedance 2.0 series: default 720p. 4K is only exposed for the base 2.0 line.
+  // Seedance 2.0 系列。分辨率按上游文档（amux doubao-seedance-2）：
+  // 基础版 720p/1080p，fast 版**仅 720p**。此前表里给的是 480p/720p/1080p/4k 与
+  // 480p/720p —— 那些多出来的档位上游并不支持，用户选中即必然失败。
   'seedance-2.0': {
     kind: 'seedance-2.0',
     displayName: 'Seedance 2.0',
-    resolutions: ['480p', '720p', '1080p', '4k'],
+    resolutions: ['720p', '1080p'],
     defaultResolution: '720p',
   },
   'seedance-2.0-fast': {
     kind: 'seedance-2.0-fast',
     displayName: 'Seedance 2.0 Fast',
-    resolutions: ['480p', '720p'],
+    resolutions: ['720p'],
     defaultResolution: '720p',
   },
   'seedance-2.0-mini': {

@@ -14,7 +14,6 @@ import { TemplateGenerationRepository } from '../template-generation.repository'
 import { VideoTemplatesService } from './video-templates.service';
 import {
   VideoTemplatesController,
-  VideoGenerationController,
   VideoTemplatesAdminController,
 } from './video-templates.controller';
 
@@ -33,8 +32,7 @@ import {
   ],
   controllers: [
     VideoTemplatesController,
-    VideoGenerationController,
-    VideoTemplatesAdminController,
+      VideoTemplatesAdminController,
   ],
   providers: [
     MarketplaceResourceCrudRepository,

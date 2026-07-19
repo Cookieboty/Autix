@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpRight, Download, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Download, Trash2, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { MaterialAsset, MaterialFolder } from '@autix/shared-store';
 import { DropdownMenuItem } from '../../ui/dropdown-menu';
@@ -29,6 +29,8 @@ export function AssetCardMenu({
   onToggleFolder,
   onCreateFolder,
   onDelete,
+  onPublish,
+  publishing,
 }: {
   asset: MaterialAsset;
   state: CursorMenuState;
@@ -40,8 +42,21 @@ export function AssetCardMenu({
   onToggleFolder: (asset: MaterialAsset, folder: MaterialFolder, next: boolean) => void;
   onCreateFolder: (asset: MaterialAsset, name: string) => Promise<boolean>;
   onDelete: (asset: MaterialAsset) => void;
+  /** 投稿到广场。只对生成素材出现，见下方 canPublish。 */
+  onPublish: (asset: MaterialAsset) => void;
+  publishing: boolean;
 }) {
   const t = useTranslations('publicGrowth.assets');
+
+  /**
+   * 只有**生成的**素材能投稿。
+   *
+   * 用户上传的参考图/视频/音频虽然同样躺在素材库里，但它们不是作品——它们是别处
+   * 拿来的素材，发到广场既没有出处也没有生成参数。服务端的 FROM_GENERATION 投稿
+   * 本来就要求一条生成记录（asset.sourceId 里那个 generationId），上传素材根本没有，
+   * 硬发也只会被拒。所以这里直接不给入口，而不是给了再报错。
+   */
+  const canPublish = asset.librarySource === 'GENERATION';
 
   // 与批量工具栏共用同一套判定（单张时「全在该文件夹」= 「它就在该文件夹」）。
   const selection = folderSelectionState([asset]);
@@ -63,6 +78,17 @@ export function AssetCardMenu({
         onToggleFolder={(folder, next) => onToggleFolder(asset, folder, next)}
         onCreateFolder={(name) => onCreateFolder(asset, name)}
       />
+
+      {canPublish ? (
+        <DropdownMenuItem
+          onClick={() => onPublish(asset)}
+          disabled={publishing}
+          className={`${ASSET_MENU_ITEM_CLASS} text-foreground/85`}
+        >
+          <Upload className="size-3.5 text-foreground/45" />
+          {t('card.publish')}
+        </DropdownMenuItem>
+      ) : null}
 
       <DropdownMenuItem
         onClick={() => onDownload(asset)}

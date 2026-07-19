@@ -24,43 +24,53 @@ export function generationIdFromAsset(asset: MaterialAsset): string | null {
 }
 
 export interface AssetPublishPlan {
-  /** 去重后可投稿的生成 id（一次生成多张图只投一次稿）。 */
-  generationIds: string[];
-  /** 标题按生成 id 取该次生成任意一张的 title。 */
-  titleOf: Map<string, string>;
-  /** 无法投稿的素材数（非生成来源，或是视频——广场投稿这里只走 IMAGE）。 */
+  /** 去重后可投稿的生成条目（一次生成多张图只投一次稿）。 */
+  entries: Array<{ generationId: string; kind: 'IMAGE' | 'VIDEO'; title: string }>;
+  /** 无法投稿的素材数（非生成来源，或既非图片也非视频）。 */
   skipped: number;
 }
 
+/** 素材类型 → 广场 kind；音频等暂无投稿入口，返回 null。 */
+function galleryKindOf(type: MaterialAsset['type']): 'IMAGE' | 'VIDEO' | null {
+  if (type === 'image') return 'IMAGE';
+  if (type === 'video') return 'VIDEO';
+  return null;
+}
+
 export function planAssetPublish(assets: MaterialAsset[]): AssetPublishPlan {
-  const generationIds: string[] = [];
-  const titleOf = new Map<string, string>();
+  const entries: AssetPublishPlan['entries'] = [];
+  const seen = new Set<string>();
   let skipped = 0;
 
   for (const asset of assets) {
-    const generationId = asset.type === 'image' ? generationIdFromAsset(asset) : null;
-    if (!generationId) {
+    const kind = galleryKindOf(asset.type);
+    const generationId = kind ? generationIdFromAsset(asset) : null;
+    if (!kind || !generationId) {
       skipped += 1;
       continue;
     }
-    if (!titleOf.has(generationId)) {
-      titleOf.set(generationId, asset.title.slice(0, 60));
-      generationIds.push(generationId);
+    if (!seen.has(generationId)) {
+      seen.add(generationId);
+      entries.push({ generationId, kind, title: asset.title.slice(0, 60) });
     }
   }
 
-  return { generationIds, titleOf, skipped };
+  return { entries, skipped };
 }
 
 export async function publishAssetsToGallery(assets: MaterialAsset[]) {
   const plan = planAssetPublish(assets);
   const results = await Promise.allSettled(
-    plan.generationIds.map((generationId) =>
+    plan.entries.map((entry) =>
       galleryActions.publish({
-        kind: 'IMAGE',
-        title: plan.titleOf.get(generationId),
+        kind: entry.kind,
+        title: entry.title,
         sourceType: 'FROM_GENERATION',
-        imageGenerationId: generationId,
+        // 视频生成 id 落 videoGenerationId——服务端据此查 video_clip_generations
+        // 派生 mediaUrls；图片仍走 imageGenerationId。
+        ...(entry.kind === 'VIDEO'
+          ? { videoGenerationId: entry.generationId }
+          : { imageGenerationId: entry.generationId }),
         allowPublicReference: true,
       }),
     ),

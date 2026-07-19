@@ -2,9 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Eye, Heart, ImageIcon, Play } from 'lucide-react';
+import { Eye, Heart, ImageIcon } from 'lucide-react';
 import {
-  galleryActions,
   useProfileGenerationsController,
   useAuthStore,
   useUiStore,
@@ -12,6 +11,7 @@ import {
 } from '@autix/shared-store';
 import { useRouter } from '../../navigation';
 import { AuthorAvatar } from '../AuthorAvatar';
+import { GalleryMediaThumb, galleryHoverPlayHandlers } from '../GalleryMediaThumb';
 import { ImpressionSentinel } from '../ImpressionSentinel';
 import { GalleryDetailDialog, type GalleryInteraction } from '../detail/GalleryDetailDialog';
 import { useGalleryPostModal } from '../detail/useGalleryPostModal';
@@ -126,27 +126,16 @@ export function ProfileGenerationsFeed({ username }: { username: string }) {
       <div className="columns-1 gap-3 sm:columns-2 lg:columns-3 2xl:columns-4">
         {feed.items.map((item, index) => {
           const { post, metrics } = item;
-          const cover = post.coverImage ?? post.mediaUrls[0] ?? null;
           const author = item.author?.nickname || tGen('unknownAuthor');
-          const isVideo = post.kind === 'VIDEO';
           const interaction = interactionOf(item);
           return (
             <article
               key={post.id}
+              // 同首页：悬浮播放绑容器，绑 video 会被上面的点击热区吃掉事件
+              {...galleryHoverPlayHandlers()}
               className="growth-generator-masonry group relative mb-3 block w-full break-inside-avoid overflow-hidden rounded-md bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
             >
-              {cover ? (
-                <img
-                  src={cover}
-                  alt={post.title ?? ''}
-                  loading={index < 8 ? 'eager' : 'lazy'}
-                  className="block h-auto w-full"
-                />
-              ) : (
-                <div className="grid aspect-[3/4] w-full place-items-center bg-secondary text-foreground/32">
-                  <ImageIcon className="size-10" />
-                </div>
-              )}
+              <GalleryMediaThumb item={item} index={index} />
 
               <ImpressionSentinel resourceType="GALLERY_POST" resourceId={post.id} />
 
@@ -156,12 +145,6 @@ export function ProfileGenerationsFeed({ username }: { username: string }) {
                 className="absolute inset-0 z-10 cursor-pointer"
                 onClick={() => galleryModal.open(item)}
               />
-
-              {isVideo ? (
-                <span className="pointer-events-none absolute left-1/2 top-1/2 z-20 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-background/45 text-foreground backdrop-blur-md">
-                  <Play className="size-5 translate-x-px" />
-                </span>
-              ) : null}
 
               <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100" />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100">

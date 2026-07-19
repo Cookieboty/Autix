@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import type { AuthUser } from '@autix/domain';
 import { GalleryKind, GalleryStatus, Prisma, ResourceType } from '../../platform/prisma/generated';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
@@ -47,6 +49,14 @@ interface GenerationOwnershipRecord {
   height?: number | null;
   referenceImage: string | null;
   mediaUrls: string[];
+  /**
+   * 视频专有的封面来源（thumbnailUrl ?? lastFrameUrl）。图片投稿不需要——它的
+   * coverImage 取 mediaUrls[0] 天然成立；视频的 mediaUrls[0] 是 mp4，当封面用会挂。
+   */
+  coverImage?: string | null;
+  /** 视频专有的展示字段，从生成记录快照而来（不采信 DTO）。 */
+  aspectRatio?: string | null;
+  durationSec?: number | null;
 }
 
 /** 与 AdminGuard 一致的管理员判定，供"公开详情按角色可见性"复用（见 §5.1.1）。 */
@@ -159,7 +169,7 @@ export class GalleryService {
       if (gen == null || gen.userId !== authorId) {
         throw new ForbiddenException('生成记录不存在或不属于当前用户');
       }
-      return { ...gen, mediaUrls: gen.generatedVideos ?? [] };
+      return { ...gen, mediaUrls: gen.generatedVideos ?? [], coverImage: gen.coverImage };
     }
 
     return undefined;
@@ -231,6 +241,17 @@ export class GalleryService {
       if (existing) return existing;
     }
 
+    // 视频同理。此前缺这一支不是疏忽也无害——videoGenerationId 指向的是那张永不产出的
+    // 第一代表，视频投稿根本走不到落库。现在它指向 clip 表、投稿真的会成功，
+    // 缺了就意味着同一次视频生成能在广场里刷出任意多条一模一样的帖子。
+    if (dto.videoGenerationId) {
+      const existing = await this.repo.findActivePostByVideoGenerationId(
+        dto.videoGenerationId,
+        authorId,
+      );
+      if (existing) return existing;
+    }
+
     const snapshot = await this.buildGenerationSnapshot(
       generation,
       authorId,
@@ -247,6 +268,7 @@ export class GalleryService {
       tags: dto.tags ?? [],
       coverImage: media.coverImage,
       mediaUrls: media.mediaUrls,
+      // 草稿不做归属校验，拿不到生成记录，先存 DTO 值；submitDraft 会用生成记录覆盖。
       aspectRatio: dto.aspectRatio,
       durationSec: dto.durationSec,
       sourceType: dto.sourceType,
@@ -272,12 +294,23 @@ export class GalleryService {
         err instanceof Prisma.PrismaClientKnownRequestError ||
         (err as { code?: string })?.code === 'P2002'
       ) {
-        if ((err as { code?: string }).code === 'P2002' && dto.imageGenerationId) {
-          const raced = await this.repo.findActivePostByImageGenerationId(
-            dto.imageGenerationId,
-            authorId,
-          );
-          if (raced) return raced;
+        if ((err as { code?: string }).code === 'P2002') {
+          // image / video 两条都要兜：视频的 partial unique index 是同一次迁移建的，
+          // 只兜 image 会让视频侧的并发抢跑返回 500，而对方其实已经建帖成功。
+          if (dto.imageGenerationId) {
+            const raced = await this.repo.findActivePostByImageGenerationId(
+              dto.imageGenerationId,
+              authorId,
+            );
+            if (raced) return raced;
+          }
+          if (dto.videoGenerationId) {
+            const raced = await this.repo.findActivePostByVideoGenerationId(
+              dto.videoGenerationId,
+              authorId,
+            );
+            if (raced) return raced;
+          }
         }
       }
       throw err;
@@ -315,6 +348,12 @@ export class GalleryService {
       const derived = deriveGenerationMediaUrls({ generatedImages: generation?.mediaUrls });
       if (!derived) {
         throw new BadRequestException('生成结果为空，无法投稿');
+      }
+      // deriveGenerationMediaUrls 的 coverImage 恒取 mediaUrls[0]——图片成立，视频不成立
+      // （那是 mp4）。视频记录带了自己的封面就用它；没有（末帧转存失败）则宁可留空，
+      // 也不要给前端一个当 <img>/poster 用必然空白的 mp4 地址。
+      if (generation?.coverImage !== undefined) {
+        return { ...derived, coverImage: generation.coverImage ?? undefined };
       }
       return derived;
     }
@@ -356,6 +395,7 @@ export class GalleryService {
       tags: dto.tags ?? [],
       coverImage: media.coverImage,
       mediaUrls: media.mediaUrls,
+      // 草稿不做归属校验，拿不到生成记录，先存 DTO 值；submitDraft 会用生成记录覆盖。
       aspectRatio: dto.aspectRatio,
       durationSec: dto.durationSec,
       sourceType: dto.sourceType,
@@ -427,12 +467,36 @@ export class GalleryService {
       { mediaUrls: post.mediaUrls, coverImage: post.coverImage },
       generation,
     );
+    // 同一次生成已有活帖时，DRAFT→PENDING 会让这条草稿也进入活帖集合，撞
+    // gallery_posts_{image,video}_generation_active_uniq。草稿刻意不占活帖坑
+    // （见 findActivePostByImageGenerationId 注释），所以这里必须显式拦一道：
+    // 不拦就是 P2002 冒泡成 500，用户只看到「提交按钮永远报错」而不知道已有活帖。
+    await this.assertNoRivalActivePost(post, authorId);
+
     return this.repo.update(id, {
       status: GalleryStatus.PENDING,
       mediaUrls: media.mediaUrls,
       coverImage: media.coverImage ?? null,
+      // 与 createSubmission 同：DRAFT 阶段存的是 DTO 值，公开前用生成记录覆盖。
+      ...(generation?.aspectRatio ? { aspectRatio: generation.aspectRatio } : {}),
+      ...(generation?.durationSec != null ? { durationSec: generation.durationSec } : {}),
       ...this.metadataFields(snapshot),
     });
+  }
+
+  /** 草稿提交前：该次生成是否已被别的帖子占了活帖坑（自己那条不算）。 */
+  private async assertNoRivalActivePost(
+    post: { id: string; imageGenerationId: string | null; videoGenerationId: string | null },
+    authorId: string,
+  ) {
+    const rival = post.imageGenerationId
+      ? await this.repo.findActivePostByImageGenerationId(post.imageGenerationId, authorId)
+      : post.videoGenerationId
+        ? await this.repo.findActivePostByVideoGenerationId(post.videoGenerationId, authorId)
+        : null;
+    if (rival && rival.id !== post.id) {
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'gallery.generation_already_posted');
+    }
   }
 
   /**
@@ -535,6 +599,19 @@ export class GalleryService {
         .filter((post) => !!post.imageGenerationId)
         .map((post) => [
           post.imageGenerationId as string,
+          { id: post.id, status: post.status, rejectReason: post.rejectReason },
+        ]),
+    );
+  }
+
+  /** 同上，按视频生成 id 取活帖。 */
+  async findActivePostsByVideoGenerationIds(authorId: string, videoGenerationIds: string[]) {
+    const posts = await this.repo.findActivePostsByVideoGenerationIds(videoGenerationIds, authorId);
+    return new Map(
+      posts
+        .filter((post) => !!post.videoGenerationId)
+        .map((post) => [
+          post.videoGenerationId as string,
           { id: post.id, status: post.status, rejectReason: post.rejectReason },
         ]),
     );

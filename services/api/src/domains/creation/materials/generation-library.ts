@@ -34,6 +34,11 @@ export interface GenerationMaterialInput {
   urls: string[];
   prompt: string;
   kind: 'image' | 'video';
+  /**
+   * 视频封面。图片素材的封面就是自身，无需传；视频没有自带缩略图，
+   * 不传则 thumbnailUrl 落 NULL，素材库/选择面板将没有封面可渲染。
+   */
+  thumbnailUrl?: string | null;
   createdAt?: Date;
   /** 落进 metadata 供详情页展示（model / 尺寸等），不参与检索。 */
   metadata?: Prisma.InputJsonValue;
@@ -56,7 +61,7 @@ export function buildGenerationMaterialRows(
       type: input.kind,
       title: buildGenerationTitle(input.prompt, fallbackTitle),
       url,
-      thumbnailUrl: input.kind === 'image' ? url : null,
+      thumbnailUrl: input.kind === 'image' ? url : input.thumbnailUrl ?? null,
       sourceType: input.kind === 'image' ? 'image_generation' : 'video_generation',
       librarySource: 'GENERATION' as const,
       // 生成素材没有对应的市场 ResourceType——sourceId 指向生成流水行而非市场资源，
