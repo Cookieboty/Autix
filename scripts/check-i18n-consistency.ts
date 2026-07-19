@@ -32,6 +32,12 @@ const API_LOCALE_DIR = 'services/api/src/domains/platform/i18n/locales';
 /** 前端 catalog 未译条目数的棘轮基线，详见 `assertUntranslatedRatchet`。 */
 const BASELINE_FILE = 'scripts/i18n/untranslated-baseline.json';
 
+/** 各域硬编码中文异常数的棘轮基线，详见 `assertCjkExceptionRatchet`。 */
+const CJK_BASELINE_FILE = 'scripts/i18n/cjk-exception-baseline.json';
+
+/** `services/api/src/domains` 下参与棘轮统计的业务域。 */
+const API_DOMAIN_ROOT = 'services/api/src/domains';
+
 /**
  * 允许各语言使用**不同**占位符的键——极少数，必须逐个论证。
  *
@@ -280,6 +286,65 @@ export function assertUntranslatedRatchet(
   return issues;
 }
 
+/**
+ * 统计各域仍在硬编码中文的异常抛出点。
+ *
+ * 只数抛异常的构造调用，不数普通中文字符串——注释和日志里的中文是本仓库的常态，
+ * 一并统计会让基线充满噪声、失去信号。
+ */
+export function countCjkExceptions(domains: string[]): Record<string, number> {
+  const pattern = /(?:throw new \w*Exception\(|throw new Error\()\s*[`'"][^`'"]*[一-鿿]/g;
+  const counts: Record<string, number> = {};
+  for (const domain of domains) {
+    const dir = join(API_DOMAIN_ROOT, domain);
+    counts[domain] = existsSync(dir) ? countInDir(dir, pattern) : 0;
+  }
+  return counts;
+}
+
+function countInDir(dir: string, pattern: RegExp): number {
+  let total = 0;
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) {
+      total += countInDir(p, pattern);
+      continue;
+    }
+    if (!name.endsWith('.ts') || name.endsWith('.spec.ts')) continue;
+    total += (readFileSync(p, 'utf8').match(pattern) ?? []).length;
+  }
+  return total;
+}
+
+/**
+ * 各域硬编码中文异常数的棘轮：只许降、不许升。
+ *
+ * 与 `assertUntranslatedRatchet` 同构。已归零的域基线为 0，再写中文异常立刻失败；
+ * 未迁移的域保留存量债务但不允许增长。每迁完一个域把基线降到 0。
+ */
+export function assertCjkExceptionRatchet(
+  counts: Record<string, number>,
+  baseline: Record<string, number>,
+): string[] {
+  const issues: string[] = [];
+  for (const domain of Object.keys(counts).sort()) {
+    const actual = counts[domain];
+    const allowed = baseline[domain] ?? 0;
+    if (actual > allowed) {
+      issues.push(
+        `[cjk-exception:${domain}] ${actual} 处硬编码中文异常 > 基线 ${allowed}` +
+          `（新增 ${actual - allowed} 处）。请改用 I18nHttpException + 词条键。`,
+      );
+    } else if (actual < allowed) {
+      issues.push(
+        `[cjk-exception:${domain}] ${actual} 处 < 基线 ${allowed}——迁移有进展，` +
+          `请把 ${CJK_BASELINE_FILE} 里的 ${domain} 下调到 ${actual} 以锁住成果。`,
+      );
+    }
+  }
+  return issues;
+}
+
 /** 把 `clients/web/app/[locale]/(public)/ai/image/page.tsx` 还原成路由模板 `/ai/image`。 */
 export function pageFileToTemplate(file: string): string {
   const rel = file
@@ -417,6 +482,14 @@ export function collectIssues(
       `⚠ ${DIST_DIR} not found — skipping src/dist sync check (run \`pnpm --filter @autix/i18n build\` first). Expected on a fresh clone; not expected otherwise.`,
     );
   }
+
+  // 各域硬编码中文异常的棘轮。
+  const cjkBaseline: Record<string, number> = existsSync(CJK_BASELINE_FILE)
+    ? JSON.parse(readFileSync(CJK_BASELINE_FILE, 'utf8'))
+    : {};
+  issues.push(
+    ...assertCjkExceptionRatchet(countCjkExceptions(Object.keys(cjkBaseline)), cjkBaseline),
+  );
 
   const pages = collectPages(APP_LOCALE_DIR);
   issues.push(...assertRoutePolicyCoverage(pages, Object.keys(ROUTE_POLICY)));

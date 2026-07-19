@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import {
   assertAligned,
   assertApiCatalogNonEmpty,
+  assertCjkExceptionRatchet,
   assertPlaceholdersMatch,
   assertUntranslatedRatchet,
   collectIssues,
@@ -253,5 +254,29 @@ describe('loadApiLocales', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('assertCjkExceptionRatchet', () => {
+  it('域内数量等于基线时通过', () => {
+    expect(assertCjkExceptionRatchet({ creation: 181 }, { creation: 181 })).toEqual([]);
+  });
+
+  it('已归零的域再写中文异常立刻失败', () => {
+    const issues = assertCjkExceptionRatchet({ identity: 2 }, { identity: 0 });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain('identity');
+    expect(issues[0]).toContain('2');
+  });
+
+  it('低于基线时要求下调基线，避免棘轮失效', () => {
+    const issues = assertCjkExceptionRatchet({ admin: 0 }, { admin: 8 });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain('0');
+  });
+
+  it('基线里没有的域按 0 处理', () => {
+    expect(assertCjkExceptionRatchet({ newdomain: 1 }, {})).toHaveLength(1);
+    expect(assertCjkExceptionRatchet({ newdomain: 0 }, {})).toEqual([]);
   });
 });
