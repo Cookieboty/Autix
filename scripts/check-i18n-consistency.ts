@@ -306,16 +306,49 @@ export function assertRoutePolicyCoverage(pages: string[], policyKeys: string[])
     .map((t) => `[route-policy] 缺少声明: ${t}`);
 }
 
-/** 读取 API 侧的扁平 YAML 文案表，缺失的语言留空交给 assertAligned 报告。 */
+/** 递归读取 API 侧按域拆分的扁平 YAML 文案表，合并成每语言一张表。 */
 function loadApiLocales(): Record<string, Record<string, string>> {
-  const byLang: Record<string, Record<string, string>> = {};
-  for (const l of LANGS) {
-    const file = join(API_LOCALE_DIR, `${l}.yaml`);
-    byLang[l] = existsSync(file)
-      ? (loadYaml(readFileSync(file, 'utf8')) as Record<string, string>)
-      : {};
-  }
+  const byLang: Record<string, Record<string, string>> = Object.fromEntries(
+    LANGS.map((l) => [l, {} as Record<string, string>]),
+  );
+  if (!existsSync(API_LOCALE_DIR)) return byLang;
+
+  const walk = (dir: string): void => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) {
+        walk(p);
+        continue;
+      }
+      if (!name.endsWith('.yaml')) continue;
+      const lang = name.slice(0, -'.yaml'.length);
+      if (!(lang in byLang)) continue;
+      Object.assign(byLang[lang], loadYaml(readFileSync(p, 'utf8')) as Record<string, string>);
+    }
+  };
+
+  walk(API_LOCALE_DIR);
   return byLang;
+}
+
+/**
+ * API 词条表不得为空。
+ *
+ * `loadApiLocales()` 早先对缺失文件返回 `{}`，于是词条目录一旦被移动或改名，
+ * 后续所有 `[api]` 检查都在空对象上真空通过，`i18n:check` 照常报绿。
+ * 空词条表永远是配置错误，不是合法状态——必须响。
+ */
+export function assertApiCatalogNonEmpty(
+  byLang: Record<string, Record<string, string>>,
+): string[] {
+  return Object.keys(byLang)
+    .sort()
+    .filter((lang) => Object.keys(byLang[lang]).length === 0)
+    .map(
+      (lang) =>
+        `[api][catalog:${lang}] 未读到任何词条——${API_LOCALE_DIR} 下缺少 ${lang}.yaml，` +
+        `或目录结构已变动。空词条表不是合法状态。`,
+    );
 }
 
 /** 把嵌套的 message 树压平成 `a.b.c -> 字符串值`，用于按值比较。 */
@@ -345,6 +378,7 @@ function main() {
 
   // API 错误文案：这套是新纳入的，没有存量债务，所以未译一律硬失败——不给棘轮。
   const apiByLang = loadApiLocales();
+  issues.push(...assertApiCatalogNonEmpty(apiByLang));
   issues.push(...assertAligned(apiByLang).map((i) => `[api]${i}`));
   issues.push(...assertPlaceholdersMatch(apiByLang, 'en', extractMustacheArgs).map((i) => `[api]${i}`));
   for (const [lang, n] of Object.entries(countUntranslated(apiByLang, 'en'))) {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   assertAligned,
+  assertApiCatalogNonEmpty,
   assertPlaceholdersMatch,
   assertUntranslatedRatchet,
   countUntranslated,
@@ -167,6 +168,24 @@ describe('countUntranslated', () => {
     // byte-for-byte copies of en.yaml and went unnoticed for months.
     const counts = countUntranslated({ en: { a: 'x', b: 'y' }, ja: { a: 'x', b: 'y' } }, 'en');
     expect(counts.ja).toBe(2);
+  });
+});
+
+describe('assertApiCatalogNonEmpty', () => {
+  it('词条表为空时失败——空目录不能算通过', () => {
+    const issues = assertApiCatalogNonEmpty({ en: {}, fr: {} });
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues.join(' ')).toContain('en');
+  });
+
+  it('某一语言为空时失败', () => {
+    const issues = assertApiCatalogNonEmpty({ en: { 'a.b': 'x' }, fr: {} });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain('fr');
+  });
+
+  it('各语言都有词条时通过', () => {
+    expect(assertApiCatalogNonEmpty({ en: { 'a.b': 'x' }, fr: { 'a.b': 'y' } })).toEqual([]);
   });
 });
 
