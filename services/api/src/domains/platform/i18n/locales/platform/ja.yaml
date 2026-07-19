@@ -1,0 +1,3 @@
+model.not_found: "モデル設定が見つかりません: {{id}}"
+task.not_found: "タスクが見つかりません"
+task.already_read: "タスクが存在しないか、すでに既読です"

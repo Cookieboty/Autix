@@ -1,0 +1,3 @@
+common.request_success: "请求成功"
+common.internal_error: "服务器内部错误"
+common.invalid_params: "参数无效"

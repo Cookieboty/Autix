@@ -1,0 +1,3 @@
+model.not_found: "Configuration de modèle introuvable : {{id}}"
+task.not_found: "Tâche introuvable"
+task.already_read: "Tâche introuvable ou déjà lue"

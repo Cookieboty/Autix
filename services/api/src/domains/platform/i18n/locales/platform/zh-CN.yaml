@@ -1,0 +1,3 @@
+model.not_found: "模型配置不存在: {{id}}"
+task.not_found: "任务不存在"
+task.already_read: "任务不存在或已读"

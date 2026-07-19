@@ -1,0 +1,3 @@
+common.request_success: "Успешно"
+common.internal_error: "Внутренняя ошибка сервера"
+common.invalid_params: "Недопустимые параметры"

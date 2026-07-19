@@ -1,0 +1,3 @@
+model.not_found: "Không tìm thấy cấu hình mô hình: {{id}}"
+task.not_found: "Không tìm thấy tác vụ"
+task.already_read: "Không tìm thấy tác vụ hoặc tác vụ đã được đọc"
