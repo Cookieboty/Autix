@@ -717,7 +717,9 @@
         "deletedVideoToast": "已删除 {count} 个视频",
         "deleteVideoBlockedToast": "该视频已在广场，请先撤回或下架",
         "deleteVideoConfirmTitle": "删除 {count} 个视频",
-        "deleteVideoConfirmDescription": "将永久删除 {count} 条生成记录及其视频，此操作不可撤销。"
+        "deleteVideoConfirmDescription": "将永久删除 {count} 条生成记录及其视频，此操作不可撤销。",
+        "play": "播放",
+        "pause": "暂停"
       },
       "privateFirst": "默认私有",
       "createPrivately": "当前页创作",

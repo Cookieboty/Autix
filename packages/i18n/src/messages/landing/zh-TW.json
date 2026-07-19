@@ -394,7 +394,9 @@
         "deletedVideoToast": "已刪除 {count} 個影片",
         "deleteVideoBlockedToast": "該影片已在廣場，請先撤回或下架",
         "deleteVideoConfirmTitle": "刪除 {count} 個影片",
-        "deleteVideoConfirmDescription": "將永久刪除 {count} 筆生成記錄及其影片，此操作無法復原。"
+        "deleteVideoConfirmDescription": "將永久刪除 {count} 筆生成記錄及其影片，此操作無法復原。",
+        "play": "播放",
+        "pause": "暫停"
       },
       "privateFirst": "預設私有",
       "createPrivately": "目前頁創作",

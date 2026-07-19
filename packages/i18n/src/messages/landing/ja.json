@@ -394,7 +394,9 @@
         "deletedVideoToast": "{count} 件の動画を削除しました",
         "deleteVideoBlockedToast": "この動画はギャラリーにあります。先に取り下げるか非公開にしてください",
         "deleteVideoConfirmTitle": "{count} 件の動画を削除",
-        "deleteVideoConfirmDescription": "{count} 件の生成記録と動画を完全に削除します。元に戻せません。"
+        "deleteVideoConfirmDescription": "{count} 件の生成記録と動画を完全に削除します。元に戻せません。",
+        "play": "再生",
+        "pause": "一時停止"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

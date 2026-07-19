@@ -394,7 +394,9 @@
         "deletedVideoToast": "Đã xoá {count} video",
         "deleteVideoBlockedToast": "Video này đang ở thư viện. Hãy rút lại hoặc gỡ đăng trước",
         "deleteVideoConfirmTitle": "Xoá {count} video",
-        "deleteVideoConfirmDescription": "Sẽ xoá vĩnh viễn {count} bản ghi tạo và video của chúng. Không thể hoàn tác."
+        "deleteVideoConfirmDescription": "Sẽ xoá vĩnh viễn {count} bản ghi tạo và video của chúng. Không thể hoàn tác.",
+        "play": "Phát",
+        "pause": "Tạm dừng"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

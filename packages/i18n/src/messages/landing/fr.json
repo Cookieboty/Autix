@@ -717,7 +717,9 @@
         "deletedVideoToast": "{count} vidéo(s) supprimée(s)",
         "deleteVideoBlockedToast": "Cette vidéo est dans la galerie. Retirez-la ou dépubliez-la d’abord",
         "deleteVideoConfirmTitle": "Supprimer {count} vidéo(s)",
-        "deleteVideoConfirmDescription": "Cela supprime définitivement {count} génération(s) et leurs vidéos. Irréversible."
+        "deleteVideoConfirmDescription": "Cela supprime définitivement {count} génération(s) et leurs vidéos. Irréversible.",
+        "play": "Lire",
+        "pause": "Suspendre"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

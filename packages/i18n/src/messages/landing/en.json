@@ -717,7 +717,9 @@
         "deletedVideoToast": "Deleted {count} video(s)",
         "deleteVideoBlockedToast": "This video is in the gallery. Withdraw or unpublish it first",
         "deleteVideoConfirmTitle": "Delete {count} video(s)",
-        "deleteVideoConfirmDescription": "This permanently deletes {count} generation(s) and their videos. This cannot be undone."
+        "deleteVideoConfirmDescription": "This permanently deletes {count} generation(s) and their videos. This cannot be undone.",
+        "play": "Play",
+        "pause": "Pause"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

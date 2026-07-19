@@ -394,7 +394,9 @@
         "deletedVideoToast": "Удалено видео: {count}",
         "deleteVideoBlockedToast": "Это видео в галерее. Сначала отзовите или снимите с публикации",
         "deleteVideoConfirmTitle": "Удалить видео: {count}",
-        "deleteVideoConfirmDescription": "Будет безвозвратно удалено генераций: {count}, вместе с видео. Отменить нельзя."
+        "deleteVideoConfirmDescription": "Будет безвозвратно удалено генераций: {count}, вместе с видео. Отменить нельзя.",
+        "play": "Воспроизвести",
+        "pause": "Пауза"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
