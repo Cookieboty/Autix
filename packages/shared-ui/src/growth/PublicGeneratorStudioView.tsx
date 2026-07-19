@@ -224,25 +224,18 @@ export function PublicGeneratorStudioView({
   }, [initialModel, kind]);
 
   return (
-    <div className="relative flex h-full flex-col bg-background text-foreground">
+    <div className="relative flex h-full flex-col text-foreground">
       {/* 功能页横幅内容（由 (public) layout 在导航上方渲染） */}
       <SetPublicTopPromo
         label={t('generator.studio.topPromo', buildDiscountTranslationValues())}
         href="/pricing"
       />
-      {/* 功能页主题背景：唯一的全屏固定底层（渐变 + 噪点），滑动时不动，内容与导航都透出它 */}
-      <div
-        className={`pointer-events-none fixed inset-0 ${kind === 'video' ? 'growth-video-studio-bg' : 'growth-image-studio-bg'}`}
-      />
-      <div
-        className={`growth-generator-noise pointer-events-none fixed inset-0 ${kind === 'video' ? 'opacity-[0.1]' : 'opacity-[0.13]'}`}
-      />
+      {/* 背景统一由全局默认背景（body 的 --background）提供，功能页不再自带渐变/噪点层 */}
       {/* 导航与顶部横幅均由 (public) layout 持久提供 */}
       {/* studio 区占满剩余高度（定高）：image 内部自管滚动；video 在此容器内滚动 */}
       <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-none">
         {kind === 'video' ? (
         <VideoGeneratorStudio
-          items={items}
           initialModel={initialModel}
           videoModels={videoModels}
           selectedModel={selectedVideoModel}

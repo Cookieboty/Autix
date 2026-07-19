@@ -285,10 +285,10 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+  /* 全局默认背景：统一为 --background 纯色（与账户设置页一致），
+     不再叠加渐变。各页面/功能页不应再自带整屏背景层去覆盖它。 */
   body {
     @apply bg-background text-foreground;
-    background:
-      linear-gradient(180deg, #050505 0%, #0b0b0b 48%, #111 100%);
   }
   /* Tailwind v4 preflight 不再给 button 默认 cursor:pointer;恢复交互元素的手型 */
   button:not(:disabled),
@@ -491,16 +491,6 @@ body {
   animation: growth-rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes growth-generator-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 28px color-mix(in srgb, var(--growth-accent) 18%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 46px color-mix(in srgb, var(--growth-accent) 38%, transparent);
-  }
-}
-
 .growth-media-rail {
   animation: growth-marquee 58s linear infinite;
 }
@@ -585,17 +575,23 @@ body {
   opacity: 0.35;
 }
 
+/* 复古实体按钮：顶部高光 + 底部内阴影 + 一条实心下沿，形成"凸起可按"的厚度感。
+   不再用外发光脉冲（那圈大光晕在纯色背景上过重）。 */
 .growth-generator-generate {
-  animation: growth-generator-pulse 2.8s ease-in-out infinite;
-  box-shadow: 0 0 34px color-mix(in srgb, var(--growth-accent) 22%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    inset 0 -3px 0 rgb(0 0 0 / 0.2),
+    0 2px 0 color-mix(in srgb, var(--growth-accent) 58%, #000),
+    0 3px 6px rgb(0 0 0 / 0.3);
+  transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
-.growth-generator-noise {
-  background-image:
-    linear-gradient(rgb(255 255 255 / 3%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px);
-  background-size: 54px 54px;
-  mask-image: radial-gradient(circle at 50% 45%, black, transparent 72%);
+/* 按下时整体下沉，下沿收薄 */
+.growth-generator-generate:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 0.28),
+    0 0 0 color-mix(in srgb, var(--growth-accent) 58%, #000);
 }
 
 .growth-spotlight-panel {
@@ -857,23 +853,9 @@ body {
   background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.09), transparent 42%);
 }
 
-/* Image generator studio atmospheric background overlay */
-.growth-image-studio-bg {
-  background:
-    radial-gradient(circle at 48% 34%, rgba(61, 100, 125, 0.16), transparent 32%),
-    linear-gradient(180deg, #101312, #080a09 46%, #111415);
-}
-
 /* Template-mode scroll-area fade overlay (ImageGeneratorStudio) */
 .growth-template-scroll-overlay {
   background: linear-gradient(180deg, rgba(8, 10, 9, 0.05), rgba(8, 10, 9, 0.18) 55%, rgba(8, 10, 9, 0.86));
-}
-
-/* Video generator studio atmospheric background overlay (lime-tinted radial) */
-.growth-video-studio-bg {
-  background:
-    radial-gradient(circle at 76% 8%, color-mix(in srgb, var(--growth-accent) 6%, transparent), transparent 24%),
-    linear-gradient(180deg, #080a09, #0c0f0e);
 }
 
 /* Image composer SpotlightPanel deep shadow */
@@ -897,6 +879,75 @@ body {
 }
 .growth-history-icon-glow {
   box-shadow: 0 0 42px color-mix(in srgb, var(--growth-accent) 22%, transparent);
+}
+
+/* 功能页面板体系（video studio）：
+   - growth-panel      外层面板：左侧操作区、右侧内容卡片，统一底色 + 极淡描边
+   - growth-panel-item 面板内的按钮 / 小卡片：亮一档、无描边
+   两者成对使用，避免这套色值散落到各个组件里。 */
+.growth-panel {
+  background-color: rgb(19, 21, 23);
+  border-color: rgba(217, 217, 217, 0.04);
+}
+
+.growth-panel-item {
+  background-color: rgb(28, 30, 32);
+  border-color: transparent;
+}
+
+/* 上传区里的媒体类型圆图标：气泡质感。
+   关键是**白色内发光**——沿圆环一圈向内扩散，中心保持暗，形成玻璃气泡的边缘感。
+   圆钮之间小幅重叠，重叠区正好落在这圈内发光里。 */
+.growth-media-chip {
+  /* 与卡片同色的不透明底：圆盘本身不该比卡片亮，全靠内阴影勾出边 */
+  background-color: rgb(28, 30, 32);
+  /* 紧贴边缘的白色内阴影，不扩散——扩散开就糊成一团，贴边才有气泡感 */
+  box-shadow: inset 0 0 9px rgb(255 255 255 / 0.2);
+}
+
+/* 提示词编辑器（contenteditable）的占位符。
+   contenteditable 没有原生 placeholder，只能用 :empty + ::before 模拟。
+   注意 :empty 要求元素连空文本节点都没有——浏览器在编辑器获得焦点后常会塞一个 <br>，
+   所以额外匹配「只含一个 br」的情况。 */
+.growth-prompt-editor:empty::before,
+.growth-prompt-editor:has(> br:only-child)::before {
+  content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--foreground) 36%, transparent);
+  pointer-events: none;
+}
+
+/* 时长滑块（VideoSliderTrack）：整条是 h-9(36px) 的圆角矩形。
+   轨道底色、已选区域、手柄全部由外层 div 自绘（这样才能对位置做 CSS 补间）；
+   input 本身 opacity-0，只提供拖拽/键盘交互。下面的 thumb 尺寸因此只影响
+   拖拽热区大小，不影响观感——但仍需保留，否则热区会退化成 1px。 */
+.growth-range::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+.growth-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 4px;
+  height: 24px;
+  margin-top: 6px; /* (36 - 24) / 2，在 36px 轨道内垂直居中 */
+  border-radius: 2px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.growth-range::-moz-range-track {
+  height: 100%;
+  background: transparent;
+}
+
+.growth-range::-moz-range-thumb {
+  width: 4px;
+  height: 24px;
+  border: none;
+  border-radius: 2px;
+  background: #fff;
+  cursor: pointer;
 }
 
 /* VideoSidebar aside deep shadow + inset top highlight */
@@ -1321,7 +1372,6 @@ body {
   .growth-generator-card,
   .growth-generator-masonry,
   .growth-generator-generate {
-    animation: none;
     transform: none;
   }
 

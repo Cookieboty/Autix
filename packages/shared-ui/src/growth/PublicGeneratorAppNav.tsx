@@ -43,12 +43,18 @@ export function PublicGeneratorAppNav({
 }: {
   /** 不传则由 pathname 推导（持久单实例用）；显式传用于非持久场景（如 shell 内的 presets） */
   kind?: PublicGeneratorAppNavKind;
-  /** contained：定宽居中（首页/pricing）；fluid：全宽 + 始终收缩（功能页 image/video）。不传按 kind 推导 */
-  variant?: 'contained' | 'fluid';
+  /**
+   * contained：定宽居中 + 随滚动收缩（首页/pricing）
+   * fluid：全宽贴边 + 始终收缩（功能页 image）
+   * studio：定宽居中 + 始终收缩（功能页 video，核心内容与工作区同宽）
+   * 不传按 kind 推导
+   */
+  variant?: 'contained' | 'fluid' | 'studio';
 } = {}) {
   const pathname = usePathname();
   const kind = kindProp ?? deriveNavKind(pathname);
-  const variant = variantProp ?? (kind === 'image' || kind === 'video' ? 'fluid' : 'contained');
+  const variant =
+    variantProp ?? (kind === 'video' ? 'studio' : kind === 'image' ? 'fluid' : 'contained');
 
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -58,9 +64,13 @@ export function PublicGeneratorAppNav({
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // 功能页（fluid）以功能为主，导航始终保持收缩态；首页/pricing（contained）随滚动收缩
-  const fluid = variant === 'fluid';
-  const compact = fluid || scrolled;
+  // 功能页（fluid/studio）以功能为主，导航始终保持收缩态；首页/pricing（contained）随滚动收缩
+  const isFunction = variant !== 'contained';
+  // 背景：功能页透明以透出 studio 的全屏固定主题背景；contained 用 bg-background
+  const transparent = isFunction;
+  // 宽度：仅 fluid 全宽贴边；contained/studio 都收窄到 1920px（与站内核心内容约定一致）
+  const bounded = variant !== 'fluid';
+  const compact = isFunction || scrolled;
 
   // 默认 52px / 收缩 36px；内部元素尺寸随之收缩
   const linkSize = compact ? 'min-h-6 px-2 text-[13px]' : 'min-h-8 px-2.5 text-sm';
@@ -103,10 +113,9 @@ export function PublicGeneratorAppNav({
 
   return (
     <header
-      // 功能页(fluid)透明，透出全屏固定主题背景以求统一；首页/pricing(contained) 用 bg-background
-      className={`sticky top-0 z-30 transition-colors duration-300 ${fluid ? 'bg-transparent' : 'bg-background'}`}
+      className={`sticky top-0 z-30 transition-colors duration-300 ${transparent ? 'bg-transparent' : 'bg-background'}`}
     >
-      <div className={`w-full px-3 transition-all duration-300 md:px-5 ${fluid ? 'max-w-none' : 'mx-auto max-w-[1920px]'}`}>
+      <div className={`w-full px-3 transition-all duration-300 md:px-5 ${bounded ? 'mx-auto max-w-[1920px]' : 'max-w-none'}`}>
         <div
           className={`flex items-center justify-between gap-4 transition-all duration-300 ${compact ? 'h-9' : 'h-[52px]'
             }`}
