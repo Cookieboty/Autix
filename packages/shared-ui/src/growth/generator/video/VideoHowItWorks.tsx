@@ -3,8 +3,15 @@
 import { History, LayoutGrid } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useAuthStore, useUiStore, type DirectVideoGenerationDto } from '@autix/shared-store';
+import {
+  useAuthStore,
+  useUiStore,
+  type DirectVideoGenerationDto,
+  type GalleryFeedItem,
+} from '@autix/shared-store';
 import { StudioDensitySlider } from '../parts';
+import { GalleryDetailDialog } from '../../detail/GalleryDetailDialog';
+import { useGalleryPostModal } from '../../detail/useGalleryPostModal';
 import { VideoHistoryPanel, type PendingVideoGenerationCard } from './VideoHistoryPanel';
 import { VideoGalleryWall } from './VideoGalleryWall';
 import type { TemplateDensity } from '../generator-studio-helpers';
@@ -23,6 +30,7 @@ export function VideoHowItWorks({
   onRecreate,
   onSelectionActiveChange,
   onHistoryChanged,
+  onRecreatePrompt,
 }: {
   activeTab: 'history' | 'gallery';
   pendingGeneration?: PendingVideoGenerationCard | null;
@@ -35,6 +43,8 @@ export function VideoHowItWorks({
   onSelectionActiveChange?: (active: boolean) => void;
   /** 发布/删除后重拉 history —— 徽章状态来自服务端，不靠本地内存猜。 */
   onHistoryChanged?: () => void;
+  /** 广场作品的「Recreate」：把该作品的提示词填回输入框。 */
+  onRecreatePrompt?: (prompt: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -49,7 +59,16 @@ export function VideoHowItWorks({
     loadingMore: galleryLoadingMore,
     hasMore: galleryHasMore,
     loadMore: galleryLoadMore,
+    toggleLike: galleryToggleLike,
+    toggleFavorite: galleryToggleFavorite,
   } = useGalleryFeedController('VIDEO');
+  /**
+   * 广场作品详情：与 /ai/image 广场同一个弹窗（GalleryDetailDialog 已原生支持
+   * kind='VIDEO' —— 媒体区走 <video>+poster、详情行多一条时长），
+   * 且同样只用 History API 改地址栏、不做路由导航。视频这边此前压根没接详情，
+   * 点卡片没有任何反应。
+   */
+  const galleryModal = useGalleryPostModal();
 
   // 右栏不加上下内边距：与左侧 aside 一起贴容器的 py-3，保证两栏顶部对齐
   return (
@@ -135,11 +154,39 @@ export function VideoHowItWorks({
                 hasMore={galleryHasMore}
                 density={density}
                 onLoadMore={galleryLoadMore}
+                onOpen={galleryModal.open}
+                onToggleLike={(item) => void galleryToggleLike(item).catch(() => undefined)}
+                {...(onRecreatePrompt
+                  ? {
+                      onRecreate: (item: GalleryFeedItem) =>
+                        onRecreatePrompt(item.post.prompt ?? ''),
+                    }
+                  : {})}
               />
             </div>
           )}
         </div>
       </div>
+      <GalleryDetailDialog
+        item={galleryModal.item}
+        onClose={galleryModal.close}
+        onToggleLike={(postId) => {
+          const hit = galleryItems.find((entry) => entry.post.id === postId);
+          if (hit) void galleryToggleLike(hit).catch(() => undefined);
+        }}
+        onToggleFavorite={(postId) => {
+          const hit = galleryItems.find((entry) => entry.post.id === postId);
+          if (hit) void galleryToggleFavorite(hit).catch(() => undefined);
+        }}
+        {...(onRecreatePrompt
+          ? {
+              onRecreate: (item: GalleryFeedItem) => {
+                onRecreatePrompt(item.post.prompt ?? '');
+                galleryModal.close();
+              },
+            }
+          : {})}
+      />
     </main>
   );
 }

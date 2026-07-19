@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Check, Download, Ellipsis, Eye, Film, Pause, Play, RefreshCw, Share2, Trash2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, Download, Ellipsis, Eye, Film, RefreshCw, Share2, Trash2, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import {
@@ -121,46 +121,6 @@ export function VideoHistoryPanel({
    * （adaptive 模式尤其如此），拿请求值当最终值会让整行错位。
    */
   const [naturalRatios, setNaturalRatios] = useState<Record<string, number>>({});
-
-  /**
-   * 显式播放（点播放按钮）中的那一条。同一时刻只允许一条，点另一条会先停掉前一条 ——
-   * 历史里一屏能放下十几个视频，同时出声就是灾难。
-   */
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const videoRefs = useRef(new Map<string, HTMLVideoElement>());
-
-  /** 停止某条的显式播放：暂停、归零、重新静音（下次 hover 预览才不会带声音）。 */
-  const stopPlayback = (id: string) => {
-    const element = videoRefs.current.get(id);
-    if (element) {
-      element.pause();
-      element.currentTime = 0;
-      element.muted = true;
-      element.loop = true;
-    }
-    setPlayingId((current) => (current === id ? null : current));
-  };
-
-  const togglePlayback = (id: string) => {
-    if (playingId === id) {
-      stopPlayback(id);
-      return;
-    }
-    if (playingId) stopPlayback(playingId);
-    const element = videoRefs.current.get(id);
-    if (!element) return;
-    // 显式播放 = 用户手势，可以带声音；hover 预览那条路径始终静音。
-    // 也不循环：播完就停回封面，避免一直转。
-    element.muted = false;
-    element.loop = false;
-    element.currentTime = 0;
-    void element.play().catch(() => {
-      // 浏览器仍拒绝（极少见）→ 退回静音再试一次，别让按钮点了没反应
-      element.muted = true;
-      void element.play().catch(() => undefined);
-    });
-    setPlayingId(id);
-  };
 
   const rememberNaturalRatio = (id: string, element: HTMLVideoElement) => {
     const { videoWidth, videoHeight } = element;
@@ -365,24 +325,14 @@ export function VideoHistoryPanel({
                       // 元数据到位就校正比例；命中缓存时 loadedmetadata 可能已经过了，
                       // 所以 ref 里也读一次（readyState>=1 表示元数据已就绪）
                       ref={(element) => {
-                        if (element) {
-                          videoRefs.current.set(item.id, element);
-                          if (element.readyState >= 1) rememberNaturalRatio(item.id, element);
-                        } else {
-                          videoRefs.current.delete(item.id);
-                        }
+                        if (element && element.readyState >= 1) rememberNaturalRatio(item.id, element);
                       }}
                       onLoadedMetadata={(event) => rememberNaturalRatio(item.id, event.currentTarget)}
-                      // 播完（显式播放不循环）→ 归位成「未播放」，按钮变回 ▶
-                      onEnded={() => stopPlayback(item.id)}
-                      // 悬浮预览：静音循环播放，移开归零。
-                      // 显式播放中的那条完全不参与 —— 否则用户点了播放、鼠标一移开就被掐掉。
-                      onMouseEnter={(event) => {
-                        if (playingId === item.id) return;
-                        void event.currentTarget.play().catch(() => undefined);
-                      }}
+                      // 播放交互只有悬浮一种：移入静音循环播放，移开暂停归零。
+                      // 不放显式播放按钮 —— 一屏十几张卡，每张挂一个按钮太抢视线，
+                      // 想认真看的走详情弹窗（那里有完整 controls）。
+                      onMouseEnter={(event) => void event.currentTarget.play().catch(() => undefined)}
                       onMouseLeave={(event) => {
-                        if (playingId === item.id) return;
                         event.currentTarget.pause();
                         event.currentTarget.currentTime = 0;
                       }}
@@ -485,27 +435,6 @@ export function VideoHistoryPanel({
                   >
                     <Check className="size-3" strokeWidth={3} />
                   </button>
-
-                  {/* 播放按钮：右下角、白底深色图标 —— 与资产面板里的视频/音频播放入口同款，
-                      三处的播放长相保持一致。多选态下不出现（那时整卡是选择热区）。
-                      必须 stopPropagation：底下铺着打开详情的整卡热区。 */}
-                  {status === 'completed' && item.videoUrl && !selectionActive ? (
-                    <button
-                      type="button"
-                      aria-label={playingId === item.id ? t('pause') : t('play')}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        togglePlayback(item.id);
-                      }}
-                      className="absolute bottom-2 right-2 z-30 grid size-9 cursor-pointer place-items-center rounded-full bg-foreground text-background transition hover:brightness-90"
-                    >
-                      {playingId === item.id ? (
-                        <Pause className="size-4 fill-current" />
-                      ) : (
-                        <Play className="size-4 translate-x-px fill-current" />
-                      )}
-                    </button>
-                  ) : null}
 
                   {item.galleryPost ? (
                     <span className="pointer-events-none absolute bottom-2 left-2 z-30 rounded-full bg-background/70 px-2 py-0.5 text-xs font-bold text-foreground backdrop-blur-md">

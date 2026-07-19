@@ -47,7 +47,7 @@ export function PublicGeneratorStudioView({
   examples?: PublicGrowthMediaItem[] | null;
   initialModel?: string | null;
   initialMode?: ImageStudioMode;
-  /** Plan C Task 12：广场「recreate」跳转预填——目前仅 image studio 接线，video 暂未接。 */
+  /** 生成器 Tab 初值（?mode=gallery），image / video 共用。 */
   initialPrompt?: string | null;
 }) {
   const t = useTranslations('publicGrowth');
@@ -253,6 +253,9 @@ export function PublicGeneratorStudioView({
           pricingSchema={videoPricingSchema}
           pricingContext={videoPricingContext}
           onModelChange={setSelectedVideoModelId}
+          initialMode={initialMode}
+          /* 同 image：Web 端才写地址栏 */
+          syncUrl
         />
       ) : (
         <ImageGeneratorStudio

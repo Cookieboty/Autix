@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowUpRight, Eye, Heart, ImageIcon, Play } from 'lucide-react';
+import { ArrowUpRight, Eye, Heart, ImageIcon } from 'lucide-react';
 import {
   galleryActions,
   publicGalleryActions,
@@ -205,6 +205,15 @@ function formatMetric(value: number): string {
   return String(value);
 }
 
+/** "16:9" → 1.777…；解析不出返回 undefined，由调用方兜底。 */
+function parsePostRatio(label?: string | null): number | undefined {
+  const match = label?.match(/(\d+)\s*[x:×]\s*(\d+)/i);
+  if (!match) return undefined;
+  const w = Number(match[1]);
+  const h = Number(match[2]);
+  return w > 0 && h > 0 ? w / h : undefined;
+}
+
 /**
  * 广场作品瀑布流卡片。悬浮态与生成器广场墙（ImageTemplateWall）**保持一致**：
  * 底部一行 = 作者胶囊（左） + 访问量/点赞合并胶囊（右）。
@@ -227,19 +236,82 @@ function HomeGalleryGrid({
 }) {
   return (
     <div className="columns-1 gap-3 opacity-95 sm:columns-2 lg:columns-3 2xl:columns-4">
-      {items.map((item, index) => {
-        const { post, metrics } = item;
-        const cover = post.coverImage ?? post.mediaUrls[0] ?? null;
-        const author = item.author?.nickname || unknownAuthor;
-        const isVideo = post.kind === 'VIDEO';
-        const interaction = interactionOf(item);
-        return (
+      {items.map((item, index) => (
+        <HomeGalleryCard
+          key={item.post.id}
+          item={item}
+          index={index}
+          unknownAuthor={unknownAuthor}
+          onSelect={onSelect}
+          interaction={interactionOf(item)}
+          onToggleLike={onToggleLike}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 单张卡片。抽成组件而不是留在 map 里，是因为视频要用 state 存「量到的真实比例」——
+ * hooks 不能写在循环体内。
+ */
+function HomeGalleryCard({
+  item,
+  index,
+  unknownAuthor,
+  onSelect,
+  interaction,
+  onToggleLike,
+}: {
+  item: GalleryFeedItem;
+  index: number;
+  unknownAuthor: string;
+  onSelect: (item: GalleryFeedItem) => void;
+  interaction: GalleryInteraction;
+  onToggleLike: (postId: string) => void;
+}) {
+  const { post, metrics } = item;
+  const cover = post.coverImage ?? post.mediaUrls[0] ?? null;
+  const author = item.author?.nickname || unknownAuthor;
+  const isVideo = post.kind === 'VIDEO';
+  /** 投稿快照里的画幅只是「请求值」，真实比例以视频元数据为准（见下方 onLoadedMetadata）。 */
+  const [videoRatio, setVideoRatio] = useState<number>(() => parsePostRatio(post.aspectRatio) ?? 9 / 16);
+
+  return (
           <article
-            key={post.id}
             className="growth-generator-masonry group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-md bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
             style={{ animationDelay: `${(index % 9) * 80}ms` }}
           >
-            {cover ? (
+            {isVideo && post.mediaUrls[0] ? (
+              /*
+               * 视频必须渲染 <video>：此前这里对所有 kind 一律 <img src={cover}>，而
+               * cover 回退到 mediaUrls[0] 就是个 .mp4 —— 浏览器当图片解不出来，
+               * 首页视频画廊整片空白。
+               *
+               * 比例取真实元数据（onLoadedMetadata），拿不到前用投稿快照兜底：
+               * 投稿里的 aspectRatio 只是请求的画幅，与厂商实际返回的未必一致。
+               */
+              <video
+                src={post.mediaUrls[0]}
+                poster={post.coverImage ?? undefined}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                className="block w-full object-cover"
+                style={{ aspectRatio: String(videoRatio) }}
+                onLoadedMetadata={(event) => {
+                  const { videoWidth, videoHeight } = event.currentTarget;
+                  if (videoWidth && videoHeight) setVideoRatio(videoWidth / videoHeight);
+                }}
+                // 悬浮即播、移开暂停归零 —— 首页不放播放按钮，卡面保持干净
+                onMouseEnter={(event) => void event.currentTarget.play().catch(() => undefined)}
+                onMouseLeave={(event) => {
+                  event.currentTarget.pause();
+                  event.currentTarget.currentTime = 0;
+                }}
+              />
+            ) : cover ? (
               <img
                 src={cover}
                 alt={post.title ?? ''}
@@ -260,12 +332,6 @@ function HomeGalleryGrid({
               className="absolute inset-0 z-10 cursor-pointer"
               onClick={() => onSelect(item)}
             />
-
-            {isVideo ? (
-              <span className="pointer-events-none absolute left-1/2 top-1/2 z-20 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-background/45 text-foreground backdrop-blur-md">
-                <Play className="size-5 translate-x-px" />
-              </span>
-            ) : null}
 
             <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100" />
             {/* 底部：作者（左） + 访问量/点赞（右）。与广场墙同一套胶囊：h-7 / bg-black/25 /
@@ -298,8 +364,5 @@ function HomeGalleryGrid({
               </span>
             </div>
           </article>
-        );
-      })}
-    </div>
   );
 }

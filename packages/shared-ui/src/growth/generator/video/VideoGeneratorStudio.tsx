@@ -18,7 +18,8 @@ import { VideoSidebar } from './VideoSidebar';
 import { VideoHowItWorks } from './VideoHowItWorks';
 import type { PublicVideoGenerationPayload } from './public-video-generation';
 import type { PendingVideoGenerationCard } from './VideoHistoryPanel';
-import { usePathname, useRouter, useSearchParams } from '../../../navigation';
+import type { StudioMode } from '../generator-studio-helpers';
+import { buildStudioSearch, parseStudioMode } from '../image/gallery-url';
 
 /** 轮询终态：completed/failed/expired 都收敛为「结束」，非 completed 的按失败处理。 */
 const TERMINAL_VIDEO_STATUSES = new Set(['completed', 'failed', 'expired']);
@@ -39,6 +40,8 @@ export function VideoGeneratorStudio({
   pricingSchema,
   pricingContext,
   onModelChange,
+  initialMode = 'history',
+  syncUrl = false,
 }: {
   initialModel?: string | null;
   videoModels: ModelConfigItem[];
@@ -50,25 +53,43 @@ export function VideoGeneratorStudio({
   pricingSchema: PricingSchema | undefined;
   pricingContext: { multiplier: number; discountFactor: number };
   onModelChange: (modelId: string) => void;
+  /**
+   * 初始 Tab，由服务端从 `?mode=` 解析后传入（见 ai/video/page.tsx）。
+   *
+   * 必须走服务端而不是在客户端读 location.search：后者 SSR 时读不到，首帧渲染成
+   * 「history 选中」，客户端再变成 gallery —— 属性不一致，React 明确不会修补，
+   * 表现就是直接打开 ?mode=gallery 时内容是广场、Gallery 那个 tab 却是灰的。
+   */
+  initialMode?: StudioMode;
+  /** 把 Tab 写进地址栏。Web 端开；桌面端 HashRouter 地址栏不可见，开了没意义。 */
+  syncUrl?: boolean;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  // tab 存进 URL，刷新/分享都能保持；默认 history。
-  // 用 replace 而非 push：切 tab 不该在浏览器历史里堆一堆条目，返回键应回到上一个页面。
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-  const tab: 'history' | 'gallery' = searchParams.get('tab') === 'gallery' ? 'gallery' : 'history';
+  // Tab 以本地 state 为准、URL 只是镜像 —— 与 /ai/image 完全同一套（含 ?mode= 参数名）。
+  //
+  // 此前这里读的是 shared-ui 那个 useSearchParams shim + router.replace，有两个毛病：
+  // 1) shim 在 useState 初始化里读 window.location.search，SSR 读不到 → hydration 不匹配；
+  // 2) 它只监听 popstate，而 router.replace 不触发 popstate → 点 tab 后 tab 值根本不变，
+  //    表现为「切换 tab 没反应、也不加载对应数据」。
+  const [tab, setTabState] = useState<StudioMode>(initialMode);
   const setTab = useCallback(
-    (next: 'history' | 'gallery') => {
-      const params = new URLSearchParams(searchParams.toString());
-      // history 是默认值，不写进 URL，保持地址干净
-      if (next === 'gallery') params.set('tab', 'gallery');
-      else params.delete('tab');
-      const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname);
+    (next: StudioMode) => {
+      setTabState(next);
+      if (!syncUrl || typeof window === 'undefined') return;
+      // 原生 History API 而不是 router.replace：后者会走一趟服务端、整页重挂载，
+      // 正在生成的任务和输入框内容都会没。切 Tab 只要地址栏变，不要导航。
+      const search = buildStudioSearch(window.location.search, next);
+      window.history.replaceState(null, '', `${window.location.pathname}${search}`);
     },
-    [pathname, router, searchParams],
+    [syncUrl],
   );
+  // 浏览器前进/后退：地址栏里的 ?mode= 是 Tab 的真相来源
+  useEffect(() => {
+    if (!syncUrl || typeof window === 'undefined') return;
+    const handlePopState = () => setTabState(parseStudioMode(window.location.search));
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [syncUrl]);
   // 素材面板的挂载宿主（右栏容器）。用 state 而非 ref：ref 变化不触发重渲染，
   // portal 目标拿不到就永远渲染不出来。
   const [assetPanelHost, setAssetPanelHost] = useState<HTMLDivElement | null>(null);
@@ -167,9 +188,10 @@ export function VideoGeneratorStudio({
    * （用户就在这个页面上，直接改了输入框即可）。token 递增让连点两次也能生效。
    */
   const [injectedPrompt, setInjectedPrompt] = useState<{ text: string; token: number } | undefined>();
-  const handleRecreate = (item: DirectVideoGenerationDto) => {
-    setInjectedPrompt((prev) => ({ text: item.prompt, token: (prev?.token ?? 0) + 1 }));
+  const applyPrompt = (text: string) => {
+    setInjectedPrompt((prev) => ({ text, token: (prev?.token ?? 0) + 1 }));
   };
+  const handleRecreate = (item: DirectVideoGenerationDto) => applyPrompt(item.prompt);
 
   useEffect(() => {
     // 优化模型列表用登录后的通用/对话模型（公开模型接口通常不含 chat 模型）；
@@ -310,6 +332,7 @@ export function VideoGeneratorStudio({
           historyLoading={historyLoading}
           onRecreate={handleRecreate}
           onHistoryChanged={() => void reloadHistory()}
+          onRecreatePrompt={applyPrompt}
         />
         </div>
       </div>

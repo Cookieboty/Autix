@@ -1,6 +1,12 @@
 import type { ImageTemplate } from '@autix/shared-store';
 
-export type ImageStudioMode = 'history' | 'gallery';
+/**
+ * 生成器右栏的 Tab。image 与 video 共用同一套值与同一个 URL 参数（?mode=gallery）——
+ * 两个页面的地址栏写法必须一致，否则用户在两边来回切会发现规则不一样。
+ */
+export type StudioMode = 'history' | 'gallery';
+/** 旧名，保留以免大面积改动调用点。 */
+export type ImageStudioMode = StudioMode;
 // 5 档密度：xrelaxed = 图最大/列最少 … xdense = 图最小/列最多
 export type TemplateDensity = 'xrelaxed' | 'relaxed' | 'normal' | 'dense' | 'xdense';
 export type PublicUploadedReference = {

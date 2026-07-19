@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Play } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Eye, Heart, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { GalleryFeedItem } from '@autix/shared-store';
 import type { TemplateDensity } from '../generator-studio-helpers';
+import { AuthorAvatar } from '../../AuthorAvatar';
+import { formatMetricCount } from '../metric-format';
 import { VideoEmptyShowcase } from './VideoEmptyShowcase';
 
 /**
@@ -74,7 +76,11 @@ function itemAspectRatio(item: GalleryFeedItem): number | undefined {
 /**
  * 贪心分列。列等宽，所以「高度」只需按 1/ratio 累加，无需测量 DOM。
  */
-function distributeToColumns(items: GalleryFeedItem[], columnCount: number) {
+function distributeToColumns(
+  items: GalleryFeedItem[],
+  columnCount: number,
+  measured: Record<string, number>,
+) {
   const columns: GalleryFeedItem[][] = Array.from({ length: columnCount }, () => []);
   const heights = new Array(columnCount).fill(0);
   for (const item of items) {
@@ -83,7 +89,9 @@ function distributeToColumns(items: GalleryFeedItem[], columnCount: number) {
       if (heights[i] < heights[target]) target = i;
     }
     columns[target]!.push(item);
-    heights[target] += 1 / (itemAspectRatio(item) ?? FALLBACK_ASPECT_RATIO);
+    // 优先用视频元数据量到的真实比例，其次投稿快照，最后兜底
+    const ratio = measured[item.post.id] ?? itemAspectRatio(item) ?? FALLBACK_ASPECT_RATIO;
+    heights[target] += 1 / ratio;
   }
   return columns;
 }
@@ -98,21 +106,45 @@ function formatDuration(seconds: number | null) {
 
 function VideoGalleryCard({
   item,
+  index,
+  interaction,
   onOpen,
+  onRecreate,
+  onToggleLike,
+  onMeasureRatio,
 }: {
   item: GalleryFeedItem;
+  /** 全局下标：决定首屏 eager 预加载 */
+  index: number;
+  interaction?: { liked?: boolean; likeCount?: number };
   onOpen?: (item: GalleryFeedItem) => void;
+  onRecreate?: (item: GalleryFeedItem) => void;
+  onToggleLike?: (item: GalleryFeedItem) => void;
+  /** 视频元数据到位后回传真实比例，供列高估算校正 */
+  onMeasureRatio?: (postId: string, ratio: number) => void;
 }) {
+  const t = useTranslations('publicGrowth.generator.studio');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const { post } = item;
   const cover = post.coverImage ?? undefined;
   const src = post.mediaUrls[0];
-  const ratio = itemAspectRatio(item) ?? FALLBACK_ASPECT_RATIO;
+  /**
+   * 卡片自己也存一份量到的比例：父级那份是给列高估算用的，这里要在同一帧就把容器
+   * 定高改过来。只靠父级回传会多一次渲染往返，中间那帧仍按错误比例裁切。
+   */
+  const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
+  const ratio = naturalRatio ?? itemAspectRatio(item) ?? FALLBACK_ASPECT_RATIO;
   const duration = formatDuration(post.durationSec);
+  const liked = interaction?.liked ?? item.liked ?? false;
+  const likeCount = interaction?.likeCount ?? item.metrics?.likeCount ?? 0;
+  const authorName = item.author?.nickname || t('unknownAuthor');
 
   return (
     <article
       className="group relative w-full overflow-hidden rounded-[10px] bg-black/40"
+      // 比例来自真实视频元数据（onLoadedMetadata 回传后由父级校正），
+      // 拿不到时才退回投稿快照里的 aspectRatio —— 与 history 同一原则：
+      // 厂商实际返回的画幅未必等于请求值，按请求值渲染会裁切画面。
       style={{ aspectRatio: String(ratio) }}
     >
       {src ? (
@@ -123,34 +155,21 @@ function VideoGalleryCard({
           muted
           loop
           playsInline
-          preload="metadata"
-          className="size-full object-cover transition duration-500 group-hover:scale-[1.03]"
+          preload={index < 8 ? 'auto' : 'metadata'}
+          className="size-full object-cover"
+          onLoadedMetadata={(event) => {
+            const { videoWidth, videoHeight } = event.currentTarget;
+            if (!videoWidth || !videoHeight) return;
+            const measured = videoWidth / videoHeight;
+            setNaturalRatio(measured);
+            onMeasureRatio?.(post.id, measured);
+          }}
         />
       ) : cover ? (
         <img src={cover} alt="" className="size-full object-cover" />
       ) : null}
 
-      {/* 悬停渐变 + 元信息 */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 transition duration-300 group-hover:opacity-100" />
-
-      {/* 播放角标：未悬停时提示这是视频 */}
-      <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-background/40 text-foreground backdrop-blur-md transition duration-300 group-hover:opacity-0">
-        <Play className="size-4 translate-x-px fill-current" />
-      </span>
-
-      {duration ? (
-        <span className="pointer-events-none absolute right-2 top-2 rounded-md bg-background/60 px-1.5 py-0.5 text-[10px] font-bold text-foreground/85 backdrop-blur-sm">
-          {duration}
-        </span>
-      ) : null}
-
-      {post.modelName ? (
-        <span className="pointer-events-none absolute inset-x-2 bottom-2 truncate text-[11px] font-bold text-foreground/85 opacity-0 transition duration-300 group-hover:opacity-100">
-          {post.modelName}
-        </span>
-      ) : null}
-
-      {/* 整卡热区：hover 播放、点击进详情 */}
+      {/* 整卡热区：hover 播放预览、点击进详情。放在浮层之下，浮层里的按钮自己 stopPropagation */}
       <button
         type="button"
         aria-label={post.title ?? post.prompt ?? 'video'}
@@ -164,8 +183,64 @@ function VideoGalleryCard({
           el.pause();
           el.currentTime = 0;
         }}
-        className="absolute inset-0 cursor-pointer"
+        className="absolute inset-0 z-10 cursor-pointer"
       />
+
+      {/* 悬停渐变：上下两头压暗，让顶部按钮与底部信息读得清 */}
+      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
+
+      {/* 时长角标：不放播放按钮，靠它表达「这是视频」。悬浮即播放，让位给操作按钮 */}
+      {duration ? (
+        <span className="pointer-events-none absolute right-2 top-2 z-20 rounded-md bg-background/60 px-1.5 py-0.5 text-[10px] font-bold text-foreground/85 backdrop-blur-sm transition group-hover:opacity-0">
+          {duration}
+        </span>
+      ) : null}
+
+      {/* 右上角：用这条的提示词重新生成（与 image 广场卡同款位置与样式） */}
+      {onRecreate ? (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex translate-y-[-6px] items-start justify-end gap-1.5 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+          <button
+            type="button"
+            className="growth-btn-drop-shadow pointer-events-auto inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-growth-accent px-2.5 text-xs font-black text-background transition duration-200 hover:bg-foreground"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRecreate(item);
+            }}
+          >
+            <RefreshCw className="size-3.5" />
+            {t('recreate')}
+          </button>
+        </div>
+      ) : null}
+
+      {/* 底部：作者（左） + 浏览量/点赞（右）。收藏只在详情弹窗里，卡片上不放 —— 与 image 一致 */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+        <span className="growth-inset-ring inline-flex h-7 min-w-0 items-center gap-2 rounded-full bg-black/25 pl-1 pr-2.5 text-xs font-bold text-foreground backdrop-blur-md">
+          <AuthorAvatar name={authorName} avatarUrl={item.author?.avatar} />
+          <span className="truncate">{authorName}</span>
+        </span>
+        <span className="growth-inset-ring inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-black/25 pl-2.5 pr-1 text-xs font-bold text-foreground backdrop-blur-md">
+          <span className="inline-flex items-center gap-1">
+            <Eye className="size-3.5" />
+            {formatMetricCount(item.metrics?.uvCount)}
+          </span>
+          {onToggleLike ? (
+            <button
+              type="button"
+              aria-label={t('ariaLike')}
+              aria-pressed={liked}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleLike(item);
+              }}
+              className="pointer-events-auto inline-flex h-[22px] cursor-pointer items-center gap-1 rounded-full bg-black/45 px-2 transition hover:bg-black/60"
+            >
+              <Heart className={`size-3.5 ${liked ? 'fill-red-500 text-red-500' : ''}`} />
+              {formatMetricCount(likeCount)}
+            </button>
+          ) : null}
+        </span>
+      </div>
     </article>
   );
 }
@@ -214,6 +289,8 @@ export function VideoGalleryWall({
   density,
   onLoadMore,
   onOpen,
+  onRecreate,
+  onToggleLike,
 }: {
   items: GalleryFeedItem[];
   loading: boolean;
@@ -222,10 +299,26 @@ export function VideoGalleryWall({
   density: TemplateDensity;
   onLoadMore: () => void;
   onOpen?: (item: GalleryFeedItem) => void;
+  onRecreate?: (item: GalleryFeedItem) => void;
+  onToggleLike?: (item: GalleryFeedItem) => void;
 }) {
   const columnCount = useColumnCount(density);
   const gap = DENSITY_GAP[density];
-  const columns = useMemo(() => distributeToColumns(items, columnCount), [items, columnCount]);
+  /**
+   * 视频元数据量到的真实比例（key = postId）。
+   *
+   * 投稿快照里的 aspectRatio 只是「请求的画幅」，厂商实际返回的未必一致；不校正就会
+   * 按错误比例给卡片定高，画面被 object-cover 裁掉一截。列高估算也一并用它，
+   * 免得整面墙越滚越歪。
+   */
+  const [measuredRatios, setMeasuredRatios] = useState<Record<string, number>>({});
+  const rememberRatio = useCallback((postId: string, ratio: number) => {
+    setMeasuredRatios((prev) => (prev[postId] === ratio ? prev : { ...prev, [postId]: ratio }));
+  }, []);
+  const columns = useMemo(
+    () => distributeToColumns(items, columnCount, measuredRatios),
+    [items, columnCount, measuredRatios],
+  );
 
   // 无限滚动：哨兵进入视口前 600px 就预取下一页
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -250,8 +343,16 @@ export function VideoGalleryWall({
       <div className={`flex items-start ${gap}`}>
         {columns.map((column, columnIndex) => (
           <div key={columnIndex} className={`flex min-w-0 flex-1 flex-col ${gap}`}>
-            {column.map((item) => (
-              <VideoGalleryCard key={item.post.id} item={item} onOpen={onOpen} />
+            {column.map((item, rowIndex) => (
+              <VideoGalleryCard
+                key={item.post.id}
+                item={item}
+                index={columnIndex + rowIndex * columnCount}
+                onOpen={onOpen}
+                onRecreate={onRecreate}
+                onToggleLike={onToggleLike}
+                onMeasureRatio={rememberRatio}
+              />
             ))}
           </div>
         ))}
