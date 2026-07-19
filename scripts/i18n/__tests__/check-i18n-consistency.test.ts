@@ -1,12 +1,17 @@
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   assertAligned,
   assertApiCatalogNonEmpty,
   assertPlaceholdersMatch,
   assertUntranslatedRatchet,
+  collectIssues,
   countUntranslated,
   extractIcuArgs,
   extractMustacheArgs,
+  loadApiLocales,
 } from '../../check-i18n-consistency';
 
 describe('assertAligned', () => {
@@ -212,5 +217,41 @@ describe('assertUntranslatedRatchet', () => {
   it('treats a language absent from the baseline as needing zero untranslated', () => {
     expect(assertUntranslatedRatchet({ de: 5 }, {})).toHaveLength(1);
     expect(assertUntranslatedRatchet({ de: 0 }, {})).toEqual([]);
+  });
+});
+
+describe('collectIssues (main() wiring)', () => {
+  // Regression test for a reviewer deleting the single line that wires
+  // `assertApiCatalogNonEmpty` into `main()`: every unit test for the pure
+  // function kept passing, and `pnpm run i18n:check` stayed green even with
+  // the entire locales directory moved away, because nothing exercised the
+  // wiring itself. Inject an empty API catalog so we don't have to mutate
+  // the real repo's locales directory to prove the wiring works.
+  it('surfaces a catalog: issue when the injected API catalog is empty', () => {
+    const emptyApiByLang = Object.fromEntries(
+      ['zh-CN', 'zh-TW', 'en', 'fr', 'ja', 'ru', 'vi'].map((l) => [l, {}]),
+    );
+    const issues = collectIssues(emptyApiByLang);
+    expect(issues.some((i) => i.includes('catalog:'))).toBe(true);
+  });
+});
+
+describe('loadApiLocales', () => {
+  // Regression test mirroring `locale-loader.ts`'s own duplicate-key guard
+  // (hardened in 8f25ba82): `loadApiLocales` used to reimplement the same
+  // recursive walk-and-merge by hand, without that guard, so a key defined
+  // with different values in two domain files for the same language was
+  // silently resolved last-write-wins instead of failing loudly.
+  it('throws when the same key is defined in two different domain files for one language', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'api-locales-dup-'));
+    try {
+      mkdirSync(join(dir, 'billing'));
+      mkdirSync(join(dir, 'creation'));
+      writeFileSync(join(dir, 'billing', 'en.yaml'), 'shared.key: from-billing\n');
+      writeFileSync(join(dir, 'creation', 'en.yaml'), 'shared.key: from-creation\n');
+      expect(() => loadApiLocales(dir)).toThrow(/shared\.key/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -1,10 +1,10 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { load as loadYaml } from 'js-yaml';
 import { flattenLeaves } from './i18n/merge-locales.core';
 import { CHUNKS } from '../packages/i18n/src/messages';
 import { ROUTE_POLICY } from '../clients/web/lib/i18n/route-policy';
+import { loadLocaleTree } from '../services/api/src/domains/platform/i18n/locale-loader';
 
 const LANGS = ['zh-CN', 'zh-TW', 'en', 'fr', 'ja', 'ru', 'vi'];
 const DIR = 'packages/i18n/src/messages';
@@ -306,29 +306,19 @@ export function assertRoutePolicyCoverage(pages: string[], policyKeys: string[])
     .map((t) => `[route-policy] 缺少声明: ${t}`);
 }
 
-/** 递归读取 API 侧按域拆分的扁平 YAML 文案表，合并成每语言一张表。 */
-function loadApiLocales(): Record<string, Record<string, string>> {
-  const byLang: Record<string, Record<string, string>> = Object.fromEntries(
-    LANGS.map((l) => [l, {} as Record<string, string>]),
-  );
-  if (!existsSync(API_LOCALE_DIR)) return byLang;
-
-  const walk = (dir: string): void => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) {
-        walk(p);
-        continue;
-      }
-      if (!name.endsWith('.yaml')) continue;
-      const lang = name.slice(0, -'.yaml'.length);
-      if (!(lang in byLang)) continue;
-      Object.assign(byLang[lang], loadYaml(readFileSync(p, 'utf8')) as Record<string, string>);
-    }
-  };
-
-  walk(API_LOCALE_DIR);
-  return byLang;
+/**
+ * 递归读取 API 侧按域拆分的扁平 YAML 文案表，合并成每语言一张表。
+ *
+ * 复用生产环境的 `loadLocaleTree`（而非自行手写递归合并），从而继承它的跨文件
+ * 撞键硬失败保护——同一语言的同一个 key 在两个域文件里都定义、值还不一样时，
+ * 手写的浅合并会静默按遍历顺序丢掉一个，`loadLocaleTree` 会直接抛错。
+ *
+ * `dir` 可注入，默认指向真实的 `API_LOCALE_DIR`，便于测试用临时目录验证撞键
+ * 会被抛出，而不必改动仓库里的真实词条文件。
+ */
+export function loadApiLocales(dir: string = API_LOCALE_DIR): Record<string, Record<string, string>> {
+  const tree = loadLocaleTree(dir);
+  return Object.fromEntries(LANGS.map((l) => [l, tree.get(l) ?? {}]));
 }
 
 /**
@@ -346,8 +336,9 @@ export function assertApiCatalogNonEmpty(
     .filter((lang) => Object.keys(byLang[lang]).length === 0)
     .map(
       (lang) =>
-        `[api][catalog:${lang}] 未读到任何词条——${API_LOCALE_DIR} 下缺少 ${lang}.yaml，` +
-        `或目录结构已变动。空词条表不是合法状态。`,
+        `[api][catalog:${lang}] 未读到任何词条——${API_LOCALE_DIR} 下所有域目录中都缺少 ` +
+        `${lang}.yaml（应位于 ${API_LOCALE_DIR}/<domain>/${lang}.yaml），或目录结构已变动。` +
+        `空词条表不是合法状态。`,
     );
 }
 
@@ -360,7 +351,22 @@ function flattenValues(tree: Record<string, unknown>): Record<string, string> {
   return out;
 }
 
-function main() {
+/**
+ * 汇总所有一致性检查的问题列表——`main()` 的全部业务逻辑都在这里，`main()` 只负责
+ * 打印与 exit code。
+ *
+ * 单独导出是为了让"某项检查被静默漏接"这类回归本身可测：这个脚本此前已经出现过
+ * 四次"守卫报绿但从未真正跑过"的事故（详见文件底部 `isDirectRun` 的注释），其中一次
+ * 就是有人删掉了把 `assertApiCatalogNonEmpty` 接进 `main()` 的那一行——纯函数单测
+ * 全绿，`i18n:check` 也照常报绿，因为没有任何测试断言"main 真的调用了它"。把逻辑
+ * 拆成一个可导入、可断言返回值的函数，才能对"接线本身"写回归测试。
+ *
+ * `apiByLangOverride` 允许测试注入一个空/构造出的 API 词条表，从而不必移动或清空
+ * 仓库里真实的 locales 目录就能验证 `assertApiCatalogNonEmpty` 确实被调用到了。
+ */
+export function collectIssues(
+  apiByLangOverride?: Record<string, Record<string, string>>,
+): string[] {
   const issues = assertChunkDirsMatchRuntime();
   const byLang = loadMergedByLang(DIR);
   issues.push(...assertAligned(byLang));
@@ -377,7 +383,7 @@ function main() {
   issues.push(...assertUntranslatedRatchet(countUntranslated(webValues, 'en'), baseline));
 
   // API 错误文案：这套是新纳入的，没有存量债务，所以未译一律硬失败——不给棘轮。
-  const apiByLang = loadApiLocales();
+  const apiByLang = apiByLangOverride ?? loadApiLocales();
   issues.push(...assertApiCatalogNonEmpty(apiByLang));
   issues.push(...assertAligned(apiByLang).map((i) => `[api]${i}`));
   issues.push(...assertPlaceholdersMatch(apiByLang, 'en', extractMustacheArgs).map((i) => `[api]${i}`));
@@ -415,6 +421,11 @@ function main() {
   const pages = collectPages(APP_LOCALE_DIR);
   issues.push(...assertRoutePolicyCoverage(pages, Object.keys(ROUTE_POLICY)));
 
+  return issues;
+}
+
+function main() {
+  const issues = collectIssues();
   if (issues.length) {
     console.error(`i18n 一致性检查失败（${issues.length} 项）:`);
     issues.slice(0, 50).forEach((i) => console.error(`- ${i}`));
