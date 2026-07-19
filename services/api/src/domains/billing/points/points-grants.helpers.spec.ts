@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { PointGrantType } from '../../platform/prisma/generated';
 import {
   grantCanBeUsedForTask,
@@ -64,7 +63,9 @@ describe('points grant helpers', () => {
         [grant({ id: 'gift', grantType: PointGrantType.GIFT, availableAmount: 10 })],
         11,
       ),
-    ).toThrow(BadRequestException);
+    ).toThrow(
+      expect.objectContaining({ i18nKey: 'points.balance_insufficient' }),
+    );
   });
 
   it('matches usage scope by exact task and prefix allow/deny lists', () => {

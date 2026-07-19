@@ -1,10 +1,9 @@
 import {
   Injectable,
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
+  HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { BillingCycle, Prisma } from '../../platform/prisma/generated';
 import {
   normalizeVideoResolution,
@@ -130,24 +129,30 @@ export class MembershipService {
     requested: { resolution: VideoResolution; durationSeconds: number },
   ): void {
     if (!entitlement.enabled) {
-      throw new ForbiddenException({
-        code: 'VIDEO_MEMBERSHIP_REQUIRED',
-        message: `当前会员等级（${entitlement.levelName}）未开通视频生成功能，请升级套餐`,
-      });
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'video_entitlement.membership_required',
+        { levelName: entitlement.levelName },
+        { code: 'VIDEO_MEMBERSHIP_REQUIRED' },
+      );
     }
     const requestRank = VIDEO_RESOLUTION_RANK[requested.resolution] ?? 0;
     const allowedRank = VIDEO_RESOLUTION_RANK[entitlement.maxResolution] ?? 0;
     if (requestRank > allowedRank) {
-      throw new ForbiddenException({
-        code: 'VIDEO_MEMBERSHIP_LIMIT_EXCEEDED',
-        message: `当前会员等级（${entitlement.levelName}）最高支持 ${entitlement.maxResolution} 分辨率，请降级分辨率或升级套餐`,
-      });
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'video_entitlement.resolution_exceeded',
+        { levelName: entitlement.levelName, maxResolution: entitlement.maxResolution },
+        { code: 'VIDEO_MEMBERSHIP_LIMIT_EXCEEDED' },
+      );
     }
     if (requested.durationSeconds > entitlement.maxDurationSeconds) {
-      throw new ForbiddenException({
-        code: 'VIDEO_MEMBERSHIP_LIMIT_EXCEEDED',
-        message: `当前会员等级（${entitlement.levelName}）单次最长 ${entitlement.maxDurationSeconds} 秒，请缩短时长或升级套餐`,
-      });
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'video_entitlement.duration_exceeded',
+        { levelName: entitlement.levelName, maxDurationSeconds: entitlement.maxDurationSeconds },
+        { code: 'VIDEO_MEMBERSHIP_LIMIT_EXCEEDED' },
+      );
     }
   }
 
@@ -187,7 +192,7 @@ export class MembershipService {
   async cancelAtPeriodEnd(userId: string) {
     const membership = await this.repository.findUserMembership(userId);
     if (!membership || membership.status !== 'ACTIVE') {
-      throw new BadRequestException('当前没有可取消的有效会员');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.no_active_cancellable');
     }
 
     if (membership.stripeSubscriptionId) {
@@ -203,7 +208,7 @@ export class MembershipService {
   async createBillingPortal(userId: string) {
     const membership = await this.repository.findUserMembership(userId);
     if (!membership?.stripeCustomerId) {
-      throw new BadRequestException('当前账户暂无可管理的支付信息');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.no_billing_management');
     }
     return this.stripePaymentService.createBillingPortalSession(membership.stripeCustomerId);
   }
@@ -254,7 +259,7 @@ export class MembershipService {
     try {
       const result = await this.repository.deleteLevel(id);
       if (!result.deleted) {
-        throw new BadRequestException('该会员等级已有用户会员记录，不能直接删除');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.tier_has_users');
       }
       return { message: '删除成功' };
     } catch (err) {
@@ -266,7 +271,7 @@ export class MembershipService {
     try {
       const result = await this.repository.deletePlan(id);
       if (!result.deleted) {
-        throw new BadRequestException('该会员计划已有用户会员记录，不能直接删除');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.plan_has_users');
       }
       return { message: '删除成功' };
     } catch (err) {
@@ -307,7 +312,7 @@ export class MembershipService {
     if (this.has(input, 'billingCycle')) {
       const cycle = this.billingCycle(input.billingCycle);
       if (cycle === BillingCycle.QUARTERLY) {
-        throw new BadRequestException('会员计划仅支持月付或年付');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.plan_billing_cycle_invalid');
       }
       data.billingCycle = cycle;
     }
@@ -315,7 +320,7 @@ export class MembershipService {
     if (this.has(input, 'autoRenew')) {
       const autoRenew = this.boolean(input.autoRenew, 'autoRenew');
       if (!autoRenew) {
-        throw new BadRequestException('会员计划仅支持连续订阅');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.plan_must_be_subscription');
       }
       data.autoRenew = autoRenew;
     } else if (required.length > 0) {
@@ -343,7 +348,11 @@ export class MembershipService {
   private assertRequired(input: Record<string, unknown>, fields: string[]) {
     for (const field of fields) {
       if (!this.has(input, field) || input[field] === undefined || input[field] === null || input[field] === '') {
-        throw new BadRequestException(`缺少必填字段: ${field}`);
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'membership.field_required',
+          { field },
+        );
       }
     }
   }
@@ -358,30 +367,38 @@ export class MembershipService {
 
   private handleLevelWriteError(err: unknown): never {
     if ((err as { code?: string })?.code === 'P2002') {
-      throw new ConflictException('会员等级数字已存在，请换一个等级值');
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'membership.tier_level_taken');
     }
     throw err;
   }
 
   private handleDeleteError(err: unknown, notFoundMessage: string): never {
-    if (err instanceof BadRequestException) throw err;
+    if (err instanceof I18nHttpException) throw err;
     const code = (err as { code?: string })?.code;
     if (code === 'P2025') {
       throw new NotFoundException(notFoundMessage);
     }
     if (code === 'P2003') {
-      throw new BadRequestException('该配置已被业务数据引用，不能直接删除');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.record_in_use');
     }
     throw err;
   }
 
   private requiredString(value: unknown, field: string) {
     if (typeof value !== 'string') {
-      throw new BadRequestException(`${field} 必须为字符串`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_be_string',
+        { field },
+      );
     }
     const trimmed = value.trim();
     if (!trimmed) {
-      throw new BadRequestException(`${field} 不能为空`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_not_be_empty',
+        { field },
+      );
     }
     return trimmed;
   }
@@ -389,7 +406,11 @@ export class MembershipService {
   private nullableString(value: unknown, field: string) {
     if (value === null || value === undefined || value === '') return null;
     if (typeof value !== 'string') {
-      throw new BadRequestException(`${field} 必须为字符串`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_be_string',
+        { field },
+      );
     }
     const trimmed = value.trim();
     return trimmed || null;
@@ -398,7 +419,11 @@ export class MembershipService {
   private nonNegativeInt(value: unknown, field: string) {
     const n = Number(value);
     if (!Number.isInteger(n) || n < 0) {
-      throw new BadRequestException(`${field} 必须为非负整数`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_be_non_negative_int',
+        { field },
+      );
     }
     return n;
   }
@@ -406,21 +431,37 @@ export class MembershipService {
   private positiveInt(value: unknown, field: string) {
     const n = Number(value);
     if (!Number.isInteger(n) || n < 1) {
-      throw new BadRequestException(`${field} 必须为正整数`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_be_positive_int',
+        { field },
+      );
     }
     return n;
   }
 
   private nonNegativeDecimal(value: unknown, field: string) {
     if (value === null || value === undefined || value === '') {
-      throw new BadRequestException(`${field} 不能为空`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_not_be_empty',
+        { field },
+      );
     }
     if (typeof value !== 'string' && typeof value !== 'number') {
-      throw new BadRequestException(`${field} 必须为金额`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_be_amount',
+        { field },
+      );
     }
     const n = Number(value);
     if (!Number.isFinite(n) || n < 0) {
-      throw new BadRequestException(`${field} 必须为非负金额`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_be_non_negative_amount',
+        { field },
+      );
     }
     return typeof value === 'string' ? value.trim() : value;
   }
@@ -432,14 +473,18 @@ export class MembershipService {
 
   private boolean(value: unknown, field: string) {
     if (typeof value !== 'boolean') {
-      throw new BadRequestException(`${field} 必须为布尔值`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.field_must_be_boolean',
+        { field },
+      );
     }
     return value;
   }
 
   private billingCycle(value: unknown) {
     if (!Object.values(BillingCycle).includes(value as BillingCycle)) {
-      throw new BadRequestException('billingCycle 不合法');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.billing_cycle_invalid');
     }
     return value as BillingCycle;
   }

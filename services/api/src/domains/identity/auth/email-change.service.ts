@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException, ConflictException, ForbiddenException, Optional } from '@nestjs/common';
+import { Injectable, HttpStatus, Optional } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthIdentityRepository } from './auth-identity.repository';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { MailService } from '../../platform/mail/mail.service';
 import { StepUpService } from './step-up/step-up.service';
 import { RateLimitService } from '../../platform/common/rate-limit.service';
@@ -43,34 +44,35 @@ export class EmailChangeService {
    * 前置：user.email 为空/null；否则应走 requestChange。
    */
   async requestSupplement(userId: string, email: string): Promise<void> {
-    if (!EMAIL_RE.test(email)) throw new BadRequestException('邮箱格式不正确');
+    if (!EMAIL_RE.test(email)) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.email.invalid_format');
 
     const currentUser = (await this.identity.findUserById(userId)) as UserRow | null;
-    if (!currentUser) throw new ForbiddenException('账户不可用');
+    if (!currentUser) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.account.unavailable');
     if (
       currentUser.status === 'DELETED' ||
       currentUser.status === 'DISABLED' ||
       currentUser.status === 'LOCKED'
     ) {
-      throw new ForbiddenException('账户不可用');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.account.unavailable');
     }
     if (currentUser.email) {
       // spec §2 P0：无可信邮箱的纯 OAuth 用户（占位邮箱 @no-email.oauth.local）**不允许**通过自助通道
       // 建立"首个可信邮箱"——否则会话被劫持者可绑定并验证自己控制的邮箱，进而 bootstrap step-up
       // （改密/删账）而无需证明掌握原凭据。此类账户统一走人工支持（EMAIL_CHANGE_NOT_AVAILABLE）。
       if (currentUser.email.endsWith('@no-email.oauth.local')) {
-        throw new ConflictException({
-          code: 'EMAIL_CHANGE_NOT_AVAILABLE',
-          message: '该账户暂不支持自助绑定邮箱，请联系客服',
-          hint: { i18nKey: 'CONTACT_SUPPORT' },
-        });
+        throw new I18nHttpException(
+          HttpStatus.CONFLICT,
+          'auth.email.change_not_available',
+          undefined,
+          { code: 'EMAIL_CHANGE_NOT_AVAILABLE', hint: { i18nKey: 'CONTACT_SUPPORT' } },
+        );
       }
       // 已有真实邮箱的用户改邮箱必须走需要 step-up proof 的变更通道。
-      throw new BadRequestException('账户已绑定邮箱，请使用变更通道');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.email.already_bound_use_change');
     }
 
     const existing = await this.identity.findUserByEmail(email);
-    if (existing && existing.id !== userId) throw new ConflictException('该邮箱已被使用');
+    if (existing && existing.id !== userId) throw new I18nHttpException(HttpStatus.CONFLICT, 'auth.email.already_in_use');
 
     await this.identity.setPendingEmail(userId, email);
     const token = this.jwt.sign({ sub: userId, email, purpose: 'email-verify' }, { expiresIn: '1h' });
@@ -85,14 +87,16 @@ export class EmailChangeService {
    * 兼容期允许 sessionId 缺省，但生产 controller 应始终传入。
    */
   async requestChange(userId: string, email: string, proof: string, sessionId?: string): Promise<void> {
-    if (!EMAIL_RE.test(email)) throw new BadRequestException('邮箱格式不正确');
-    if (!proof) throw new BadRequestException('缺少 step-up 凭证');
+    if (!EMAIL_RE.test(email)) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.email.invalid_format');
+    if (!proof) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.step_up.proof_missing');
 
     if (!this.stepUp || !sessionId) {
-      throw new BadRequestException({
-        code: 'STEP_UP_INVALID_OR_EXPIRED',
-        message: '当前会话不可用于身份复核',
-      });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'auth.step_up.session_unavailable',
+        undefined,
+        { code: 'STEP_UP_INVALID_OR_EXPIRED' },
+      );
     }
     const proofPayload = this.stepUp.verifyProof(proof, userId, 'change-email', sessionId);
 
@@ -106,16 +110,16 @@ export class EmailChangeService {
     }
 
     const existing = await this.identity.findUserByEmail(email);
-    if (existing && existing.id !== userId) throw new ConflictException('该邮箱已被使用');
+    if (existing && existing.id !== userId) throw new I18nHttpException(HttpStatus.CONFLICT, 'auth.email.already_in_use');
 
     const currentUser = (await this.identity.findUserById(userId)) as UserRow | null;
-    if (!currentUser) throw new ForbiddenException('账户不可用');
+    if (!currentUser) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.account.unavailable');
     if (
       currentUser.status === 'DELETED' ||
       currentUser.status === 'DISABLED' ||
       currentUser.status === 'LOCKED'
     ) {
-      throw new ForbiddenException('账户不可用');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'auth.account.unavailable');
     }
 
     await this.identity.setPendingEmailWithProof({
@@ -130,22 +134,22 @@ export class EmailChangeService {
 
   async confirm(token: string): Promise<void> {
     let payload: { sub: string; email: string; purpose: string };
-    try { payload = this.jwt.verify(token); } catch { throw new BadRequestException('验证链接已过期或无效'); }
-    if (payload.purpose !== 'email-verify') throw new BadRequestException('无效的验证链接');
+    try { payload = this.jwt.verify(token); } catch { throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.email.verify_link_invalid'); }
+    if (payload.purpose !== 'email-verify') throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.email.verify_link_wrong_purpose');
     const user = await this.identity.findUserById(payload.sub);
-    if (!user) throw new BadRequestException('验证链接已过期或无效');
-    if ((user as any).pendingEmail !== payload.email) throw new BadRequestException('验证链接已过期或无效');
+    if (!user) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.email.verify_link_invalid');
+    if ((user as any).pendingEmail !== payload.email) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.email.verify_link_invalid');
     // 账户 status 检查：DELETED/DISABLED/LOCKED 用户一律不允许 apply（与其余 PII 写入路径一致）。
     const st = (user as any).status;
     if (st === 'DELETED' || st === 'DISABLED' || st === 'LOCKED') {
-      throw new BadRequestException('账户不可用');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
     }
     const existing = await this.identity.findUserByEmail(payload.email);
-    if (existing && existing.id !== payload.sub) throw new ConflictException('该邮箱已被使用');
+    if (existing && existing.id !== payload.sub) throw new I18nHttpException(HttpStatus.CONFLICT, 'auth.email.already_in_use');
     try {
       await this.identity.applyVerifiedEmail(payload.sub, payload.email);
     } catch (err: any) {
-      if (err?.code === 'P2002') throw new ConflictException('该邮箱已被使用');
+      if (err?.code === 'P2002') throw new I18nHttpException(HttpStatus.CONFLICT, 'auth.email.already_in_use');
       throw err;
     }
   }

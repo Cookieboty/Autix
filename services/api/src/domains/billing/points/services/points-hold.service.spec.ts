@@ -85,7 +85,9 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
     const pointsRepo = { findHoldById: vi.fn().mockResolvedValue(null) };
     const service = new PointsHoldService(pointsRepo as never, {} as never);
 
-    await expect(service.quoteHoldFromSnapshot('missing', {})).rejects.toThrow(BadRequestException);
+    await expect(service.quoteHoldFromSnapshot('missing', {})).rejects.toMatchObject({
+      i18nKey: 'points.hold_not_found',
+    });
   });
 
   it('propagates parsePricingSnapshot rejection for an old-engine-shaped snapshot instead of falling back to re-estimation', async () => {

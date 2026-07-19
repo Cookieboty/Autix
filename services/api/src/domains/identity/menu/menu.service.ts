@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { Prisma } from '../../platform/prisma/generated';
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
@@ -17,7 +18,7 @@ type RoleMenuLink = UserWithRoleMenus['roles'][number]['role']['menus'][number];
 
 @Injectable()
 export class MenuService {
-  constructor(private readonly menuRepository: MenuRepository) {}
+  constructor(private readonly menuRepository: MenuRepository) { }
 
   private buildTree<TMenu extends { id: string; parentId: string | null; sort: number }>(
     items: TMenu[],
@@ -45,7 +46,7 @@ export class MenuService {
 
   async findUserMenus(userId: string, systemId?: string) {
     const user = await this.findUserWithRoleMenus(userId);
-    if (!user) throw new NotFoundException('用户不存在');
+    if (!user) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'user.not_found');
 
     let menus: Prisma.MenuGetPayload<object>[];
     if (user.isSuperAdmin) {
@@ -69,13 +70,13 @@ export class MenuService {
   async getMenuPermissions(menuId: string) {
     const menu = await this.menuRepository.findWithPermissions(menuId);
 
-    if (!menu) throw new NotFoundException('菜单不存在');
+    if (!menu) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'menu.not_found');
     return menu.permissions;
   }
 
   async findOne(id: string) {
     const menu = await this.menuRepository.findById(id);
-    if (!menu) throw new NotFoundException('菜单不存在');
+    if (!menu) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'menu.not_found');
     return menu;
   }
 

@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import {
   PointGrantType,
   type Prisma,
@@ -57,7 +58,7 @@ export function selectGrantsForAmount(
     }
   }
   if (remaining > 0) {
-    throw new BadRequestException('积分余额不足');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.balance_insufficient');
   }
   return selected;
 }

@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { AuthIdentityRepository } from './auth-identity.repository';
 
 function model(overrides: Record<string, unknown> = {}) {
@@ -126,7 +125,10 @@ describe('AuthIdentityRepository.anonymizeUserImmediately', () => {
       sessionId: 'session-1',
       proofJti: 'used-proof',
       usernameConfirmation: 'alice',
-    })).rejects.toBeInstanceOf(BadRequestException);
+    })).rejects.toMatchObject({
+      i18nKey: 'auth.step_up.invalid_or_expired',
+      code: 'STEP_UP_INVALID_OR_EXPIRED',
+    });
     expect(tx.user.update).not.toHaveBeenCalled();
     expect(tx.userSession.deleteMany).not.toHaveBeenCalled();
   });
@@ -139,7 +141,10 @@ describe('AuthIdentityRepository.anonymizeUserImmediately', () => {
       sessionId: 'session-1',
       proofJti: 'proof-jti',
       usernameConfirmation: 'mallory',
-    })).rejects.toBeInstanceOf(BadRequestException);
+    })).rejects.toMatchObject({
+      i18nKey: 'auth.account.delete_confirmation_mismatch',
+      code: 'ACCOUNT_DELETE_CONFIRMATION_MISMATCH',
+    });
     expect(tx.step_up_proofs.updateMany).not.toHaveBeenCalled();
     expect(tx.user.update).not.toHaveBeenCalled();
   });

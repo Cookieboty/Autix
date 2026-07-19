@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { CampaignStatus, CampaignType, Prisma } from '../../platform/prisma/generated';
 import { PointsService } from '../points/points.service';
 import { CampaignRepository } from './campaign.repository';
@@ -89,7 +90,7 @@ export class CampaignRewardService {
   constructor(
     private readonly campaignRepository: CampaignRepository,
     private readonly pointsService: PointsService,
-  ) {}
+  ) { }
 
   async listActiveCampaigns(now = new Date()) {
     return this.campaignRepository.listActiveCampaigns(activeCampaignWhere(now));
@@ -181,12 +182,12 @@ export class CampaignRewardService {
     const normalizedCode = code.trim();
     const campaign = await this.campaignRepository.findCampaignByCode(normalizedCode);
     if (!campaign || !this.isHomeQuestCampaign(campaign)) {
-      throw new BadRequestException('首页任务不存在');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.home_task_not_found');
     }
 
     const points = resolveRewardPoints(campaign.rewardPointsExpression);
     if (!this.isCampaignEligibleNow(campaign) || points <= 0) {
-      throw new BadRequestException('首页任务未启用');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.home_task_disabled');
     }
 
     const triggerKey = this.homeQuestTriggerKey(campaign.code, userId);
@@ -201,7 +202,7 @@ export class CampaignRewardService {
 
     const metadata = this.asRecord(campaign.metadata);
     const completed = await this.hasCompletedHomeQuest(userId, metadata);
-    if (!completed) throw new BadRequestException('首页任务未完成');
+    if (!completed) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.home_task_not_completed');
 
     const result = await this.grantCampaignReward(campaign.id, {
       userId,
@@ -238,15 +239,15 @@ export class CampaignRewardService {
   }
 
   async createCampaign(input: UpsertCampaignInput) {
-    if (!input.code?.trim()) throw new BadRequestException('活动 code 必填');
-    if (!input.name?.trim()) throw new BadRequestException('活动名称必填');
+    if (!input.code?.trim()) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.code_required');
+    if (!input.name?.trim()) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.name_required');
 
     return this.campaignRepository.createCampaign(buildCampaignCreateData(input));
   }
 
   async updateCampaign(id: string, input: UpsertCampaignInput) {
     const existing = await this.campaignRepository.findCampaign(id);
-    if (!existing) throw new BadRequestException('活动不存在');
+    if (!existing) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.not_found');
     assertBuiltinCampaignUpdateAllowed(existing, input);
     return this.campaignRepository.updateCampaign(id, buildCampaignUpdateData(input));
   }
@@ -322,19 +323,19 @@ export class CampaignRewardService {
 
   async recordFeedback(userId: string, input: RecordFeedbackInput) {
     const feedbackId = resolveFeedbackId(input);
-    if (!feedbackId) throw new BadRequestException('feedbackId 或 generationId 必填');
+    if (!feedbackId) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.feedback_or_generation_required');
     if (!isEffectiveFeedback(input)) {
-      throw new BadRequestException('反馈内容不足');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.feedback_content_insufficient');
     }
 
     // FIX-14: 奖励必须锚定在"属于当前用户的真实生成记录"上，杜绝伪造 generationId 刷奖励。
     const generationId = String(input.generationId ?? '').trim();
     if (!generationId) {
-      throw new BadRequestException('generationId 必填');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.generation_id_required');
     }
     const owned = await this.campaignRepository.generationBelongsToUser(userId, generationId);
     if (!owned) {
-      throw new ForbiddenException('无效的生成记录');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'campaign.generation_invalid');
     }
 
     const campaigns = await this.listEventCampaigns(
@@ -363,7 +364,7 @@ export class CampaignRewardService {
   async recordEvent(userId: string, input: RecordCampaignEventInput) {
     const triggerKind = input.triggerKind?.trim();
     if (!this.isSupportedAutoEventTrigger(triggerKind)) {
-      throw new BadRequestException('不支持的活动触发类型');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.trigger_type_unsupported');
     }
     if (triggerKind === 'FEEDBACK_SUBMITTED') {
       return this.recordFeedbackEvent(userId, input);
@@ -371,7 +372,7 @@ export class CampaignRewardService {
     if (triggerKind === 'SUCCESSFUL_GENERATION_STREAK') {
       return this.recordSuccessfulGenerationStreakEvent(userId, input);
     }
-    throw new BadRequestException('不支持的活动触发类型');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.trigger_type_unsupported');
   }
 
   async grantCampaignReward(campaignId: string, input: GrantCampaignRewardInput) {
@@ -400,11 +401,11 @@ export class CampaignRewardService {
     // FIX-12: 先锁活动行，串行化并发发奖，保证封顶判断原子化。
     await this.campaignRepository.lockCampaignInTx(tx, campaignId);
     const campaign = await this.campaignRepository.findCampaignInTx(tx, campaignId);
-    if (!campaign) throw new BadRequestException('活动不存在');
+    if (!campaign) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.not_found');
     assertCampaignCanGrant(campaign);
 
     const points = options.pointsOverride ?? resolveRewardPoints(campaign.rewardPointsExpression);
-    if (points <= 0) throw new BadRequestException('活动奖励积分必须大于 0');
+    if (points <= 0) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.reward_points_invalid');
 
     const existing = await this.campaignRepository.findRewardByTriggerInTx(
       tx,
@@ -427,7 +428,7 @@ export class CampaignRewardService {
       points,
     );
     if (updated.count === 0) {
-      throw new BadRequestException('活动总预算不足');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.budget_total_insufficient');
     }
 
     const grant = await this.pointsService.grantPointsWithinTx(
@@ -489,7 +490,7 @@ export class CampaignRewardService {
         },
       );
       if (isRewardCapExceeded(daily._sum.pointsGranted, points, campaign.dailyBudget)) {
-        throw new BadRequestException('活动今日预算不足');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.budget_daily_insufficient');
       }
     }
 
@@ -503,7 +504,7 @@ export class CampaignRewardService {
         },
       );
       if (isRewardCapExceeded(dailyUser._sum.pointsGranted, points, campaign.perUserDailyCap)) {
-        throw new BadRequestException('用户今日奖励上限已达');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.user_daily_limit_reached');
       }
     }
 
@@ -513,7 +514,7 @@ export class CampaignRewardService {
         { campaignId: campaign.id, userId },
       );
       if (isRewardCapExceeded(totalUser._sum.pointsGranted, points, campaign.perUserTotalCap)) {
-        throw new BadRequestException('用户活动总奖励上限已达');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.user_total_limit_reached');
       }
     }
   }
@@ -555,8 +556,8 @@ export class CampaignRewardService {
     const metadata = input.metadata ?? {};
     const feedbackId = String(input.triggerEventId ?? metadata.feedbackId ?? '').trim();
     const generationId = String(input.sourceRef?.generationId ?? metadata.generationId ?? '').trim();
-    if (!feedbackId) throw new BadRequestException('feedbackId 必填');
-    if (!generationId) throw new BadRequestException('generationId 必填');
+    if (!feedbackId) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.feedback_id_required');
+    if (!generationId) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.generation_id_required');
 
     const feedbackInput: CampaignFeedbackInput = {
       feedbackId,
@@ -568,11 +569,11 @@ export class CampaignRewardService {
       metadata,
     };
     if (!isEffectiveFeedback(feedbackInput)) {
-      throw new BadRequestException('反馈内容不足');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.feedback_content_insufficient');
     }
     const owned = await this.campaignRepository.generationBelongsToUser(userId, generationId);
     if (!owned) {
-      throw new ForbiddenException('无效的生成记录');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'campaign.generation_invalid');
     }
 
     const campaigns = await this.listEventCampaigns('FEEDBACK_SUBMITTED');
@@ -602,16 +603,16 @@ export class CampaignRewardService {
     const currentStreak = Number(input.sourceRef?.currentStreak);
     const cycleKey = String(input.sourceRef?.cycleKey ?? '').trim();
     if (!generationId || !Number.isFinite(currentStreak) || currentStreak <= 0 || !cycleKey) {
-      throw new BadRequestException('连续生成事件参数不完整');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.continuous_generation_params_missing');
     }
     const owned = await this.campaignRepository.generationBelongsToUser(userId, generationId);
     if (!owned) {
-      throw new ForbiddenException('无效的生成记录');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'campaign.generation_invalid');
     }
     if (!shouldRewardSuccessfulGenerationStreak(currentStreak)) return { rewards: [] };
     const expectedCycleKey = buildContinuousUseCycleKey(userId, currentStreak);
     if (cycleKey !== expectedCycleKey) {
-      throw new BadRequestException('连续生成周期不匹配');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'campaign.continuous_generation_cycle_mismatch');
     }
     const streak = await this.campaignRepository.findStreak(userId, SUCCESSFUL_GENERATION_STREAK);
     if (!streak || streak.currentStreak !== currentStreak || streak.rewardedAtCycle === cycleKey) {

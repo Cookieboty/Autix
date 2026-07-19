@@ -54,7 +54,7 @@ describe('AuthService.issueSessionForUser', () => {
     const { svc } = makeService();
     await expect(
       svc.issueSessionForUser(makeUser({ status: 'DISABLED' }), { ip: '', userAgent: '' }),
-    ).rejects.toThrow('账户已被禁用');
+    ).rejects.toMatchObject({ i18nKey: 'auth.account.disabled' });
   });
 });
 
@@ -79,10 +79,10 @@ describe('AuthService.buildLoginResultFromSession 守卫', () => {
   }
   it('会话失效（isActive=false）抛错', async () => {
     const svc = svcWith({ id: 's', userId: 'u', isActive: false, expiresAt: new Date('2099-01-01') }, { id: 'u', status: 'ACTIVE', roles: [] });
-    await expect(svc.buildLoginResultFromSession('s')).rejects.toThrow('会话已失效');
+    await expect(svc.buildLoginResultFromSession('s')).rejects.toMatchObject({ i18nKey: 'auth.session.expired' });
   });
   it('用户 DISABLED 抛错', async () => {
     const svc = svcWith({ id: 's', userId: 'u', isActive: true, expiresAt: new Date('2099-01-01'), currentSystemId: null }, { id: 'u', username: 'a', language: 'zh-CN', isSuperAdmin: false, status: 'DISABLED', roles: [] });
-    await expect(svc.buildLoginResultFromSession('s')).rejects.toThrow('账户不可用');
+    await expect(svc.buildLoginResultFromSession('s')).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
   });
 });

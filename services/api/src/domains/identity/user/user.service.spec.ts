@@ -1,4 +1,3 @@
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UserRegistrationStatusSyncService } from './user-registration-status-sync.service';
 import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
@@ -68,7 +67,7 @@ describe('UserService.updateStatus', () => {
 
     await expect(
       service.updateStatus('admin-1', { status: 'ACTIVE' } as any, ADMIN_USER),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toMatchObject({ i18nKey: 'user.cannot_modify_own_status' });
 
     expect(tx.user.update).not.toHaveBeenCalled();
   });
@@ -81,7 +80,7 @@ describe('UserService.updateStatus', () => {
 
     await expect(
       service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toMatchObject({ i18nKey: 'user.not_found' });
   });
 
   it('rejects every status transition out of DELETED', async () => {
@@ -92,7 +91,7 @@ describe('UserService.updateStatus', () => {
 
     await expect(
       service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({ i18nKey: 'user.deleted_read_only', code: 'USER_DELETED' });
     expect(tx.user.update).not.toHaveBeenCalled();
   });
 

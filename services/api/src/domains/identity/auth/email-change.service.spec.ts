@@ -24,7 +24,7 @@ describe('EmailChangeService', () => {
   });
   it('request 邮箱被他人占用 → 冲突', async () => {
     const { svc } = deps({ identity: { findUserByEmail: vi.fn().mockResolvedValue({ id: 'other' }) } });
-    await expect(svc.request('u1', 'a@x.com')).rejects.toThrow('该邮箱已被使用');
+    await expect(svc.request('u1', 'a@x.com')).rejects.toMatchObject({ i18nKey: 'auth.email.already_in_use' });
   });
   it('confirm 有效 token → 落地邮箱', async () => {
     const { svc, identity } = deps();
@@ -34,7 +34,7 @@ describe('EmailChangeService', () => {
   it('confirm 错误 purpose → 抛错', async () => {
     const { svc, jwt } = deps();
     jwt.verify.mockReturnValueOnce({ sub: 'u1', email: 'a@x.com', purpose: 'login' });
-    await expect(svc.confirm('TKN')).rejects.toThrow('无效');
+    await expect(svc.confirm('TKN')).rejects.toMatchObject({ i18nKey: 'auth.email.verify_link_wrong_purpose' });
   });
   it('confirm token 邮箱与 pendingEmail 不符 → 抛错（replay/superseded）', async () => {
     const { svc } = deps({
@@ -43,7 +43,7 @@ describe('EmailChangeService', () => {
       },
     });
     // token claims 'a@x.com' but pendingEmail is now 'new@x.com'
-    await expect(svc.confirm('TKN')).rejects.toThrow('验证链接已过期或无效');
+    await expect(svc.confirm('TKN')).rejects.toMatchObject({ i18nKey: 'auth.email.verify_link_invalid' });
   });
   it('confirm 用户不存在 → 抛错', async () => {
     const { svc } = deps({
@@ -51,7 +51,7 @@ describe('EmailChangeService', () => {
         findUserById: vi.fn().mockResolvedValue(null),
       },
     });
-    await expect(svc.confirm('TKN')).rejects.toThrow('验证链接已过期或无效');
+    await expect(svc.confirm('TKN')).rejects.toMatchObject({ i18nKey: 'auth.email.verify_link_invalid' });
   });
 
   // ---------- T5.1 分拆：requestSupplement / requestChange 双分支断言 ----------
@@ -73,7 +73,7 @@ describe('EmailChangeService', () => {
           findUserById: vi.fn().mockResolvedValue({ id: 'u1', email: 'old@x.com', pendingEmail: null }),
         },
       });
-      await expect(svc.requestSupplement('u1', 'new@x.com')).rejects.toThrow('账户已绑定邮箱');
+      await expect(svc.requestSupplement('u1', 'new@x.com')).rejects.toMatchObject({ i18nKey: 'auth.email.already_bound_use_change' });
     });
 
     it('账户 DELETED → 拒绝', async () => {
@@ -82,7 +82,7 @@ describe('EmailChangeService', () => {
           findUserById: vi.fn().mockResolvedValue({ id: 'u1', status: 'DELETED', email: null }),
         },
       });
-      await expect(svc.requestSupplement('u1', 'new@x.com')).rejects.toThrow('账户不可用');
+      await expect(svc.requestSupplement('u1', 'new@x.com')).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     });
 
     it('通过 request(userId, email) 无 proof → 路由到 supplement', async () => {
@@ -99,7 +99,7 @@ describe('EmailChangeService', () => {
   describe('requestChange (/auth/email/change)', () => {
     it('缺少 proof → 拒绝', async () => {
       const { svc } = deps();
-      await expect(svc.requestChange('u1', 'new@x.com', '')).rejects.toThrow('缺少 step-up 凭证');
+      await expect(svc.requestChange('u1', 'new@x.com', '')).rejects.toMatchObject({ i18nKey: 'auth.step_up.proof_missing' });
     });
 
     it('携带 proof 且 verifyProof 通过 → 存 pending + 发信', async () => {

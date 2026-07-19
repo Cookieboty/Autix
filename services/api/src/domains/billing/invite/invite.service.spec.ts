@@ -229,7 +229,7 @@ describe('InviteService.recordInvitation', () => {
 
     await expect(
       service.recordInvitation('ABCD1234', 'user-1'),
-    ).rejects.toThrow('不能邀请自己');
+    ).rejects.toMatchObject({ i18nKey: 'invite.cannot_invite_self' });
     expect(prisma.invite_records.create).not.toHaveBeenCalled();
     expect(campaignRewardService.grantCampaignRewardWithinTx).not.toHaveBeenCalled();
   });

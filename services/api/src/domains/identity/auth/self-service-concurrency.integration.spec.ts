@@ -221,7 +221,7 @@ describeDatabase('user self-service PostgreSQL concurrency', () => {
       ip: '127.0.0.1',
       userAgent: 'integration-test',
       expiresAt: new Date(Date.now() + 3_600_000),
-    }))).rejects.toThrow('账户不可用');
+    }))).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     expect(await prisma.userSession.count({ where: { userId: loginUser.id } })).toBe(0);
   });
 
@@ -231,7 +231,7 @@ describeDatabase('user self-service PostgreSQL concurrency', () => {
       sessionId: user.sessionId,
       refreshToken: `${user.id}-rotated`,
       expiresAt: new Date(Date.now() + 3_600_000),
-    }))).rejects.toThrow('账户不可用');
+    }))).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     expect(await prisma.userSession.count({ where: { userId: user.id } })).toBe(0);
   });
 });

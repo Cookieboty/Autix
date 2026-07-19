@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   canTransitionUserStatus,
   type UserStatus as DomainUserStatus,
 } from '@autix/domain';
 import { Prisma, UserStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -20,7 +21,7 @@ type CreateUserWithRoleInput = {
 
 @Injectable()
 export class UserRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   findByUsernameOrEmail(username: string, email: string) {
     return this.prisma.user.findFirst({
@@ -203,10 +204,12 @@ export class UserRepository {
       // 又通过 domain 白名单 canTransitionUserStatus 统一校验状态迁移（spec §3.2 D''）。
       const { status: currentStatus } = await this.lockMutableForUpdate(tx, id);
       if (!canTransitionUserStatus(currentStatus as DomainUserStatus, status as DomainUserStatus)) {
-        throw new BadRequestException({
-          code: 'INVALID_STATUS_TRANSITION',
-          message: `不允许的状态迁移：${currentStatus} -> ${status}`,
-        });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'user.invalid_status_transition',
+          undefined,
+          { code: 'INVALID_STATUS_TRANSITION' },
+        );
       }
       await tx.user.update({
         where: { id },
@@ -244,10 +247,12 @@ export class UserRepository {
         for (const sr of systemRoles) {
           for (const roleId of sr.roleIds) {
             if (roleSystem.get(roleId) !== sr.systemId) {
-              throw new BadRequestException({
-                code: 'BAD_REQUEST',
-                message: '角色与系统不匹配',
-              });
+              throw new I18nHttpException(
+                HttpStatus.BAD_REQUEST,
+                'role.system_mismatch',
+                undefined,
+                { code: 'BAD_REQUEST' },
+              );
             }
           }
         }
@@ -298,7 +303,12 @@ export class UserRepository {
       SELECT "status", "avatarStorageKey" FROM "users" WHERE "id" = ${id} FOR UPDATE
     `;
     if (!rows[0] || rows[0].status === 'DELETED') {
-      throw new ConflictException({ code: 'USER_DELETED', message: '已删除用户为只读记录' });
+      throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'user.deleted_read_only',
+        undefined,
+        { code: 'USER_DELETED' },
+      );
     }
     return rows[0];
   }

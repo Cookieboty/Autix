@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { Prisma } from '../../platform/prisma/generated';
 import { CreateSystemDto } from './dto/create-system.dto';
 import { UpdateSystemDto } from './dto/update-system.dto';
@@ -10,13 +11,13 @@ type UserSystemsResult = Array<SystemModel | UserSystemWithRoles>;
 
 @Injectable()
 export class SystemService {
-  constructor(private readonly systemRepository: SystemRepository) {}
+  constructor(private readonly systemRepository: SystemRepository) { }
 
   async create(dto: CreateSystemDto) {
     const existing = await this.systemRepository.findByCode(dto.code);
 
     if (existing) {
-      throw new ConflictException(`System with code ${dto.code} already exists`);
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'system.code_taken', { code: dto.code });
     }
 
     return this.systemRepository.create(dto);
@@ -30,7 +31,7 @@ export class SystemService {
     const system = await this.systemRepository.findWithMenusAndRoles(id);
 
     if (!system) {
-      throw new NotFoundException(`System with ID ${id} not found`);
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'system.not_found', { id });
     }
 
     return system;
@@ -40,7 +41,7 @@ export class SystemService {
     const user = await this.systemRepository.findUserWithSystems(userId);
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'user.not_found');
     }
 
     if (user.isSuperAdmin) {
@@ -68,7 +69,7 @@ export class SystemService {
     const system = await this.systemRepository.findById(id);
 
     if (!system) {
-      throw new NotFoundException(`System with ID ${id} not found`);
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'system.not_found', { id });
     }
 
     return this.systemRepository.findMenus(id);
@@ -78,13 +79,13 @@ export class SystemService {
     const existing = await this.systemRepository.findById(id);
 
     if (!existing) {
-      throw new NotFoundException(`System with ID ${id} not found`);
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'system.not_found', { id });
     }
 
     if (dto.code && dto.code !== existing.code) {
       const codeExists = await this.systemRepository.findByCode(dto.code);
       if (codeExists) {
-        throw new ConflictException(`System with code ${dto.code} already exists`);
+        throw new I18nHttpException(HttpStatus.CONFLICT, 'system.code_taken', { code: dto.code });
       }
     }
 
@@ -95,7 +96,7 @@ export class SystemService {
     const existing = await this.systemRepository.findById(id);
 
     if (!existing) {
-      throw new NotFoundException(`System with ID ${id} not found`);
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'system.not_found', { id });
     }
 
     return this.systemRepository.delete(id);

@@ -1,6 +1,7 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, RegistrationStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 type ProcessRegistrationInput = {
   id: string;
@@ -10,7 +11,7 @@ type ProcessRegistrationInput = {
 
 @Injectable()
 export class RegistrationRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   findSystemAdminRole(userId: string, systemId: string) {
     return this.prisma.userRole.findFirst({
@@ -79,7 +80,12 @@ export class RegistrationRepository {
         where: { id: input.userId, status: { not: 'DELETED' } },
         data: { status: 'ACTIVE' },
       });
-      if (activated.count !== 1) throw new ConflictException({ code: 'USER_DELETED', message: '账户已删除' });
+      if (activated.count !== 1) throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'registration.user_deleted',
+        undefined,
+        { code: 'USER_DELETED' },
+      );
 
       await tx.userRole.upsert({
         where: { userId_roleId: { userId: input.userId, roleId: input.roleId } },
@@ -112,7 +118,12 @@ export class RegistrationRepository {
         where: { id: input.userId, status: { not: 'DELETED' } },
         data: { status: 'DISABLED' },
       });
-      if (disabled.count !== 1) throw new ConflictException({ code: 'USER_DELETED', message: '账户已删除' });
+      if (disabled.count !== 1) throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'registration.user_deleted',
+        undefined,
+        { code: 'USER_DELETED' },
+      );
     });
   }
 

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { RiskRepository } from './risk.repository';
 
 export const RISK_LEVELS = ['L0', 'L1', 'L2', 'L3'] as const;
@@ -14,7 +15,7 @@ export interface ListFlaggedUsersQuery {
 export class RiskService {
   private readonly logger = new Logger(RiskService.name);
 
-  constructor(private readonly riskRepository: RiskRepository) {}
+  constructor(private readonly riskRepository: RiskRepository) { }
 
   async listFlaggedUsers(query: ListFlaggedUsersQuery) {
     const page = Math.max(1, Math.floor(query.page ?? 1));
@@ -63,7 +64,7 @@ export class RiskService {
 
   async setLevel(actorId: string, userId: string, level: RiskLevelValue, reason?: string) {
     if (!RISK_LEVELS.includes(level)) {
-      throw new BadRequestException('无效的风控等级');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'risk.level_invalid');
     }
 
     const now = new Date();
@@ -121,7 +122,7 @@ export class RiskService {
   private normalizeOptionalLevel(level?: string): RiskLevelValue | undefined {
     if (!level) return undefined;
     if (!RISK_LEVELS.includes(level as RiskLevelValue)) {
-      throw new BadRequestException('无效的风控等级');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'risk.level_invalid');
     }
     return level as RiskLevelValue;
   }

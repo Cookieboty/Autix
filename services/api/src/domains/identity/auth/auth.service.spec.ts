@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest';
-import { UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { AuthIdentityRepository } from './auth-identity.repository';
 import { AuthSessionRepository } from './auth-session.repository';
 import { AuthService } from './auth.service';
@@ -172,7 +173,7 @@ describe('AuthService', () => {
       const { service } = buildService();
       await expect(
         service.login({ username: 'nobody', password: 'pass' }, '127.0.0.1', 'agent'),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.login.invalid_credentials' });
     });
 
     it('should throw UnauthorizedException when password is wrong', async () => {
@@ -183,7 +184,7 @@ describe('AuthService', () => {
       });
       await expect(
         service.login({ username: 'testuser', password: 'wrongpass' }, '127.0.0.1', 'agent'),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.login.invalid_credentials' });
     });
 
     it('should throw UnauthorizedException when user is DISABLED', async () => {
@@ -197,7 +198,7 @@ describe('AuthService', () => {
       });
       await expect(
         service.login({ username: 'testuser', password: 'correctpass' }, '127.0.0.1', 'agent'),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.account.disabled' });
     });
 
     it('should return tokens and session on successful login', async () => {
@@ -244,7 +245,7 @@ describe('AuthService', () => {
       });
       await expect(
         service.login({ username: 'testuser', password: 'correctpass' }, '127.0.0.1', 'agent'),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     });
   });
 
@@ -253,7 +254,7 @@ describe('AuthService', () => {
       const { service } = buildService();
       await expect(
         service.refresh({ refreshToken: 'invalid-rt' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.refresh.token_invalid' });
     });
 
     it('should throw UnauthorizedException when session is expired', async () => {
@@ -267,7 +268,7 @@ describe('AuthService', () => {
       });
       await expect(
         service.refresh({ refreshToken: 'old-rt' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.refresh.token_invalid' });
     });
 
     it('should throw UnauthorizedException when session is inactive', async () => {
@@ -281,7 +282,7 @@ describe('AuthService', () => {
       });
       await expect(
         service.refresh({ refreshToken: 'old-rt' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.refresh.token_invalid' });
     });
 
     it('should return new token pair on valid refresh', async () => {
@@ -323,7 +324,7 @@ describe('AuthService', () => {
           password: 'pass123',
           systemCode: 'main',
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.register.username_taken' });
     });
 
     it('should throw ConflictException when email exists', async () => {
@@ -338,7 +339,7 @@ describe('AuthService', () => {
           password: 'pass123',
           systemCode: 'main',
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.register.email_taken' });
     });
 
     it('should throw BadRequestException when system not found', async () => {
@@ -352,7 +353,7 @@ describe('AuthService', () => {
           password: 'pass123',
           systemCode: 'nonexistent',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.system.not_found' });
     });
 
     it('should return requiresActivation=false when system has no autoApprove', async () => {
@@ -464,7 +465,7 @@ describe('AuthService', () => {
       jwt.verify.mockImplementation(() => { throw new Error('expired'); });
       await expect(
         service.resetPasswordByToken({ token: 'bad-token', newPassword: 'new123' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.password_reset.link_invalid' });
     });
 
     it('should throw BadRequestException when purpose is not password-reset', async () => {
@@ -472,7 +473,7 @@ describe('AuthService', () => {
       jwt.verify.mockReturnValue({ sub: 'user-1', purpose: 'other', ph: '12345678' });
       await expect(
         service.resetPasswordByToken({ token: 'token', newPassword: 'new123' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.password_reset.link_wrong_purpose' });
     });
 
     it('should reset password and clear sessions on valid token', async () => {
@@ -555,21 +556,21 @@ describe('AuthService', () => {
       const { service } = setupSvc({ id: 'user-1', status: 'DELETED', password: 'p' });
       await expect(
         service.updateOwnProfile(AUTH_USER, { nickname: 'x' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     });
 
     it('DISABLED 用户返回 UnauthorizedException', async () => {
       const { service } = setupSvc({ id: 'user-1', status: 'DISABLED', password: 'p' });
       await expect(
         service.updateOwnProfile(AUTH_USER, { nickname: 'x' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     });
 
     it('LOCKED 用户返回 UnauthorizedException', async () => {
       const { service } = setupSvc({ id: 'user-1', status: 'LOCKED', password: 'p' });
       await expect(
         service.updateOwnProfile(AUTH_USER, { nickname: 'x' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     });
 
     it('账户不存在返回 UnauthorizedException', async () => {
@@ -577,7 +578,7 @@ describe('AuthService', () => {
       (identityRepository.findUserById as Mock).mockResolvedValue(null);
       await expect(
         service.updateOwnProfile(AUTH_USER, { nickname: 'x' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     });
 
     it('返回值不含 avatarStorageKey', async () => {
@@ -677,7 +678,7 @@ describe('AuthService', () => {
       (prisma.$queryRaw as Mock).mockResolvedValueOnce([{ status: 'DELETED', avatarStorageKey: null }]);
       await expect(
         identityRepository.updateOwnProfile('user-1', { nickname: 'x' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
       expect(prisma.user.update).not.toHaveBeenCalled();
     });
 
@@ -725,7 +726,7 @@ describe('AuthService', () => {
 
       await expect(
         service.updateOwnProfile(AUTH_USER, { avatarStorageKey: 'avatars/user-1/missing.png' }),
-      ).rejects.toThrow('头像对象不存在或与上传凭据不匹配');
+      ).rejects.toMatchObject({ i18nKey: 'auth.profile.avatar_upload_mismatch' });
 
       (r2.getObjectMetadata as Mock).mockResolvedValueOnce({
         exists: true,
@@ -734,7 +735,7 @@ describe('AuthService', () => {
       });
       await expect(
         service.updateOwnProfile(AUTH_USER, { avatarStorageKey: 'avatars/user-1/mismatch.png' }),
-      ).rejects.toThrow('头像对象不存在或与上传凭据不匹配');
+      ).rejects.toMatchObject({ i18nKey: 'auth.profile.avatar_upload_mismatch' });
 
       expect(avatarImageProcessor.processAndUpload).not.toHaveBeenCalled();
       expect(consumeSpy).not.toHaveBeenCalled();
@@ -777,11 +778,11 @@ describe('AuthService', () => {
         processed: true,
       });
       vi.spyOn(identityRepository, 'consumeAvatarReservation')
-        .mockRejectedValue(new BadRequestException('头像上传凭据无效或已过期'));
+        .mockRejectedValue(new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.profile.avatar_reservation_invalid'));
 
       await expect(
         service.updateOwnProfile(AUTH_USER, { avatarStorageKey: 'avatars/user-1/original.png' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.profile.avatar_reservation_invalid' });
       expect(storageCleanup.enqueue).toHaveBeenCalledWith({
         storageKey: 'avatars/user-1/processed.webp',
         ownerUserId: 'user-1',
@@ -819,11 +820,11 @@ describe('AuthService', () => {
       vi.spyOn(identityRepository, 'assertPendingUploadReservation').mockResolvedValue({ sizeBytes: 1024, contentType: 'image/png' });
       vi
         .spyOn(identityRepository, 'consumeAvatarReservation')
-        .mockRejectedValue(new BadRequestException('头像上传凭据无效或已过期'));
+        .mockRejectedValue(new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.profile.avatar_reservation_invalid'));
 
       await expect(
         service.updateOwnProfile(AUTH_USER, { avatarStorageKey: 'avatars/other-user/x.png' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.profile.avatar_reservation_invalid' });
       expect(storageCleanup.enqueue).not.toHaveBeenCalled();
     });
 
@@ -860,7 +861,7 @@ describe('AuthService', () => {
           avatar: 'https://x.com/y.png',
           avatarStorageKey: 'avatars/user-1/z.png',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toMatchObject({ i18nKey: 'auth.profile.avatar_conflict' });
     });
   });
 });

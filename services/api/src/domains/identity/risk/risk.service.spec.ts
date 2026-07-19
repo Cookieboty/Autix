@@ -84,7 +84,8 @@ describe('RiskService.setLevel', () => {
 
   it('rejects an invalid level', async () => {
     const { service } = buildService();
-    await expect(service.setLevel('admin-1', 'u1', 'L9' as any, 'x')).rejects.toThrow();
+    await expect(service.setLevel('admin-1', 'u1', 'L9' as any, 'x'))
+      .rejects.toMatchObject({ i18nKey: 'risk.level_invalid' });
   });
 });
 

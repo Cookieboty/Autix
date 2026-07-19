@@ -32,9 +32,12 @@ describe('AccountDeletionService', () => {
 
   it('rejects a missing proof or session before touching persistence', async () => {
     const { service, identity } = makeService();
-    await expect(service.deleteImmediately('u1', '', 'session-1', 'alice')).rejects.toThrow();
-    await expect(service.deleteImmediately('u1', 'proof', undefined, 'alice')).rejects.toThrow();
-    await expect(service.deleteImmediately('u1', 'proof', 'session-1')).rejects.toThrow();
+    await expect(service.deleteImmediately('u1', '', 'session-1', 'alice'))
+      .rejects.toMatchObject({ i18nKey: 'auth.step_up.proof_missing', code: 'STEP_UP_INVALID_OR_EXPIRED' });
+    await expect(service.deleteImmediately('u1', 'proof', undefined, 'alice'))
+      .rejects.toMatchObject({ i18nKey: 'auth.step_up.proof_missing', code: 'STEP_UP_INVALID_OR_EXPIRED' });
+    await expect(service.deleteImmediately('u1', 'proof', 'session-1'))
+      .rejects.toMatchObject({ i18nKey: 'auth.step_up.proof_missing', code: 'STEP_UP_INVALID_OR_EXPIRED' });
     expect(identity.anonymizeUserImmediately).not.toHaveBeenCalled();
   });
 

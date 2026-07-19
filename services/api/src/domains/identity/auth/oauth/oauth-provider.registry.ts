@@ -1,9 +1,10 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { GoogleProvider } from './providers/google.provider';
 import { AppleProvider } from './providers/apple.provider';
 import { GitHubProvider } from './providers/github.provider';
 import { OAuthProvider } from './provider.types';
 import { OAuthConfigService } from './oauth-config.service';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 
 @Injectable()
 export class OAuthProviderRegistry {
@@ -14,7 +15,7 @@ export class OAuthProviderRegistry {
   }
   getInstance(name: string): OAuthProvider {
     const p = this.map[name];
-    if (!p) throw new BadRequestException('OAUTH_PROVIDER_DISABLED');
+    if (!p) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'oauth.provider_disabled');
     return p;
   }
   async isEnabled(name: string): Promise<boolean> {

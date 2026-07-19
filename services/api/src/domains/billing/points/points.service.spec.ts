@@ -325,7 +325,7 @@ describe('PointsService grant and hold ledger', () => {
 
     await expect(
       service.createHold('u1', { taskType: 'video_generation', amount: 60 }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'points.balance_insufficient' });
     expect(tx.point_holds.create).not.toHaveBeenCalled();
   });
 
@@ -398,7 +398,7 @@ describe('PointsService grant and hold ledger', () => {
         taskId: 'video-1',
         amount: 100,
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'points.balance_insufficient' });
     expect(tx.point_grants.updateMany).not.toHaveBeenCalled();
     expect(tx.point_hold_items.create).not.toHaveBeenCalled();
   });
@@ -427,7 +427,10 @@ describe('PointsService grant and hold ledger', () => {
         taskId: 'gen-1',
         amount: 60,
       }),
-    ).rejects.toThrow(/INSUFFICIENT_GRANT/);
+    ).rejects.toMatchObject({
+      i18nKey: 'points.hold_grant_insufficient',
+      code: 'INSUFFICIENT_GRANT',
+    });
     expect(tx.point_hold_items.create).not.toHaveBeenCalled();
     expect(tx.user_points.updateMany).not.toHaveBeenCalled();
   });
@@ -649,9 +652,9 @@ describe('PointsService.quoteHoldFromSnapshot', () => {
     tx.point_holds.findUnique.mockResolvedValue(null);
     const service = buildPointsService(createPrisma(tx));
 
-    await expect(service.quoteHoldFromSnapshot('missing', {})).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(service.quoteHoldFromSnapshot('missing', {})).rejects.toMatchObject({
+      i18nKey: 'points.hold_not_found',
+    });
   });
 });
 

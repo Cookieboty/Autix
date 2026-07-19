@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import { Prisma } from '../../platform/prisma/generated';
 
@@ -178,7 +179,12 @@ export class AuthIdentityRepository {
         where: { id: input.userId, status: { not: 'DELETED' } },
         data: { status: 'ACTIVE' },
       });
-      if (activated.count !== 1) throw new BadRequestException({ code: 'USER_DELETED', message: '账户不可用' });
+      if (activated.count !== 1) throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'auth.account.unavailable',
+        undefined,
+        { code: 'USER_DELETED' },
+      );
 
       await tx.systemRegistration.update({
         where: { id: input.registrationId },
@@ -222,7 +228,7 @@ export class AuthIdentityRepository {
         !user.password ||
         user.password.slice(-8) !== input.expectedPasswordSuffix
       ) {
-        throw new BadRequestException('链接已使用或无效');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.password_reset.link_used');
       }
       await tx.user.update({ where: { id: input.userId }, data: { password: input.password } });
       await tx.userSession.deleteMany({ where: { userId: input.userId } });
@@ -261,10 +267,12 @@ export class AuthIdentityRepository {
         data: { consumedAt: new Date() },
       });
       if (consumedProof.count !== 1) {
-        throw new BadRequestException({
-          code: 'STEP_UP_INVALID_OR_EXPIRED',
-          message: '身份复核凭证无效或已使用',
-        });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.step_up.invalid_or_expired',
+          undefined,
+          { code: 'STEP_UP_INVALID_OR_EXPIRED' },
+        );
       }
       try {
         await tx.user.update({
@@ -277,7 +285,7 @@ export class AuthIdentityRepository {
       } catch (err: any) {
         // P2025：Record to update not found —— 说明 status 已被并发迁到 DELETED
         if (err?.code === 'P2025') {
-          throw new BadRequestException('账户不可用');
+          throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
         }
         throw err;
       }
@@ -352,7 +360,7 @@ export class AuthIdentityRepository {
       `;
       const user = users[0];
       if (!user || ['DELETED', 'DISABLED', 'LOCKED'].includes(user.status)) {
-        throw new BadRequestException('账户不可用');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
       }
       await tx.user.update({ where: { id: userId }, data });
       // 逐条 create（而非 createMany）：与既有头像清理路径保持同一调用形状。
@@ -400,7 +408,7 @@ export class AuthIdentityRepository {
       `;
       const dbUser = users[0];
       if (!dbUser || ['DELETED', 'DISABLED', 'LOCKED'].includes(dbUser.status)) {
-        throw new BadRequestException('账户不可用');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
       }
 
       const consumed = await tx.pending_uploads.updateMany({
@@ -415,7 +423,7 @@ export class AuthIdentityRepository {
       });
       // 统一错误消息，不区分超时/已消费/越权/不存在——避免探测泄露
       if (consumed.count === 0) {
-        throw new BadRequestException('banner 上传凭据无效或已过期');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.profile.banner_reservation_invalid');
       }
 
       const oldStorageKey = dbUser.bannerStorageKey ?? null;
@@ -457,8 +465,11 @@ export class AuthIdentityRepository {
       select: { id: true, sizeBytes: true, contentType: true },
     });
     if (!reservation) {
-      throw new BadRequestException(
-        purpose === 'BANNER' ? 'banner 上传凭据无效或已过期' : '头像上传凭据无效或已过期',
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        purpose === 'BANNER'
+          ? 'auth.profile.banner_reservation_invalid'
+          : 'auth.profile.avatar_reservation_invalid',
       );
     }
     return {
@@ -506,7 +517,7 @@ export class AuthIdentityRepository {
       `;
       const dbUser = users[0];
       if (!dbUser || dbUser.status === 'DELETED' || dbUser.status === 'DISABLED' || dbUser.status === 'LOCKED') {
-        throw new BadRequestException('账户不可用');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
       }
 
       // 原子消费：updateMany + 条件 where，避免 findFirst → update 两段式竞态
@@ -524,7 +535,7 @@ export class AuthIdentityRepository {
         },
       });
       if (consumed.count === 0) {
-        throw new BadRequestException('头像上传凭据无效或已过期');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.profile.avatar_reservation_invalid');
       }
       const oldStorageKey = dbUser.avatarStorageKey ?? null;
 
@@ -581,20 +592,29 @@ export class AuthIdentityRepository {
       `;
       const lockedUser = lockedUsers[0];
       if (!lockedUser || lockedUser.status === 'DELETED') {
-        throw new BadRequestException({ code: 'USER_DELETED', message: '账户不可用' });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.account.unavailable',
+          undefined,
+          { code: 'USER_DELETED' },
+        );
       }
       if (lockedUser.isSuperAdmin) {
         // spec §3.2 F：超管自删是幂等冲突语义，用 409（而非 400）。
-        throw new ConflictException({
-          code: 'SUPER_ADMIN_CANNOT_SELF_DELETE',
-          message: '超级管理员不能自助删除账号',
-        });
+        throw new I18nHttpException(
+          HttpStatus.CONFLICT,
+          'auth.account.super_admin_cannot_self_delete',
+          undefined,
+          { code: 'SUPER_ADMIN_CANNOT_SELF_DELETE' },
+        );
       }
       if (lockedUser.username !== input.usernameConfirmation) {
-        throw new BadRequestException({
-          code: 'ACCOUNT_DELETE_CONFIRMATION_MISMATCH',
-          message: '用户名确认不匹配',
-        });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.account.delete_confirmation_mismatch',
+          undefined,
+          { code: 'ACCOUNT_DELETE_CONFIRMATION_MISMATCH' },
+        );
       }
 
       const consumedProof = await tx.step_up_proofs.updateMany({
@@ -609,10 +629,12 @@ export class AuthIdentityRepository {
         data: { consumedAt: now },
       });
       if (consumedProof.count !== 1) {
-        throw new BadRequestException({
-          code: 'STEP_UP_INVALID_OR_EXPIRED',
-          message: '身份复核凭证无效或已使用',
-        });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.step_up.invalid_or_expired',
+          undefined,
+          { code: 'STEP_UP_INVALID_OR_EXPIRED' },
+        );
       }
 
       const pendingUploads = await tx.pending_uploads.findMany({
@@ -622,10 +644,10 @@ export class AuthIdentityRepository {
       const cleanupTasks = [
         ...(lockedUser.avatarStorageKey
           ? [{
-              storageKey: lockedUser.avatarStorageKey,
-              ownerUserId: input.userId,
-              reason: 'ACCOUNT_DELETED' as const,
-            }]
+            storageKey: lockedUser.avatarStorageKey,
+            ownerUserId: input.userId,
+            reason: 'ACCOUNT_DELETED' as const,
+          }]
           : []),
         ...pendingUploads.map((upload) => ({
           storageKey: upload.storageKey,
@@ -899,7 +921,12 @@ export class AuthIdentityRepository {
         SELECT "status" FROM "users" WHERE "id" = ${input.userId} FOR UPDATE
       `;
       if (!rows[0] || rows[0].status === 'DELETED') {
-        throw new BadRequestException({ code: 'USER_DELETED', message: '账户不可用' });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.account.unavailable',
+          undefined,
+          { code: 'USER_DELETED' },
+        );
       }
       await tx.userAccount.create({
         data: {
@@ -938,7 +965,7 @@ export class AuthIdentityRepository {
       where: { id: userId, status: { not: 'DELETED' } },
       data: { pendingEmail: email },
     }).then((result) => {
-      if (result.count !== 1) throw new BadRequestException('账户不可用');
+      if (result.count !== 1) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
     });
   }
 
@@ -961,16 +988,18 @@ export class AuthIdentityRepository {
         data: { consumedAt: new Date() },
       });
       if (consumedProof.count !== 1) {
-        throw new BadRequestException({
-          code: 'STEP_UP_INVALID_OR_EXPIRED',
-          message: '身份复核凭证无效或已使用',
-        });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.step_up.invalid_or_expired',
+          undefined,
+          { code: 'STEP_UP_INVALID_OR_EXPIRED' },
+        );
       }
       const updated = await tx.user.updateMany({
         where: { id: input.userId, status: { not: 'DELETED' } },
         data: { pendingEmail: input.email },
       });
-      if (updated.count !== 1) throw new BadRequestException('账户不可用');
+      if (updated.count !== 1) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
     });
   }
 
@@ -979,7 +1008,7 @@ export class AuthIdentityRepository {
       where: { id: userId, pendingEmail: email, status: { not: 'DELETED' } },
       data: { email, emailVerified: true, pendingEmail: null },
     }).then((result) => {
-      if (result.count !== 1) throw new BadRequestException('账户不可用');
+      if (result.count !== 1) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'auth.account.unavailable');
     });
   }
 
@@ -1005,7 +1034,12 @@ export class AuthIdentityRepository {
       if (!role) {
         // 与邮箱激活流程（auth.service.ts:210）一致：缺默认角色直接抛错并回滚事务，
         // 避免产出 ACTIVE 但无可访问系统的"孤儿"用户。
-        throw new BadRequestException(`该系统未配置默认用户角色(${input.defaultRoleCode})，无法完成账号创建`);
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'auth.registration.default_role_missing',
+          { roleCode: input.defaultRoleCode },
+          { code: 'REGISTRATION_ROLE_MISSING' },
+        );
       }
       await tx.userRole.create({ data: { userId: user.id, roleId: role.id } });
       const rawMeta = (input.account.metadata ?? {}) as Record<string, unknown>;

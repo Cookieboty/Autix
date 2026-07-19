@@ -1,4 +1,3 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import {
   CampaignStatus,
   CampaignType,
@@ -163,7 +162,7 @@ describe('CampaignRewardService.grantCampaignReward', () => {
         userId: 'user-1',
         triggerKey: 'trigger-1',
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'campaign.budget_total_insufficient' });
     expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 });
@@ -176,7 +175,7 @@ describe('CampaignRewardService.recordFeedback', () => {
 
     await expect(
       service.recordFeedback('user-1', { feedbackId: 'feedback-1' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'campaign.feedback_content_insufficient' });
     expect(prisma.campaigns.findMany).not.toHaveBeenCalled();
   });
 
@@ -193,7 +192,7 @@ describe('CampaignRewardService.recordFeedback', () => {
         rating: 5,
         tags: ['useful'],
       }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toMatchObject({ i18nKey: 'campaign.generation_invalid' });
 
     expect(prisma.campaigns.findMany).not.toHaveBeenCalled();
     expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
@@ -324,7 +323,7 @@ describe('CampaignRewardService.recordFeedback', () => {
 
     await expect(
       service.recordEvent('user-1', { triggerKind: 'FRONTEND_CLICK' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'campaign.trigger_type_unsupported' });
   });
 
   it('rejects dynamic streak events for generations not owned by the user', async () => {
@@ -339,7 +338,7 @@ describe('CampaignRewardService.recordFeedback', () => {
           cycleKey: buildContinuousUseCycleKey('user-1', 7),
         },
       }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toMatchObject({ i18nKey: 'campaign.generation_invalid' });
   });
 
   it('rejects dynamic streak events with forged cycle keys', async () => {
@@ -354,7 +353,7 @@ describe('CampaignRewardService.recordFeedback', () => {
           cycleKey: 'continuous_use:user-1:forged:7',
         },
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'campaign.continuous_generation_cycle_mismatch' });
   });
 });
 
@@ -499,7 +498,7 @@ describe('CampaignRewardService home starter quests', () => {
 
     await expect(
       service.claimHomeStarterTask('HOME_QUEST_NANO_BANANA_PRO', 'user-1'),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ i18nKey: 'campaign.home_task_not_completed' });
     expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 

@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto';
@@ -17,11 +18,11 @@ type RoleMenuLink = RoleWithMenus['menus'][number];
 
 @Injectable()
 export class RoleService {
-  constructor(private readonly roleRepository: RoleRepository) {}
+  constructor(private readonly roleRepository: RoleRepository) { }
 
   async create(dto: CreateRoleDto) {
     const existing = await this.roleRepository.findBySystemAndCode(dto.systemId, dto.code);
-    if (existing) throw new ConflictException('该系统中角色编码已存在');
+    if (existing) throw new I18nHttpException(HttpStatus.CONFLICT, 'role.code_taken');
     return this.roleRepository.create(dto);
   }
 
@@ -32,7 +33,7 @@ export class RoleService {
 
   async findOne(id: string) {
     const role = await this.roleRepository.findWithPermissions(id);
-    if (!role) throw new NotFoundException('角色不存在');
+    if (!role) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'role.not_found');
     return role;
   }
 
@@ -40,14 +41,14 @@ export class RoleService {
     await this.findOne(id);
     if (dto.name || dto.code) {
       const existing = await this.roleRepository.findNameOrCodeConflict(id, dto);
-      if (existing) throw new ConflictException('角色名称或编码已存在');
+      if (existing) throw new I18nHttpException(HttpStatus.CONFLICT, 'role.name_or_code_taken');
     }
     return this.roleRepository.update(id, dto);
   }
 
   async remove(id: string): Promise<MessageResponse> {
     const role = await this.findOne(id);
-    if (role._count.users > 0) throw new ConflictException('角色下还有用户，无法删除');
+    if (role._count.users > 0) throw new I18nHttpException(HttpStatus.CONFLICT, 'role.has_users');
     await this.roleRepository.delete(id);
     return { message: '删除成功' };
   }
@@ -78,7 +79,7 @@ export class RoleService {
 
   private async findRoleWithMenus(id: string) {
     const role = await this.roleRepository.findWithMenus(id);
-    if (!role) throw new NotFoundException('角色不存在');
+    if (!role) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'role.not_found');
     return role;
   }
 

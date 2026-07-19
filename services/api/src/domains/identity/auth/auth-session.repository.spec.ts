@@ -1,4 +1,3 @@
-import { UnauthorizedException } from '@nestjs/common';
 import { AuthSessionRepository } from './auth-session.repository';
 
 function createRepository(status = 'ACTIVE') {
@@ -45,7 +44,7 @@ describe('AuthSessionRepository.create', () => {
       ip: '',
       userAgent: '',
       expiresAt: new Date('2099-01-01T00:00:00Z'),
-    })).rejects.toBeInstanceOf(UnauthorizedException);
+    })).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     expect(tx.userSession.create).not.toHaveBeenCalled();
     expect(tx.user.update).not.toHaveBeenCalled();
   });

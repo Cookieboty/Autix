@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import {
   CampaignStatus,
   CampaignType,
@@ -52,7 +51,7 @@ describe('campaign reward helpers', () => {
         { status: CampaignStatus.DRAFT, startsAt: null, endsAt: null },
         now,
       ),
-    ).toThrow(BadRequestException);
+    ).toThrow(expect.objectContaining({ i18nKey: 'campaign.not_enabled' }));
     expect(() =>
       assertCampaignCanGrant(
         {
@@ -62,7 +61,7 @@ describe('campaign reward helpers', () => {
         },
         now,
       ),
-    ).toThrow(BadRequestException);
+    ).toThrow(expect.objectContaining({ i18nKey: 'campaign.not_started' }));
     expect(() =>
       assertCampaignCanGrant(
         {
@@ -72,7 +71,7 @@ describe('campaign reward helpers', () => {
         },
         now,
       ),
-    ).toThrow(BadRequestException);
+    ).toThrow(expect.objectContaining({ i18nKey: 'campaign.ended' }));
   });
 
   it('detects budget and per-user cap overflow without blocking exact-cap grants', () => {
@@ -169,10 +168,10 @@ describe('campaign reward helpers', () => {
     ).not.toThrow();
     expect(() =>
       assertBuiltinCampaignUpdateAllowed(fixed, { code: 'OTHER_CODE' }),
-    ).toThrow(BadRequestException);
+    ).toThrow(expect.objectContaining({ i18nKey: 'campaign.fixed_code_immutable' }));
     expect(() =>
       assertBuiltinCampaignUpdateAllowed(fixed, { type: CampaignType.FEEDBACK }),
-    ).toThrow(BadRequestException);
+    ).toThrow(expect.objectContaining({ i18nKey: 'campaign.fixed_type_immutable' }));
   });
 
   it('FIX-15: builds a deterministic per-campaign-per-user manual trigger key (idempotent grant-once)', () => {

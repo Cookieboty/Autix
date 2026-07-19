@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { OrderRepository } from './repositories/order.repository';
 import { PaymentEventRepository } from './repositories/payment-event.repository';
 import { OrderCreationService } from './services/order-creation.service';
@@ -36,7 +32,7 @@ export class OrderService {
     private readonly fulfillmentService: OrderFulfillmentService,
     private readonly refundService: OrderRefundService,
     private readonly paymentEventRepo: PaymentEventRepository,
-  ) {}
+  ) { }
 
   async recoverStaleProcessingEvents(): Promise<number> {
     return this.paymentEventRepo.recoverStaleProcessingEvents();
@@ -96,7 +92,7 @@ export class OrderService {
     const order = await this.orderRepo.findByIdOrThrow(orderId);
     const resolvedOrder = await this.resolveExpiredPendingOrder(order);
     if (resolvedOrder.status !== OrderStatus.PENDING) {
-      throw new BadRequestException('订单已超时取消，请重新下单');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'order.timeout_cancelled');
     }
 
     return this.orderRepo.update(orderId, {
@@ -130,8 +126,8 @@ export class OrderService {
 
   async getOrderById(id: string, userId: string) {
     const order = await this.orderRepo.findById(id);
-    if (!order) throw new NotFoundException('订单不存在');
-    if (order.userId !== userId) throw new ForbiddenException('无权访问此订单');
+    if (!order) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.not_found');
+    if (order.userId !== userId) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'order.forbidden');
     return this.resolveExpiredPendingOrder(order);
   }
 
@@ -143,7 +139,7 @@ export class OrderService {
   async cancelOrder(id: string, userId: string) {
     const order = await this.getOrderById(id, userId);
     if (order.status !== 'PENDING') {
-      throw new BadRequestException('只能取消待付款的订单');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'order.only_pending_can_cancel');
     }
 
     return this.orderRepo.updateStatus(id, OrderStatus.CANCELLED);
