@@ -305,6 +305,7 @@ export class VideoGenerationRepository {
     return true;
   }
 
+  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
   async markProjectGenerationCompletedAndConfirmHold(
     input: {
       generationId: string;
@@ -428,6 +429,7 @@ export class VideoGenerationRepository {
     });
   }
 
+  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
   async markProjectGenerationFailedAndRefund(
     input: {
       generationId: string;
@@ -545,6 +547,7 @@ export class VideoGenerationRepository {
    * 不做任何父行 update，也不在这里退款（退款由调用方经 holdReconciliation.safeRefund
    * 单独完成，两者不共享事务，任一失败不影响另一个）。
    */
+  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
   markDirectGenerationFailed(generationId: string, error: string) {
     return this.prisma.video_clip_generations.update({
       where: { id: generationId },
@@ -558,6 +561,7 @@ export class VideoGenerationRepository {
    * 直连行没有父 clip/project，只 update generation 行本身，不做任何
    * tx.video_clips.update —— 那个 where: { id: clipId } 在 clipId 为 null 时会抛。
    */
+  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
   async markDirectGenerationCompletedAndConfirmHold(
     input: {
       generationId: string;
@@ -606,6 +610,7 @@ export class VideoGenerationRepository {
     return confirmedUserId;
   }
 
+  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
   async markDirectGenerationFailedAndRefund(
     input: {
       generationId: string;
@@ -630,6 +635,7 @@ export class VideoGenerationRepository {
     });
   }
 
+  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
   markDirectGenerationExpiredWithoutRefund(input: {
     generationId: string;
     externalStatus: string;

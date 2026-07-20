@@ -1,6 +1,18 @@
 import { VideoGenStatus, type Prisma } from '../../platform/prisma/generated';
+import { AppLogger } from '../../platform/common/app-logger';
 
-/** 唯一允许迁出的状态。与 generation_tasks 的 CLAIMABLE_FROM 保持一致。 */
+const logger = new AppLogger('claimVideoTerminal');
+
+/**
+ * 唯一允许迁出的状态。与 generation_tasks 的 CLAIMABLE_FROM 保持一致。
+ *
+ * **前提**：`VideoGenStatus` 共六个值（pending / queued / running / completed / failed /
+ * expired，见 schema.prisma），此处刻意只收 pending+queued —— 三个终态不可再迁出，而
+ * `running` 当前**全仓无任何写入点**，所以不列它是自洽的。
+ * 一旦有人（回填脚本、新的上游状态映射、轮询把 running 落库）开始写 `running`，这些行
+ * 将**永久无法进入终态**：每次 CAS 都返回 false，调用方整体放弃，hold 只能等 60min 的
+ * PointsHoldReclaimCron 孤儿回收。届时必须把 `running` 加进这个数组，而不是绕过 CAS。
+ */
 const CLAIMABLE_FROM: VideoGenStatus[] = [VideoGenStatus.pending, VideoGenStatus.queued];
 
 export interface VideoTerminalUpdate {
@@ -53,5 +65,14 @@ export async function claimVideoTerminal(
     where: { id: generationId, status: { in: CLAIMABLE_FROM } },
     data,
   });
+  if (count === 0) {
+    // 原实现用 update()，行缺失会抛 P2025；改 updateMany 后两种情况被压成同一个
+    // count===0，且无法从 count 本身区分：generationId 已是终态（合理跳过，并发下常见）；
+    // 或 generationId 根本不存在（很可能是上游 bug）。这里不做额外查询判断，只把 id 与
+    // 目标状态打出来，交给排查者结合上下文判断。写法对齐 generation-task.repository。
+    logger.warn(
+      `claimVideoTerminal: no row updated (already terminal or id not found) generationId=${generationId} target=${next.status}`,
+    );
+  }
   return count === 1;
 }

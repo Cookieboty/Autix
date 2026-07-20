@@ -482,7 +482,7 @@ export class VideoGenerationFlowService {
 
       return { generationId, taskId: providerTaskId };
     } catch (err) {
-      await this.repository.markGenerationCreateTaskFailedAndRefund(
+      const claimed = await this.repository.markGenerationCreateTaskFailedAndRefund(
         buildCreateTaskFailureInput({
           generationId,
           clipId: input.clipId,
@@ -495,9 +495,13 @@ export class VideoGenerationFlowService {
             'createTask 同步失败',
           ),
       );
-      await this.projectStatusConvergence.recalculateProjectStatus(
-        input.projectId,
-      );
+      // CAS 输家：终态已由并发路径写定，重算只会读到赢家状态，本次没有新信息可加。
+      // 但 err 仍要抛 —— 它是本调用自身的失败，吞掉会让调用方误以为提交成功。
+      if (claimed) {
+        await this.projectStatusConvergence.recalculateProjectStatus(
+          input.projectId,
+        );
+      }
       throw err;
     }
   }
@@ -596,7 +600,7 @@ export class VideoGenerationFlowService {
             ),
         );
       } else if (generation.clipId) {
-        await this.repository.markGenerationCompletedAndConfirmHold(
+        const claimed = await this.repository.markGenerationCompletedAndConfirmHold(
           // clipId 已在此分支确认非空
           { ...completedInput, clipId: generation.clipId },
           (tx) =>
@@ -605,6 +609,9 @@ export class VideoGenerationFlowService {
               generation.id,
             ),
         );
+        // CAS 输家：终态已由并发路径写定，事务内一行未写。这里必须连事务外的副作用
+        // 一起放弃 —— 重算虽幂等，但它读到的是赢家的状态，本次没有任何新信息可加。
+        if (!claimed) return;
       } else {
         // 直连行（clipId=null）：只写 generation 行本身，不碰不存在的父 clip/project。
         await this.repository.markDirectGenerationCompletedAndConfirmHold(
@@ -655,7 +662,7 @@ export class VideoGenerationFlowService {
       }
 
       if (generation.clipId) {
-        await this.repository.markGenerationFailedAndRefund(
+        const claimed = await this.repository.markGenerationFailedAndRefund(
           // clipId 已在此分支确认非空
           { ...failedInput, clipId: generation.clipId },
           (tx) =>
@@ -665,6 +672,9 @@ export class VideoGenerationFlowService {
               legacy.refundReason,
             ),
         );
+        // CAS 输家：真终态多半是刚落的 completed。此时 convergeAfterClipFailure 会把
+        // 下游 pending 分镜批量写成 failed —— 不可逆的跨行破坏，必须整体放弃。
+        if (!claimed) return;
       } else {
         // 直连行（clipId=null）：只写 generation 行本身，不碰不存在的父 clip/project。
         await this.repository.markDirectGenerationFailedAndRefund(
@@ -824,11 +834,15 @@ export class VideoGenerationFlowService {
     // 排水口，故必须保留标终态 —— 删掉会让卡死任务永占队列前列、新任务饿死。
     const expiredInput = buildExpiredGenerationInput({ generation, reason });
     if (generation.clipId) {
-      await this.repository.markGenerationExpiredWithoutRefund({
+      const claimed = await this.repository.markGenerationExpiredWithoutRefund({
         // clipId 已在此分支确认非空
         ...expiredInput,
         clipId: generation.clipId,
       });
+      // CAS 输家：真终态（多半是刚落的 completed）已由赢家写好。仓储层已挡住把成功分镜
+      // 打成 failed，但 convergeAfterClipFailure 在事务外做同一件事、且波及下游 pending
+      // 分镜，同样必须放弃。
+      if (!claimed) return;
       await this.projectStatusConvergence.convergeAfterClipFailure({
         clipId: generation.clipId,
         projectId: generation.projectId!,
@@ -1048,7 +1062,7 @@ export class VideoGenerationFlowService {
   ) {
     const failedInput = buildExplicitFailedGenerationInput({ generation, reason, externalStatus });
     if (generation.clipId) {
-      await this.repository.markGenerationFailedAndRefund(
+      const claimed = await this.repository.markGenerationFailedAndRefund(
         // clipId 已在此分支确认非空
         { ...failedInput, clipId: generation.clipId },
         (tx) =>
@@ -1058,6 +1072,8 @@ export class VideoGenerationFlowService {
             reason,
           ),
       );
+      // CAS 输家：终态已被并发路径写定，不做级联失败（会把下游 pending 分镜写成 failed）。
+      if (!claimed) return;
     } else {
       // 直连行（clipId=null）：succeeded 兜底也可能命中直连生成，只写 generation 行本身。
       await this.repository.markDirectGenerationFailedAndRefund(

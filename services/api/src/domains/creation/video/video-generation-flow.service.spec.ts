@@ -1535,3 +1535,135 @@ describe('VideoGenerationFlowService markExpired (超时排水，不退款)', ()
     expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
   });
 });
+
+// Task 7 评审 · Critical：仓储层 CAS 返回的 boolean 一度在**全部五个调用点**被丢弃，
+// 输家继续跑事务外的副作用 —— 最严重的是 convergeAfterClipFailure → cascadeFailDependents
+// 把下游 pending 分镜批量写成 failed（不可逆的跨行破坏）。仓储里那条
+// "这里再标 clip failed 会把成功的分镜打成失败" 的注释正是在描述这个失败模式：
+// 它在事务内被堵住了，在事务外一步之遥又发生了。
+//
+// 这里的每个用例都把 updateMany 打成 { count: 0 }（= 并发的另一路径已抢到终态），
+// 断言输家**一个事务外副作用都不做**。变异：删掉调用点的 `if (!claimed) return;` 即全红。
+describe('VideoGenerationFlowService CAS 输家（updateMany count:0）不执行事务外副作用', () => {
+  /** 让本次 CAS 判负：行已被并发路径写成终态，updateMany 的 where 匹配不到 pending/queued。 */
+  function loseCas(prisma: ReturnType<typeof makeService>['prisma']) {
+    prisma.video_clip_generations.updateMany.mockResolvedValue({ count: 0 } as never);
+  }
+
+  it('createTask 失败路径：输家不重算项目状态、不退款，但原始错误仍要抛', async () => {
+    const {
+      service,
+      prisma,
+      pointsService,
+      submitVideoTaskMock,
+      projectStatusConvergence,
+    } = makeService();
+    submitVideoTaskMock.mockRejectedValue(new Error('Seedance unavailable'));
+    loseCas(prisma);
+
+    await expect(
+      service.generateClip({
+        clipId: 'clip-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+      }),
+      // 吞掉 err 会让调用方误以为提交成功——CAS 判负只该掐掉副作用，不该改变错误传播。
+    ).rejects.toThrow('Seedance unavailable');
+
+    expect(projectStatusConvergence.recalculateProjectStatus).not.toHaveBeenCalled();
+    // 退款在仓储事务内、CAS 之后，输家早退即已挡住；一并锁死，防止有人把它挪到事务外。
+    expect(pointsService.refundHoldWithinTx).not.toHaveBeenCalled();
+  });
+
+  it('completed 路径：输家不重算项目状态、不确认 hold（重复确认 = 重复扣费）', async () => {
+    const { service, prisma, pointsService, projectStatusConvergence } = makeService();
+    loseCas(prisma);
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+    }) as never;
+
+    await service.applyTaskStatus(
+      {
+        id: 'gen-1',
+        clipId: 'clip-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+        status: VideoGenStatus.queued,
+      } as never,
+      {
+        kind: 'succeeded',
+        externalStatus: 'succeeded',
+        sourceUrl: 'https://provider.test/video.mp4',
+        lastFrameUrl: null,
+        durationSec: 5,
+      },
+    );
+
+    expect(projectStatusConvergence.recalculateProjectStatus).not.toHaveBeenCalled();
+    expect(pointsService.confirmHoldWithinTx).not.toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('failed 路径：输家不做 convergeAfterClipFailure（会把下游 pending 分镜写成 failed）、不退款', async () => {
+    const { service, prisma, pointsService, projectStatusConvergence } = makeService();
+    loseCas(prisma);
+
+    await service.applyTaskStatus(
+      {
+        id: 'gen-1',
+        clipId: 'clip-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+        status: VideoGenStatus.queued,
+      } as never,
+      { kind: 'failed', externalStatus: 'failed', error: 'provider rejected' },
+    );
+
+    expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
+    // 重复退款会凭空发积分——真实资金，必须锁死。
+    expect(pointsService.refundHoldWithinTx).not.toHaveBeenCalled();
+  });
+
+  it('succeeded 兜底路径（video_url 缺失）：输家不做 convergeAfterClipFailure、不退款', async () => {
+    const { service, prisma, pointsService, projectStatusConvergence } = makeService();
+    loseCas(prisma);
+
+    await service.applyTaskStatus(
+      {
+        id: 'gen-1',
+        clipId: 'clip-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+        status: VideoGenStatus.queued,
+      } as never,
+      // sourceUrl 缺失 → 走 markGenerationFailed 兜底（幽灵 completed 防线）。
+      { kind: 'succeeded', externalStatus: 'succeeded', lastFrameUrl: null, durationSec: null },
+    );
+
+    expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
+    expect(pointsService.refundHoldWithinTx).not.toHaveBeenCalled();
+  });
+
+  it('markExpired 路径：输家不做 convergeAfterClipFailure —— 赢家多半刚落 completed', async () => {
+    const { service, prisma, repository, terminalConvergence, projectStatusConvergence } =
+      makeService();
+    loseCas(prisma);
+    vi.spyOn(repository, 'findGenerationById').mockResolvedValue({
+      id: 'gen-1',
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      status: VideoGenStatus.queued,
+    } as never);
+    vi.spyOn(terminalConvergence, 'reconcileIfTerminal').mockResolvedValue(false);
+
+    await service.markExpired('gen-1', 'cron: queued 超过 65 分钟未完成');
+
+    // 这是五处里最危险的一处：cascadeFailDependents 的写入不可逆。
+    expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
+    // 输家没抢到，clip 行一行都不该动。
+    expect(prisma.video_clips.update).not.toHaveBeenCalled();
+  });
+});
