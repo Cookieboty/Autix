@@ -2473,3 +2473,83 @@ model rate_limit_counters {
   @@index([bucketStart])
   @@map("rate_limit_counters")
 }
+
+enum GenerationKind {
+  IMAGE
+  VIDEO
+}
+
+enum GenerationTaskStatus {
+  PENDING
+  QUEUED
+  SUCCEEDED
+  FAILED
+  EXPIRED
+}
+
+enum GenerationErrorStage {
+  SUBMIT
+  POLL
+  CALLBACK
+  PERSIST
+  BILLING
+}
+
+enum GenerationBillingStatus {
+  HELD
+  CONFIRMED
+  REFUNDED
+  REFUND_FAILED
+}
+
+model generation_tasks {
+  id             String   @id
+  kind           GenerationKind
+  userId         String
+  status         GenerationTaskStatus @default(PENDING)
+
+  modelConfigId  String?
+  provider       String?
+  model          String
+  protocolKey    String?
+  providerTaskId String?
+
+  prompt         String?  @db.Text
+  promptLength   Int      @default(0)
+  paramsSnapshot Json?
+  materialCount  Int      @default(0)
+
+  errorStage        GenerationErrorStage?
+  errorClass        String?
+  errorCode         String?
+  errorMessage      String?  @db.Text
+  upstreamStatus    Int?
+  upstreamBody      String?  @db.Text
+  upstreamRequestId String?
+
+  holdId         String?
+  pointsCost     Int?
+  billingStatus  GenerationBillingStatus?
+  billingError   String?  @db.Text
+
+  createdAt      DateTime @default(now())
+  submittedAt    DateTime?
+  queuedAt       DateTime?
+  finishedAt     DateTime?
+  updatedAt      DateTime @updatedAt
+  durationMs     Int?
+
+  lateCallbackAt DateTime?
+  lateOutcome    String?
+
+  videoGenerationId String? @unique
+  imageGenerationId String? @unique
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([kind, status, createdAt])
+  @@index([model, createdAt])
+  @@index([holdId])
+  @@index([providerTaskId])
+  @@map("generation_tasks")
+}
