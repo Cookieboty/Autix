@@ -1,15 +1,15 @@
 # Terms of Service
 
-**Effective Date**: {{EFFECTIVE_DATE}}
-**Last Updated**: {{EFFECTIVE_DATE}}
+**Effective Date**: 2026-06-20
+**Last Updated**: 2026-06-20
 
-> ⚠️ **Placeholders to be replaced**: `{{COMPANY_NAME}}` (full legal name of the operating entity), `{{COMPANY_ADDRESS}}` (registered address), `{{EFFECTIVE_DATE}}` (effective date). **All placeholders must be replaced before launch, and this document must be reviewed by legal counsel.**
+> ⚠️ **This document has not yet been reviewed by legal counsel. Please complete such review before launch.**
 
 ---
 
 ## 1. Introduction
 
-This Agreement is entered into between you and {{COMPANY_NAME}} ("we," "us," or "our") regarding your use of Amux Studio ("the Service").
+This Agreement is entered into between you and SentenceEnd Inc ("we," "us," or "our") regarding your use of Amux Studio ("the Service").
 
 **Please read carefully, especially the provisions on limitation of liability, content ownership, and account handling.** By registering an account or using the Service, you confirm that you have read, understood, and agree to be bound by this Agreement in its entirety. If you do not agree, please do not use the Service.
 
@@ -222,5 +222,5 @@ Disputes arising from this Agreement shall first be resolved through good-faith 
 ## 16. Contact Us
 
 **Email**: studio@amux.ai
-**Operating Entity**: {{COMPANY_NAME}}
-**Address**: {{COMPANY_ADDRESS}}
+**Operating Entity**: SentenceEnd Inc
+**Address**: 30 N Gould St Ste R, Sheridan, WY 82801, USA

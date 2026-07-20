@@ -1,11 +1,11 @@
 # Privacy Policy
 
-**Effective Date**: {{EFFECTIVE_DATE}}
-**Last Updated**: {{EFFECTIVE_DATE}}
+**Effective Date**: 2026-06-20
+**Last Updated**: 2026-06-20
 
-> ⚠️ **Placeholders to be replaced**: `{{COMPANY_NAME}}` (full legal name of the operating entity), `{{COMPANY_ADDRESS}}` (registered address), `{{EFFECTIVE_DATE}}` (effective date). **All placeholders must be replaced before launch, and this document must be reviewed by legal counsel.**
+> ⚠️ **This document has not yet been reviewed by legal counsel. Please complete such review before launch.**
 
-{{COMPANY_NAME}} ("we," "us," or "our") operates Amux Studio ("the Service"). This Policy explains what information we collect, how we use it, who we share it with, and how you can manage it.
+SentenceEnd Inc ("we," "us," or "our") operates Amux Studio ("the Service"). This Policy explains what information we collect, how we use it, who we share it with, and how you can manage it.
 
 Please read this Policy in full before using the Service. If you do not agree with this Policy, please stop using the Service.
 
@@ -192,6 +192,43 @@ You may delete your account from your account settings. Deletion requires verifi
 
 To exercise the rights above, or for any questions or complaints about this Policy, please contact **studio@amux.ai**. We will respond within a reasonable time after receiving your request.
 
+### 8.5 Additional Rights for U.S. State Residents
+
+If you are a resident of California, or of another state with comprehensive privacy legislation in effect (including Virginia, Colorado, Connecticut, and Utah), you have the following rights in addition to those described above.
+
+**We do not "sell" or "share" your personal information.**
+
+Under the California Consumer Privacy Act (CCPA, as amended by the CPRA), "sell" means disclosing personal information to a third party for monetary or other valuable consideration, and "share" specifically means disclosing personal information for **cross-context behavioral advertising**.
+
+**We do neither.** The Service does not integrate any advertising network, cross-site tracking, or third-party analytics service. Accordingly, we do not offer a "Do Not Sell or Share My Personal Information" option — there is no such activity for you to opt out of.
+
+The only disclosures we make to third parties are to the service providers listed in Section 4 of this Policy (model inference, payment, cloud storage, email, third-party login). These disclosures are necessary to provide the Service to you and do not constitute a "sale" or "share."
+
+**Your rights:**
+
+- **Right to know** — to request disclosure of the categories of personal information we collect, their sources, the purposes of use, and the categories of recipients
+- **Right to access** — to obtain a copy of the personal information we hold about you
+- **Right to correct** — to request correction of inaccurate personal information
+- **Right to delete** — to request deletion of the personal information we have collected (except where retention is required by law; see Section 8.3)
+- **Right to limit the use of sensitive personal information** — see below
+- **Right to non-discrimination** — we will **not** deny you service, charge you a different price, provide a different level of service quality, or retaliate against you in any way for exercising any of these rights
+
+**Regarding sensitive personal information**
+
+Your account login credentials (email address and password) constitute sensitive personal information as defined by the CPRA. We use them **solely for account authentication, login, and security protection**, and not to infer your characteristics, preferences, or identity attributes. Because our use of sensitive personal information does not exceed the purposes permitted by law, there is no additional use to be limited under the CPRA's "right to limit" in this context.
+
+**How to exercise these rights**
+
+Send an email to **studio@amux.ai** stating the right you wish to exercise and your state of residence.
+
+- We will respond within **45 days** of receiving a **verifiable request**; where reasonably necessary, we may extend this by an additional 45 days and will inform you of the reason for the extension within the original period
+- To protect your account, we will first verify the identity of the requester, typically by confirming through the email address associated with your account
+- We will not charge you a fee for making a request
+
+**Authorized agents**
+
+You may authorize another person to submit a request on your behalf. We may require the agent to provide written authorization signed by you, and we may require you to confirm the authorization directly with us.
+
 ---
 
 ## 9. Minors
@@ -217,5 +254,5 @@ Your continued use of the Service after a change takes effect constitutes accept
 For any questions, comments, or complaints about this Policy:
 
 **Email**: studio@amux.ai
-**Operating Entity**: {{COMPANY_NAME}}
-**Address**: {{COMPANY_ADDRESS}}
+**Operating Entity**: SentenceEnd Inc
+**Address**: 30 N Gould St Ste R, Sheridan, WY 82801, USA
