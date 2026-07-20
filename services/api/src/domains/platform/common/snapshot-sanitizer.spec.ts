@@ -44,6 +44,49 @@ describe('sanitizeSnapshot', () => {
     expect(Buffer.byteLength(serialized, 'utf8')).toBeLessThanOrEqual(SNAPSHOT_BYTE_LIMIT + 200);
     expect(serialized).toContain('truncated');
   });
+
+  it('降级路径的返回值二次序列化后仍不超过体积上限（即使原始内容全是引号）', () => {
+    const out = sanitizeSnapshot({ note: '"'.repeat(SNAPSHOT_BYTE_LIMIT * 2) });
+    const serialized = JSON.stringify(out);
+    expect(Buffer.byteLength(serialized, 'utf8')).toBeLessThanOrEqual(SNAPSHOT_BYTE_LIMIT);
+  });
+
+  it('遇到循环引用不爆栈，用占位符替换', () => {
+    const c: Record<string, unknown> = { a: 1 };
+    c.self = c;
+    let out: any;
+    expect(() => {
+      out = sanitizeSnapshot(c);
+    }).not.toThrow();
+    expect(out.a).toBe(1);
+    expect(out.self).toBe('[Circular]');
+  });
+
+  it('__proto__ 键作为普通数据键被保留并净化，不篡改原型', () => {
+    const input = JSON.parse('{"__proto__":{"apiKey":"LEAKED"},"safe":"ok"}');
+    const out = sanitizeSnapshot(input) as Record<string, any>;
+    expect(Object.keys(out)).toContain('safe');
+    expect(Object.keys(out)).toContain('__proto__');
+    expect(out.safe).toBe('ok');
+    expect(out.__proto__.apiKey).toBe('[REDACTED]');
+    expect(Object.getPrototypeOf(out)).not.toEqual({ apiKey: '[REDACTED]' });
+  });
+
+  it('Date 转成 ISO 字符串，不被静默清空', () => {
+    const d = new Date('2024-01-01T00:00:00.000Z');
+    const out = sanitizeSnapshot({ createdAt: d }) as Record<string, unknown>;
+    expect(out.createdAt).toBe('2024-01-01T00:00:00.000Z');
+  });
+
+  it('Map/Set 转成可读形态，不被静默清空', () => {
+    const out = sanitizeSnapshot({
+      m: new Map<string, number>([['a', 1]]),
+      s: new Set([1, 2]),
+    }) as Record<string, unknown>;
+    expect(out.m).not.toEqual({});
+    expect(out.s).not.toEqual({});
+    expect(JSON.stringify(out)).toContain('1');
+  });
 });
 
 describe('truncateToBytes', () => {
