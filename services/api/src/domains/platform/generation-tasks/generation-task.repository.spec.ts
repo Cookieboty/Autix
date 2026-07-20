@@ -115,3 +115,27 @@ describe('GenerationTaskRepository.create', () => {
     expect(tx.generation_tasks.create.mock.calls[0][0].data.videoGenerationId).toBeNull();
   });
 });
+
+describe('GenerationTaskRepository.recordBilling', () => {
+  function buildPrisma() {
+    return { generation_tasks: { update: vi.fn().mockResolvedValue({}) } } as any;
+  }
+
+  it('传入 holdId 时写进 update 的 data（图片侧靠此回填 holdId，start 时还不知道 hold）', async () => {
+    const prisma = buildPrisma();
+    const repo = new GenerationTaskRepository(prisma);
+
+    await repo.recordBilling('t-1', 'HELD' as any, undefined, 'hold-1');
+
+    expect(prisma.generation_tasks.update.mock.calls[0][0].data.holdId).toBe('hold-1');
+  });
+
+  it('未传 holdId 时不覆写该字段（视频侧 create 时已写过 holdId，后续调用不应清空）', async () => {
+    const prisma = buildPrisma();
+    const repo = new GenerationTaskRepository(prisma);
+
+    await repo.recordBilling('t-1', 'HELD' as any);
+
+    expect(prisma.generation_tasks.update.mock.calls[0][0].data.holdId).toBeUndefined();
+  });
+});

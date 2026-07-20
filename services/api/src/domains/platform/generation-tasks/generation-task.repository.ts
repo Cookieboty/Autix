@@ -137,15 +137,21 @@ export class GenerationTaskRepository {
    * （行不存在时 Prisma 抛 `P2025`）——「失败只 log 不抛」是调用方
    * `GenerationTaskRecorder` 的职责，它会把这个调用包在 try/catch 里只打日志不抛，
    * 这里保持薄、不吞异常是有意为之。
+   *
+   * `holdId` 可选：图片侧的 hold 在 `start()` 之后才建，`generation_tasks.holdId`
+   * 在建行时永远写不进去；第一次 `recordBilling(HELD)` 正是 hold 已存在之后的
+   * 第一个落点，故在此顺带回填。`undefined` 时 Prisma 视为字段未传，不会把已有值
+   * 覆写成 null（视频侧 create 时就已写 holdId，后续调用不传即维持原值不变）。
    */
   async recordBilling(
     id: string,
     status: GenerationBillingStatus,
     error?: string,
+    holdId?: string,
   ): Promise<void> {
     await this.prisma.generation_tasks.update({
       where: { id },
-      data: { billingStatus: status, billingError: error ?? null },
+      data: { billingStatus: status, billingError: error ?? null, holdId },
     });
   }
 

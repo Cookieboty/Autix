@@ -714,8 +714,22 @@ export class ImageGenerationFlowService {
       throw err;
     }
     holdId = hold.id;
-    await this.taskRecorder.recordBilling(generationTaskId, GenerationBillingStatus.HELD);
+    // recordBilling(HELD) 是 hold 存在之后的第一个落点：顺带回填
+    // generation_tasks.holdId（start() 时 hold 还没建，写不进去；此前没人回填过，
+    // 导致图片侧这一列永远是 null，join 只能从 point_holds.taskId 反向走）。
+    await this.taskRecorder.recordBilling(
+      generationTaskId,
+      GenerationBillingStatus.HELD,
+      undefined,
+      holdId,
+    );
 
+    // 成功之后（persistImageResult 已提交：image_generations 已建、任务行已
+    // SUCCEEDED、hold 已 CONFIRMED）的收尾步骤——CONFIRMED 计费回写 / generationId
+    // 解析 / 结果整形——若再抛出，不能落进下面 catch 里「这次生成失败」的处理：
+    // 那会对已终态的行再走一次 failTask（CAS 判负→打假警报），并对已确认的 hold
+    // 误触发退款、把 billingStatus 从 CONFIRMED 覆写成 REFUNDED/REFUND_FAILED。
+    let succeeded = false;
     try {
       const {
         images,
@@ -750,6 +764,9 @@ export class ImageGenerationFlowService {
           startedAt,
         },
       );
+      // persistImageResult 已提交：任务行已 SUCCEEDED、hold 已 CONFIRMED。此刻之后
+      // 的任何异常都不再是「这次生成失败」，见上方注释。
+      succeeded = true;
       await this.taskRecorder.recordBilling(
         generationTaskId,
         GenerationBillingStatus.CONFIRMED,
@@ -774,6 +791,17 @@ export class ImageGenerationFlowService {
         request,
       });
     } catch (err) {
+      if (succeeded) {
+        // 生成本身已经成功（任务行 SUCCEEDED、hold 已 CONFIRMED）：这里的异常来自
+        // 成功之后的收尾步骤，不是生成失败。既不打 CAS 判负的假警报，也不去退一笔
+        // 已经确认的 hold、更不把 billingStatus 从 CONFIRMED 覆写回去 —— 只记录，
+        // 原始异常照常抛出，让上层知道收尾这一步没完全做完。
+        this.logger.error(
+          `image generation 成功后的收尾步骤失败（任务已 SUCCEEDED，不回滚任务状态、不触发退款）：` +
+            `task=${generationTaskId} reason=${String(err instanceof Error ? err.message : err)}`,
+        );
+        throw err;
+      }
       // 先落任务终态，再退款：退款把钱还回去，任务行才是「这次为什么失败」的唯一证据。
       // 两者都不得掩盖原始异常 —— 用户/上层看到的必须还是那个真实的错误。
       await this.failTask(generationTaskId, resolveImageGenerationFailure(err, stage));
@@ -796,9 +824,13 @@ export class ImageGenerationFlowService {
    *
    * CAS 判负在图片侧的含义与视频侧不同：视频侧要区分「行不存在（本特性上线前的存量
    * 生成）」与「行已终态（两表分叉）」；图片侧的任务行是本次请求刚 `start()` 出来的，
-   * 不存在存量行，`start()` 失败已让请求中止。因此判负只剩一种成因：同一个
-   * generationTaskId 被写了两次终态。那是真异常，记 error 级日志留证；但**不抛**，
-   * 理由同上——此刻已经在处理另一个失败了，退款还没做，抛出会连退款一起跳过。
+   * 不存在存量行，`start()` 失败已让请求中止。调用方现在也只在 `succeeded` 为
+   * false（即生成本身尚未成功）时才会走到这里，所以不会再被「成功之后的收尾步骤
+   * 失败」误触发。判负目前唯一已知成因是同一个 generationTaskId 被并发写了两次
+   * 终态；但不排除未来新增别的终态写入路径（例如 PENDING/QUEUED 过期清扫）抢先
+   * 落库——判负日志按可能成因罗列，不假定只有一种，避免它退化成必然误报的噪声源。
+   * 那是真异常，记 error 级日志留证；但**不抛**，理由同上——此刻已经在处理另一个
+   * 失败了，退款还没做，抛出会连退款一起跳过。
    */
   private async failTask(
     generationTaskId: string,
@@ -811,7 +843,8 @@ export class ImageGenerationFlowService {
       if (!won) {
         this.logger.error(
           `generation task 终态 CAS 判负：task=${generationTaskId} stage=${failure.stage} —— ` +
-            `该行本次请求刚创建，判负只可能是被重复写了终态，请查是否有并发路径在写同一 id`,
+            `该行已处于终态，可能原因：并发路径重复写了同一 id；` +
+            `或存在其它终态写入路径（如 PENDING/QUEUED 过期清扫）抢先落库；请结合并发上下文排查`,
         );
       }
     } catch (err) {

@@ -122,4 +122,13 @@ describe('GenerationTaskRecorder', () => {
 
     await expect(recorder.recordBilling('t-1', 'REFUNDED' as any)).resolves.toBeUndefined();
   });
+
+  it('recordBilling 把 holdId 透传给 repository（图片侧靠这里回填 generation_tasks.holdId）', async () => {
+    const repo = buildRepo();
+    const recorder = new GenerationTaskRecorder(repo as any);
+
+    await recorder.recordBilling('t-1', 'HELD' as any, undefined, 'hold-1');
+
+    expect(repo.recordBilling).toHaveBeenCalledWith('t-1', 'HELD', undefined, 'hold-1');
+  });
 });

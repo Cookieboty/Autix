@@ -119,10 +119,22 @@ export class GenerationTaskRecorder {
     );
   }
 
-  /** 计费记录与主失败正交，独立于主事务；失败只 log 不抛。 */
-  async recordBilling(id: string, status: GenerationBillingStatus, error?: string): Promise<void> {
+  /**
+   * 计费记录与主失败正交，独立于主事务；失败只 log 不抛。
+   *
+   * `holdId` 可选：仅图片侧需要——hold 在 `start()` 之后才建，第一次
+   * `recordBilling(HELD)` 是回填 `generation_tasks.holdId` 的第一个落点
+   * （见 `GenerationTaskRepository.recordBilling` 的注释）。视频侧 start 时
+   * 就已知 holdId，不需要在这里传。
+   */
+  async recordBilling(
+    id: string,
+    status: GenerationBillingStatus,
+    error?: string,
+    holdId?: string,
+  ): Promise<void> {
     try {
-      await this.repository.recordBilling(id, status, error);
+      await this.repository.recordBilling(id, status, error, holdId);
     } catch (err) {
       this.logger.error(
         `record billing failed: task=${id} status=${status}`,

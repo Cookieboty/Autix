@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest';
 import {
+  GenerationBillingStatus,
   GenerationErrorStage,
   ModelType,
   PointHoldStatus,
@@ -1855,6 +1856,59 @@ describe('ImageGenerationFlowService', () => {
       await expect(
         service.generateAndPersistImage(failingInput, failingRequest(), 1),
       ).rejects.toThrow('already terminal');
+    });
+
+    it('recordBilling(HELD) 会回填任务行的 holdId（否则 join 只能靠 point_holds.taskId 反查，Finding B）', async () => {
+      const { service, taskRecorder } = createService();
+      vi.spyOn(service, 'callImageApi').mockResolvedValue({
+        images: ['https://img.test/1.png'],
+        appliedSettings: { size: '1024x1024', count: 1, coerced: false, notes: [] },
+      });
+      vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+
+      await service.generateAndPersistImage(failingInput, failingRequest(), 1);
+
+      const heldCall = taskRecorder.recordBilling.mock.calls.find(
+        (call: unknown[]) => call[1] === GenerationBillingStatus.HELD,
+      );
+      expect(heldCall).toBeDefined();
+      // hold-1 是 createHold 打桩返回的 hold.id —— 必须原样回填进 recordBilling(HELD)。
+      expect(heldCall?.[3]).toBe('hold-1');
+    });
+
+    it('成功之后的收尾步骤抛出，不应打假 CAS 警报、也不应把 billingStatus 从 CONFIRMED 回退（Finding A）', async () => {
+      // 此时 image_generations 已建、任务行已 SUCCEEDED、hold 已 CONFIRMED
+      // （均在 persistImageResult 的同一事务内完成）。若此后（比如把 CONFIRMED
+      // 计费状态回写落库时）再抛出一次，当前实现会把它当成「这次生成失败」处理：
+      // 对已终态的行再走一次 failTask（CAS 判负→打假警报），并对已确认的 hold
+      // 调退款、把 billingStatus 覆写成 REFUNDED/REFUND_FAILED。
+      const { service, taskRecorder } = createService();
+      vi.spyOn(service, 'callImageApi').mockResolvedValue({
+        images: ['https://img.test/1.png'],
+        appliedSettings: { size: '1024x1024', count: 1, coerced: false, notes: [] },
+      });
+      vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+      taskRecorder.recordBilling.mockImplementation(async (_id: string, status: unknown) => {
+        if (status === GenerationBillingStatus.CONFIRMED) {
+          throw new Error('billing sync glitch after commit');
+        }
+      });
+
+      await expect(
+        service.generateAndPersistImage(failingInput, failingRequest(), 1),
+      ).rejects.toThrow('billing sync glitch after commit');
+
+      // 任务行已经是 SUCCEEDED：不应再被当成失败去做 CAS 判负。
+      expect(taskRecorder.fail).not.toHaveBeenCalled();
+      // billingStatus 已经是 CONFIRMED：不应被覆写成 REFUNDED/REFUND_FAILED。
+      expect(taskRecorder.recordBilling).not.toHaveBeenCalledWith(
+        expect.any(String),
+        GenerationBillingStatus.REFUNDED,
+      );
+      expect(taskRecorder.recordBilling).not.toHaveBeenCalledWith(
+        expect.any(String),
+        GenerationBillingStatus.REFUND_FAILED,
+      );
     });
   });
 });
