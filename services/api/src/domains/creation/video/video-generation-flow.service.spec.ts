@@ -130,6 +130,9 @@ function makeService(options: {
         createdAt: new Date('2026-01-01T00:00:00Z'),
         ...args.data,
       })),
+      // 终态写入已改为 CAS：updateMany 命中 1 行代表本次抢到终态。
+      // 默认返回 count:1（行还在 pending/queued），个别用例可覆盖成 0 模拟输家。
+      updateMany: vi.fn(async () => ({ count: 1 })),
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       findMany: vi.fn(async (): Promise<any[]> => []),
@@ -1481,7 +1484,7 @@ describe('VideoGenerationFlowService markExpired (超时排水，不退款)', ()
     vi.spyOn(terminalConvergence, 'reconcileIfTerminal').mockResolvedValue(false);
     const expiredSpy = vi
       .spyOn(repository, 'markGenerationExpiredWithoutRefund')
-      .mockResolvedValue(undefined);
+      .mockResolvedValue(true);
     const refundSpy = vi.spyOn(
       holdReconciliation,
       'refundGenerationHoldWithinTx',
