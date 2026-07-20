@@ -16,11 +16,26 @@ export interface GenerationFailure {
   upstreamStatus?: number;
   upstreamBody?: string;
   upstreamRequestId?: string;
+  diagnostics?: Record<string, unknown>;
 }
 
 function clipBody(body: string | undefined): string | undefined {
   if (body === undefined) return undefined;
   return truncateToBytes(body, UPSTREAM_BODY_BYTE_LIMIT);
+}
+
+/**
+ * 挤掉值为 undefined 的 key；若挤完一个 key 都不剩，返回 undefined 而非 `{}`——
+ * 兜底列宁可缺失也不留一个空对象占位（区分「没有诊断信息」与「诊断信息是空对象」）。
+ */
+function compactDiagnostics(
+  fields: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 export function fromImageUpstreamError(
@@ -34,6 +49,11 @@ export function fromImageUpstreamError(
     upstreamStatus: err.httpStatus,
     upstreamBody: clipBody(err.upstreamBody),
     upstreamRequestId: err.requestId,
+    diagnostics: compactDiagnostics({
+      endpoint: err.endpoint,
+      retryAfter: err.retryAfter,
+      retryable: err.retryable,
+    }),
   };
 }
 
@@ -48,6 +68,12 @@ export function fromVideoUpstreamError(
     upstreamStatus: err.httpStatus,
     upstreamBody: clipBody(err.upstreamBody),
     upstreamRequestId: err.requestId,
+    // video 侧 VideoUpstreamError 没有 retryAfter 字段（确认 packages/ai-adapters/src/video/protocol/types.ts），
+    // 故这里只放 endpoint/retryable，不是漏填。
+    diagnostics: compactDiagnostics({
+      endpoint: err.endpoint,
+      retryable: err.retryable,
+    }),
   };
 }
 

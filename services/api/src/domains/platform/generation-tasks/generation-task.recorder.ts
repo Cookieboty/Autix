@@ -108,6 +108,12 @@ export class GenerationTaskRecorder {
         upstreamStatus: failure.upstreamStatus,
         upstreamBody: failure.upstreamBody,
         upstreamRequestId: failure.upstreamRequestId,
+        // 上游字段内容不可控（如 endpoint 可能带签名参数的 URL），落库前必须过 sanitizeSnapshot；
+        // undefined 时原样透传 undefined（repository 再 ?? null），不产出 {}。
+        upstreamDiagnostics:
+          failure.diagnostics === undefined
+            ? undefined
+            : (sanitizeSnapshot(failure.diagnostics) as Prisma.InputJsonValue),
       },
       tx,
     );

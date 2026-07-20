@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import {
   GenerationBillingStatus,
   GenerationTaskStatus,
+  Prisma,
   type GenerationErrorStage,
   type GenerationKind,
-  type Prisma,
 } from '../prisma/generated';
 import { AppLogger } from '../common/app-logger';
 import { PrismaService } from '../prisma/prisma.service';
@@ -46,6 +46,7 @@ export interface TerminalUpdate {
   upstreamStatus?: number;
   upstreamBody?: string;
   upstreamRequestId?: string;
+  upstreamDiagnostics?: Prisma.InputJsonValue;
   imageGenerationId?: string;
   durationMs?: number;
 }
@@ -122,6 +123,7 @@ export class GenerationTaskRepository {
         upstreamStatus: next.upstreamStatus ?? null,
         upstreamBody: next.upstreamBody ?? null,
         upstreamRequestId: next.upstreamRequestId ?? null,
+        upstreamDiagnostics: next.upstreamDiagnostics ?? Prisma.JsonNull,
         imageGenerationId: next.imageGenerationId ?? null,
         durationMs: next.durationMs ?? null,
         finishedAt,

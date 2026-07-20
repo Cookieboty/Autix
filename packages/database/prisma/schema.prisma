@@ -2526,6 +2526,7 @@ model generation_tasks {
   upstreamStatus    Int?
   upstreamBody      String?  @db.Text
   upstreamRequestId String?
+  upstreamDiagnostics Json?
 
   holdId         String?
   pointsCost     Int?

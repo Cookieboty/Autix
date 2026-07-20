@@ -68,6 +68,33 @@ describe('GenerationTaskRecorder', () => {
     expect(next.upstreamRequestId).toBe('req-1');
   });
 
+  it('fail 把 diagnostics 净化后映射到 upstreamDiagnostics（签名参数被剥掉）', async () => {
+    const repo = buildRepo();
+    const recorder = new GenerationTaskRecorder(repo as any);
+    const tx = {} as any;
+
+    await recorder.fail(
+      't-1',
+      {
+        stage: GenerationErrorStage.SUBMIT,
+        message: 'bad gateway',
+        diagnostics: {
+          endpoint: 'https://x/gen?signature=abc123&other=1',
+          retryAfter: '30',
+          retryable: true,
+        },
+      },
+      tx,
+    );
+
+    const [, next] = repo.claimTerminal.mock.calls[0];
+    expect(next.upstreamDiagnostics).toEqual({
+      endpoint: 'https://x/gen',
+      retryAfter: '30',
+      retryable: true,
+    });
+  });
+
   it('succeed 把 imageGenerationId/durationMs 透传给终态更新，返回值即 claimTerminal 的布尔结果', async () => {
     const repo = buildRepo();
     repo.claimTerminal.mockResolvedValue(false);
