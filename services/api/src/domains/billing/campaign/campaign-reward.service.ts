@@ -159,7 +159,7 @@ export class CampaignRewardService {
           subtitleI18nKey: this.asString(metadata.subtitleI18nKey) ?? 'onboardSubPromptCampaign',
           ctaI18nKey: this.asString(metadata.ctaI18nKey) ?? 'onboardCtaExplore',
           modelLabel: this.asString(metadata.modelLabel) ?? campaign.name,
-          hrefPath: this.asString(metadata.hrefPath) ?? '/workbench/image',
+          hrefPath: this.asString(metadata.hrefPath) ?? '/ai/image',
           sortOrder: this.asNumber(metadata.sortOrder, 999),
         } satisfies HomeStarterTask;
       }),

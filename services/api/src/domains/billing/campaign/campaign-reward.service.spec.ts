@@ -377,7 +377,7 @@ describe('CampaignRewardService home starter quests', () => {
       subtitleI18nKey: 'onboardSubBestImage',
       ctaI18nKey: 'onboardCtaTry',
       modelLabel: 'Nano Banana Pro',
-      hrefPath: '/workbench/image',
+      hrefPath: '/ai/image',
       sortOrder: 1,
     },
   });
