@@ -1390,6 +1390,58 @@
         "hint": "Note: the override fields above only affect this featured slot's display content and will not modify the referenced source resource itself."
       }
     },
+    "generationTasks": {
+      "title": "Generation Task Observability",
+      "description": "Inspect image/video generation task execution status, failure causes, and billing outcomes for troubleshooting.",
+      "filters": {
+        "kind": "Kind",
+        "status": "Status",
+        "errorStage": "Failure Stage",
+        "allKinds": "All Kinds",
+        "allStatuses": "All Statuses",
+        "allStages": "All Stages",
+        "userId": "User ID",
+        "model": "Model",
+        "provider": "Provider",
+        "errorClass": "Error Class",
+        "search": "Search task ID / provider task ID",
+        "from": "From date",
+        "to": "To date",
+        "reset": "Reset filters"
+      },
+      "table": {
+        "status": "Status",
+        "kind": "Kind",
+        "model": "Model",
+        "user": "User",
+        "stage": "Failure Stage",
+        "upstreamStatus": "Upstream Status",
+        "duration": "Duration",
+        "createdAt": "Created At",
+        "actions": "Actions",
+        "detail": "Detail"
+      },
+      "empty": {
+        "title": "No generation tasks",
+        "description": "No tasks match the current filters. Try adjusting them."
+      },
+      "pager": {
+        "prev": "Previous",
+        "next": "Next"
+      },
+      "drawer": {
+        "title": "Task Detail",
+        "basic": "Basic Info",
+        "failure": "Failure Info",
+        "snapshot": "Params Snapshot",
+        "billing": "Billing",
+        "links": "Linked Records",
+        "promptSection": "Generated Content (Sensitive)",
+        "promptSensitiveHint": "This content contains user-private data. Use it only for troubleshooting — do not leak it or share screenshots.",
+        "close": "Close",
+        "dataInconsistentWarning": "Data inconsistency: billing status is CONFIRMED but no matching hold record was found. Do not refund or charge again based on this alone — verify first."
+      }
+    },
     "common": {
       "actions": "Actions",
       "all": "All",
@@ -1397,6 +1449,7 @@
       "close": "Close",
       "delete": "Delete",
       "edit": "Edit",
+      "loadFailed": "Failed to load",
       "loading": "Loading...",
       "noData": "No data",
       "none": "None",

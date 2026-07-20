@@ -1390,6 +1390,58 @@
         "hint": "ヒント：上記の override フィールドはこの特集枠の表示内容のみに影響し、参照元のソースリソース自体は変更しません。"
       }
     },
+    "generationTasks": {
+      "title": "生成タスクの可観測性",
+      "description": "画像/動画生成タスクの実行状況、失敗原因、課金結果をトラブルシューティングのために確認します。",
+      "filters": {
+        "kind": "種別",
+        "status": "ステータス",
+        "errorStage": "失敗ステージ",
+        "allKinds": "すべての種別",
+        "allStatuses": "すべてのステータス",
+        "allStages": "すべてのステージ",
+        "userId": "ユーザーID",
+        "model": "モデル",
+        "provider": "プロバイダー",
+        "errorClass": "エラークラス",
+        "search": "タスクID / プロバイダータスクIDで検索",
+        "from": "開始日",
+        "to": "終了日",
+        "reset": "フィルターをリセット"
+      },
+      "table": {
+        "status": "ステータス",
+        "kind": "種別",
+        "model": "モデル",
+        "user": "ユーザー",
+        "stage": "失敗ステージ",
+        "upstreamStatus": "上流ステータス",
+        "duration": "所要時間",
+        "createdAt": "作成日時",
+        "actions": "操作",
+        "detail": "詳細"
+      },
+      "empty": {
+        "title": "生成タスクがありません",
+        "description": "現在のフィルター条件に一致するタスクがありません。条件を調整してください。"
+      },
+      "pager": {
+        "prev": "前へ",
+        "next": "次へ"
+      },
+      "drawer": {
+        "title": "タスク詳細",
+        "basic": "基本情報",
+        "failure": "失敗情報",
+        "snapshot": "パラメータスナップショット",
+        "billing": "課金情報",
+        "links": "関連レコード",
+        "promptSection": "生成コンテンツ（機密）",
+        "promptSensitiveHint": "この内容にはユーザーの個人情報が含まれます。トラブルシューティング目的でのみ使用し、漏洩やスクリーンショットの共有をしないでください。",
+        "close": "閉じる",
+        "dataInconsistentWarning": "データ不整合：課金ステータスは CONFIRMED ですが、対応する保留（hold）レコードが見つかりません。これだけを根拠に再返金・再請求をせず、先に確認してください。"
+      }
+    },
     "common": {
       "actions": "操作",
       "all": "すべて",
@@ -1397,6 +1449,7 @@
       "close": "閉じる",
       "delete": "削除",
       "edit": "編集",
+      "loadFailed": "読み込みに失敗しました",
       "loading": "読み込み中...",
       "noData": "データなし",
       "none": "なし",

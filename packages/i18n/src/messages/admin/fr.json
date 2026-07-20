@@ -1390,6 +1390,58 @@
         "hint": "Astuce : les champs override ci-dessus n’affectent que le contenu affiché de cet emplacement, sans modifier la ressource source référencée elle-même."
       }
     },
+    "generationTasks": {
+      "title": "Observabilité des tâches de génération",
+      "description": "Consultez l'état d'exécution, les causes d'échec et la facturation des tâches de génération d'images/vidéos à des fins de dépannage.",
+      "filters": {
+        "kind": "Type",
+        "status": "Statut",
+        "errorStage": "Étape d'échec",
+        "allKinds": "Tous les types",
+        "allStatuses": "Tous les statuts",
+        "allStages": "Toutes les étapes",
+        "userId": "ID utilisateur",
+        "model": "Modèle",
+        "provider": "Fournisseur",
+        "errorClass": "Classe d'erreur",
+        "search": "Rechercher un ID de tâche / ID de tâche fournisseur",
+        "from": "Date de début",
+        "to": "Date de fin",
+        "reset": "Réinitialiser les filtres"
+      },
+      "table": {
+        "status": "Statut",
+        "kind": "Type",
+        "model": "Modèle",
+        "user": "Utilisateur",
+        "stage": "Étape d'échec",
+        "upstreamStatus": "Statut amont",
+        "duration": "Durée",
+        "createdAt": "Créé le",
+        "actions": "Opérations",
+        "detail": "Détail"
+      },
+      "empty": {
+        "title": "Aucune tâche de génération",
+        "description": "Aucune tâche ne correspond aux filtres actuels. Essayez de les ajuster."
+      },
+      "pager": {
+        "prev": "Précédent",
+        "next": "Suivant"
+      },
+      "drawer": {
+        "title": "Détail de la tâche",
+        "basic": "Informations de base",
+        "failure": "Informations d'échec",
+        "snapshot": "Instantané des paramètres",
+        "billing": "Facturation",
+        "links": "Enregistrements liés",
+        "promptSection": "Contenu généré (sensible)",
+        "promptSensitiveHint": "Ce contenu concerne des données privées de l'utilisateur. À utiliser uniquement pour le dépannage — ne le divulguez pas et ne le partagez pas en capture d'écran.",
+        "close": "Fermer",
+        "dataInconsistentWarning": "Incohérence de données : le statut de facturation est CONFIRMED mais aucun enregistrement de blocage (hold) correspondant n'a été trouvé. Ne remboursez ni ne débitez pas de nouveau sur cette seule base — vérifiez d'abord."
+      }
+    },
     "common": {
       "actions": "Actions",
       "all": "Tout",
@@ -1397,6 +1449,7 @@
       "close": "Fermer",
       "delete": "Supprimer",
       "edit": "Modifier",
+      "loadFailed": "Échec du chargement",
       "loading": "Chargement...",
       "noData": "Aucune donnée",
       "none": "Aucun",

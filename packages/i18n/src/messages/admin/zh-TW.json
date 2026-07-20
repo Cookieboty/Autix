@@ -1390,6 +1390,58 @@
         "hint": "提示：以上覆蓋欄位僅影響該營運位的展示內容，不會修改所引用的來源資源本身。"
       }
     },
+    "generationTasks": {
+      "title": "生成任務觀測",
+      "description": "查看圖片/影片生成任務的執行狀態、失敗原因與計費情況，用於問題排查。",
+      "filters": {
+        "kind": "類型",
+        "status": "狀態",
+        "errorStage": "失敗階段",
+        "allKinds": "全部類型",
+        "allStatuses": "全部狀態",
+        "allStages": "全部階段",
+        "userId": "使用者 ID",
+        "model": "模型",
+        "provider": "服務商",
+        "errorClass": "錯誤類別",
+        "search": "搜尋任務 ID / Provider Task ID",
+        "from": "起始日期",
+        "to": "截止日期",
+        "reset": "重置篩選"
+      },
+      "table": {
+        "status": "狀態",
+        "kind": "類型",
+        "model": "模型",
+        "user": "使用者",
+        "stage": "失敗階段",
+        "upstreamStatus": "上游狀態碼",
+        "duration": "耗時",
+        "createdAt": "建立時間",
+        "actions": "操作",
+        "detail": "詳情"
+      },
+      "empty": {
+        "title": "暫無生成任務",
+        "description": "目前篩選條件下沒有符合的任務，試試調整篩選條件。"
+      },
+      "pager": {
+        "prev": "上一頁",
+        "next": "下一頁"
+      },
+      "drawer": {
+        "title": "任務詳情",
+        "basic": "基本資訊",
+        "failure": "失敗資訊",
+        "snapshot": "參數快照",
+        "billing": "計費資訊",
+        "links": "關聯記錄",
+        "promptSection": "生成內容（敏感）",
+        "promptSensitiveHint": "以下內容涉及使用者隱私，僅用於問題排查，請勿外洩或截圖分享。",
+        "close": "關閉",
+        "dataInconsistentWarning": "資料不一致：計費狀態為已確認，但查無對應的預扣記錄。請勿據此重複退款或重複扣款，請先核實再處理。"
+      }
+    },
     "common": {
       "actions": "操作",
       "all": "全部",
@@ -1397,6 +1449,7 @@
       "close": "關閉",
       "delete": "刪除",
       "edit": "編輯",
+      "loadFailed": "載入失敗",
       "loading": "載入中...",
       "noData": "暫無資料",
       "none": "無",

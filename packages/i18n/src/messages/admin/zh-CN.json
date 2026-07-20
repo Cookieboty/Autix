@@ -1390,6 +1390,58 @@
         "hint": "提示：以上覆盖字段仅影响该运营位的展示内容，不会修改所引用的来源资源本身。"
       }
     },
+    "generationTasks": {
+      "title": "生成任务观测",
+      "description": "查看图片/视频生成任务的执行状态、失败原因与计费情况，用于问题排查。",
+      "filters": {
+        "kind": "类型",
+        "status": "状态",
+        "errorStage": "失败阶段",
+        "allKinds": "全部类型",
+        "allStatuses": "全部状态",
+        "allStages": "全部阶段",
+        "userId": "用户 ID",
+        "model": "模型",
+        "provider": "服务商",
+        "errorClass": "错误类别",
+        "search": "搜索任务 ID / Provider Task ID",
+        "from": "起始日期",
+        "to": "截止日期",
+        "reset": "重置筛选"
+      },
+      "table": {
+        "status": "状态",
+        "kind": "类型",
+        "model": "模型",
+        "user": "用户",
+        "stage": "失败阶段",
+        "upstreamStatus": "上游状态码",
+        "duration": "耗时",
+        "createdAt": "创建时间",
+        "actions": "操作",
+        "detail": "详情"
+      },
+      "empty": {
+        "title": "暂无生成任务",
+        "description": "当前筛选条件下没有匹配的任务，试试调整筛选条件。"
+      },
+      "pager": {
+        "prev": "上一页",
+        "next": "下一页"
+      },
+      "drawer": {
+        "title": "任务详情",
+        "basic": "基础信息",
+        "failure": "失败信息",
+        "snapshot": "参数快照",
+        "billing": "计费信息",
+        "links": "关联记录",
+        "promptSection": "生成内容（敏感）",
+        "promptSensitiveHint": "以下内容涉及用户隐私，仅用于问题排查，请勿外泄或截图分享。",
+        "close": "关闭",
+        "dataInconsistentWarning": "数据不一致：计费状态为已确认，但未查到对应的预扣记录。请勿据此重复退款或重复扣费，先核实再处理。"
+      }
+    },
     "common": {
       "actions": "操作",
       "all": "全部",
@@ -1397,6 +1449,7 @@
       "close": "关闭",
       "delete": "删除",
       "edit": "编辑",
+      "loadFailed": "加载失败",
       "loading": "加载中...",
       "noData": "暂无数据",
       "none": "无",

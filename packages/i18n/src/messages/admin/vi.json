@@ -1390,6 +1390,58 @@
         "hint": "Gợi ý: các trường override ở trên chỉ ảnh hưởng đến nội dung hiển thị của vị trí nổi bật này, không sửa tài nguyên nguồn được tham chiếu."
       }
     },
+    "generationTasks": {
+      "title": "Quan sát tác vụ tạo sinh",
+      "description": "Xem trạng thái thực thi, nguyên nhân lỗi và kết quả tính phí của tác vụ tạo ảnh/video để phục vụ khắc phục sự cố.",
+      "filters": {
+        "kind": "Loại",
+        "status": "Trạng thái",
+        "errorStage": "Giai đoạn lỗi",
+        "allKinds": "Tất cả loại",
+        "allStatuses": "Tất cả trạng thái",
+        "allStages": "Tất cả giai đoạn",
+        "userId": "ID người dùng",
+        "model": "Mô hình",
+        "provider": "Nhà cung cấp",
+        "errorClass": "Loại lỗi",
+        "search": "Tìm theo ID tác vụ / ID tác vụ của nhà cung cấp",
+        "from": "Từ ngày",
+        "to": "Đến ngày",
+        "reset": "Đặt lại bộ lọc"
+      },
+      "table": {
+        "status": "Trạng thái",
+        "kind": "Loại",
+        "model": "Mô hình",
+        "user": "Người dùng",
+        "stage": "Giai đoạn lỗi",
+        "upstreamStatus": "Trạng thái upstream",
+        "duration": "Thời lượng",
+        "createdAt": "Thời gian tạo",
+        "actions": "Hành động",
+        "detail": "Chi tiết"
+      },
+      "empty": {
+        "title": "Không có tác vụ tạo sinh",
+        "description": "Không có tác vụ nào khớp với bộ lọc hiện tại. Hãy thử điều chỉnh bộ lọc."
+      },
+      "pager": {
+        "prev": "Trước",
+        "next": "Sau"
+      },
+      "drawer": {
+        "title": "Chi tiết tác vụ",
+        "basic": "Thông tin cơ bản",
+        "failure": "Thông tin lỗi",
+        "snapshot": "Ảnh chụp tham số",
+        "billing": "Thông tin tính phí",
+        "links": "Bản ghi liên quan",
+        "promptSection": "Nội dung tạo sinh (nhạy cảm)",
+        "promptSensitiveHint": "Nội dung này liên quan đến dữ liệu riêng tư của người dùng. Chỉ dùng để khắc phục sự cố — không được để lộ hoặc chia sẻ ảnh chụp màn hình.",
+        "close": "Đóng",
+        "dataInconsistentWarning": "Dữ liệu không nhất quán: trạng thái tính phí là CONFIRMED nhưng không tìm thấy bản ghi giữ tiền (hold) tương ứng. Không hoàn tiền hoặc tính phí lại chỉ dựa trên điều này — hãy xác minh trước."
+      }
+    },
     "common": {
       "actions": "Thao tác",
       "all": "Tất cả",
@@ -1397,6 +1449,7 @@
       "close": "Đóng",
       "delete": "Xóa",
       "edit": "Chỉnh sửa",
+      "loadFailed": "Tải thất bại",
       "loading": "Đang tải...",
       "noData": "Không có dữ liệu",
       "none": "Không có",

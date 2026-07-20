@@ -90,6 +90,7 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   '/admin/campaigns': NOINDEX,
   '/admin/featured-slots': NOINDEX,
   '/admin/gallery': NOINDEX,
+  '/admin/generation-tasks': NOINDEX,
   '/admin/membership/levels': NOINDEX,
   '/admin/membership/orders': NOINDEX,
   '/admin/membership/packages': NOINDEX,
