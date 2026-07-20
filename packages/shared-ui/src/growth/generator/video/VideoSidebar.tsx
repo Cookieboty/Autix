@@ -1,19 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  AtSign,
   Clock3,
   Coins,
-  Crop,
   Diamond,
   Image as ImageIcon,
-  LayoutTemplate,
   Loader2,
-  Maximize2,
+  MoreHorizontal,
   Music,
   Plus,
-  SlidersHorizontal,
   Sparkles,
   Video,
   Volume2,
@@ -30,40 +28,55 @@ import {
   resolveVideoCapabilityFromModelConfig,
 } from '../../generator-video-presenters';
 import type { PublicVideoReference } from '../generator-studio-helpers';
-import { VideoModelParamMenu, VideoOptionParamMenu, VideoSliderParamMenu } from './VideoParamMenus';
-import { PublicVideoMediaDialog } from './VideoMediaDialog';
-import { PublicVideoTemplateDialog } from './VideoTemplateDialog';
 import {
-  applyTemplateToStudioForm,
-  type StudioTemplateSelection,
-} from './template-apply.helpers';
-import { useVideoWorkbenchTemplates } from '../../../video/workbench/useVideoWorkbenchTemplates';
-import type { WorkbenchVideoTemplate } from '../../../video/workbench/constants';
+  VideoModelParamMenu,
+  VideoOptionParamMenu,
+  VideoRangeParamMenu,
+  VideoSliderParamMenu,
+} from './VideoParamMenus';
+import { AspectRatioIcon } from '../image/ImageParamMenus';
+import { VideoAssetPanel } from './VideoAssetPanel';
+import {
+  resolveVideoMediaLimits,
+  restrictVideoDurations,
+  videoRatioApplies,
+} from './video-model-rules';
+import { PromptMentionInput, type PromptMentionItem } from './PromptMentionInput';
+import { AudioWaveThumb } from './AudioWaveThumb';
+import { Dialog, DialogContent, DialogTitle } from '../../../ui/dialog';
 import {
   buildPublicVideoGenerationPayload,
   type PublicVideoGenerationPayload,
 } from './public-video-generation';
+
+/** 侧栏顶部展示 banner 的背景视频，与首页 Seedance 2.0 卡片同源 */
+const VIDEO_BANNER_SRC = 'https://cdn.amux.ai/playground/video/video/demo/short-film-mini.mp4';
 
 function limitPublicVideoReferences(refs: PublicVideoReference[], limit: number) {
   if (limit <= 0) return [];
   return refs.slice(-limit);
 }
 
-function mergePublicVideoReferences(
-  current: PublicVideoReference[],
-  additions: PublicVideoReference[],
-  limit: number,
-) {
-  const next = [...current];
-  for (const ref of additions) {
-    const duplicateIndex = next.findIndex((item) => item.url === ref.url);
-    if (duplicateIndex >= 0) next.splice(duplicateIndex, 1);
-    next.push(ref);
-  }
-  return limitPublicVideoReferences(next, limit);
-}
+/**
+ * 媒体类型的展示名。直接复用资产面板筛选器里那三条已译好的词条，不另开
+ * mediaType.* —— 「Image」「Audio」在法语、「Video」在越南语本来就与英文同形，
+ * 新增词条只会被 i18n ratchet 判成未翻译。
+ */
+const MEDIA_TYPE_LABEL_KEY = {
+  image: 'assetFilterImages',
+  video: 'assetFilterVideos',
+  audio: 'assetFilterAudio',
+} as const;
+
+/** 上传卡上的媒体类型图标。按模型实际接受的类型过滤后展示，顺序固定。 */
+const UPLOAD_MEDIA_CHIPS = [
+  { key: 'image' as const, Icon: ImageIcon },
+  { key: 'video' as const, Icon: Video },
+  { key: 'audio' as const, Icon: Music },
+];
 
 export function VideoSidebar({
+  assetPanelHost,
   initialModel,
   videoModels,
   selectedModel,
@@ -82,7 +95,10 @@ export function VideoSidebar({
   onTextModelChange,
   optimizing,
   onOptimizePrompt,
+  injectedPrompt,
 }: {
+  /** 素材面板的 portal 宿主（右栏容器）；为 null 时不渲染面板 */
+  assetPanelHost?: HTMLElement | null;
   initialModel?: string | null;
   videoModels: ModelConfigItem[];
   selectedModel: ModelConfigItem | null;
@@ -101,9 +117,16 @@ export function VideoSidebar({
   onTextModelChange: (modelId: string) => void;
   optimizing: boolean;
   onOptimizePrompt: (prompt: string) => Promise<string | null>;
+  /**
+   * 从历史「Recreate」推回来的提示词。
+   *
+   * prompt 是本组件的内部状态，外部只能靠这个口子写入。带 token 而不是只传字符串：
+   * 对同一条历史连点两次 Recreate，文本相同、token 递增，用户仍能看到它被重新应用
+   * （只比对文本的话第二次会静默无反应，像是按钮坏了）。
+   */
+  injectedPrompt?: { text: string; token: number };
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const tCommon = useTranslations('common');
   const tImagePrompt = useTranslations('imageStudio.prompt');
   const videoCapability = useMemo(
     () => resolveVideoCapabilityFromModelConfig(selectedModel, initialModel),
@@ -113,7 +136,16 @@ export function VideoSidebar({
   // 渲染，不写死、不用全局共享的比例/分辨率集。paramsSchema 缺失（未配置）时才回退到能力表。
   const videoParams = useMemo(() => {
     const props = paramsSchema?.properties as
-      | Record<string, { enum?: unknown[]; default?: unknown }>
+      | Record<
+        string,
+        {
+          enum?: unknown[];
+          default?: unknown;
+          minimum?: number;
+          maximum?: number;
+          'x-ui'?: { control?: string; order?: number; step?: number };
+        }
+      >
       | undefined;
     // schema 存在即**权威**：可选集/默认值完全由该模型自己的 schema 决定，schema 里没有的
     // 属性 = 该模型不支持，**不逐字段回退到能力表**（否则会给 Grok Imagine 这种无 resolution
@@ -126,13 +158,39 @@ export function VideoSidebar({
       const durations = nums(props.duration?.enum);
       const ratios = strs(props.ratio?.enum);
       const resolutions = strs(props.resolution?.enum);
+      // duration 有两种形态：离散 enum（chips）或连续区间（stepper，如 Seedance 4~15）。
+      // 只认 enum 会让连续区间的模型整个丢掉时长控件——默认模型 Seedance 2.0 Fast 正是这种。
+      const durationProp = props.duration;
+      const durationRange =
+        durations.length === 0 &&
+          typeof durationProp?.minimum === 'number' &&
+          typeof durationProp?.maximum === 'number'
+          ? {
+            min: durationProp.minimum,
+            max: durationProp.maximum,
+            step: durationProp['x-ui']?.step ?? 1,
+          }
+          : null;
+      // 渲染顺序与控件类型都由 schema 的 x-ui 决定，不再写死
+      const controls = Object.entries(props)
+        .map(([key, prop]) => ({
+          key,
+          control: prop['x-ui']?.control ?? 'chips',
+          order: prop['x-ui']?.order ?? 999,
+        }))
+        .filter((entry) => entry.control !== 'hidden')
+        .sort((a, b) => a.order - b.order);
       return {
         durations,
+        durationRange,
+        controls,
         ratios,
         resolutions,
         supportsAudio: 'generate_audio' in props,
         defaultDuration:
-          typeof props.duration?.default === 'number' ? (props.duration.default as number) : durations[0],
+          typeof props.duration?.default === 'number'
+            ? (props.duration.default as number)
+            : durations[0] ?? durationRange?.min,
         defaultResolution:
           typeof props.resolution?.default === 'string' ? (props.resolution.default as string) : resolutions[0],
         defaultRatio:
@@ -141,8 +199,16 @@ export function VideoSidebar({
           typeof props.generate_audio?.default === 'boolean' ? (props.generate_audio.default as boolean) : false,
       };
     }
+    // 模型完全没配 paramsSchema 时才回退能力表；顺序沿用历史布局
     return {
       durations: videoCapability.durations,
+      durationRange: null as { min: number; max: number; step: number } | null,
+      controls: [
+        { key: 'resolution', control: 'chips', order: 10 },
+        { key: 'duration', control: 'chips', order: 20 },
+        { key: 'ratio', control: 'chips', order: 30 },
+        ...(videoCapability.audio ? [{ key: 'generate_audio', control: 'switch', order: 40 }] : []),
+      ],
       ratios: videoCapability.ratios as string[],
       resolutions: videoCapability.resolutions,
       supportsAudio: videoCapability.audio,
@@ -153,31 +219,28 @@ export function VideoSidebar({
     };
   }, [paramsSchema, videoCapability]);
   const [prompt, setPrompt] = useState('');
+  // 只认 token 变化：把 text 也放进依赖会让用户在输入框里改字后被回滚
+  const injectedToken = injectedPrompt?.token;
+  const injectedText = injectedPrompt?.text;
+  useEffect(() => {
+    if (injectedToken === undefined) return;
+    setPrompt(injectedText ?? '');
+    promptEditorRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injectedToken]);
   const [duration, setDuration] = useState(videoParams.defaultDuration);
   const [resolution, setResolution] = useState(videoParams.defaultResolution);
   const [ratio, setRatio] = useState<string>(videoParams.defaultRatio);
   const [generateAudio, setGenerateAudio] = useState(videoParams.defaultAudio);
   const [selectedVideoRefs, setSelectedVideoRefs] = useState<PublicVideoReference[]>([]);
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [templateSelection, setTemplateSelection] = useState<StudioTemplateSelection | null>(null);
-  const [templateNotice, setTemplateNotice] = useState<
-    | { kind: 'success' | 'warning'; message: string; href?: string; hrefLabel?: string }
-    | null
-  >(null);
-  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  /** 缩略图上「更多」触发的放大预览 */
+  const [previewRef, setPreviewRef] = useState<PublicVideoReference | null>(null);
+  /** 提示词编辑器节点：点卡片空白处时把焦点交给它 */
+  const promptEditorRef = useRef<HTMLDivElement | null>(null);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [optimizeError, setOptimizeError] = useState<string | null>(null);
-  const {
-    templatesLoading,
-    templateSearch,
-    setTemplateSearch,
-    templateCategory,
-    setTemplateCategory,
-    templateCategories,
-    filteredTemplates,
-  } = useVideoWorkbenchTemplates();
   const textModelOptions = useMemo(
     () => textModels.map((item) => ({ value: item.id, label: item.name })),
     [textModels],
@@ -188,9 +251,59 @@ export function VideoSidebar({
     : selectedTextModel?.name ?? t('optimizeModel');
   const model = selectedModelValue ?? initialModel ?? undefined;
   const modelLabel = selectedModel?.name ?? videoCapability.displayName;
-  const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
+  /**
+   * 该模型接受什么输入媒体，全部由 paramsSchema 的 x-media 决定（见 video-model-rules）。
+   * 此前这里对所有模型一律给出「图片/视频/音频」三个入口，而 10 个视频模型里只有
+   * Seedance 两档和 Wan 2.7 真的接视频/音频 —— 其余模型用户传上去必然失败。
+   */
+  const mediaLimits = useMemo(() => resolveVideoMediaLimits(paramsSchema), [paramsSchema]);
+  const uploadLimit = mediaLimits.totalMax > 0
+    ? mediaLimits.totalMax
+    : getVideoReferenceUploadLimit(selectedModel);
   const hasVideoRefs = selectedVideoRefs.length > 0;
-  const durationOptions = videoParams.durations;
+  // @ 提及列表：按媒体类型分别从 1 开始编号 —— Image 1/2/3、Video 1/2、Audio 1。
+  // 编号跟随选中顺序，移除某一项后其后的会重排（与用户看到的缩略图顺序保持一致）。
+  const mentionItems = useMemo<PromptMentionItem[]>(() => {
+    const counters: Record<string, number> = {};
+    return selectedVideoRefs.map((ref) => {
+      const kind = ref.mediaType ?? 'image';
+      counters[kind] = (counters[kind] ?? 0) + 1;
+      const name = kind.charAt(0).toUpperCase() + kind.slice(1);
+      return {
+        id: ref.id,
+        label: `${name} ${counters[kind]}`,
+        url: ref.url,
+        mediaType: kind,
+      };
+    });
+  }, [selectedVideoRefs]);
+  /** 已选图片数：条件约束（VEO 首尾帧/参考模式、Seedance 首帧覆盖比例）要用它。 */
+  const selectedImageCount = useMemo(
+    () => selectedVideoRefs.filter((ref) => (ref.mediaType ?? 'image') === 'image').length,
+    [selectedVideoRefs],
+  );
+  const paramContext = useMemo(
+    () => ({ resolution, imageCount: selectedImageCount }),
+    [resolution, selectedImageCount],
+  );
+  /**
+   * schema 给的候选时长再套一层上游条件约束（VEO lite 选 1080p 或给了首尾帧 → 只能 8 秒，
+   * 参考模式 3 图 → 只能 8 秒）。这类「A 影响 B 的取值域」schema 表达不了，见 video-model-rules。
+   */
+  const durationOptions = useMemo(
+    () => restrictVideoDurations(selectedModel?.model, videoParams.durations, paramContext),
+    [selectedModel?.model, videoParams.durations, paramContext],
+  );
+  /** 画幅比在当前上下文是否真的生效（Seedance/Grok 给了图后由图定比例）。 */
+  const ratioEffective = videoRatioApplies(selectedModel?.model, paramContext);
+  // 约束收窄后当前时长可能不在候选里（例：先选了 4s 再切到 1080p）。留着不动会把一个
+  // 上游必拒的值发出去，所以就地夹到最接近的合法值。
+  useEffect(() => {
+    if (durationOptions.length > 0 && !durationOptions.includes(duration)) {
+      setDuration(durationOptions[0]!);
+    }
+  }, [durationOptions, duration]);
+
   const ratioOptions = useMemo(
     () =>
       videoParams.ratios.map((value) => {
@@ -225,9 +338,14 @@ export function VideoSidebar({
     setResolution((current) =>
       videoParams.resolutions.includes(current) ? current : videoParams.defaultResolution,
     );
-    setDuration((current) =>
-      videoParams.durations.includes(current) ? current : videoParams.defaultDuration,
-    );
+    setDuration((current) => {
+      // 连续区间只需落在 [min,max] 内即算有效；离散档位才要求命中枚举
+      const range = videoParams.durationRange;
+      if (range) {
+        return current >= range.min && current <= range.max ? current : videoParams.defaultDuration;
+      }
+      return videoParams.durations.includes(current) ? current : videoParams.defaultDuration;
+    });
     setRatio((current) =>
       videoParams.ratios.includes(current) ? current : videoParams.defaultRatio,
     );
@@ -237,15 +355,6 @@ export function VideoSidebar({
   useEffect(() => {
     setSelectedVideoRefs((current) => limitPublicVideoReferences(current, uploadLimit));
   }, [uploadLimit]);
-
-  useEffect(() => {
-    if (!promptDialogOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPromptDialogOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [promptDialogOpen]);
 
   useEffect(() => {
     if (!selectedModel || !pricingSchema || !paramsSchema) {
@@ -287,10 +396,6 @@ export function VideoSidebar({
     selectedVideoRefs.length,
   ]);
 
-  const addVideoRefs = (refs: PublicVideoReference[]) => {
-    setSelectedVideoRefs((current) => mergePublicVideoReferences(current, refs, uploadLimit));
-  };
-
   const removeVideoRef = (id: string) => {
     setSelectedVideoRefs((current) => current.filter((ref) => ref.id !== id));
   };
@@ -311,66 +416,6 @@ export function VideoSidebar({
     }
   };
 
-  const handleApplyTemplate = (template: WorkbenchVideoTemplate) => {
-    if (template.templateKind === 'workflow') {
-      setTemplateNotice({
-        kind: 'warning',
-        message: t('templateWorkflowRedirect'),
-        href: `/ai/video?templateId=${encodeURIComponent(template.id)}`,
-        hrefLabel: t('templateGoToWorkbench'),
-      });
-      return;
-    }
-    const availableModelIds = videoModels.map((item) => item.id);
-    const result = applyTemplateToStudioForm({
-      template,
-      capability: videoCapability,
-      availableModelIds,
-      currentModelId: selectedModelId,
-    });
-    setPrompt(result.prompt);
-    setDuration(result.duration);
-    setResolution(result.resolution);
-    setRatio(result.ratio);
-    setGenerateAudio(result.generateAudio);
-    if (result.modelId && result.modelId !== selectedModelId) {
-      onModelChange(result.modelId);
-    }
-    setTemplateSelection(result.selection);
-    setTemplateDialogOpen(false);
-    const hasClamp = result.clampedFields.length > 0;
-    const hasUnresolved = result.unresolvedVariables.length > 0;
-    let message: string;
-    if (hasClamp && hasUnresolved) {
-      message = t('templateAppliedWithClampAndVars', {
-        title: template.title,
-        fields: result.clampedFields.join(' / '),
-        vars: result.unresolvedVariables.map((v) => `{{${v}}}`).join(' '),
-      });
-    } else if (hasClamp) {
-      message = t('templateAppliedWithClamp', {
-        title: template.title,
-        fields: result.clampedFields.join(' / '),
-      });
-    } else if (hasUnresolved) {
-      message = t('templateAppliedWithVars', {
-        title: template.title,
-        vars: result.unresolvedVariables.map((v) => `{{${v}}}`).join(' '),
-      });
-    } else {
-      message = t('templateAppliedToast', { title: template.title });
-    }
-    setTemplateNotice({
-      kind: hasUnresolved ? 'warning' : 'success',
-      message,
-    });
-  };
-
-  const handleClearTemplate = () => {
-    setTemplateSelection(null);
-    setTemplateNotice(null);
-  };
-
   const handleGenerate = async () => {
     setGenerateError(null);
     try {
@@ -385,7 +430,6 @@ export function VideoSidebar({
           ratio,
           generateAudio,
           materials: selectedVideoRefs,
-          templateId: templateSelection?.templateId ?? null,
         }),
       );
     } catch (err) {
@@ -396,229 +440,240 @@ export function VideoSidebar({
     }
   };
 
+  // 侧栏高度自适应内容；仅当内容超过视口时才封顶并内部滚动，避免短内容时留大片空档
+  // sticky 的 top 必须等于外层容器的上内边距（py-3 = 12px）：
+  // sticky 会把「顶边距滚动容器顶部不足 top」的元素直接下推，若写大于 12px 的值，
+  // 首屏未滚动时侧栏就会比右栏低一截（滚动容器已在导航之下，无需再让开导航高度）。
   return (
-    <aside className="growth-sidebar-shadow flex rounded-[16px] border border-border bg-card/92 lg:sticky lg:top-24 lg:h-[calc(100svh-8rem)] lg:flex-col">
+    <aside className="growth-sidebar-shadow growth-panel flex rounded-[16px] border lg:sticky lg:top-3 lg:max-h-[calc(100svh-8rem)] lg:flex-col">
       <div className="growth-dark-scrollbar min-h-0 flex-1 overflow-y-auto p-3">
-        <div className="mb-3 flex items-center gap-4 border-b border-border pb-2.5">
-          <button
-            type="button"
-            className="relative min-h-8 px-0 text-sm font-bold text-foreground after:absolute after:inset-x-0 after:-bottom-[11px] after:h-0.5 after:rounded-full after:bg-foreground"
-          >
-            {t('createVideo')}
-          </button>
-          {[t('editVideo'), t('motionControl')].map((label) => (
-            <span
-              key={label}
-              aria-disabled="true"
-              title={t('comingSoon')}
-              className="inline-flex min-h-8 cursor-not-allowed items-center text-sm font-semibold text-foreground/42"
-            >
-              {label}
+        {/* 纯展示 banner：不可点、不可换。视频取自首页 Seedance 2.0 的演示片。
+            muted + playsInline 是移动端自动播放的硬性要求，缺一个都不会播。 */}
+        <div className="relative mb-2.5 h-[132px] w-full overflow-hidden rounded-[13px] bg-black/40">
+          <video
+            src={VIDEO_BANNER_SRC}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-hidden
+            className="size-full object-cover"
+          />
+          {/* 底部渐变，保证叠字在任意帧上都可读 */}
+          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/92 via-background/35 to-transparent" />
+          <span className="pointer-events-none absolute inset-x-3 bottom-2.5">
+            <span className="block text-lg font-black uppercase leading-tight text-growth-accent">
+              {t('bannerGeneral')}
             </span>
-          ))}
-        </div>
-
-        <div className="mb-2.5 flex items-stretch gap-2">
-          <button
-            type="button"
-            onClick={() => setTemplateDialogOpen(true)}
-            className="group relative flex min-h-[54px] flex-1 items-center gap-2.5 overflow-hidden rounded-[12px] border border-border bg-card/85 px-3 text-left transition hover:border-input hover:bg-secondary"
-          >
-            {templateSelection?.coverImage ? (
-              <span className="relative size-9 shrink-0 overflow-hidden rounded-[8px] border border-border bg-background">
-                <img
-                  src={templateSelection.coverImage}
-                  alt={templateSelection.templateTitle}
-                  className="h-full w-full object-cover"
-                />
-              </span>
-            ) : (
-              <span className="grid size-9 shrink-0 place-items-center rounded-[8px] bg-secondary text-foreground/60">
-                <LayoutTemplate className="size-4" />
-              </span>
-            )}
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-bold text-foreground/85">
-                {templateSelection ? templateSelection.templateTitle : t('chooseTemplate')}
-              </span>
-              <span className="mt-0.5 block truncate text-[11px] font-medium text-foreground/45">
-                {templateSelection ? t('changeTemplate') : t('templateEmptyLabel')}
-              </span>
+            <span className="mt-0.5 block truncate text-xs font-semibold text-foreground/72">
+              {modelLabel}
             </span>
-          </button>
-          {templateSelection ? (
-            <button
-              type="button"
-              aria-label={t('clearTemplate')}
-              onClick={handleClearTemplate}
-              className="grid size-9 shrink-0 cursor-pointer place-items-center self-center rounded-full bg-secondary text-foreground/70 transition hover:bg-accent hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          ) : null}
+          </span>
         </div>
-
-        {templateNotice ? (
-          <div
-            className={`mb-2.5 rounded-[10px] border px-3 py-2 text-xs font-semibold ${templateNotice.kind === 'warning'
-              ? 'border-destructive/25 bg-destructive/8 text-destructive'
-              : 'border-growth-accent/25 bg-growth-accent/8 text-growth-accent'
-              }`}
-          >
-            <p>{templateNotice.message}</p>
-            {templateNotice.href ? (
-              <a
-                href={templateNotice.href}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-flex text-[11px] font-black uppercase underline underline-offset-2"
-              >
-                {templateNotice.hrefLabel}
-              </a>
-            ) : null}
-          </div>
-        ) : null}
 
         <button
           type="button"
           onClick={() => setMediaDialogOpen(true)}
-          className="growth-inset-top-highlight group relative grid min-h-[82px] w-full cursor-pointer place-items-center overflow-hidden rounded-[13px] border border-border bg-card p-3 text-center text-sm text-foreground/48 transition hover:border-input hover:bg-secondary hover:text-foreground"
+          className="growth-inset-top-highlight group relative grid min-h-[132px] w-full cursor-pointer place-items-center overflow-hidden rounded-[13px] growth-panel-item p-3 text-center text-sm text-foreground/48 border border-dashed transition hover:border-white/25 hover:text-foreground"
         >
           <span className="growth-radial-top-overlay pointer-events-none absolute inset-0 opacity-80" />
           {hasVideoRefs ? (
-            <span className="relative grid w-full grid-cols-4 gap-2">
-              {selectedVideoRefs.slice(0, 4).map((ref, index) => {
-                const overflow = selectedVideoRefs.length - 4;
-                const isOverflowTile = index === 3 && overflow > 0;
-                return (
-                  <span
-                    key={ref.id}
-                    className="relative aspect-square overflow-hidden rounded-[10px] border border-border bg-background"
-                  >
-                    <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
-                    {isOverflowTile ? (
-                      <span className="absolute inset-0 grid place-items-center bg-background/68 text-sm font-bold text-foreground backdrop-blur-[1px]">
-                        +{overflow}
-                      </span>
+            // 固定 56px 小卡，一排 4 个、居中，超出自动换行。
+            // 用 grid 而非 flex-wrap：列数写死才能保证"一排 4 个"，flex 会随可用宽度变成 3 或 5 个。
+            <span className="relative grid w-full grid-cols-4 justify-items-center gap-2.5 pt-1">
+              {selectedVideoRefs.map((ref) => (
+                <span
+                  key={ref.id}
+                  // 音频没有画面，横向铺开成一条波形，占两格更好认
+                  className={`group/thumb relative h-14 shrink-0 ${ref.mediaType === 'audio' ? 'col-span-2 w-full' : 'w-14'
+                    }`}
+                >
+                  {/* 白边框只在悬浮时出现；平时留同宽透明边，避免 hover 瞬间尺寸跳动 */}
+                  <span className="block size-full overflow-hidden rounded-[10px] border-2 border-transparent bg-black/35 transition group-hover/thumb:border-white">
+                    {ref.mediaType === 'video' ? (
+                      <video src={ref.url} muted playsInline preload="metadata" className="size-full object-cover" />
+                    ) : ref.mediaType === 'audio' ? (
+                      <AudioWaveThumb seed={ref.id} bars={34} className="px-2" />
                     ) : (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        aria-label="remove"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          removeVideoRef(ref.id);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            removeVideoRef(ref.id);
-                          }
-                        }}
-                        className="absolute right-0.5 top-0.5 grid size-5 cursor-pointer place-items-center rounded-full bg-background/82 text-foreground/85 shadow-sm outline-none transition hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-growth-accent/55"
-                      >
-                        <X className="size-3" />
-                      </span>
+                      <img src={ref.url} alt={ref.name} className="size-full object-cover" />
                     )}
                   </span>
-                );
-              })}
-              {selectedVideoRefs.length < uploadLimit && selectedVideoRefs.length < 4 ? (
-                <span className="grid aspect-square place-items-center rounded-[10px] border border-dashed border-border bg-secondary">
+
+                  {/* 悬浮：中间「更多操作」。只有图片有——视频/音频在这个尺寸下没什么可看的。
+                      stopPropagation 是必须的：整块上传区是个 button，不拦就会冒上去把资产面板打开。 */}
+                  {(ref.mediaType ?? 'image') === 'image' ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={t('assetMore')}
+                      title={t('assetMore')}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setPreviewRef(ref);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setPreviewRef(ref);
+                        }
+                      }}
+                      className="absolute left-1/2 top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-background/75 text-foreground opacity-0 outline-none backdrop-blur-sm transition group-hover/thumb:opacity-100 focus-visible:opacity-100"
+                    >
+                      <MoreHorizontal className="size-3.5" />
+                    </span>
+                  ) : null}
+
+                  {/* 悬浮：右上角移除，压在白边框外沿上 */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t('remove')}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      removeVideoRef(ref.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        removeVideoRef(ref.id);
+                      }
+                    }}
+                    className="absolute -right-1.5 -top-1.5 grid size-4 cursor-pointer place-items-center rounded-full bg-foreground text-background opacity-0 shadow-sm outline-none transition hover:brightness-90 group-hover/thumb:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-growth-accent/55"
+                  >
+                    <X className="size-2.5" strokeWidth={3} />
+                  </span>
+                </span>
+              ))}
+              {selectedVideoRefs.length < uploadLimit ? (
+                <span className="grid size-14 shrink-0 place-items-center rounded-[10px] border border-dashed border-white/15 bg-white/5 text-foreground/45">
                   <Plus className="size-4" />
                 </span>
               ) : null}
             </span>
           ) : (
             <>
-              <span className="relative mb-2 inline-flex items-center justify-center -space-x-2">
-                {[
-                  { key: 'image', Icon: ImageIcon },
-                  { key: 'video', Icon: Video },
-                  { key: 'music', Icon: Music },
-                ].map(({ key, Icon }, index) => (
+              <span className="relative mb-2 inline-flex items-center justify-center -space-x-1.5">
+                {UPLOAD_MEDIA_CHIPS.filter((chip) =>
+                  mediaLimits.allowedTypes.includes(chip.key),
+                ).map(({ key, Icon }, index) => (
                   <span
                     key={key}
-                    className="grid size-7 place-items-center rounded-full border border-border bg-secondary text-foreground/44 transition group-hover:text-foreground/70"
+                    className="growth-media-chip grid size-9 place-items-center rounded-full text-foreground/70 transition group-hover:text-foreground"
                     style={{ zIndex: index + 1 }}
                   >
-                    <Icon className="size-3" />
+                    <Icon className="size-3.5" />
                   </span>
                 ))}
               </span>
               <span className="relative text-sm font-semibold leading-none text-foreground/60">{t('uploadMedia')}</span>
-              <span className="relative mt-1 block text-xs font-medium text-foreground/42">{t('uploadMediaHint')}</span>
+              <span className="relative mt-1 block text-xs font-medium text-foreground/42">
+                {/* 分隔符用中点：它是标点不是文案，各语言同形，进 i18n 只会被判成「未翻译」 */}
+                {mediaLimits.allowedTypes.map((type) => t(MEDIA_TYPE_LABEL_KEY[type])).join(' · ')}
+              </span>
             </>
           )}
-          {hasVideoRefs ? (
-            <span className="mt-2 block text-xs font-semibold text-growth-accent">
-              {selectedVideoRefs.length}/{uploadLimit}
-            </span>
-          ) : null}
         </button>
 
-        <label className="mt-2.5 block rounded-[13px] border border-border bg-secondary p-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-foreground/42">{t('prompt')}</span>
-            <button
-              type="button"
-              aria-label={t('prompt')}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setPromptDialogOpen(true);
-              }}
-              className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-full text-foreground/50 transition hover:bg-accent hover:text-foreground"
-            >
-              <Maximize2 className="size-3.5" />
-            </button>
-          </div>
-          <textarea
-            className="mt-1.5 min-h-[120px] w-full resize-none bg-transparent text-sm leading-6 text-foreground outline-none placeholder:text-foreground/36"
-            placeholder={t('videoPromptPlaceholder')}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-          />
-          <div className="mt-2 flex items-center gap-2">
+        {/* 这里不能用 <label>：<button> 属于 labelable 元素，点击 label 空白处会被浏览器
+            转发给第一个可关联后代——原本是 textarea（正好是想要的行为），换成 contenteditable
+            的 div 之后就变成了标题行里的模型选择按钮，点哪都会弹它的下拉。
+            改用 div + 显式把焦点交给编辑器。 */}
+        <div
+          className="mt-2.5 block rounded-[13px] growth-panel-item p-3"
+          onMouseDown={(event) => {
+            // 只处理落在卡片空白处的点击；点在按钮/编辑器自身上时不抢焦点
+            if (event.target !== event.currentTarget) return;
+            event.preventDefault();
+            promptEditorRef.current?.focus();
+          }}
+        >
+          {/* 标题行：左侧 Prompt 标签，右侧是提示词优化的模型选择 + 优化按钮（等高） */}
+          <span className="flex items-center gap-1.5">
+            <span className="flex-1 text-xs font-bold text-foreground/42">{t('prompt')}</span>
             {textModels.length > 0 ? (
-              <div className="min-w-0 flex-1">
+              <span className="min-w-0 shrink">
                 <VideoOptionParamMenu
-                  icon={<SlidersHorizontal className="size-4" />}
                   label={optimizeModelLabel}
                   title={t('optimizeModel')}
                   options={textModelOptions}
                   value={selectedTextModelId ?? ''}
                   onChange={onTextModelChange}
-                  showChevron
+                  pill
                 />
-              </div>
-            ) : (
-              <span className="flex-1" />
-            )}
+              </span>
+            ) : null}
             <button
               type="button"
-              onClick={() => void handleOptimize()}
+              aria-label={optimizing ? t('optimizing') : t('optimize')}
+              title={optimizing ? t('optimizing') : t('optimize')}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleOptimize();
+              }}
               disabled={optimizing}
-              className="inline-flex shrink-0 min-h-8 cursor-pointer items-center gap-1.5 rounded-full bg-growth-accent/15 px-3 py-1 text-xs font-bold text-growth-accent transition hover:bg-growth-accent/25 disabled:cursor-wait disabled:opacity-70"
+              className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-[7px] bg-growth-accent/15 text-growth-accent transition hover:bg-growth-accent/25 disabled:cursor-wait disabled:opacity-70"
             >
               {optimizing ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <Loader2 className="size-3 animate-spin" />
               ) : (
-                <WandSparkles className="size-3.5" />
+                <WandSparkles className="size-3" />
               )}
-              {optimizing ? t('optimizing') : t('optimize')}
             </button>
+          </span>
+          <PromptMentionInput
+            className="mt-1.5 min-h-[120px] w-full text-sm leading-6 text-foreground"
+            placeholder={t('videoPromptPlaceholder')}
+            value={prompt}
+            onChange={setPrompt}
+            items={mentionItems}
+            emptyHint={t('mentionEmpty')}
+            editorRef={promptEditorRef}
+          />
+          {/* 底部：生成参数类按钮（素材、音频…），全部小号黑底 */}
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setMediaDialogOpen(true);
+              }}
+              className="inline-flex min-h-6 shrink-0 cursor-pointer items-center gap-1 rounded-[7px] bg-black/30 px-1.5 text-[11px] font-bold text-foreground/78 transition hover:bg-black/45 hover:text-foreground"
+            >
+              <AtSign className="size-3" />
+              {t('elements')}
+              {hasVideoRefs ? (
+                <span className="text-growth-accent">{selectedVideoRefs.length}</span>
+              ) : null}
+            </button>
+            {videoParams.supportsAudio ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setGenerateAudio((prev) => !prev);
+                }}
+                className={`inline-flex min-h-6 shrink-0 cursor-pointer items-center gap-1 rounded-[7px] px-1.5 text-[11px] font-bold transition ${generateAudio
+                  ? 'bg-growth-accent/15 text-growth-accent hover:bg-growth-accent/25'
+                  : 'bg-black/30 text-foreground/45 line-through hover:bg-black/45 hover:text-foreground/70'
+                  }`}
+              >
+                <Volume2 className="size-3" />
+                {t('audioOn')}
+              </button>
+            ) : null}
           </div>
           {optimizeError ? (
             <p className="mt-1.5 text-xs font-semibold text-destructive">{optimizeError}</p>
           ) : null}
-        </label>
+        </div>
 
         <div className="mt-2.5 space-y-1.5">
           <VideoModelParamMenu
-            icon={<SlidersHorizontal className="size-4" />}
             label={modelLabel}
             models={videoModels}
             selectedModelId={selectedModelId}
@@ -626,58 +681,98 @@ export function VideoSidebar({
             onChange={onModelChange}
             fallbackLabel={videoCapability.displayName}
           />
-          <div className="grid grid-cols-2 gap-2">
-            {/* 每个控件只在该模型 schema 声明了对应属性（options 非空）时渲染 —— schema 没有
-                的属性表示不支持，不显示、也不下发（例如 Grok Imagine 无 resolution）。 */}
-            {durationOptions.length > 0 ? (
-              <VideoSliderParamMenu
-                icon={<Clock3 className="size-4" />}
-                label={durationLabel}
-                title={t('durationLabel')}
-                options={durationOptions}
-                value={duration}
-                onChange={(value) => setDuration(value)}
-              />
-            ) : null}
-            {ratioOptions.length > 0 ? (
-              <VideoOptionParamMenu
-                icon={<Crop className="size-4" />}
-                label={ratioLabel}
-                title={t('aspectRatio')}
-                options={ratioOptions}
-                value={ratio}
-                onChange={setRatio}
-              />
-            ) : null}
-            {resolutionOptions.length > 0 ? (
-              <VideoOptionParamMenu
-                icon={<Diamond className="size-4" />}
-                label={resolution}
-                title={t('selectResolution')}
-                options={resolutionOptions}
-                value={resolution}
-                onChange={(value) => {
-                  if ((videoParams.resolutions as string[]).includes(value)) {
-                    setResolution(value as typeof resolution);
-                  }
-                }}
-              />
-            ) : null}
-            {videoParams.supportsAudio ? (
-              <button
-                type="button"
-                onClick={() => setGenerateAudio((prev) => !prev)}
-                className={`flex min-h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[11px] border border-border px-3 text-xs font-bold transition ${generateAudio ? 'bg-growth-accent/15 text-growth-accent' : 'bg-secondary text-foreground/45 line-through hover:bg-accent'}`}
-              >
-                <Volume2 className="size-4" />
-                {t('audioOn')}
-              </button>
-            ) : null}
+          <div className="grid grid-cols-3 gap-2">
+            {/* 控件的**种类、顺序、是否出现**全部由选中模型的 paramsSchema 决定：
+                - 顺序 = x-ui.order（各模型不同，例如 Seedance 是 分辨率→时长→比例，
+                  VEO 是 分辨率→比例→时长→音频）
+                - 种类 = x-ui.control（chips 离散选项 / stepper 连续区间 / switch 开关）
+                schema 里没有的属性 = 该模型不支持，不渲染也不下发。 */}
+            {videoParams.controls.map(({ key, control }) => {
+              if (key === 'duration') {
+                // 连续区间（stepper）与离散档位（chips）是两种控件，不能混用
+                if (control === 'stepper' && videoParams.durationRange) {
+                  return (
+                    <VideoRangeParamMenu
+                      key={key}
+                      icon={<Clock3 className="size-4" />}
+                      label={durationLabel}
+                      title={t('durationLabel')}
+                      min={videoParams.durationRange.min}
+                      max={videoParams.durationRange.max}
+                      step={videoParams.durationRange.step}
+                      value={duration}
+                      onChange={setDuration}
+                    />
+                  );
+                }
+                if (durationOptions.length === 0) return null;
+                return (
+                  <VideoSliderParamMenu
+                    key={key}
+                    icon={<Clock3 className="size-4" />}
+                    label={durationLabel}
+                    title={t('durationLabel')}
+                    options={durationOptions}
+                    value={duration}
+                    onChange={setDuration}
+                  />
+                );
+              }
+              if (key === 'ratio') {
+                if (ratioOptions.length === 0) return null;
+                // 上游会用首帧图的比例覆盖这个参数。禁用而不是藏掉：参数还在但点了没用
+                // 比凭空消失更让人困惑，禁用态能顺带把「为什么」说清楚。
+                if (!ratioEffective) {
+                  return (
+                    <span
+                      key={key}
+                      title={t('ratioFromImageHint')}
+                      className="inline-flex min-h-6 w-auto cursor-not-allowed items-center gap-1.5 rounded-[7px] bg-black/30 px-1.5 py-0 text-[11px] font-bold leading-none text-foreground/40"
+                    >
+                      <span className="shrink-0"><AspectRatioIcon value={ratio} /></span>
+                      <span className="min-w-0 truncate leading-none">{t('ratioFromImage')}</span>
+                    </span>
+                  );
+                }
+                return (
+                  <VideoOptionParamMenu
+                    key={key}
+                    icon={<AspectRatioIcon value={ratio} />}
+                    label={ratioLabel}
+                    title={t('aspectRatio')}
+                    options={ratioOptions}
+                    value={ratio}
+                    onChange={setRatio}
+                    renderOptionIcon={(value) => <AspectRatioIcon value={value} />}
+                  />
+                );
+              }
+              if (key === 'resolution') {
+                if (resolutionOptions.length === 0) return null;
+                return (
+                  <VideoOptionParamMenu
+                    key={key}
+                    icon={<Diamond className="size-4" />}
+                    label={resolution}
+                    title={t('selectResolution')}
+                    options={resolutionOptions}
+                    value={resolution}
+                    onChange={(value) => {
+                      if ((videoParams.resolutions as string[]).includes(value)) {
+                        setResolution(value as typeof resolution);
+                      }
+                    }}
+                  />
+                );
+              }
+              // generate_audio 的开关渲染在 Prompt 卡片底部，这里不重复
+              return null;
+            })}
           </div>
         </div>
       </div>
 
-      <div className="border-t border-border bg-card/88 px-3 pb-3 pt-2.5 lg:shrink-0">
+      <div className="border-t border-[rgba(217,217,217,0.04)] px-3 pb-3 pt-2.5 lg:shrink-0">
         <MagneticButton
           type="button"
           disabled={generating}
@@ -706,101 +801,38 @@ export function VideoSidebar({
           </p>
         ) : null}
       </div>
-      <PublicVideoMediaDialog
-        open={mediaDialogOpen}
-        selectedRefs={selectedVideoRefs}
-        limit={uploadLimit}
-        onAddRefs={addVideoRefs}
-        onRemoveRef={removeVideoRef}
-        onClose={() => setMediaDialogOpen(false)}
-      />
-      <PublicVideoTemplateDialog
-        open={templateDialogOpen}
-        templates={filteredTemplates}
-        categories={templateCategories}
-        loading={templatesLoading}
-        search={templateSearch}
-        category={templateCategory}
-        applyingId={null}
-        onSearchChange={setTemplateSearch}
-        onCategoryChange={setTemplateCategory}
-        onApply={handleApplyTemplate}
-        onClose={() => setTemplateDialogOpen(false)}
-      />
-      {promptDialogOpen
+      {/* 缩略图放大预览 */}
+      <Dialog open={Boolean(previewRef)} onOpenChange={(next) => { if (!next) setPreviewRef(null); }}>
+        <DialogContent variant="fullscreen" className="grid place-items-center p-6">
+          <DialogTitle className="sr-only">{previewRef?.name ?? ''}</DialogTitle>
+          {previewRef ? (
+            <img
+              src={previewRef.url}
+              alt={previewRef.name}
+              className="max-h-[86vh] max-w-full rounded-[12px] object-contain"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* 素材面板 portal 到右栏容器：面板覆盖右侧内容区，左侧操作栏仍可见可用。
+          留在本组件的 React 树里，才能直接读写 selectedVideoRefs，无需把状态上提。 */}
+      {assetPanelHost
         ? createPortal(
-          <div
-            className="fixed inset-0 z-[90] grid place-items-center bg-background/80 p-4 backdrop-blur-md md:p-6"
-            onClick={() => setPromptDialogOpen(false)}
-          >
-            <div
-              className="growth-sheet-shadow flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[18px] border border-border bg-card ring-1 ring-border/35"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex h-[54px] shrink-0 items-center justify-between gap-2 border-b border-border px-4">
-                <span className="text-sm font-bold text-foreground">{t('prompt')}</span>
-                <button
-                  type="button"
-                  aria-label={t('prompt')}
-                  onClick={() => setPromptDialogOpen(false)}
-                  className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full bg-secondary text-foreground/70 transition hover:bg-accent hover:text-foreground"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-              <textarea
-                autoFocus
-                className="growth-dark-scrollbar min-h-[42vh] w-full flex-1 resize-none bg-transparent p-4 text-sm leading-7 text-foreground outline-none placeholder:text-foreground/36"
-                placeholder={t('videoPromptPlaceholder')}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-              />
-              {optimizeError ? (
-                <p className="px-4 pt-2 text-xs font-semibold text-destructive">{optimizeError}</p>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2 border-t border-border p-3">
-                {textModels.length > 0 ? (
-                  <div className="min-w-0 flex-1">
-                    <VideoOptionParamMenu
-                      icon={<SlidersHorizontal className="size-4" />}
-                      label={optimizeModelLabel}
-                      title={t('optimizeModel')}
-                      options={textModelOptions}
-                      value={selectedTextModelId ?? ''}
-                      onChange={onTextModelChange}
-                      showChevron
-                      contentClassName="z-[100]"
-                    />
-                  </div>
-                ) : (
-                  <span className="flex-1" />
-                )}
-                <button
-                  type="button"
-                  onClick={() => void handleOptimize()}
-                  disabled={optimizing}
-                  className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-growth-accent/15 px-3.5 py-1.5 text-xs font-bold text-growth-accent transition hover:bg-growth-accent/25 disabled:cursor-wait disabled:opacity-70"
-                >
-                  {optimizing ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <WandSparkles className="size-3.5" />
-                  )}
-                  {optimizing ? t('optimizing') : t('optimize')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPromptDialogOpen(false)}
-                  className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-growth-accent px-4 py-1.5 text-xs font-black text-background transition hover:bg-foreground"
-                >
-                  {tCommon('confirm')}
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
+          <VideoAssetPanel
+            open={mediaDialogOpen}
+            onClose={() => setMediaDialogOpen(false)}
+            selectedRefs={selectedVideoRefs}
+            onChangeRefs={setSelectedVideoRefs}
+            uploadLimit={uploadLimit}
+            allowedTypes={mediaLimits.allowedTypes}
+            maxSecondsOf={mediaLimits.maxSecondsOf}
+            maxOf={mediaLimits.maxOf}
+          />,
+          assetPanelHost,
         )
         : null}
+
     </aside>
   );
 }

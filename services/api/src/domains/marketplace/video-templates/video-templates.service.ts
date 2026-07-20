@@ -8,18 +8,13 @@ import {
   VideoTemplateSource,
   type Prisma,
 } from '../../platform/prisma/generated';
-import { randomUUID } from 'crypto';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
-import { PointsService } from '../../billing/points/points.service';
-import { MembershipService } from '../../billing/membership/membership.service';
-import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { assertInStationMediaUrls } from '../../creation/gallery/gallery.helpers';
 import { BaseResourceService, type ListResourceQuery } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
 import { FavoriteLibraryService } from '../../creation/materials/favorite-library.service';
 import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
-import { TemplateGenerationRepository } from '../template-generation.repository';
 
 export interface CreateVideoTemplateDto {
   title: string;
@@ -57,10 +52,6 @@ export class VideoTemplatesService extends BaseResourceService {
     resourceInteractions: ResourceInteractionRepository,
     private readonly resources: MarketplaceResourceCrudRepository,
     private readonly r2: CloudflareR2Service,
-    private readonly pointsService: PointsService,
-    private readonly modelConfigService: ModelConfigService,
-    private readonly generations: TemplateGenerationRepository,
-    private readonly membershipService: MembershipService,
     private readonly metrics: ResourceMetricsService,
     private readonly favoriteLibrary: FavoriteLibraryService,
   ) {
@@ -214,159 +205,6 @@ export class VideoTemplatesService extends BaseResourceService {
       materialSlots: materialSlots ? this.toJson(materialSlots) : undefined,
       status: TemplateStatus.PENDING,
     });
-  }
-
-  async createGeneration(
-    templateId: string,
-    userId: string,
-    data: {
-      modelUsed: string;
-      variables: Record<string, string>;
-      referenceImage?: string;
-      modelConfigId?: string;
-    },
-  ) {
-    const tpl = (await this.requirePublicVisible(templateId)) as {
-      prompt: string;
-      title?: string;
-      durationSec?: number | null;
-      defaultParams?: Record<string, unknown> | null;
-    };
-    const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
-    const generationId = randomUUID();
-
-    // 自有模型不再免费：模板生成视频一律计费。
-    let holdId: string | null = null;
-    {
-      const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(userId);
-      const estimate = await this.estimateTemplateGenerationCost({
-        taskType: 'video_generation',
-        modelConfigId: data.modelConfigId,
-        duration: tpl.durationSec ?? undefined,
-        resolution: typeof tpl.defaultParams?.resolution === 'string'
-          ? tpl.defaultParams.resolution
-          : undefined,
-        referenceImages: data.referenceImage ? 1 : 0,
-        membershipLevel,
-      });
-
-      if (estimate.amount > 0) {
-        const { hold } = await this.pointsService.createHold(userId, {
-          taskType: estimate.taskType,
-          taskId: generationId,
-          amount: estimate.amount,
-          pricingSnapshot: estimate.pricingSnapshot,
-          metadata: this.toJson({
-            templateId,
-            modelUsed: data.modelUsed,
-            variables: data.variables,
-            durationSec: tpl.durationSec ?? null,
-            referenceImage: data.referenceImage ?? null,
-          }),
-          remark: `video-template-generation: ${tpl.title ?? templateId}`,
-        });
-        holdId = hold.id;
-      }
-    }
-
-    try {
-      const gen = await this.generations.createVideoGeneration({
-        id: generationId,
-        templateId,
-        userId,
-        modelUsed: data.modelUsed,
-        resolvedPrompt,
-        variables: this.toJson(data.variables),
-        referenceImage: data.referenceImage,
-      });
-
-      if (holdId) {
-        await this.pointsService.confirmHold(holdId);
-      }
-      return gen;
-    } catch (err) {
-      if (holdId) {
-        try {
-          await this.pointsService.refundHold(
-            holdId,
-            'video template generation creation failed',
-          );
-        } catch (refundErr) {
-          this.logger.warn(
-            `视频模板生成冻结退回失败 hold=${holdId}: ${String(
-              refundErr instanceof Error ? refundErr.message : refundErr,
-            )}`,
-          );
-        }
-      }
-      throw err;
-    }
-  }
-
-  async findGeneration(id: string, userId: string) {
-    const gen = await this.generations.findVideoGeneration(id);
-    if (!gen) throw new ForbiddenException('生成记录不存在');
-    if (gen.userId !== userId) throw new ForbiddenException('无权访问');
-
-    const turns = await this.generations.findTurns(ResourceType.VIDEO_TEMPLATE, id);
-    return { ...gen, turns };
-  }
-
-  async addTurn(
-    generationId: string,
-    data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
-  ) {
-    return this.generations.addTurn(
-      ResourceType.VIDEO_TEMPLATE,
-      generationId,
-      data,
-    );
-  }
-
-  async findMyGenerations(userId: string, page = 1, pageSize = 20) {
-    return this.generations.findVideoGenerationsByUser(userId, page, pageSize);
-  }
-
-  resolvePrompt(
-    promptTemplate: string,
-    variables: Record<string, string>,
-  ): string {
-    let resolved = promptTemplate;
-    for (const [key, value] of Object.entries(variables)) {
-      resolved = resolved.replaceAll(`{{${key}}}`, value);
-    }
-    return resolved;
-  }
-
-  private async estimateTemplateGenerationCost(input: {
-    taskType: string;
-    modelConfigId?: string;
-    duration?: number;
-    resolution?: string;
-    referenceImages?: number;
-    membershipLevel?: number;
-  }): Promise<{
-    taskType: string;
-    amount: number;
-    pricingSnapshot?: Prisma.InputJsonValue;
-  }> {
-    // 原生化后视频计价参数即火山原生名 duration（perUnit duration）。旧写 seconds →
-    // estimateCost 取不到值 → 模板视频每秒费归零、少收费。
-    const params: Record<string, unknown> = { referenceImages: input.referenceImages ?? 0 };
-    if (input.duration !== undefined) params.duration = input.duration;
-    if (input.resolution !== undefined) params.resolution = input.resolution;
-
-    const estimate = await this.pointsService.estimateCost({
-      taskType: input.taskType,
-      ...(input.modelConfigId ? { modelConfigId: input.modelConfigId } : {}),
-      params,
-      membershipLevel: input.membershipLevel,
-    });
-    return {
-      taskType: estimate.taskType,
-      amount: estimate.estimatedCost,
-      pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-    };
   }
 
   private toJson(value: unknown): Prisma.InputJsonValue {

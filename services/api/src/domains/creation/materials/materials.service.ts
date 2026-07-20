@@ -121,7 +121,7 @@ export class MaterialsService {
    */
   async counts(userId: string) {
     const where: Prisma.material_assetsWhereInput = { userId, deletedAt: null };
-    const [byType, favorites, all] = await this.materialsRepository.countBuckets(where);
+    const [byType, favorites, all, uploads] = await this.materialsRepository.countBuckets(where);
     // byType / all 均已在 repository 内排除收藏——角标要与各分桶实际能看到的条数一致，
     // 否则「All Assets 9」点进去只有 7 条。
 
@@ -131,6 +131,7 @@ export class MaterialsService {
     return {
       all,
       favorites,
+      uploads,
       image: typeCounts.image ?? 0,
       video: typeCounts.video ?? 0,
       audio: typeCounts.audio ?? 0,

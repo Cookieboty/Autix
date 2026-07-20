@@ -47,7 +47,7 @@ export function PublicGeneratorStudioView({
   examples?: PublicGrowthMediaItem[] | null;
   initialModel?: string | null;
   initialMode?: ImageStudioMode;
-  /** Plan C Task 12：广场「recreate」跳转预填——目前仅 image studio 接线，video 暂未接。 */
+  /** 生成器 Tab 初值（?mode=gallery），image / video 共用。 */
   initialPrompt?: string | null;
 }) {
   const t = useTranslations('publicGrowth');
@@ -131,10 +131,17 @@ export function PublicGeneratorStudioView({
   );
   const videoParamsSchema = selectedVideoTaskModel?.paramsSchema as unknown as ParamsSchema | undefined;
   const videoPricingSchema = selectedVideoTaskModel?.pricingSchema as unknown as PricingSchema | undefined;
-  const videoPricingContext = {
-    multiplier: selectedVideoTaskModel?.multiplier ?? 1,
-    discountFactor: selectedVideoTaskModel?.discountFactor ?? 1,
-  };
+  // 必须 memo：裸对象字面量每次渲染都是新引用，VideoSidebar 里以它为依赖的
+  // 估价 effect 会每渲染重跑一次 computeTaskEstimate。目前靠 setState 的值相等
+  // bailout 兜住没炸，但只要 total 出现一次 NaN（NaN !== NaN，永不 bailout）
+  // 就会变成无限渲染循环。
+  const videoPricingContext = useMemo(
+    () => ({
+      multiplier: selectedVideoTaskModel?.multiplier ?? 1,
+      discountFactor: selectedVideoTaskModel?.discountFactor ?? 1,
+    }),
+    [selectedVideoTaskModel?.multiplier, selectedVideoTaskModel?.discountFactor],
+  );
 
   useEffect(() => {
     if (kind !== 'image') {
@@ -224,25 +231,18 @@ export function PublicGeneratorStudioView({
   }, [initialModel, kind]);
 
   return (
-    <div className="relative flex h-full flex-col bg-background text-foreground">
+    <div className="relative flex h-full flex-col text-foreground">
       {/* 功能页横幅内容（由 (public) layout 在导航上方渲染） */}
       <SetPublicTopPromo
         label={t('generator.studio.topPromo', buildDiscountTranslationValues())}
         href="/pricing"
       />
-      {/* 功能页主题背景：唯一的全屏固定底层（渐变 + 噪点），滑动时不动，内容与导航都透出它 */}
-      <div
-        className={`pointer-events-none fixed inset-0 ${kind === 'video' ? 'growth-video-studio-bg' : 'growth-image-studio-bg'}`}
-      />
-      <div
-        className={`growth-generator-noise pointer-events-none fixed inset-0 ${kind === 'video' ? 'opacity-[0.1]' : 'opacity-[0.13]'}`}
-      />
+      {/* 背景统一由全局默认背景（body 的 --background）提供，功能页不再自带渐变/噪点层 */}
       {/* 导航与顶部横幅均由 (public) layout 持久提供 */}
       {/* studio 区占满剩余高度（定高）：image 内部自管滚动；video 在此容器内滚动 */}
       <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-none">
         {kind === 'video' ? (
         <VideoGeneratorStudio
-          items={items}
           initialModel={initialModel}
           videoModels={videoModels}
           selectedModel={selectedVideoModel}
@@ -253,6 +253,9 @@ export function PublicGeneratorStudioView({
           pricingSchema={videoPricingSchema}
           pricingContext={videoPricingContext}
           onModelChange={setSelectedVideoModelId}
+          initialMode={initialMode}
+          /* 同 image：Web 端才写地址栏 */
+          syncUrl
         />
       ) : (
         <ImageGeneratorStudio

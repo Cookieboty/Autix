@@ -72,7 +72,7 @@ export function OfferStrip({
 
   return (
     <div
-      className={`growth-offer-strip flex min-h-10 items-center gap-2 rounded-xl border border-destructive/25 px-3 text-xs font-semibold text-foreground shadow-xl ${className}`}
+      className={`growth-offer-strip flex min-h-11 items-center gap-2 rounded-xl border border-destructive/25 px-3 py-1.5 text-xs font-semibold text-foreground shadow-xl ${className}`}
     >
       <span className="rounded-[7px] bg-growth-accent px-2 py-1 text-[10px] font-black uppercase text-background">
         {t('goUnlimited')}

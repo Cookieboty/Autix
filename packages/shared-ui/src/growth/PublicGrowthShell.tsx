@@ -12,6 +12,7 @@ import { Link, useRouter } from '../navigation';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
 import { IMAGE_NAV_FEATURES, imageModelHref, useImageNavModels } from './image-nav';
+import { VIDEO_NAV_FEATURES, videoModelHref, useVideoNavModels } from './video-nav';
 
 const FOOTER_YEAR = '2026';
 
@@ -34,17 +35,6 @@ const FOOTER_STUDIO_GROUP: FooterGroup = {
   ],
 };
 
-// Video 列暂不动，待 video 功能改造时再统一
-const FOOTER_VIDEO_GROUP: FooterGroup = {
-  titleKey: 'video',
-  links: [
-    { labelKey: 'aiVideo', href: '/ai/video' },
-    { labelKey: 'createVideo', href: '/ai/video' },
-    { label: 'Seedance 2.0', href: '/ai/video?model=Seedance%202.0' },
-    { label: 'Gemini Omni Flash', href: '/ai/video?model=Gemini%20Omni%20Flash' },
-  ],
-};
-
 // 社交超链只保留 X/Twitter + Youtube（移到底部法务区，隐私/用户协议左侧）
 const FOOTER_SOCIAL: Array<[string, string]> = [
   ['X / Twitter', '#'],
@@ -59,7 +49,43 @@ const FOOTER_LEGAL: Array<[string, string]> = [
 
 const FOOTER_LINK_CLASS = 'text-sm text-background/80 transition hover:text-background';
 
-/** 静态链接列（Studio / Video） */
+/**
+ * Video 列：与导航 Video 下拉一致——Features（Create / Gallery）+ 全部视频模型。
+ *
+ * 原来是一份静态硬编码：写死了 Seedance 2.0 与 Gemini Omni Flash 两条。前者的
+ * hint 用的是 `?model=Seedance%202.0`（能匹配上），后者**库里根本没有这个模型** ——
+ * 点过去匹配失败、静默落到默认模型。改成和 Image 列同源取真实模型列表后，
+ * 列出来的必然是能选中的，也不用每接一个模型回来改一次页尾。
+ */
+function FooterVideoColumn() {
+  const t = useTranslations('publicGrowth.footer');
+  const tFlyout = useTranslations('publicGrowth.videoNavFlyout');
+  const models = useVideoNavModels();
+  const title = t('groups.video');
+  return (
+    <nav aria-label={title}>
+      <h3 className="mb-4 text-sm font-semibold text-background/45">{title}</h3>
+      <ul className="space-y-2.5">
+        {VIDEO_NAV_FEATURES.map((feature) => (
+          <li key={feature.key}>
+            <Link href={feature.href} className={FOOTER_LINK_CLASS}>
+              {tFlyout(feature.key)}
+            </Link>
+          </li>
+        ))}
+        {models.map((model) => (
+          <li key={model.id}>
+            <Link href={videoModelHref(model.name)} className={FOOTER_LINK_CLASS}>
+              {model.name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** 静态链接列（Studio） */
 function FooterLinkColumn({ group }: { group: FooterGroup }) {
   const t = useTranslations('publicGrowth.footer');
   const groupTitle = t(`groups.${group.titleKey}`);
@@ -125,7 +151,7 @@ export function PublicFooter() {
           </div>
           <FooterLinkColumn group={FOOTER_STUDIO_GROUP} />
           <FooterImageColumn />
-          <FooterLinkColumn group={FOOTER_VIDEO_GROUP} />
+          <FooterVideoColumn />
         </div>
       </div>
 

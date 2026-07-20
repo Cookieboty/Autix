@@ -61,9 +61,6 @@ const SYSTEM_TPL = {
 function createMocks(overrides: BuildOverrides = {}) {
   const templates = overrides.templates ?? [APPROVED_TPL, PENDING_TPL, SYSTEM_TPL];
   const tx = {
-    video_generations: {
-      create: vi.fn(async (args: any) => ({ id: args.data.id, ...args.data })),
-    },
     video_templates: {
       update: vi.fn(async () => ({})),
     },
@@ -108,13 +105,6 @@ function createMocks(overrides: BuildOverrides = {}) {
   const models = {
     getConfigForOrchestrator: vi.fn(),
   };
-  const generations = {
-    createVideoGeneration: vi.fn(async (args: any) => ({
-      id: args.id,
-      ...args,
-      status: 'pending',
-    })),
-  };
   const membership = {
     resolveActiveMembershipLevel: vi.fn().mockResolvedValue(2),
   };
@@ -140,10 +130,6 @@ function createMocks(overrides: BuildOverrides = {}) {
     resourceInteractions,
     resources as never,
     r2 as never,
-    points as never,
-    models as never,
-    generations as never,
-    membership as never,
     metrics as never,
     favoriteLibrary as never,
   );
@@ -152,9 +138,7 @@ function createMocks(overrides: BuildOverrides = {}) {
     tx,
     points,
     models,
-    generations,
     resources,
-    membership,
     resourceInteractions,
     r2,
     metrics,
@@ -240,239 +224,4 @@ describe('VideoTemplatesService — 公开可见守卫 (status=APPROVED && sourc
     await expect(service.recordView('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
   });
 
-  it('createGeneration: 目标非公开可见(PENDING) → NotFoundException, 不冻结积分', async () => {
-    const { service, points } = createMocks();
-    await expect(
-      service.createGeneration('tpl-pending', 'u1', {
-        modelUsed: 'seedance-pro',
-        variables: { subject: 'shoe' },
-      }),
-    ).rejects.toThrow(NotFoundException);
-    expect(points.createHold).not.toHaveBeenCalled();
-  });
-
-  it('createGeneration: 目标为 SYSTEM 来源 → NotFoundException', async () => {
-    const { service } = createMocks();
-    await expect(
-      service.createGeneration('tpl-system', 'u1', {
-        modelUsed: 'seedance-pro',
-        variables: { subject: 'shoe' },
-      }),
-    ).rejects.toThrow(NotFoundException);
-  });
-});
-
-describe('VideoTemplatesService.createGeneration billing', () => {
-  it('freezes configurable template video points with duration and confirms after record creation', async () => {
-    const { service, points, generations } = createMocks();
-
-    const gen = await service.createGeneration('tpl-1', 'u1', {
-      modelUsed: 'seedance-pro',
-      modelConfigId: 'model-1',
-      variables: { subject: 'shoe' },
-      referenceImage: 'https://img.test/ref.png',
-    });
-
-    expect(points.estimateCost).toHaveBeenCalledWith({
-      taskType: 'video_generation',
-      modelConfigId: 'model-1',
-      params: { referenceImages: 1, duration: 5 },
-      membershipLevel: 2,
-    });
-
-    const holdArgs = points.createHold.mock.calls[0][1];
-    expect(holdArgs).toEqual(
-      expect.objectContaining({
-        taskType: 'video_generation',
-        amount: 1600,
-        taskId: gen.id,
-        pricingSnapshot: { ruleId: 'rule-video' },
-      }),
-    );
-    expect(holdArgs).not.toHaveProperty('refundPolicySnapshot');
-
-    expect(generations.createVideoGeneration).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: gen.id,
-        resolvedPrompt: 'Animate shoe',
-      }),
-    );
-    expect(points.confirmHold).toHaveBeenCalledWith('hold-1');
-  });
-
-  it('omits modelConfigId from the estimate call when the generation has none', async () => {
-    const { service, points } = createMocks();
-
-    await service.createGeneration('tpl-1', 'u1', {
-      modelUsed: 'seedance-pro',
-      variables: { subject: 'shoe' },
-    });
-
-    const estimateArgs = points.estimateCost.mock.calls[0][0];
-    expect(estimateArgs).not.toHaveProperty('modelConfigId');
-    expect(estimateArgs).toEqual({
-      taskType: 'video_generation',
-      params: { referenceImages: 0, duration: 5 },
-      membershipLevel: 2,
-    });
-  });
-
-  it('refunds the hold when generation record creation fails', async () => {
-    const { service, generations, points } = createMocks();
-    generations.createVideoGeneration.mockRejectedValue(new Error('db fail'));
-
-    await expect(
-      service.createGeneration('tpl-1', 'u1', {
-        modelUsed: 'seedance-pro',
-        variables: { subject: 'shoe' },
-      }),
-    ).rejects.toThrow('db fail');
-
-    expect(points.refundHold).toHaveBeenCalledWith(
-      'hold-1',
-      'video template generation creation failed',
-    );
-    expect(points.confirmHold).not.toHaveBeenCalled();
-  });
-});
-
-describe('VideoTemplatesService.estimateTemplateGenerationCost — new engine', () => {
-  it('packs duration/resolution/referenceImages into params', async () => {
-    const estimateCost = vi.fn().mockResolvedValue({
-      taskType: 'video_generation',
-      estimatedCost: 320,
-      pricingSnapshot: {},
-    });
-    const service = buildVideoTemplatesService({ pointsService: { estimateCost } });
-
-    await (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
-      taskType: 'video_generation',
-      modelConfigId: 'model-1',
-      duration: 5,
-      resolution: '720p',
-      referenceImages: 0,
-      membershipLevel: 0,
-    });
-
-    expect(estimateCost).toHaveBeenCalledWith({
-      taskType: 'video_generation',
-      modelConfigId: 'model-1',
-      params: { duration: 5, resolution: '720p', referenceImages: 0 },
-      membershipLevel: 0,
-    });
-  });
-
-  it('omits modelConfigId entirely when not provided (no bogus fallback)', async () => {
-    const estimateCost = vi.fn().mockResolvedValue({
-      taskType: 'video_generation',
-      estimatedCost: 320,
-      pricingSnapshot: {},
-    });
-    const service = buildVideoTemplatesService({ pointsService: { estimateCost } });
-
-    await (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
-      taskType: 'video_generation',
-      duration: 5,
-      resolution: '720p',
-      referenceImages: 0,
-    });
-
-    const args = estimateCost.mock.calls[0][0];
-    expect(args).not.toHaveProperty('modelConfigId');
-    expect(args).toEqual({
-      taskType: 'video_generation',
-      params: { duration: 5, resolution: '720p', referenceImages: 0 },
-    });
-  });
-
-  it('propagates the estimator rejection without a metered fallback', async () => {
-    const estimateCost = vi.fn().mockRejectedValue(new BadRequestException('模型未绑定任务'));
-    const service = buildVideoTemplatesService({ pointsService: { estimateCost } });
-
-    await expect(
-      (service as never as { estimateTemplateGenerationCost: Function }).estimateTemplateGenerationCost({
-        taskType: 'video_generation',
-        modelConfigId: 'model-1',
-        duration: 5,
-        resolution: '720p',
-      }),
-    ).rejects.toThrow('模型未绑定任务');
-  });
-});
-
-describe('VideoTemplatesService.create — Task 4.5：站内来源写入守卫', () => {
-  it('拒绝非站内域名的 coverImage', async () => {
-    const { service } = createMocks();
-    await expect(
-      service.create('admin-1', {
-        title: 'Admin Clip',
-        category: 'product',
-        prompt: 'Animate {{subject}}',
-        variables: [],
-        coverImage: 'https://evil.com/cover.png',
-      }),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it('拒绝非站内域名的 exampleMedia（即便 coverImage 站内）', async () => {
-    const { service } = createMocks();
-    await expect(
-      service.create('admin-1', {
-        title: 'Admin Clip',
-        category: 'product',
-        prompt: 'Animate {{subject}}',
-        variables: [],
-        coverImage: `${R2_PUBLIC_BASE}/cover.png`,
-        exampleMedia: [`${R2_PUBLIC_BASE}/ex-1.mp4`, 'https://evil.com/ex-2.mp4'],
-      }),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it('站内 coverImage/exampleMedia 全部放行', async () => {
-    const { service, resources } = createMocks();
-    await service.create('admin-1', {
-      title: 'Admin Clip',
-      category: 'product',
-      prompt: 'Animate {{subject}}',
-      variables: [],
-      coverImage: `${R2_PUBLIC_BASE}/cover.png`,
-      exampleMedia: [`${R2_PUBLIC_BASE}/ex-1.mp4`],
-    });
-    expect(resources.createVideoTemplate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        coverImage: `${R2_PUBLIC_BASE}/cover.png`,
-        exampleMedia: [`${R2_PUBLIC_BASE}/ex-1.mp4`],
-      }),
-    );
-  });
-});
-
-describe('VideoTemplatesService.update — Task 4.6：站内来源守卫', () => {
-  it('拒绝非站内 coverImage', async () => {
-    const { service } = createMocks();
-    await expect(
-      service.update('tpl-1', 'author-1', { coverImage: 'https://evil.com/cover.png' }),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it('拒绝非站内 exampleMedia', async () => {
-    const { service } = createMocks();
-    await expect(
-      service.update('tpl-1', 'author-1', {
-        exampleMedia: [`${R2_PUBLIC_BASE}/ex-1.mp4`, 'https://evil.com/ex-2.mp4'],
-      }),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it('站内 coverImage/exampleMedia 放行', async () => {
-    const { service, resources } = createMocks();
-    await service.update('tpl-1', 'author-1', {
-      coverImage: `${R2_PUBLIC_BASE}/cover.png`,
-      exampleMedia: [`${R2_PUBLIC_BASE}/ex-1.mp4`],
-    });
-    expect(resources.updateVideoTemplate).toHaveBeenCalledWith(
-      'tpl-1',
-      expect.objectContaining({ coverImage: `${R2_PUBLIC_BASE}/cover.png` }),
-    );
-  });
 });

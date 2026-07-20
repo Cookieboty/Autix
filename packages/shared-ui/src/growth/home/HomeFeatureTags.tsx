@@ -3,26 +3,46 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '../../navigation';
 import { IMAGE_NAV_FEATURES, imageModelHref, useImageNavModels } from '../image-nav';
+import { VIDEO_NAV_FEATURES, videoModelHref, useVideoNavModels } from '../video-nav';
 
 /**
  * 「EXPLORE MORE AI FEATURES」标签云。
- * 收敛为导航 Image 下拉的全部项：Features（Create Image / Edit Image / Gallery）+ 全部图片模型，
- * 均可点击跳转。Video 暂不加，待 video 功能完善后再补 video 的功能与模型标签。
+ *
+ * 收敛为两个导航下拉的全部项：Image 的 Features（Create / Edit / Gallery）+ 全部图片模型，
+ * 加上 Video 的 Features（Create Video / Gallery）+ 全部视频模型，均可点击跳转。
+ * 模型列表与跳转地址都与导航下拉、页尾同源 —— 这里不再自己维护一份名单，
+ * 接入新模型后三处会一起更新。
  */
 export function HomeFeatureTags({ title }: { title: string }) {
-  const t = useTranslations('publicGrowth.imageNavFlyout');
-  const models = useImageNavModels();
+  const tImage = useTranslations('publicGrowth.imageNavFlyout');
+  const tVideo = useTranslations('publicGrowth.videoNavFlyout');
+  const imageModels = useImageNavModels();
+  const videoModels = useVideoNavModels();
 
+  /**
+   * key 加 image-/video- 前缀：两边的 feature key 有重名（都有 'gallery'），
+   * 直接用会撞 React key；模型 id 虽然不会重，但一并前缀保持一致。
+   */
   const tags: Array<{ key: string; label: string; href: string }> = [
     ...IMAGE_NAV_FEATURES.map((feature) => ({
-      key: feature.key,
-      label: t(feature.key),
+      key: `image-${feature.key}`,
+      label: tImage(feature.key),
       href: feature.href,
     })),
-    ...models.map((model) => ({
-      key: model.id,
+    ...imageModels.map((model) => ({
+      key: `image-${model.id}`,
       label: model.name,
       href: imageModelHref(model.name),
+    })),
+    ...VIDEO_NAV_FEATURES.map((feature) => ({
+      key: `video-${feature.key}`,
+      label: tVideo(feature.key),
+      href: feature.href,
+    })),
+    ...videoModels.map((model) => ({
+      key: `video-${model.id}`,
+      label: model.name,
+      href: videoModelHref(model.name),
     })),
   ];
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowUpRight, Eye, Heart, ImageIcon, Play } from 'lucide-react';
+import { ArrowUpRight, Eye, Heart } from 'lucide-react';
 import {
   galleryActions,
   publicGalleryActions,
@@ -16,6 +16,7 @@ import { ImpressionSentinel } from '../ImpressionSentinel';
 import { GalleryDetailDialog, type GalleryInteraction } from '../detail/GalleryDetailDialog';
 import { useGalleryPostModal } from '../detail/useGalleryPostModal';
 import { AuthorAvatar } from '../AuthorAvatar';
+import { GalleryMediaThumb, galleryHoverPlayHandlers } from '../GalleryMediaThumb';
 import { buildGeneratorWorkbenchHref } from '../generator-workbench-href';
 
 export type HomeGallerySource = 'image' | 'video';
@@ -227,30 +228,51 @@ function HomeGalleryGrid({
 }) {
   return (
     <div className="columns-1 gap-3 opacity-95 sm:columns-2 lg:columns-3 2xl:columns-4">
-      {items.map((item, index) => {
-        const { post, metrics } = item;
-        const cover = post.coverImage ?? post.mediaUrls[0] ?? null;
-        const author = item.author?.nickname || unknownAuthor;
-        const isVideo = post.kind === 'VIDEO';
-        const interaction = interactionOf(item);
-        return (
+      {items.map((item, index) => (
+        <HomeGalleryCard
+          key={item.post.id}
+          item={item}
+          index={index}
+          unknownAuthor={unknownAuthor}
+          onSelect={onSelect}
+          interaction={interactionOf(item)}
+          onToggleLike={onToggleLike}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 单张卡片。抽成组件而不是留在 map 里，是因为视频要用 state 存「量到的真实比例」——
+ * hooks 不能写在循环体内。
+ */
+function HomeGalleryCard({
+  item,
+  index,
+  unknownAuthor,
+  onSelect,
+  interaction,
+  onToggleLike,
+}: {
+  item: GalleryFeedItem;
+  index: number;
+  unknownAuthor: string;
+  onSelect: (item: GalleryFeedItem) => void;
+  interaction: GalleryInteraction;
+  onToggleLike: (postId: string) => void;
+}) {
+  const { post, metrics } = item;
+  const author = item.author?.nickname || unknownAuthor;
+
+  return (
           <article
-            key={post.id}
+            // 悬浮播放绑在容器上：卡片被一层全尺寸点击热区盖着，绑 video 自身收不到事件
+            {...galleryHoverPlayHandlers()}
             className="growth-generator-masonry group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-md bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
             style={{ animationDelay: `${(index % 9) * 80}ms` }}
           >
-            {cover ? (
-              <img
-                src={cover}
-                alt={post.title ?? ''}
-                loading={index < 8 ? 'eager' : 'lazy'}
-                className="block h-auto w-full"
-              />
-            ) : (
-              <div className="grid aspect-[3/4] w-full place-items-center bg-secondary text-foreground/32">
-                <ImageIcon className="size-10" />
-              </div>
-            )}
+            <GalleryMediaThumb item={item} index={index} />
 
             <ImpressionSentinel resourceType="GALLERY_POST" resourceId={post.id} />
 
@@ -260,12 +282,6 @@ function HomeGalleryGrid({
               className="absolute inset-0 z-10 cursor-pointer"
               onClick={() => onSelect(item)}
             />
-
-            {isVideo ? (
-              <span className="pointer-events-none absolute left-1/2 top-1/2 z-20 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-background/45 text-foreground backdrop-blur-md">
-                <Play className="size-5 translate-x-px" />
-              </span>
-            ) : null}
 
             <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100" />
             {/* 底部：作者（左） + 访问量/点赞（右）。与广场墙同一套胶囊：h-7 / bg-black/25 /
@@ -298,8 +314,5 @@ function HomeGalleryGrid({
               </span>
             </div>
           </article>
-        );
-      })}
-    </div>
   );
 }

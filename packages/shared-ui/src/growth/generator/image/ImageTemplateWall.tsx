@@ -7,6 +7,7 @@ import type { ImageTemplate } from '@autix/shared-store';
 import { MediaThumb } from '../../MediaBlocks';
 import type { PublicGrowthMediaItem } from '../../types';
 import { imageTemplateCover, type TemplateDensity } from '../generator-studio-helpers';
+import { formatMetricCount } from '../metric-format';
 import { AuthorAvatar } from '../../AuthorAvatar';
 
 /**
@@ -89,17 +90,6 @@ export interface GalleryCardInteraction {
 function repeatedItems(items: PublicGrowthMediaItem[], count: number) {
   if (!items.length) return [];
   return Array.from({ length: count }, (_, index) => items[index % items.length]!);
-}
-
-function formatTemplateMetric(value?: number | null) {
-  const count = Math.max(0, value ?? 0);
-  if (count >= 1_000_000) {
-    return `${(count / 1_000_000).toFixed(count >= 10_000_000 ? 0 : 1).replace(/\.0$/, '')}M`;
-  }
-  if (count >= 1_000) {
-    return `${(count / 1_000).toFixed(count >= 10_000 ? 0 : 1).replace(/\.0$/, '')}K`;
-  }
-  return String(count);
 }
 
 export function ImageHeroCollage({ items }: { items: PublicGrowthMediaItem[] }) {
@@ -224,7 +214,7 @@ function TemplateCard({
               <span className="growth-inset-ring inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-black/25 pl-2.5 pr-1 text-xs font-bold text-foreground backdrop-blur-md">
                 <span className="inline-flex items-center gap-1">
                   <Eye className="size-3.5" />
-                  {formatTemplateMetric(template.viewCount)}
+                  {formatMetricCount(template.viewCount)}
                 </span>
                 {onToggleLike ? (
                   <button
@@ -243,7 +233,7 @@ function TemplateCard({
                         interactions?.[template.id]?.liked ? 'fill-red-500 text-red-500' : ''
                       }`}
                     />
-                    {formatTemplateMetric(
+                    {formatMetricCount(
                       interactions?.[template.id]?.likeCount ?? template.likeCount,
                     )}
                   </button>

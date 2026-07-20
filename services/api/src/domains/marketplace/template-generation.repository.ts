@@ -14,8 +14,6 @@ interface CreateImageGenerationInput {
   referenceImage?: string;
 }
 
-type CreateVideoGenerationInput = CreateImageGenerationInput;
-
 interface UpdateImageGenerationInput {
   generatedImages?: string[];
   status?: string;
@@ -75,39 +73,7 @@ export class TemplateGenerationRepository {
     return created;
   }
 
-  async createVideoGeneration(input: CreateVideoGenerationInput) {
-    const created = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.video_generations.create({
-        data: {
-          id: input.id,
-          templateId: input.templateId,
-          userId: input.userId,
-          modelUsed: input.modelUsed,
-          resolvedPrompt: input.resolvedPrompt,
-          variables: input.variables,
-          referenceImage: input.referenceImage,
-          status: 'pending',
-        },
-      });
-
-      await tx.video_templates.update({
-        where: { id: input.templateId },
-        data: { useCount: { increment: 1 } },
-      });
-
-      return created;
-    });
-
-    await this.syncUseCountMetric(
-      ResourceType.VIDEO_TEMPLATE,
-      input.templateId,
-      input.userId,
-    );
-
-    return created;
-  }
-
-  /**
+    /**
    * P0-1 dual-write：template useCount 之外，向 resource_metrics 补一条 'use_template'
    * 引用事件（referenceCount+1），使新表不再随旧列漂移。best-effort——失败只记日志，
    * 不影响已提交的生成记录。
@@ -140,14 +106,7 @@ export class TemplateGenerationRepository {
     });
   }
 
-  findVideoGeneration(id: string) {
-    return this.prisma.video_generations.findUnique({
-      where: { id },
-      include: { template: true },
-    });
-  }
-
-  findTurns(type: TemplateResourceType, id: string) {
+    findTurns(type: TemplateResourceType, id: string) {
     return this.prisma.generation_turns.findMany({
       where: {
         generationType: type,
@@ -203,29 +162,4 @@ export class TemplateGenerationRepository {
     };
   }
 
-  async findVideoGenerationsByUser(userId: string, page = 1, pageSize = 20) {
-    const skip = (page - 1) * pageSize;
-    const [items, total] = await Promise.all([
-      this.prisma.video_generations.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-        include: {
-          template: {
-            select: { title: true, coverImage: true, category: true },
-          },
-        },
-      }),
-      this.prisma.video_generations.count({ where: { userId } }),
-    ]);
-
-    return {
-      items,
-      total,
-      page,
-      pageSize,
-      hasMore: skip + items.length < total,
-    };
   }
-}

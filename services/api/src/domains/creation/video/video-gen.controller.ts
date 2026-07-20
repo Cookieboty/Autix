@@ -7,6 +7,7 @@ import { VideoDirectGenerationService, type DirectVideoMaterialInput } from './v
 import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoChatService } from './video-chat.service';
 import { toDirectVideoGenerationDto } from './video-direct-generation.presenter';
+import { GalleryService } from '../gallery/gallery.service';
 
 const MAX_PAGE_SIZE = 60;
 
@@ -27,6 +28,7 @@ export class VideoGenController {
     private readonly directService: VideoDirectGenerationService,
     private readonly repository: VideoGenerationRepository,
     private readonly videoChatService: VideoChatService,
+    private readonly galleryService: GalleryService,
   ) {}
 
   @Post('generate')
@@ -48,7 +50,18 @@ export class VideoGenController {
     const rawPs = pageSize ? +pageSize : 20;
     const ps = Number.isFinite(rawPs) ? Math.min(MAX_PAGE_SIZE, Math.max(1, rawPs)) : 20;
     const { generations, total } = await this.repository.findUserDirectGenerations({ userId, page: p, pageSize: ps });
-    return { items: generations.map(toDirectVideoGenerationDto), total, page: p, pageSize: ps, hasMore: (p - 1) * ps + generations.length < total };
+    // 整页一次批量取活帖（与 image workbench history 同做法），避免逐条查的 N+1。
+    // 无活帖的生成记录不附 galleryPost 字段，前端据此判定「未发布」。
+    const posts = await this.galleryService.findActivePostsByVideoGenerationIds(
+      userId,
+      generations.map((generation) => generation.id),
+    );
+    const items = generations.map((generation) => {
+      const dto = toDirectVideoGenerationDto(generation);
+      const post = posts.get(generation.id);
+      return post ? { ...dto, galleryPost: post } : dto;
+    });
+    return { items, total, page: p, pageSize: ps, hasMore: (p - 1) * ps + generations.length < total };
   }
 
   @Get('generations/:id')

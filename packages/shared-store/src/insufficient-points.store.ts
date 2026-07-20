@@ -49,6 +49,21 @@ export function getBillingGateContext(): BillingGateContext | null {
   return gateContext;
 }
 
+/**
+ * 手动唤起计费拦截弹框。
+ *
+ * 自动通道（`wireInsufficientPointsReporter`）只认「积分不足」类报错，而会员门槛
+ * （如素材上传的 `需要有效会员才能使用素材`，403）走不到那里。这类场景由调用方
+ * 捕获后显式调用本函数，复用同一个全屏付费弹框，不另做一套。
+ */
+export function openBillingGate(options: { msg: string; featureName?: string }): void {
+  useInsufficientPointsStore.getState().openDialog({
+    msg: options.msg,
+    triggeredAt: Date.now(),
+    context: options.featureName ? { featureName: options.featureName } : (gateContext ?? undefined),
+  });
+}
+
 let wired = false;
 
 export function wireInsufficientPointsReporter(): () => void {

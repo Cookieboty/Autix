@@ -1,156 +1,89 @@
 'use client';
 
+import { History, LayoutGrid } from 'lucide-react';
 import { useState } from 'react';
-import { Box, Film, History, Upload, Video, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useAuthStore, useUiStore, type DirectVideoGenerationDto } from '@autix/shared-store';
-import { SpotlightPanel } from '../../GrowthInteractions';
-import { MediaThumb } from '../../MediaBlocks';
-import type { PublicGrowthMediaItem } from '../../types';
-import { OfferStrip } from '../parts';
+import {
+  useAuthStore,
+  useUiStore,
+  type DirectVideoGenerationDto,
+  type GalleryFeedItem,
+} from '@autix/shared-store';
+import { StudioDensitySlider } from '../parts';
+import { GalleryDetailDialog } from '../../detail/GalleryDetailDialog';
+import { useGalleryPostModal } from '../../detail/useGalleryPostModal';
 import { VideoHistoryPanel, type PendingVideoGenerationCard } from './VideoHistoryPanel';
-
-// ---------------------------------------------------------------------------
-// Preview Dialog
-// ---------------------------------------------------------------------------
-
-function VideoPreviewDialog({
-  item,
-  onClose,
-}: {
-  item: DirectVideoGenerationDto | null;
-  onClose: () => void;
-}) {
-  const t = useTranslations('publicGrowth.generator.studio');
-
-  if (!item) return null;
-
-  const videoUrl = item.videoUrl;
-  const poster =
-    item.thumbnailUrl ?? item.lastFrameUrl ?? item.materials.find((material) => material.url)?.url ?? undefined;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-10 sm:px-8"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('historyPreviewTitle')}
-    >
-      {/* Backdrop */}
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Panel */}
-      <div className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="truncate text-sm font-semibold text-foreground">{item.prompt}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('close')}
-            className="ml-2 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        {/* Video / Poster */}
-        <div className="relative aspect-video w-full bg-muted">
-          {videoUrl ? (
-            <video
-              src={videoUrl}
-              poster={poster}
-              className="h-full w-full object-contain"
-              controls
-              autoPlay
-              playsInline
-              aria-label={item.prompt}
-            />
-          ) : poster ? (
-            <img
-              src={poster}
-              alt={item.prompt}
-              className="h-full w-full object-contain"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Film className="size-12 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+import { VideoGalleryWall } from './VideoGalleryWall';
+import type { TemplateDensity } from '../generator-studio-helpers';
+import { useGalleryFeedController } from '@autix/shared-store';
 
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
 export function VideoHowItWorks({
-  items,
   activeTab,
   pendingGeneration,
   onTabChange,
   historyItems,
   historyLoading,
-  onDeleteHistory,
+  onRecreate,
+  onSelectionActiveChange,
+  onHistoryChanged,
+  onRecreatePrompt,
 }: {
-  /** "如何使用"介绍卡片的示例素材——与下方 historyItems（扁平生成历史）无关，勿混淆同名。 */
-  items: PublicGrowthMediaItem[];
-  activeTab: 'history' | 'howItWorks';
+  activeTab: 'history' | 'gallery';
   pendingGeneration?: PendingVideoGenerationCard | null;
-  onTabChange: (tab: 'history' | 'howItWorks') => void;
+  onTabChange: (tab: 'history' | 'gallery') => void;
   historyItems: DirectVideoGenerationDto[];
   historyLoading?: boolean;
-  onDeleteHistory: (id: string) => Promise<void>;
+  /** 点击 Recreate：把该次生成的 prompt 应用回输入框。 */
+  onRecreate?: (item: DirectVideoGenerationDto) => void;
+  /** 多选态：父级据此切换「输入框 ↔ 操作栏」，与 image studio 同一交互。 */
+  onSelectionActiveChange?: (active: boolean) => void;
+  /** 发布/删除后重拉 history —— 徽章状态来自服务端，不靠本地内存猜。 */
+  onHistoryChanged?: () => void;
+  /** 广场作品的「Recreate」：把该作品的提示词填回输入框。 */
+  onRecreatePrompt?: (prompt: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const openAuthModal = useUiStore((s) => s.openAuthModal);
 
-  const [previewItem, setPreviewItem] = useState<DirectVideoGenerationDto | null>(null);
+  // 卡片密度只在会话内有效（与 image studio 一致，不做持久化）
+  const [density, setDensity] = useState<TemplateDensity>('normal');
+  // 视频广场直接复用站内公开 feed，传 'VIDEO' 分流
+  const {
+    items: galleryItems,
+    loading: galleryLoading,
+    loadingMore: galleryLoadingMore,
+    hasMore: galleryHasMore,
+    loadMore: galleryLoadMore,
+    toggleLike: galleryToggleLike,
+    toggleFavorite: galleryToggleFavorite,
+  } = useGalleryFeedController('VIDEO');
+  /**
+   * 广场作品详情：与 /ai/image 广场同一个弹窗（GalleryDetailDialog 已原生支持
+   * kind='VIDEO' —— 媒体区走 <video>+poster、详情行多一条时长），
+   * 且同样只用 History API 改地址栏、不做路由导航。视频这边此前压根没接详情，
+   * 点卡片没有任何反应。
+   */
+  const galleryModal = useGalleryPostModal();
 
-  const cards = [
-    {
-      title: t('addImage'),
-      body: t('addImageBody'),
-      item: items[0],
-      label: t('uploadImage'),
-      icon: Upload,
-    },
-    {
-      title: t('chooseTemplate'),
-      body: t('chooseTemplateBody'),
-      item: items[1],
-      label: t('chooseTemplate'),
-      icon: WandSparkles,
-    },
-    {
-      title: t('getVideo'),
-      body: t('getVideoBody'),
-      item: items[2],
-      label: t('getVideo'),
-      icon: Video,
-    },
-  ];
-
+  // 右栏不加上下内边距：与左侧 aside 一起贴容器的 py-3，保证两栏顶部对齐
   return (
-    <main className="min-w-0 flex-1 px-3 pb-2 pt-2 lg:order-1 lg:px-4">
-      {/* Tab Toggle */}
-      <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
-        <div className="inline-flex rounded-[11px] border border-border bg-secondary p-1">
+    <main className="relative min-w-0 lg:h-full">
+      {/* Tab Toggle。lg 起脱离文档流浮在滚动区之上，滚动时固定在顶部；
+          容器本身 pointer-events-none，只让两个子块可点，避免挡住下方内容的滚轮与点击。 */}
+      <div className="z-30 mb-2.5 flex flex-wrap items-center justify-between gap-2 lg:pointer-events-none lg:absolute lg:inset-x-0 lg:top-0 lg:mb-0">
+        <div className="growth-panel pointer-events-auto inline-flex rounded-[11px] border p-1">
           {/* History tab — disabled when not authenticated */}
           {isAuthenticated ? (
             <button
               type="button"
               onClick={() => onTabChange('history')}
               className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${activeTab === 'history'
-                ? 'bg-secondary text-foreground'
+                ? 'growth-panel-item text-foreground'
                 : 'text-foreground/42 hover:text-foreground/76'
                 }`}
             >
@@ -172,77 +105,87 @@ export function VideoHowItWorks({
           {/* How it works tab */}
           <button
             type="button"
-            onClick={() => onTabChange('howItWorks')}
-            className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${activeTab === 'howItWorks'
-              ? 'bg-secondary text-foreground'
+            onClick={() => onTabChange('gallery')}
+            className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${activeTab === 'gallery'
+              ? 'growth-panel-item text-foreground'
               : 'text-foreground/42 hover:text-foreground/76'
               }`}
           >
-            <Box className="size-3.5" />
-            {t('howItWorks')}
+            <LayoutGrid className="size-3.5" />
+            {t('gallery')}
           </button>
+        </div>
+        {/* 两个 tab 都支持缩放：History 与 Gallery 同样按密度决定列数 */}
+        <div className="pointer-events-auto">
+          <StudioDensitySlider label={t('density')} value={density} onChange={setDensity} />
         </div>
       </div>
 
-      <OfferStrip label={t('videoOffer')} premium={t('premiumPlans')} />
+      {/* 滚动区：lg 起铺满右栏、自身滚动，顶部留出悬浮 tab 的高度。
+          内层 min-h-full + 卡片 flex-1 —— 内容短时卡片撑到视口底部，内容长时随内容增高。 */}
+      <div className="lg:absolute lg:inset-0 lg:overflow-y-auto lg:overscroll-contain">
+        <div className="flex flex-col lg:min-h-full lg:pt-12">
+          {/* 引导付费条幅（OfferStrip）暂时摘掉：它无条件渲染、不读会员状态，
+              已付费用户也会被劝「Go Unlimited」；且折扣数字是前端常量
+              （discount.ts 的 DISCOUNT_PERCENT），与后端实际扣费用的 discountFactor
+              是两套独立的数，对不上就是标价与实收不符。
+              补上会员门槛 + 折扣改走后端来源后再放回来。 */}
 
-      {/* History panel */}
-      {isAuthenticated && activeTab === 'history' ? (
-        <div className="mt-2 rounded-[13px] border border-border bg-card p-4 shadow-xl md:p-4">
-          <VideoHistoryPanel
-            items={historyItems}
-            loading={historyLoading}
-            pending={pendingGeneration}
-            onSelectItem={setPreviewItem}
-            onDelete={onDeleteHistory}
-          />
+          {/* 内容卡片只保留上圆角：下沿贴着视口底部，圆角会露出背景显得断开 */}
+          {isAuthenticated && activeTab === 'history' ? (
+            <div className="growth-panel mt-2.5 rounded-t-[18px] border border-b-0 p-4 shadow-xl md:p-4 lg:flex-1">
+              <VideoHistoryPanel
+                items={historyItems}
+                loading={historyLoading}
+                pending={pendingGeneration}
+                density={density}
+                onRecreate={onRecreate}
+                onSelectionActiveChange={onSelectionActiveChange}
+                onHistoryChanged={onHistoryChanged}
+              />
+            </div>
+          ) : (
+            /* Gallery：视频广场 */
+            <div className="growth-panel mt-2.5 rounded-t-[18px] border border-b-0 p-3 shadow-xl md:p-4 lg:flex-1">
+              <VideoGalleryWall
+                items={galleryItems}
+                loading={galleryLoading}
+                loadingMore={galleryLoadingMore}
+                hasMore={galleryHasMore}
+                density={density}
+                onLoadMore={galleryLoadMore}
+                onOpen={galleryModal.open}
+                onToggleLike={(item) => void galleryToggleLike(item).catch(() => undefined)}
+                {...(onRecreatePrompt
+                  ? {
+                      onRecreate: (item: GalleryFeedItem) =>
+                        onRecreatePrompt(item.post.prompt ?? ''),
+                    }
+                  : {})}
+              />
+            </div>
+          )}
         </div>
-      ) : (
-        /* How it works panel */
-        <SpotlightPanel className="mt-2 rounded-[13px] border border-border bg-card p-4 shadow-xl md:p-4">
-          <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-14" />
-          <div className="mb-3">
-            <h1 className="text-3xl font-black uppercase leading-none md:text-[40px]">
-              {t('videoHeroTitle')}
-            </h1>
-            <p className="mt-1.5 max-w-4xl text-xs font-semibold leading-5 text-foreground/42 md:text-sm">
-              {t('videoHeroDescription')}
-            </p>
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-3">
-            {cards.map((card, index) => {
-              const Icon = card.icon;
-              return (
-                <button key={card.title} type="button" className="group block w-full text-left">
-                  <div className="growth-generator-video-card relative aspect-[16/10.4] overflow-hidden rounded-[12px] border border-border bg-background">
-                    {card.item ? (
-                      <MediaThumb item={card.item} eager={index === 0} autoPlay={index === 0} className="opacity-82 transition duration-700 group-hover:scale-[1.04]" />
-                    ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-b from-background/10 to-background/60" />
-                    <div className="absolute inset-7 rounded-[10px] border border-dashed border-border bg-background/12" />
-                    <div className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[11px] border border-input bg-background/45 text-foreground backdrop-blur">
-                      <Icon className="size-6" />
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 p-3">
-                      <span className="inline-flex rounded-[8px] bg-growth-accent px-2 py-1 text-[10px] font-black uppercase text-background">
-                        {card.label}
-                      </span>
-                    </div>
-                  </div>
-                  <h2 className="mt-2.5 text-lg font-black uppercase">{card.title}</h2>
-                  <p className="mt-1 text-xs font-medium leading-5 text-foreground/45">{card.body}</p>
-                </button>
-              );
-            })}
-          </div>
-        </SpotlightPanel>
-      )}
-
-      {/* Preview dialog */}
-      <VideoPreviewDialog
-        item={previewItem}
-        onClose={() => setPreviewItem(null)}
+      </div>
+      <GalleryDetailDialog
+        item={galleryModal.item}
+        onClose={galleryModal.close}
+        onToggleLike={(postId) => {
+          const hit = galleryItems.find((entry) => entry.post.id === postId);
+          if (hit) void galleryToggleLike(hit).catch(() => undefined);
+        }}
+        onToggleFavorite={(postId) => {
+          const hit = galleryItems.find((entry) => entry.post.id === postId);
+          if (hit) void galleryToggleFavorite(hit).catch(() => undefined);
+        }}
+        {...(onRecreatePrompt
+          ? {
+              onRecreate: (item: GalleryFeedItem) => {
+                onRecreatePrompt(item.post.prompt ?? '');
+                galleryModal.close();
+              },
+            }
+          : {})}
       />
     </main>
   );

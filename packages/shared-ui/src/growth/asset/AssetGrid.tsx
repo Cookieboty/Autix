@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Check, Ellipsis, ImageIcon, Minus, Play } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { Check, Ellipsis, ImageIcon, Minus, Pause, Play } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { MaterialAsset, MaterialFolder } from '@autix/shared-store';
 import type { TemplateDensity } from '../generator/generator-studio-helpers';
 import { groupAssetsByDate, toggleGroupSelection, type AssetDateGroup } from './asset-grid-model';
 import { AssetCardMenu } from './AssetCardMenu';
 import { useCursorMenu } from './CursorMenu';
+import { galleryHoverPlayHandlers } from '../GalleryMediaThumb';
+import { AudioWaveThumb } from '../generator/video/AudioWaveThumb';
 import { useMarqueeSelection } from './useMarqueeSelection';
 
 /**
@@ -41,6 +43,9 @@ export type AssetFitMode = 'contain' | 'cover';
 
 /** 右键菜单里除 asset/state 之外的入参，从 AssetLibraryView 一路透传到每张卡。 */
 type AssetCardMenuProps = {
+  /** 投稿到广场（仅生成素材可用，判定在 AssetCardMenu 内） */
+  onPublish: (asset: MaterialAsset) => void;
+  publishing: boolean;
   folders: MaterialFolder[];
   pendingFolderId: string | null;
   onOpen: (asset: MaterialAsset) => void;
@@ -73,7 +78,33 @@ function AssetCard({
 }) {
   const t = useTranslations('publicGrowth.assets');
   const isVideo = asset.type === 'video';
-  const preview = asset.thumbnailUrl || asset.url;
+  const isAudio = asset.type === 'audio';
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+
+  /**
+   * 音频试听。必须 stopPropagation + preventDefault：这个按钮浮在整卡的点击热区之上，
+   * 不拦的话点「播放」会冒泡上去打开详情弹窗 —— 音频根本没播。
+   */
+  const toggleAudio = (event: ReactMouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) {
+      void el.play().catch(() => undefined);
+      setAudioPlaying(true);
+    } else {
+      el.pause();
+      setAudioPlaying(false);
+    }
+  };
+  /**
+   * 图片用缩略图/原图；视频**不能**这样退回 asset.url —— 那是个 .mp4，
+   * 塞进 <img> 浏览器解不出来，素材库里的视频至今是一片空白。
+   * 视频走下面的 <video>，thumbnailUrl 只作 poster。
+   */
+  const preview = isVideo ? asset.thumbnailUrl : asset.thumbnailUrl || asset.url;
   const menu = useCursorMenu();
 
   return (
@@ -83,6 +114,9 @@ function AssetCard({
       onContextMenu={menu.openAt}
       // 选中态与 /ai/image 历史一致：3px 纯白粗边，不用主题色。
       // overflow-hidden 只裁图片，不裁菜单：菜单走 portal 渲染到 body，不受这里影响。
+      // 悬浮播放绑在容器上（与广场/历史同一套 handlers）：卡面被整块点击热区盖着，
+      // 绑在 <video> 上的 onMouseEnter 一次都不会触发。
+      {...galleryHoverPlayHandlers()}
       className={`group relative aspect-square overflow-hidden rounded-xl border-solid border-white bg-[rgb(28,30,32)] transition-all duration-75 ${
         selected ? 'border-[3px]' : 'border-0'
       }`}
@@ -98,7 +132,62 @@ function AssetCard({
         className="block size-full cursor-pointer"
         aria-label={asset.title}
       >
-        {preview ? (
+        {isAudio ? (
+          /*
+           * 音频没有可看的缩略图，走「文件名 + 波形 + 播放」的卡面 —— 与视频素材选择
+           * 面板里的音频卡同款，两处的音频长相保持一致。
+           * 波形是按 id 生成的确定性伪波形（AudioWaveThumb），不解码音频本体：
+           * 网格里一屏几十个，真解码会把主线程卡死。
+           */
+          <span className="flex size-full flex-col justify-between p-2 text-left">
+            <span className="truncate text-[11px] font-semibold text-foreground/70">
+              {asset.title || asset.id}
+            </span>
+            <AudioWaveThumb seed={asset.id} bars={24} className="min-h-0 flex-1 py-2" />
+            <span className="flex justify-end">
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label={audioPlaying ? t('card.pause') : t('card.play')}
+                onClick={toggleAudio}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleAudio(event as unknown as ReactMouseEvent);
+                  }
+                }}
+                className="z-20 grid size-6 cursor-pointer place-items-center rounded-full bg-foreground text-background transition hover:brightness-90"
+              >
+                {audioPlaying ? (
+                  <Pause className="size-3 fill-current" />
+                ) : (
+                  <Play className="size-3 translate-x-px fill-current" />
+                )}
+              </span>
+            </span>
+            <audio
+              ref={audioRef}
+              src={asset.url}
+              preload="none"
+              onEnded={() => setAudioPlaying(false)}
+              onPause={() => setAudioPlaying(false)}
+              className="hidden"
+            />
+          </span>
+        ) : isVideo ? (
+          <video
+            src={asset.url}
+            poster={asset.thumbnailUrl ?? undefined}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            // fit 与图片同一套：cover 铺满方卡、contain 完整展示
+            className={`size-full transition duration-300 ${
+              fit === 'cover' ? 'object-cover group-hover:scale-[1.02]' : 'object-contain'
+            }`}
+          />
+        ) : preview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={preview}
@@ -116,7 +205,8 @@ function AssetCard({
       </button>
 
       {isVideo && !selectionActive && (
-        <div className="pointer-events-none absolute inset-0 grid place-items-center">
+        // 悬浮即播放，角标随之淡出——留着会压在正在播的画面中间
+        <div className="pointer-events-none absolute inset-0 grid place-items-center opacity-100 transition duration-200 group-hover:opacity-0">
           <span className="grid size-9 place-items-center rounded-full bg-black/45 backdrop-blur">
             <Play className="size-4 translate-x-[1px] fill-white text-white" />
           </span>

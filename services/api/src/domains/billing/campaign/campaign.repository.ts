@@ -117,14 +117,13 @@ export class CampaignRepository {
     return this.prisma.campaigns.update({ where: { id }, data });
   }
 
-  // FIX-14: 校验 generationId 是否为属于该用户的真实生成记录（图片/视频/分镜）。
+  // FIX-14: 校验 generationId 是否为属于该用户的真实生成记录（图片 / 视频）。
   async generationBelongsToUser(userId: string, generationId: string): Promise<boolean> {
-    const [image, video, clip] = await Promise.all([
+    const [image, clip] = await Promise.all([
       this.prisma.image_generations.count({ where: { id: generationId, userId } }),
-      this.prisma.video_generations.count({ where: { id: generationId, userId } }),
       this.prisma.video_clip_generations.count({ where: { id: generationId, userId } }),
     ]);
-    return image + video + clip > 0;
+    return image + clip > 0;
   }
 
   findStreak(userId: string, streakType: string) {
@@ -184,15 +183,7 @@ export class CampaignRepository {
     userId: string,
     modelMatchers: string[],
   ): Promise<boolean> {
-    const modelUsedWhere = modelMatchersToVideoModelUsedWhere(modelMatchers);
     const clipModelWhere = modelMatchersToClipModelWhere(modelMatchers);
-    const templateVideoWhere: Prisma.video_generationsWhereInput = {
-      userId,
-      status: 'completed',
-      generatedVideos: { isEmpty: false },
-    };
-    if (modelUsedWhere.length > 0) templateVideoWhere.OR = modelUsedWhere;
-
     const clipVideoWhere: Prisma.video_clip_generationsWhereInput = {
       userId,
       status: VideoGenStatus.completed,
@@ -200,11 +191,10 @@ export class CampaignRepository {
     };
     if (clipModelWhere.length > 0) clipVideoWhere.OR = clipModelWhere;
 
-    const [templateVideo, clipVideo] = await Promise.all([
-      this.prisma.video_generations.count({ where: templateVideoWhere }),
-      this.prisma.video_clip_generations.count({ where: clipVideoWhere }),
-    ]);
-    return templateVideo + clipVideo > 0;
+    // 只查 clip 表：第一代 video_generations 已删除（它从未产出过 completed 行，
+    // 那条 OR 分支恒为 0，删掉不改变任何判定结果）。
+    const clipVideo = await this.prisma.video_clip_generations.count({ where: clipVideoWhere });
+    return clipVideo > 0;
   }
 
   runRewardTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
@@ -279,17 +269,6 @@ export class CampaignRepository {
 function modelMatchersToImageModelWhere(
   modelMatchers: string[],
 ): Prisma.image_generationsWhereInput[] {
-  return modelMatchers
-    .map((matcher) => matcher.trim())
-    .filter(Boolean)
-    .map((matcher) => ({
-      modelUsed: { contains: matcher, mode: 'insensitive' },
-    }));
-}
-
-function modelMatchersToVideoModelUsedWhere(
-  modelMatchers: string[],
-): Prisma.video_generationsWhereInput[] {
   return modelMatchers
     .map((matcher) => matcher.trim())
     .filter(Boolean)

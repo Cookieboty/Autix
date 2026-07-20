@@ -57,6 +57,19 @@ export function buildVideoParamsSchema(model: ModelSchemaHint): ParamsSchema {
       ...base.properties,
       resolution: { ...base.properties.resolution, enum: resolutions, default: defaultResolution },
       ratio: { ...base.properties.ratio, enum: ratios, default: defaultRatio },
+      // 出声开关。Seedance 的协议 preset 一直就把 generate_audio 发上游
+      // （vendors.ts 的 paramBindings），但 schema 从没声明过这个属性 ——
+      // 前端按 schema 渲染参数，于是 Seedance 的音频开关从来没出现过，
+      // 用户无法控制出不出声。cap.audio 为真的模型才给。
+      ...(cap.audio
+        ? {
+            generate_audio: {
+              type: 'boolean',
+              default: true,
+              'x-ui': { role: 'both', control: 'switch', order: 40, labelKey: 'pricing.params.generateAudio' },
+            },
+          }
+        : {}),
     },
   };
   if (has4k && base.allOf) schema.allOf = base.allOf;

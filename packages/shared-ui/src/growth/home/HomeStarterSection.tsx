@@ -10,8 +10,9 @@ import {
 } from '@autix/shared-store';
 import { ByteDanceIcon, GoogleGeminiIcon, OpenAIIcon } from '../../brand';
 import { Link } from '../../navigation';
-import { buildGeneratorWorkbenchHref } from '../generator-workbench-href';
 import { imageModelHref } from '../image-nav';
+import { videoModelHref } from '../video-nav';
+import { KNOWN_MODEL_TITLES } from './known-models';
 
 /* ----------------------------- 数据 ----------------------------- */
 
@@ -298,11 +299,27 @@ function OnboardingPanel() {
 function QualityModelCard({ model }: { model: QualityModel }) {
   const Icon = model.Icon;
   // 图片模型走共享的 `?model=<模型名>` 约定（与导航下拉一致，可被 page 精确预选）；video 暂沿用旧 href
+  /**
+   * 图片与视频统一走 `?model=<模型名，空格转下划线>` 约定（与两个导航下拉、页尾同源），
+   * 落地页按模型名精确匹配预选。
+   *
+   * 关键是用 **title 而不是 id**：id 是这里自己编的展示用短名（如 'seedance-2'），
+   * 归一化后是 "seedance2"，与库里的 "Seedance 2.0"（"seedance20"）精确匹配不上，
+   * 只能退到模糊匹配 —— 而 "seedance2" 同时是 "Seedance 2.0 Fast" 的子串，
+   * 选中哪个取决于列表顺序，跳过去很可能对不上。title 能精确命中。
+   *
+   * 库里没有的模型（如尚未接入的 Gemini Omni Flash）不带 model 参数：
+   * 带一个匹配不到的 hint，落地页会静默回落到默认模型，用户以为点错了。
+   */
   const href =
-    model.href ||
-    (model.kind === 'image'
-      ? imageModelHref(model.title)
-      : buildGeneratorWorkbenchHref({ kind: model.kind, model: model.id }));
+    model.href ??
+    (KNOWN_MODEL_TITLES.has(model.title)
+      ? model.kind === 'image'
+        ? imageModelHref(model.title)
+        : videoModelHref(model.title)
+      : model.kind === 'image'
+        ? '/ai/image'
+        : '/ai/video');
   return (
     <Link
       href={href}

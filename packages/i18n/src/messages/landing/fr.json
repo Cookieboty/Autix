@@ -675,7 +675,54 @@
         "publish": "Publier",
         "lastViewed": "Dernier consulté",
         "copyShareLink": "Copier le lien de l'œuvre",
-        "copiedShareLinkToast": "Lien copié"
+        "copiedShareLinkToast": "Lien copié",
+        "galleryEmptyTitle": "Aucune vidéo",
+        "galleryEmptyDescription": "Les vidéos publiées par la communauté apparaîtront ici.",
+        "assetTabUploads": "Import",
+        "assetTabImageGen": "Générations d'images",
+        "assetTabVideoGen": "Générations vidéo",
+        "assetLoadFailed": "Échec du chargement",
+        "assetUploadFailed": "Échec de l'import",
+        "assetEmpty": "Rien pour le moment",
+        "assetDelete": "Supprimer",
+        "assetPreview": "Aperçu",
+        "assetFilter": "Filtrer",
+        "assetFilterBy": "Filtrer par",
+        "assetFilterAll": "Tous",
+        "assetFilterImages": "Images fixes",
+        "assetFilterVideos": "Vidéos",
+        "assetFilterAudio": "Sons",
+        "remove": "Retirer",
+        "assetMore": "Plus",
+        "mentionEmpty": "Sélectionnez d'abord des médias",
+        "trimAudioTitle": "Découper l'audio",
+        "trimAudioHint": "Choisissez le segment à utiliser (max {seconds}s)",
+        "trimAudioSave": "Enregistrer",
+        "trimAudioCancel": "Annuler",
+        "trimAudioPlay": "Lire",
+        "trimAudioPause": "Suspendre",
+        "trimAudioDecodeFailed": "Impossible de lire ce fichier audio",
+        "trimAudioHandleStart": "Ajuster le début",
+        "trimAudioHandleEnd": "Ajuster la fin",
+        "videoTooLong": "{name} dépasse {seconds}s et ne peut pas être utilisée. Découpez-la puis réimportez-la.",
+        "bannerGeneral": "Général",
+        "copyVideoUrl": "Copier le lien de la vidéo",
+        "deleteVideo": "Supprimer la vidéo",
+        "videoDetail": "Détail de la vidéo",
+        "videoRatio": "Format",
+        "videoResolution": "Résolution",
+        "videoDuration": "Durée",
+        "secondsValue": "{seconds} s",
+        "publishSubmittedVideoToast": "{count} vidéo(s) soumise(s) pour examen",
+        "deletedVideoToast": "{count} vidéo(s) supprimée(s)",
+        "deleteVideoBlockedToast": "Cette vidéo est dans la galerie. Retirez-la ou dépubliez-la d’abord",
+        "deleteVideoConfirmTitle": "Supprimer {count} vidéo(s)",
+        "deleteVideoConfirmDescription": "Cela supprime définitivement {count} génération(s) et leurs vidéos. Irréversible.",
+        "play": "Lire",
+        "pause": "Suspendre",
+        "mediaTypeFull": "Ce modèle accepte au maximum {max} fichier(s) {type}",
+        "ratioFromImage": "Format selon l'image",
+        "ratioFromImageHint": "Ce modèle reprend le format de votre première image ; ce réglage n'a donc aucun effet."
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",
@@ -1124,7 +1171,9 @@
         "all": "All Assets",
         "favorites": "Favorites",
         "image": "Image",
-        "video": "Video"
+        "video": "Video",
+        "uploads": "Imports",
+        "audio": "Sons"
       },
       "empty": {
         "title": "Your assets will appear here",
@@ -1137,7 +1186,9 @@
         "size": "Size",
         "createdAt": "Created",
         "download": "Download",
-        "delete": "Delete"
+        "delete": "Delete",
+        "fileName": "Nom du fichier",
+        "uploader": "Importé par"
       },
       "fit": {
         "toCover": "Fill card",
@@ -1163,7 +1214,10 @@
         "moveFailed": "Could not move asset",
         "deleteFailed": "Could not delete asset",
         "save": "Save",
-        "more": "More"
+        "more": "More",
+        "publish": "Publier",
+        "play": "Lire",
+        "pause": "Suspendre"
       },
       "bulk": {
         "download": "Download",
@@ -1208,8 +1262,17 @@
       "createImageDesc": "Générer des images IA",
       "editImage": "Modifier l’image",
       "editImageDesc": "Retoucher et affiner les images",
-      "gallery": "Galerie",
-      "galleryDesc": "Explorer les créations de la communauté"
+      "gallery": "Galerie d’images",
+      "galleryDesc": "Explorer les images de la communauté"
+    },
+    "videoNavFlyout": {
+      "models": "Modèles",
+      "loading": "Chargement des modèles…",
+      "features": "Fonctions",
+      "createVideo": "Créer une vidéo",
+      "createVideoDesc": "Générer des vidéos par IA",
+      "gallery": "Galerie vidéo",
+      "galleryDesc": "Explorer les vidéos de la communauté"
     }
   }
 }

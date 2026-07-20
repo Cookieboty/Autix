@@ -42,17 +42,21 @@ function makeService(overrides: {
   captureCreate?: (data: Record<string, unknown>) => void;
   createImpl?: (data: Record<string, unknown>) => Promise<unknown>;
   findActivePostImpl?: (imageGenerationId: string) => Promise<{ id: string; status: string } | null>;
+  videoGenerations?: Record<string, unknown>;
+  activeVideoPosts?: Record<string, { id: string; status: string } | null>;
 }) {
   const repo = {
     findImageGenerationOwner:
       overrides.findImageGenerationOwnerImpl ??
       (async (id: string) => overrides.imageGenerations?.[id] ?? null),
-    findVideoGenerationOwner: async () => null,
+    findVideoGenerationOwner: async (id: string) => overrides.videoGenerations?.[id] ?? null,
     isReferenceImagePubliclyReusable: async () =>
       overrides.isReferenceImagePubliclyReusable ?? false,
     findActivePostByImageGenerationId:
       overrides.findActivePostImpl ??
       (async (imageGenerationId: string) => overrides.activePosts?.[imageGenerationId] ?? null),
+    findActivePostByVideoGenerationId: async (videoGenerationId: string) =>
+      overrides.activeVideoPosts?.[videoGenerationId] ?? null,
     create: async (data: Record<string, unknown>) => {
       if (overrides.createImpl) return overrides.createImpl(data);
       overrides.captureCreate?.(data);
@@ -1141,5 +1145,57 @@ describe('GalleryService.batchModerate — 逐条尽力执行', () => {
 
     expect(result.succeeded.sort()).toEqual(['p-1', 'p-2']);
     expect(result.failed).toEqual([]);
+  });
+});
+
+describe('GalleryService.createSubmission 视频投稿去重', () => {
+  const videoGen = {
+    userId: 'author-1',
+    resolvedPrompt: 'a cat surfing',
+    modelUsed: 'seedance-2-0-fast',
+    referenceImage: null,
+    generatedVideos: [`${R2_PUBLIC_BASE}/v.mp4`],
+  };
+
+  it('同一次视频生成已有活帖 → 直接返回该帖，不重复建帖', async () => {
+    // 视频投稿此前根本落不了库（videoGenerationId 指向永不产出的第一代表），
+    // 所以这一支从来没被走到过。改指 clip 表后没有它，同一次生成能刷出任意多条重复帖。
+    let created = 0;
+    const service = makeService({
+      videoGenerations: { 'vgen-1': videoGen },
+      activeVideoPosts: { 'vgen-1': { id: 'post-existing', status: 'PENDING' } },
+      createImpl: async (data) => {
+        created += 1;
+        return { id: 'post-new', ...data };
+      },
+    });
+
+    const result = (await service.createSubmission('author-1', {
+      kind: 'VIDEO',
+      sourceType: 'FROM_GENERATION',
+      videoGenerationId: 'vgen-1',
+    } as never)) as { id: string };
+
+    expect(result.id).toBe('post-existing');
+    expect(created).toBe(0);
+  });
+
+  it('无活帖 → 正常建帖，mediaUrls 由 clip 生成记录派生', async () => {
+    let captured: Record<string, unknown> | undefined;
+    const service = makeService({
+      videoGenerations: { 'vgen-1': videoGen },
+      captureCreate: (data) => {
+        captured = data;
+      },
+    });
+
+    await service.createSubmission('author-1', {
+      kind: 'VIDEO',
+      sourceType: 'FROM_GENERATION',
+      videoGenerationId: 'vgen-1',
+    } as never);
+
+    expect(captured?.mediaUrls).toEqual([`${R2_PUBLIC_BASE}/v.mp4`]);
+    expect(captured?.videoGenerationId).toBe('vgen-1');
   });
 });

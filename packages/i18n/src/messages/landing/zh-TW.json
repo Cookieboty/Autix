@@ -352,7 +352,54 @@
         "publish": "發布到廣場",
         "lastViewed": "最後檢視",
         "copyShareLink": "複製作品連結",
-        "copiedShareLinkToast": "作品連結已複製"
+        "copiedShareLinkToast": "作品連結已複製",
+        "galleryEmptyTitle": "還沒有影片",
+        "galleryEmptyDescription": "社群發布的影片會展示在這裡。",
+        "assetTabUploads": "我的上傳",
+        "assetTabImageGen": "圖片生成",
+        "assetTabVideoGen": "影片生成",
+        "assetLoadFailed": "素材載入失敗",
+        "assetUploadFailed": "上傳失敗",
+        "assetEmpty": "這裡還沒有內容",
+        "assetDelete": "刪除",
+        "assetPreview": "放大預覽",
+        "assetFilter": "篩選",
+        "assetFilterBy": "依類型篩選",
+        "assetFilterAll": "全部",
+        "assetFilterImages": "圖片",
+        "assetFilterVideos": "影片",
+        "assetFilterAudio": "音訊",
+        "remove": "移除",
+        "assetMore": "更多操作",
+        "mentionEmpty": "請先選擇素材",
+        "trimAudioTitle": "裁剪音訊",
+        "trimAudioHint": "選擇要使用的片段（最長 {seconds} 秒）",
+        "trimAudioSave": "儲存",
+        "trimAudioCancel": "取消",
+        "trimAudioPlay": "播放",
+        "trimAudioPause": "暫停",
+        "trimAudioDecodeFailed": "無法讀取該音訊檔案",
+        "trimAudioHandleStart": "調整起點",
+        "trimAudioHandleEnd": "調整終點",
+        "videoTooLong": "{name} 超過 {seconds} 秒，無法選用。請自行裁剪後重新上傳。",
+        "bannerGeneral": "通用",
+        "copyVideoUrl": "複製影片連結",
+        "deleteVideo": "刪除影片",
+        "videoDetail": "影片詳情",
+        "videoRatio": "畫幅比",
+        "videoResolution": "解析度",
+        "videoDuration": "時長",
+        "secondsValue": "{seconds} 秒",
+        "publishSubmittedVideoToast": "已提交 {count} 個影片待審核",
+        "deletedVideoToast": "已刪除 {count} 個影片",
+        "deleteVideoBlockedToast": "該影片已在廣場，請先撤回或下架",
+        "deleteVideoConfirmTitle": "刪除 {count} 個影片",
+        "deleteVideoConfirmDescription": "將永久刪除 {count} 筆生成記錄及其影片，此操作無法復原。",
+        "play": "播放",
+        "pause": "暫停",
+        "mediaTypeFull": "該模型最多可選 {max} 個{type}",
+        "ratioFromImage": "比例隨圖",
+        "ratioFromImageHint": "該模型以首幀圖片的畫幅為準，此處的比例設定不會生效。"
       },
       "privateFirst": "預設私有",
       "createPrivately": "目前頁創作",
@@ -801,7 +848,9 @@
         "all": "全部素材",
         "favorites": "收藏",
         "image": "圖片",
-        "video": "影片"
+        "video": "影片",
+        "uploads": "我的上傳",
+        "audio": "音訊"
       },
       "empty": {
         "title": "你的素材會出現在這裡",
@@ -814,7 +863,9 @@
         "size": "尺寸",
         "createdAt": "建立時間",
         "download": "下載",
-        "delete": "刪除"
+        "delete": "刪除",
+        "fileName": "檔名",
+        "uploader": "上傳者"
       },
       "fit": {
         "toCover": "鋪滿卡片",
@@ -840,7 +891,10 @@
         "moveFailed": "移動素材失敗",
         "deleteFailed": "刪除素材失敗",
         "save": "儲存",
-        "more": "更多"
+        "more": "更多",
+        "publish": "發布到廣場",
+        "play": "播放",
+        "pause": "暫停"
       },
       "bulk": {
         "download": "下載",
@@ -885,8 +939,17 @@
       "createImageDesc": "生成 AI 圖像",
       "editImage": "編輯圖像",
       "editImageDesc": "修改與精修圖像",
-      "gallery": "作品廣場",
-      "galleryDesc": "探索社群創作"
+      "gallery": "圖片廣場",
+      "galleryDesc": "瀏覽社群圖片作品"
+    },
+    "videoNavFlyout": {
+      "models": "模型",
+      "loading": "正在載入模型…",
+      "features": "功能",
+      "createVideo": "生成影片",
+      "createVideoDesc": "用 AI 生成影片",
+      "gallery": "影片廣場",
+      "galleryDesc": "瀏覽社群影片作品"
     }
   },
   "landing": {

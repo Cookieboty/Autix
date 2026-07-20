@@ -675,7 +675,54 @@
         "publish": "发布到广场",
         "lastViewed": "最后查看",
         "copyShareLink": "复制作品链接",
-        "copiedShareLinkToast": "作品链接已复制"
+        "copiedShareLinkToast": "作品链接已复制",
+        "galleryEmptyTitle": "还没有视频",
+        "galleryEmptyDescription": "社区发布的视频会展示在这里。",
+        "assetTabUploads": "我的上传",
+        "assetTabImageGen": "图片生成",
+        "assetTabVideoGen": "视频生成",
+        "assetLoadFailed": "素材加载失败",
+        "assetUploadFailed": "上传失败",
+        "assetEmpty": "这里还没有内容",
+        "assetDelete": "删除",
+        "assetPreview": "放大预览",
+        "assetFilter": "筛选",
+        "assetFilterBy": "按类型筛选",
+        "assetFilterAll": "全部",
+        "assetFilterImages": "图片",
+        "assetFilterVideos": "视频",
+        "assetFilterAudio": "音频",
+        "remove": "移除",
+        "assetMore": "更多操作",
+        "mentionEmpty": "请先选择素材",
+        "trimAudioTitle": "裁剪音频",
+        "trimAudioHint": "选择要使用的片段（最长 {seconds} 秒）",
+        "trimAudioSave": "保存",
+        "trimAudioCancel": "取消",
+        "trimAudioPlay": "播放",
+        "trimAudioPause": "暂停",
+        "trimAudioDecodeFailed": "无法读取该音频文件",
+        "trimAudioHandleStart": "调整起点",
+        "trimAudioHandleEnd": "调整终点",
+        "videoTooLong": "{name} 超过 {seconds} 秒，无法选用。请自行裁剪后重新上传。",
+        "bannerGeneral": "通用",
+        "copyVideoUrl": "复制视频链接",
+        "deleteVideo": "删除视频",
+        "videoDetail": "视频详情",
+        "videoRatio": "画幅比",
+        "videoResolution": "分辨率",
+        "videoDuration": "时长",
+        "secondsValue": "{seconds} 秒",
+        "publishSubmittedVideoToast": "已提交 {count} 个视频待审核",
+        "deletedVideoToast": "已删除 {count} 个视频",
+        "deleteVideoBlockedToast": "该视频已在广场，请先撤回或下架",
+        "deleteVideoConfirmTitle": "删除 {count} 个视频",
+        "deleteVideoConfirmDescription": "将永久删除 {count} 条生成记录及其视频，此操作不可撤销。",
+        "play": "播放",
+        "pause": "暂停",
+        "mediaTypeFull": "该模型最多可选 {max} 个{type}",
+        "ratioFromImage": "比例随图",
+        "ratioFromImageHint": "该模型以首帧图片的画幅为准，此处的比例设置不会生效。"
       },
       "privateFirst": "默认私有",
       "createPrivately": "当前页创作",
@@ -1124,7 +1171,9 @@
         "all": "全部素材",
         "favorites": "收藏",
         "image": "图片",
-        "video": "视频"
+        "video": "视频",
+        "uploads": "我的上传",
+        "audio": "音频"
       },
       "empty": {
         "title": "你的素材会出现在这里",
@@ -1137,7 +1186,9 @@
         "size": "尺寸",
         "createdAt": "创建时间",
         "download": "下载",
-        "delete": "删除"
+        "delete": "删除",
+        "fileName": "文件名",
+        "uploader": "上传者"
       },
       "fit": {
         "toCover": "铺满卡片",
@@ -1163,7 +1214,10 @@
         "moveFailed": "移动素材失败",
         "deleteFailed": "删除素材失败",
         "save": "保存",
-        "more": "更多"
+        "more": "更多",
+        "publish": "发布到广场",
+        "play": "播放",
+        "pause": "暂停"
       },
       "bulk": {
         "download": "下载",
@@ -1208,8 +1262,17 @@
       "createImageDesc": "生成 AI 图像",
       "editImage": "编辑图像",
       "editImageDesc": "修改与精修图像",
-      "gallery": "作品广场",
-      "galleryDesc": "探索社区创作"
+      "gallery": "图片广场",
+      "galleryDesc": "浏览社区图片作品"
+    },
+    "videoNavFlyout": {
+      "models": "模型",
+      "loading": "正在加载模型…",
+      "features": "功能",
+      "createVideo": "生成视频",
+      "createVideoDesc": "用 AI 生成视频",
+      "gallery": "视频广场",
+      "galleryDesc": "浏览社区视频作品"
     }
   }
 }

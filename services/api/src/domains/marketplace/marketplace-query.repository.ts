@@ -158,27 +158,13 @@ export class MarketplaceQueryRepository {
           },
         },
       }),
-      this.prisma.video_generations.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        take,
-        include: {
-          template: {
-            select: { title: true, coverImage: true, category: true },
-          },
-        },
-      }),
-    ]).then(([imageGenerations, videoGenerations]) => ({
-      imageGenerations,
-      videoGenerations,
-    }));
+    ]).then(([imageGenerations]) => ({ imageGenerations }));
   }
 
   countGenerationRows(userId: string) {
-    return Promise.all([
-      this.prisma.image_generations.count({ where: { userId } }),
-      this.prisma.video_generations.count({ where: { userId } }),
-    ]).then(([imageTotal, videoTotal]) => ({ imageTotal, videoTotal }));
+    return Promise.all([this.prisma.image_generations.count({ where: { userId } })]).then(
+      ([imageTotal]) => ({ imageTotal }),
+    );
   }
 
   private imageTemplatePublicWhere(extra: Record<string, unknown> = {}) {

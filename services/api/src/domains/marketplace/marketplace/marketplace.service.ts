@@ -162,27 +162,20 @@ export class MarketplaceService {
     }
 
     if (tab === 'generations') {
-      // 图片/视频生成记录分属两张表：各取前 skip+pageSize 条做归并排序后切出当前页，
-      // total 由两表 count 求和，避免一次性加载全部历史。
+      // 只剩图片模板生成一张表：video_generations（第一代视频表）已随「扣费但不产出」
+      // 的模板生成链路一并删除，现役视频生成走 video_clip_generations，
+      // 有自己的历史接口（GET /api/video-gen/history），不混进这个 tab。
       const limit = skip + pageSize;
-      const [{ imageGenerations, videoGenerations }, { imageTotal, videoTotal }] =
-        await Promise.all([
-          this.queries.findGenerationRows(userId, limit),
-          this.queries.countGenerationRows(userId),
-        ]);
-      const merged = [
-        ...imageGenerations.map((g) => ({
-          ...g,
-          generationType: ResourceType.IMAGE_TEMPLATE,
-        })),
-        ...videoGenerations.map((g) => ({
-          ...g,
-          generationType: ResourceType.VIDEO_TEMPLATE,
-        })),
-      ].sort(this.byCreatedAtDesc);
+      const [{ imageGenerations }, { imageTotal }] = await Promise.all([
+        this.queries.findGenerationRows(userId, limit),
+        this.queries.countGenerationRows(userId),
+      ]);
+      const merged = imageGenerations
+        .map((g) => ({ ...g, generationType: ResourceType.IMAGE_TEMPLATE }))
+        .sort(this.byCreatedAtDesc);
       return {
         items: merged.slice(skip, skip + pageSize),
-        total: imageTotal + videoTotal,
+        total: imageTotal,
         page,
         pageSize,
       };

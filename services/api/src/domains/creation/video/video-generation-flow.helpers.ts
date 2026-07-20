@@ -610,13 +610,19 @@ export function buildCompletedGenerationInput(input: {
   generation: Pick<video_clip_generations, 'id' | 'clipId'>;
   outcome: SucceededSeedanceTaskOutcome;
   videoUrl: string;
+  /**
+   * 转存到 R2 之后的末帧地址。必传（可为 null）——**不要**回退到
+   * `outcome.lastFrameUrl`：那是供应商的 24h 临时链接，会被当成素材库封面和链式
+   * 生成的输入图存进库，一天后集体失效。转存失败就落 null，宁可没封面也不留死链。
+   */
+  lastFrameUrl: string | null;
 }): CompletedGenerationInput {
   return {
     generationId: input.generation.id,
     clipId: input.generation.clipId,
     externalStatus: input.outcome.externalStatus,
     videoUrl: input.videoUrl,
-    lastFrameUrl: input.outcome.lastFrameUrl,
+    lastFrameUrl: input.lastFrameUrl,
     durationSec: input.outcome.durationSec,
   };
 }

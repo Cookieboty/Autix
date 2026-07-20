@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { AppLogger } from '../../platform/common/app-logger';
 import { runInJobContext } from '../../platform/common/job-context';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
@@ -314,9 +315,10 @@ export class VideoGenerationFlowService {
     // Wan 2.7 是一个模型，上游按素材角色分派到 t2v/i2v/ref —— routing 据素材覆盖 preset 与 model ID。
     const routing = resolveVideoRouting(modelConfig.metadata, modelConfig.model, materials.map((m) => m.role));
     if (routing.maxDurationSeconds != null && requestLimits.durationSeconds > routing.maxDurationSeconds)
-      throw new BadRequestException(
-        `该生成模式最长 ${routing.maxDurationSeconds}s，当前请求 ${requestLimits.durationSeconds}s`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'video.duration_exceeds_mode_limit', {
+        max: routing.maxDurationSeconds,
+        requested: requestLimits.durationSeconds,
+      });
     const preset = routing.preset;
     const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
@@ -563,10 +565,17 @@ export class VideoGenerationFlowService {
         return;
       }
 
+      // 末帧同样要转存：它会成为素材库封面与链式生成的输入图，留供应商链接等于留 24h 死链。
+      // 失败落 null 而不是失败整次生成——少张封面 ≠ 视频没生成出来。
+      const persistedLastFrameUrl = await this.videoAssets.persistProviderImage(
+        legacy.lastFrameUrl ?? undefined,
+        generation.id,
+      );
       const completedInput = buildCompletedGenerationInput({
         generation,
         outcome: legacy,
         videoUrl: videoResolution.videoUrl,
+        lastFrameUrl: persistedLastFrameUrl,
       });
       if (isStoryboardProjectGeneration) {
         await this.repository.markProjectGenerationCompletedAndConfirmHold(
@@ -898,9 +907,10 @@ export class VideoGenerationFlowService {
       storyboardMaterials.map((m) => m.role),
     );
     if (routing.maxDurationSeconds != null && requestLimits.durationSeconds > routing.maxDurationSeconds)
-      throw new BadRequestException(
-        `该生成模式最长 ${routing.maxDurationSeconds}s，当前请求 ${requestLimits.durationSeconds}s`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'video.duration_exceeds_mode_limit', {
+        max: routing.maxDurationSeconds,
+        requested: requestLimits.durationSeconds,
+      });
     const preset = routing.preset;
     const callbackUrl = this.callbackUrlBuilder.build(preset.key);
     const callRequest = {
