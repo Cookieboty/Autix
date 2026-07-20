@@ -66,11 +66,16 @@ export function Navbar() {
   }, [scrollY]);
 
   const docsLocale = language === 'zh-CN' || language === 'zh-TW' ? 'zh-CN' : 'en';
-  const NAV_LINKS = [
+  // navDocs 的 href 已经带上了 docs 专属的 locale 前缀（docs 只有 en/zh-CN 两版，
+  // 与站点当前 locale 无关）。next-intl 的 <Link> 会再按当前 locale 加一层前缀，
+  // 造成 /zh-CN/zh-CN/docs、/fr/en/docs 这类双重前缀 404（同一坑见
+  // app/[locale]/docs/layout.tsx 里的语言切换器注释）。所以这一项标记为 `plain`，
+  // 渲染时用裸 <a> 绕开 <Link> 的自动前缀。
+  const NAV_LINKS: { label: string; href: string; plain?: boolean }[] = [
     { label: t('navVideoCreation'), href: '/video' },
     ...(chatEnabled ? [{ label: t('navWorkspace'), href: '/chat' }] : []),
     { label: t('navPricing'), href: '#pricing' },
-    { label: t('navDocs'), href: `/${docsLocale}/docs` },
+    { label: t('navDocs'), href: `/${docsLocale}/docs`, plain: true },
     { label: t('navHelp'), href: '#faq' },
   ];
 
@@ -124,11 +129,17 @@ export function Navbar() {
             </button>
           </div>
 
-          {NAV_LINKS.slice(2).map(({ label, href }) => (
-            <Link key={label} href={href} className="text-sm transition-colors" style={{ color: navMutedColor }}>
-              {label}
-            </Link>
-          ))}
+          {NAV_LINKS.slice(2).map(({ label, href, plain }) =>
+            plain ? (
+              <a key={label} href={href} className="text-sm transition-colors" style={{ color: navMutedColor }}>
+                {label}
+              </a>
+            ) : (
+              <Link key={label} href={href} className="text-sm transition-colors" style={{ color: navMutedColor }}>
+                {label}
+              </Link>
+            ),
+          )}
         </nav>
 
         {/* Right controls */}
@@ -377,11 +388,17 @@ export function Navbar() {
               </Link>
             );
           })}
-          {NAV_LINKS.slice(2).map(({ label, href }) => (
-            <Link key={label} href={href} className="block py-2 text-sm" style={{ color: 'var(--foreground)' }} onClick={() => setMobileOpen(false)}>
-              {label}
-            </Link>
-          ))}
+          {NAV_LINKS.slice(2).map(({ label, href, plain }) =>
+            plain ? (
+              <a key={label} href={href} className="block py-2 text-sm" style={{ color: 'var(--foreground)' }} onClick={() => setMobileOpen(false)}>
+                {label}
+              </a>
+            ) : (
+              <Link key={label} href={href} className="block py-2 text-sm" style={{ color: 'var(--foreground)' }} onClick={() => setMobileOpen(false)}>
+                {label}
+              </Link>
+            ),
+          )}
           <div className="flex items-center gap-2 py-2">
             <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={t('a11yToggleTheme')} className="p-2 rounded-md cursor-pointer" style={{ color: 'var(--muted)' }}>
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

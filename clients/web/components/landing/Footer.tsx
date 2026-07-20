@@ -12,7 +12,7 @@ export function Footer() {
   const chatEnabled = useChatEnabled(false);
   const docsLocale = language === 'zh-CN' || language === 'zh-TW' ? 'zh-CN' : 'en';
 
-  const footerLinks: Record<string, { label: string; href: string }[]> = {
+  const footerLinks: Record<string, { label: string; href: string; plain?: boolean }[]> = {
     [t('footerProduct')]: [
       ...(chatEnabled
         ? [
@@ -24,7 +24,9 @@ export function Footer() {
       { label: t('showcasePoints'), href: '/register' },
     ],
     [t('footerHelp')]: [
-      { label: t('navDocs'), href: `/${docsLocale}/docs` },
+      // 与 Navbar 同理：href 已带 docs 专属 locale 前缀（docs 只有 en/zh-CN 两版），
+      // 标记 plain 以渲染裸 <a>，避免 next-intl <Link> 再叠一层当前站点 locale 前缀。
+      { label: t('navDocs'), href: `/${docsLocale}/docs`, plain: true },
       { label: t('faqTitle'), href: '#faq' },
       { label: t('showcasePointsDetail'), href: '#' },
       { label: t('planContactUs'), href: '#' },
@@ -52,9 +54,13 @@ export function Footer() {
             <div key={group}>
               <p className="text-xs font-semibold mb-4" style={{ color: 'var(--foreground)' }}>{group}</p>
               <ul className="space-y-2.5">
-                {links.map(({ label, href }) => (
+                {links.map(({ label, href, plain }) => (
                   <li key={label}>
-                    <Link href={href} className="text-xs transition-colors" style={{ color: 'var(--muted)' }}>{label}</Link>
+                    {plain ? (
+                      <a href={href} className="text-xs transition-colors" style={{ color: 'var(--muted)' }}>{label}</a>
+                    ) : (
+                      <Link href={href} className="text-xs transition-colors" style={{ color: 'var(--muted)' }}>{label}</Link>
+                    )}
                   </li>
                 ))}
               </ul>

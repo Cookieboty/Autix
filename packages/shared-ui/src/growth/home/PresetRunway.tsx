@@ -61,8 +61,12 @@ export function PresetRunway({
           subtitle={subtitle}
           center
           actions={
+            // `/presets` 从未落地；组件展示的是可复用的创作 preset 标签，
+            // 语义上最接近的现存路由是模板市场（`/marketplace/image-templates`，
+            // 与 Navbar 的 mega menu「模板」入口一致），先指向它避免未来被重新
+            // 接上首页时立刻 404。
             <Link
-              href="/presets"
+              href="/marketplace/image-templates"
               className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-primary px-4 py-2 text-sm font-black text-primary-foreground transition hover:bg-info"
             >
               <Layers3 className="size-4" />

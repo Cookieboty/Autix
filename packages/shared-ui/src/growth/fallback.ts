@@ -47,7 +47,7 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
       subtitle: t('fallback.items.launchCampaign.subtitle'),
       mediaType: 'image',
       mediaUrl: image('photo-1557804506-669a67965ba0'),
-      href: '/marketing-studio',
+      href: '/ai/image',
       badge: t('fallback.badges.growth'),
       tags: [t('fallback.tags.ads'), t('fallback.tags.marketing'), t('fallback.tags.scale')],
       author: null,
@@ -70,7 +70,7 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
       mediaType: 'video',
       mediaUrl: video('short-film-mini.mp4'),
       posterUrl: image('photo-1519608487953-e999c86e7455'),
-      href: '/original-series',
+      href: '/ai/video',
       badge: t('fallback.badges.series'),
       tags: [t('fallback.tags.series'), t('fallback.tags.story'), t('fallback.tags.cinema')],
       author: null,
@@ -106,7 +106,7 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
         sourceIndex: 2,
         id: 'fallback-launch-room',
         mediaUrl: image('photo-1522202176988-66273c2fd55f'),
-        href: '/marketing-studio',
+        href: '/ai/image',
         badge: t('fallback.badges.growth'),
       },
       {
@@ -122,7 +122,7 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
         mediaUrl: video('action-v2-mini.mp4'),
         posterUrl: image('photo-1500530855697-b586d89ba3ee'),
         mediaType: 'video',
-        href: '/original-series',
+        href: '/ai/video',
         badge: t('fallback.badges.series'),
       },
     ];
@@ -144,7 +144,11 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
   ];
 }
 
-export function getFallbackPage(t: GrowthTranslator, slug = 'marketing-studio'): PublicGrowthPage {
+// 注：仓库内目前没有任何调用方（`grep -rn getFallbackPage` 只命中本文件的定义），
+// 之前的默认值 `slug = 'marketing-studio'` 是个死链陷阱——一旦有新调用方漏传
+// slug，会静默拿到一个不存在的路由。既然没有已知调用方依赖它，改成必填参数，
+// 交给未来的调用方显式决定落地页 slug，而不是继续猜一个默认值。
+export function getFallbackPage(t: GrowthTranslator, slug: string): PublicGrowthPage {
   const items = getFallbackItems(t);
   return {
     slug,

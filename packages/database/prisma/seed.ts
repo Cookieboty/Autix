@@ -124,7 +124,7 @@ const FIXED_CAMPAIGN_SEEDS: FixedCampaignSeed[] = [
       subtitleI18nKey: 'onboardSubPromptCampaign',
       ctaI18nKey: 'onboardCtaExplore',
       modelLabel: 'Marketing Studio',
-      hrefPath: '/marketing-studio',
+      hrefPath: '/ai/image',
       sortOrder: 3,
     },
   },

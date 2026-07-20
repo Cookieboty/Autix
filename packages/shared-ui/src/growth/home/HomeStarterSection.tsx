@@ -127,7 +127,7 @@ const FALLBACK_ONBOARDING_TASKS = [
     titleI18nKey: 'onboardExploreModel',
     subtitleI18nKey: 'onboardSubPromptCampaign',
     ctaI18nKey: 'onboardCtaExplore',
-    hrefPath: '/marketing-studio',
+    hrefPath: '/ai/image',
     points: 20,
     status: 'DISABLED',
     completed: false,

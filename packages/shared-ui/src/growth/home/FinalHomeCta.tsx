@@ -34,7 +34,8 @@ export function FinalHomeCta({
   const links = [
     { label: imageLabel, href: '/ai/image', icon: Images },
     { label: videoLabel, href: '/ai/video', icon: Video },
-    { label: presetsLabel, href: '/presets', icon: Layers3 },
+    // `/presets` 从未落地，同 PresetRunway 一样改指向模板市场（`/marketplace/image-templates`）。
+    { label: presetsLabel, href: '/marketplace/image-templates', icon: Layers3 },
   ];
 
   return (
