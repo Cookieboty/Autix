@@ -3,7 +3,16 @@ import { createHash } from 'node:crypto';
 export const SNAPSHOT_BYTE_LIMIT = 16 * 1024;
 export const UPSTREAM_BODY_BYTE_LIMIT = 4 * 1024;
 
-/** 凭据字段：按名字匹配（大小写不敏感），新增 provider 时默认被覆盖而非默认泄露。 */
+/**
+ * 凭据字段：**精确**匹配字段名（仅大小写不敏感），不是子串匹配也不是前缀匹配。
+ *
+ * 即：只有名字与下列条目完全相等的键会被遮盖。`access_token`、`x-api-key`、
+ * `apiSecret`、`callbackUrl` 这类变体**会原样透传**——新增 provider 时默认是
+ * 泄露而非默认被覆盖，加新 provider 必须回来手工补齐它用的字段名。
+ *
+ * 目前可接受：本净化器的输入是 paramsSnapshot（用户请求参数），不是 provider
+ * 凭据，所以实际暴露面很小。改成子串匹配是后续动作，不在本次改动范围内。
+ */
 const CREDENTIAL_KEYS = new Set([
   'callback_url',
   'apikey',

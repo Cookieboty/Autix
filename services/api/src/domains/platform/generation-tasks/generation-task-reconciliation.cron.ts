@@ -30,6 +30,10 @@ interface Violation {
  * 悬挂生成任务收敛 cron：扫描 `status=PENDING AND providerTaskId IS NULL` 的行，
  * 按对应 hold 的**真实状态**分派——不是按任务年龄分派。
  *
+ * hold 的定位有两条路：优先 `generation_tasks.holdId`；该字段为 null 时回退按
+ * `point_holds.taskId = generation_tasks.id` 反查（回填行与图片侧 start/createHold
+ * 窗口内的行都天然没有 holdId，只按 holdId 查会让它们永不收敛）。
+ *
  * 完整分派矩阵（见 task-10 brief / spec）：
  * - hold=REFUNDED                         → CAS 标 EXPIRED，errorStage=SUBMIT，billingStatus=REFUNDED
  * - hold=PARTIALLY_REFUNDED               → 不改状态，最高优先级告警（不受年龄门槛限制）
@@ -71,6 +75,23 @@ export class GenerationTaskReconciliationCron {
     const holdRows = ids.length > 0 ? await this.holds.findByIds(ids) : [];
     const holdById = new Map(holdRows.map((h) => [h.id, h]));
 
+    // holdId 为 null 的行不是"没有 hold"，而是"这一行从来没机会写下 holdId"：
+    // Task 2 回填脚本从不写该字段，且图片侧 hold 是 start() 之后才建、要到首次
+    // recordBilling(HELD) 才回填。这两类行只按 holdId 查的话永远进不了 REFUNDED
+    // 分支——既不朽（清理 cron 刻意不删 PENDING），又每 10 分钟刷一条 hold-missing
+    // 告警。反向指针 point_holds.taskId 在两侧都等于 generation_tasks.id（spec §4.2
+    // 统一 ID 决策），故回退按 taskId 查。
+    const taskIdsWithoutHold = tasks.filter((t) => !t.holdId).map((t) => t.id);
+    const holdRowsByTask =
+      taskIdsWithoutHold.length > 0 ? await this.holds.findByTaskIds(taskIdsWithoutHold) : [];
+    // findByTaskIds 按 createdAt 升序返回，故同一 taskId 有多行时后写入的覆盖先写入的
+    // ——留下的是最新 hold。据一个已被新 hold 取代的旧 REFUNDED 收敛，会把仍可能
+    // 成功的任务错标成 EXPIRED。
+    const holdByTaskId = new Map<string, (typeof holdRowsByTask)[number]>();
+    for (const row of holdRowsByTask) {
+      if (row.taskId) holdByTaskId.set(row.taskId, row);
+    }
+
     const now = Date.now();
     const violations: Violation[] = [];
     let changed = 0;
@@ -79,7 +100,7 @@ export class GenerationTaskReconciliationCron {
       // 70 分钟阈值用 submittedAt；仅当该字段缺失（Task 2 回填的行）时回退 createdAt。
       const anchor = task.submittedAt ?? task.createdAt;
       const ageMs = now - anchor.getTime();
-      const hold = task.holdId ? holdById.get(task.holdId) : undefined;
+      const hold = task.holdId ? holdById.get(task.holdId) : holdByTaskId.get(task.id);
 
       if (hold?.status === PointHoldStatus.REFUNDED) {
         // 唯一能驱动状态迁移的业务事实：hold 已确认退款 → 任务不再可能完成，
@@ -95,8 +116,9 @@ export class GenerationTaskReconciliationCron {
       }
 
       if (!hold) {
-        // holdId 为空或指向不存在的行：本身就是数据完整性问题，但可能只是刚
-        // 建行、hold 还没来得及写——所以仍然要求超过年龄阈值才告警。
+        // 走到这里意味着两条路都没查到：holdId 指向不存在的行，或 holdId 为空且
+        // point_holds 里也没有任何 taskId 指回本行。这是真的数据完整性问题，但也
+        // 可能只是刚建行、hold 还没来得及写——所以仍然要求超过年龄阈值才告警。
         if (ageMs >= STALE_ALERT_MS) {
           violations.push({ id: task.id, reason: 'hold-missing', ageMs });
         }

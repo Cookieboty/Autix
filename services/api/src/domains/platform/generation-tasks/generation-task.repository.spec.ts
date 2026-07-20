@@ -88,6 +88,22 @@ describe('GenerationTaskRepository.findDanglingPending', () => {
       createdAt: true,
     });
   });
+
+  /**
+   * 阻塞 2：`take: 500` 没有 `orderBy` 时，Postgres 返回哪 500 条是不确定的。
+   * 一旦悬挂行累积超过 500，新退款的行可能永远进不了扫描窗口——按 createdAt 升序
+   * 才能保证最老的行优先收敛、窗口随收敛稳定前移。
+   */
+  it('按 createdAt 升序排序，保证 take 上限下的扫描窗口是确定的', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const repo = new GenerationTaskRepository({ generation_tasks: { findMany } } as any);
+
+    await repo.findDanglingPending();
+
+    const args = findMany.mock.calls[0][0];
+    expect(args.orderBy).toEqual({ createdAt: 'asc' });
+    expect(args.take).toBe(500);
+  });
 });
 
 describe('GenerationTaskRepository.claimTerminalStandalone', () => {

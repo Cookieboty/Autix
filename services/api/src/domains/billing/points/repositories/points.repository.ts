@@ -237,6 +237,35 @@ export class PointsRepository {
     });
   }
 
+  /**
+   * 按任务 id 批量反查 hold（生成任务收敛 cron 的回退路径）。
+   *
+   * 存在意义：`generation_tasks.holdId` 有两类天然为 null 的行——Task 2 回填脚本
+   * 产出的行（脚本从不写 holdId），以及图片侧 `start()` 与 `createHold()` 之间崩溃
+   * 的行（holdId 要到首次 `recordBilling(HELD)` 才回填）。这两类行只能靠反向指针
+   * `point_holds.taskId` 找到自己的 hold；spec §4.2 的统一 ID 决策保证
+   * `point_holds.taskId == generation_tasks.id` 对图片与视频两侧都成立。
+   *
+   * 按 createdAt 升序返回：同一 taskId 理论上只有一个 hold（createHold 对活跃 hold
+   * 做幂等去重），但"退款后重试"确实可能留下多行。调用方按顺序覆盖取最后一条，
+   * 即最新的 hold —— 据一个已被新 hold 取代的旧 REFUNDED 收敛，会把仍可能成功的
+   * 任务错标成 EXPIRED。
+   *
+   * 注意 taskType 未参与过滤（该字段是动态定价类型，取值发散），因此走不到
+   * `@@index([taskType, taskId])`。可接受：调用方单轮最多传 500 个 id、每 10 分钟
+   * 一次。若 point_holds 增长到该扫描成为瓶颈，应补一条 taskId 单列索引。
+   */
+  async findHoldsByTaskIds(
+    taskIds: string[],
+  ): Promise<Array<{ id: string; taskId: string | null; status: PointHoldStatus }>> {
+    if (taskIds.length === 0) return [];
+    return this.prisma.point_holds.findMany({
+      where: { taskId: { in: taskIds } },
+      select: { id: true, taskId: true, status: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   async createHoldWithinTx(
     tx: Prisma.TransactionClient,
     data: Prisma.point_holdsUncheckedCreateInput,

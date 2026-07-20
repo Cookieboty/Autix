@@ -83,6 +83,16 @@ export class PointsHoldService {
     return this.pointsRepo.findHoldsByIds(ids);
   }
 
+  /**
+   * 按任务 id 反查 hold（收敛 cron 在 `generation_tasks.holdId` 为 null 时的回退）。
+   * 按 createdAt 升序返回，调用方取每个 taskId 的最后一条即最新 hold。
+   */
+  async findByTaskIds(
+    taskIds: string[],
+  ): Promise<Array<{ id: string; taskId: string | null; status: PointHoldStatus }>> {
+    return this.pointsRepo.findHoldsByTaskIds(taskIds);
+  }
+
   async createHold(userId: string, input: CreateHoldInput) {
     this.ledgerService.assertPositiveAmount(input.amount);
 

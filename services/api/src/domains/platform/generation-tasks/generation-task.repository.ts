@@ -144,11 +144,16 @@ export class GenerationTaskRepository {
   /**
    * 悬挂任务：PENDING 且从未拿到 providerTaskId（即 submit 从未成功过）。
    * 收敛 cron 唯一的候选来源；`take` 做防御性上限，避免单轮扫出过多行拖垮 cron。
+   *
+   * `orderBy` 不是可选的装饰：没有它时，一旦悬挂行累积超过 take 上限，Postgres
+   * 返回哪 500 条完全不确定，新退款的行可能永远进不了扫描窗口。按 createdAt 升序
+   * 保证最老的行优先收敛，窗口随收敛稳定前移。
    */
   async findDanglingPending() {
     return this.prisma.generation_tasks.findMany({
       where: { status: GenerationTaskStatus.PENDING, providerTaskId: null },
       select: { id: true, holdId: true, submittedAt: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
       take: 500,
     });
   }
