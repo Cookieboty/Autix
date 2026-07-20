@@ -2,6 +2,7 @@ import { getDatabaseUrl, PrismaClient, type Prisma } from '@autix/database';
 import type { PermissionAction, PermissionType } from '@autix/database';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { seedFeaturedSlots } from './seeds/featured-slots';
+import { CHAT_MENU_DEFS } from './seeds/chat-menus';
 
 const adapter = new PrismaPg({
   connectionString: getDatabaseUrl(),
@@ -337,135 +338,12 @@ async function main() {
     },
   });
 
-  // Chat 系统菜单
-  const chatMenuDefs = [
-    {
-      code: 'template-review',
-      name: '模板审核', nameEn: 'Template Review',
-      nameZhTW: '模板審核', nameFr: 'Examen des modèles',
-      nameJa: 'テンプレート審査', nameRu: 'Проверка шаблонов',
-      nameVi: 'Duyệt mẫu',
-      path: '/templates', icon: 'FileText', sort: 1,
-    },
-    {
-      code: 'membership-users',
-      name: '用户管理', nameEn: 'Membership Users',
-      nameZhTW: '使用者管理', nameFr: 'Gestion des membres',
-      nameJa: '会員管理', nameRu: 'Управление пользователями',
-      nameVi: 'Quản lý thành viên',
-      path: '/membership/users', icon: 'Users', sort: 2,
-    },
-    {
-      code: 'membership-levels',
-      name: '会员等级', nameEn: 'Membership Levels',
-      nameZhTW: '會員等級', nameFr: 'Niveaux de membres',
-      nameJa: '会員ランク', nameRu: 'Уровни членства',
-      nameVi: 'Cấp thành viên',
-      path: '/membership/levels', icon: 'Crown', sort: 3,
-    },
-    {
-      code: 'membership-packages',
-      name: '积分加油包', nameEn: 'Credit Packages',
-      nameZhTW: '積分加油包', nameFr: 'Packs de crédits',
-      nameJa: 'クレジットパック', nameRu: 'Пакеты кредитов',
-      nameVi: 'Gói tín dụng',
-      path: '/membership/packages', icon: 'Zap', sort: 4,
-    },
-    {
-      code: 'membership-task-costs',
-      name: '计费规则', nameEn: 'Pricing Rules',
-      nameZhTW: '計費規則', nameFr: 'Règles de tarification',
-      nameJa: '課金ルール', nameRu: 'Правила тарификации',
-      nameVi: 'Quy tắc tính phí',
-      path: '/membership/task-costs', icon: 'Settings', sort: 5,
-    },
-    {
-      code: 'membership-orders',
-      name: '订单管理', nameEn: 'Orders',
-      nameZhTW: '訂單管理', nameFr: 'Gestion des commandes',
-      nameJa: '注文管理', nameRu: 'Управление заказами',
-      nameVi: 'Quản lý đơn hàng',
-      path: '/membership/orders', icon: 'Receipt', sort: 6,
-    },
-    {
-      code: 'membership-points',
-      name: '积分流水', nameEn: 'Points History',
-      nameZhTW: '積分流水', nameFr: 'Historique des points',
-      nameJa: 'ポイント履歴', nameRu: 'История баллов',
-      nameVi: 'Lịch sử điểm',
-      path: '/membership/points', icon: 'History', sort: 7,
-    },
-    {
-      code: 'campaign-rewards',
-      name: '活动奖励中心', nameEn: 'Campaign Rewards Center',
-      nameZhTW: '活動獎勵中心', nameFr: 'Centre des récompenses',
-      nameJa: 'キャンペーン報酬センター', nameRu: 'Центр наград кампаний',
-      nameVi: 'Trung tâm thưởng chiến dịch',
-      path: '/campaigns', icon: 'Gift', sort: 8,
-    },
-    {
-      code: 'system-models',
-      name: '系统模型配置', nameEn: 'System Models',
-      nameZhTW: '系統模型配置', nameFr: 'Modèles système',
-      nameJa: 'システムモデル設定', nameRu: 'Системные модели',
-      nameVi: 'Cấu hình mô hình hệ thống',
-      path: '/models', icon: 'Globe', sort: 9,
-    },
-    {
-      code: 'system-settings',
-      name: '系统配置', nameEn: 'System Settings',
-      nameZhTW: '系統配置', nameFr: 'Paramètres système',
-      nameJa: 'システム設定', nameRu: 'Системные настройки',
-      nameVi: 'Cấu hình hệ thống',
-      path: '/settings', icon: 'Settings', sort: 10,
-    },
-    {
-      code: 'system-prompts',
-      name: '系统 Prompt', nameEn: 'System Prompts',
-      nameZhTW: '系統 Prompt', nameFr: 'Prompts système',
-      nameJa: 'システムプロンプト', nameRu: 'Системные промпты',
-      nameVi: 'Prompt hệ thống',
-      path: '/prompts', icon: 'FileText', sort: 11,
-    },
-    {
-      code: 'gallery-review',
-      name: '广场审核', nameEn: 'Gallery Review',
-      nameZhTW: '廣場審核', nameFr: 'Modération de la galerie',
-      nameJa: 'ギャラリー審査', nameRu: 'Модерация галереи',
-      nameVi: 'Duyệt thư viện',
-      path: '/gallery', icon: 'ShieldAlert', sort: 7,
-    },
-    {
-      code: 'featured-slots',
-      name: '运营位编排', nameEn: 'Featured Slots',
-      nameZhTW: '運營位編排', nameFr: 'Emplacements mis en avant',
-      nameJa: '注目枠', nameRu: 'Витрины',
-      nameVi: 'Vị trí nổi bật',
-      path: '/featured-slots', icon: 'LayoutGrid', sort: 8,
-    },
-    {
-      code: 'resource-boosts',
-      name: '内容加热', nameEn: 'Content Boost',
-      nameZhTW: '內容加熱', nameFr: 'Boost de contenu',
-      nameJa: 'コンテンツブースト', nameRu: 'Продвижение',
-      nameVi: 'Tăng nhiệt nội dung',
-      path: '/boosts', icon: 'Flame', sort: 9,
-    },
-    {
-      code: 'generation-tasks',
-      name: '生成任务', nameEn: 'Generation Tasks',
-      nameZhTW: '生成任務', nameFr: 'Tâches de génération',
-      nameJa: '生成タスク', nameRu: 'Задачи генерации',
-      nameVi: 'Tác vụ tạo',
-      path: '/generation-tasks', icon: 'ListChecks', sort: 10,
-    },
-  ] as const;
-
+  // Chat 系统菜单（单一来源见 ./seeds/chat-menus，勿在此处再复制一份定义）
   const chatMenus: { id: string }[] = [];
   // generation-tasks 菜单权限需在角色关联阶段显式挂到 chatSystemAdmin（见下方
   // “生成任务管理权限” 小节），chatMenus 的 roleMenu 循环只处理菜单可见性，不处理权限。
   let generationTasksMenu: { id: string } | undefined;
-  for (const def of chatMenuDefs) {
+  for (const def of CHAT_MENU_DEFS) {
     const m = await prisma.menu.upsert({
       where: { systemId_code: { systemId: chatSystem.id, code: def.code } },
       update: {
