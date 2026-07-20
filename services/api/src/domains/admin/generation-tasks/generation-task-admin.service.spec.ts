@@ -1,12 +1,24 @@
 import { GenerationTaskAdminService } from './generation-task-admin.service';
 
 describe('GenerationTaskAdminService', () => {
-  it('列表结果里绝不能出现 prompt / paramsSnapshot / upstreamBody', async () => {
+  it('列表结果里绝不能出现全部 6 个敏感列', async () => {
     // repository 的 select 已经不取这些列，但 service 层再做一次断言式过滤，
-    // 防止将来有人改 select 时把敏感字段带出去。
+    // 防止将来有人改 select 时把敏感字段带出去。mock item 把全部 6 个敏感键都塞上
+    // 真实值，确保每个断言都有实际的红/绿信号（而不是因为 mock 里压根没这个键而恒真）。
     const repo = {
       list: vi.fn().mockResolvedValue({
-        items: [{ id: 't-1', promptLength: 12, prompt: '不该出现', upstreamBody: '不该出现' }],
+        items: [
+          {
+            id: 't-1',
+            promptLength: 12,
+            prompt: '不该出现',
+            paramsSnapshot: { seed: 1 },
+            upstreamBody: '不该出现',
+            upstreamDiagnostics: { trace: 'x' },
+            errorMessage: '不该出现',
+            billingError: '不该出现',
+          },
+        ],
         nextCursor: null,
       }),
       findDetail: vi.fn(),
@@ -18,6 +30,9 @@ describe('GenerationTaskAdminService', () => {
     expect(result.items[0]).not.toHaveProperty('prompt');
     expect(result.items[0]).not.toHaveProperty('paramsSnapshot');
     expect(result.items[0]).not.toHaveProperty('upstreamBody');
+    expect(result.items[0]).not.toHaveProperty('upstreamDiagnostics');
+    expect(result.items[0]).not.toHaveProperty('errorMessage');
+    expect(result.items[0]).not.toHaveProperty('billingError');
     expect(result.items[0].promptLength).toBe(12);
   });
 

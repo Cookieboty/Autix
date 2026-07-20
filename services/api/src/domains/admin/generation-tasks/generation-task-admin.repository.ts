@@ -3,7 +3,21 @@ import type { Prisma } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import type { GenerationTaskListQueryDto } from './dto/generation-task-query.dto';
 
-/** 列表返回的列。刻意不含 prompt / paramsSnapshot / upstreamBody —— 见 spec §6 字段切分。 */
+/**
+ * 敏感/自由文本列：generation_tasks 表上不应对外泄露给列表接口的字段（详情接口按更高权限放行）。
+ * LIST_SELECT 的排除范围和 service 层第二道闸（LIST_FORBIDDEN_KEYS）都从这里派生，
+ * 避免两处手工维护清单导致漂移——见 spec §6 字段切分。
+ */
+export const GENERATION_TASK_SENSITIVE_KEYS = [
+  'prompt',
+  'paramsSnapshot',
+  'upstreamBody',
+  'upstreamDiagnostics',
+  'errorMessage',
+  'billingError',
+] as const;
+
+/** 列表返回的列。刻意不含 GENERATION_TASK_SENSITIVE_KEYS 里的任一列。 */
 const LIST_SELECT = {
   id: true,
   kind: true,
@@ -31,6 +45,15 @@ const LIST_SELECT = {
   videoGenerationId: true,
   imageGenerationId: true,
 } as const;
+
+/**
+ * 编译期断言：若 LIST_SELECT 意外选中了 GENERATION_TASK_SENSITIVE_KEYS 里的任一列，
+ * `_overlap` 的类型就不再是 `never`，下一行赋值会编译失败。这样两份清单的一致性
+ * 由编译器强制保证，而不是靠人工 review 发现漂移。
+ */
+type _SensitiveOverlap = Extract<keyof typeof LIST_SELECT, (typeof GENERATION_TASK_SENSITIVE_KEYS)[number]>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _overlapCheck: _SensitiveOverlap extends never ? true : never = true;
 
 @Injectable()
 export class GenerationTaskAdminRepository {
