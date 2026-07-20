@@ -83,3 +83,36 @@ export function fromUnknown(err: unknown, stage: GenerationErrorStage): Generati
     message: err instanceof Error ? err.message : String(err),
   };
 }
+
+/**
+ * 「在最原始的位置构造 failure，但要在很外层才落库」的桥。
+ *
+ * 图片侧 `callImageApi` 把 params 类上游错误就地压成 `BadRequestException`
+ * （只留 httpStatus + message），原始 `ImageUpstreamError` 从不外泄 —— 外层的落库点
+ * 拿到的是一个已经丢光结构化字段的用户异常。与其把原始异常一路透传（要改多处签名，
+ * 且很容易被下一个「压成用户异常」的改动重新截断），不如在构造用户异常的同一行把
+ * 已经建好的 `GenerationFailure` 挂上去：谁抛谁负责挂，谁落库谁负责读。
+ *
+ * 用 Symbol 承载：不进 JSON 序列化（不会泄进 HTTP 响应体），也不会和 Nest 异常
+ * 自身的字段撞名。
+ */
+const GENERATION_FAILURE = Symbol.for('autix.generationFailure');
+
+/** 把 failure 挂到即将抛出的用户异常上，返回同一个异常以便 `throw attach(...)`。 */
+export function attachGenerationFailure<T extends object>(
+  error: T,
+  failure: GenerationFailure,
+): T {
+  Object.defineProperty(error, GENERATION_FAILURE, {
+    value: failure,
+    enumerable: false,
+    configurable: true,
+  });
+  return error;
+}
+
+/** 读回挂载的 failure；没有则 undefined（调用方自行回退 fromUnknown）。 */
+export function readGenerationFailure(error: unknown): GenerationFailure | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  return (error as Record<symbol, GenerationFailure | undefined>)[GENERATION_FAILURE];
+}

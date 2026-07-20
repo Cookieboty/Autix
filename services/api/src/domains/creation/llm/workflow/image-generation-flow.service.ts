@@ -1,10 +1,21 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { AppLogger } from '../../../platform/common/app-logger';
 import {
+  GenerationBillingStatus,
+  GenerationErrorStage,
+  GenerationKind,
   MessageRole,
   ModelType,
   PointHoldStatus,
 } from '../../../platform/prisma/generated';
+import { GenerationTaskRecorder } from '../../../platform/generation-tasks/generation-task.recorder';
+import {
+  fromImageUpstreamError,
+  fromUnknown,
+  readGenerationFailure,
+  type GenerationFailure,
+} from '../../../platform/generation-tasks/generation-failure';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { ImageTemplatesService } from '../../../marketplace/image-templates/image-templates.service';
@@ -25,7 +36,7 @@ import { readImageModelMetadata } from '@autix/domain/model';
 import {
   buildImageCallRequest,
   buildImageModelNotConfiguredException,
-  buildUnsupportedImageParamsException,
+  buildImageParamsFailure,
   narrowImageParamsSchema,
   toImageUrlOrDataUri,
   type AppliedImageSettings,
@@ -174,6 +185,7 @@ export class ImageGenerationFlowService {
     private readonly campaignRewardService: CampaignRewardService,
     private readonly systemPromptService: SystemPromptService,
     private readonly membershipService: MembershipService,
+    private readonly taskRecorder: GenerationTaskRecorder,
   ) { }
 
   buildConversationSummary(
@@ -575,7 +587,9 @@ export class ImageGenerationFlowService {
         this.logger.warn(
           `image upstream rejected params: model=${callRequest.model} protocol=${callRequest.preset.key} status=${error.httpStatus ?? '-'} body=${truncateUpstreamBody(error.upstreamBody)}`,
         );
-        throw buildUnsupportedImageParamsException(request, error);
+        // failure 与用户异常在同一处构造：结构化上游字段（upstreamBody / requestId /
+        // classification）在这一行之后就再也拿不到了 —— 这里是最原始的位置。
+        throw buildImageParamsFailure(request, error).exception;
       }
       throw error;
     }
@@ -628,8 +642,13 @@ export class ImageGenerationFlowService {
       resolveImageCountCeiling(request.modelConfig.metadata),
     );
     const persistedRequest = options?.persistedRequest ?? request;
-    const billingTaskId = `image:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    // 统一任务 ID：同时作为 generation_tasks.id 与 point_holds.taskId，让图片与视频的
+    // 计费 join 语义一致（视频侧一直用 generationId）。客服按 hold 反查任务行才能落到实处。
+    const generationTaskId = randomUUID();
     let holdId: string | null = null;
+    // 失败落库的 stage：上游派发前恒为 SUBMIT，callImageApi 成功返回后（上传/落库/结算）
+    // 全部算 PERSIST。这是唯一一处需要「当前走到哪了」的状态，故用可变量而非层层传参。
+    let stage: GenerationErrorStage = GenerationErrorStage.SUBMIT;
     const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(input.userId);
 
     // FIX-4: 图片生成的两层服务端闸门（hold/调用之前）：
@@ -654,18 +673,48 @@ export class ImageGenerationFlowService {
       buildImageGenerationEstimateInput(request, membershipLevel),
     );
 
-    const { hold } = await this.pointsService.createHold(
-      input.userId,
-      buildImageGenerationHoldCreateInput({
-        taskId: billingTaskId,
-        estimate,
-        // 冻结额 = 单张价 × 张数（张数由业务逻辑计费，见 holds.ts 注释）。
-        count: normalizedCount,
-        requestInput: input,
-        request,
-      }),
-    );
+    // 顺序是硬约束（spec §5.6）：预生成 id → start() → 建 hold → 打上游。
+    //   · 早于建 hold：否则 hold.taskId 指向一条不存在的任务行，客服按 hold 反查落空；
+    //   · 早于打上游：否则上游失败仍然零落库 —— 这正是本次要堵的缺口。
+    // start() 不是 best-effort：任务行是生成的前置条件，写不进去就整个请求中止
+    // （此刻还没冻结积分、没打上游，中止的代价最小）。
+    //
+    // 放在几道准入闸门（entitlement / 硬上限 / 并发 / 估价）**之后**：那些拒绝发生在
+    // 任何花费与上游调用之前，用户拿到的是 4xx 参数错误，不是「一次失败的生成」；
+    // 若提前到闸门之前，每次被拒都会留下一行永远不会收敛的 PENDING。
+    await this.taskRecorder.start({
+      id: generationTaskId,
+      kind: GenerationKind.IMAGE,
+      userId: input.userId,
+      model: request.modelConfig.model,
+      modelConfigId: request.modelConfig.id,
+      provider: request.modelConfig.provider,
+      prompt: request.prompt,
+      paramsSnapshot: persistedRequest,
+      materialCount:
+        (request.referenceImages?.length ?? 0) + (request.sourceImages?.length ?? 0),
+    });
+
+    let hold: { id: string };
+    try {
+      ({ hold } = await this.pointsService.createHold(
+        input.userId,
+        buildImageGenerationHoldCreateInput({
+          taskId: generationTaskId,
+          estimate,
+          // 冻结额 = 单张价 × 张数（张数由业务逻辑计费，见 holds.ts 注释）。
+          count: normalizedCount,
+          requestInput: input,
+          request,
+        }),
+      ));
+    } catch (err) {
+      // 任务行已存在，冻结失败必须留痕（stage=BILLING），否则这行会永远 PENDING。
+      await this.failTask(generationTaskId, fromUnknown(err, GenerationErrorStage.BILLING));
+      throw err;
+    }
     holdId = hold.id;
+    await this.taskRecorder.recordBilling(generationTaskId, GenerationBillingStatus.HELD);
 
     try {
       const {
@@ -674,6 +723,8 @@ export class ImageGenerationFlowService {
         sourceImages: dispatchedSourceImages,
         referenceImages: dispatchedReferenceImages,
       } = await this.callImageApi(request, normalizedCount);
+      // 上游已经成功返回：此后的失败（转存/落库/结算）不再是 SUBMIT。
+      stage = GenerationErrorStage.PERSIST;
       const uploadedImages = await this.uploadGeneratedImages(images);
       // 用 callImageApi 归一化（generate-json-url 转存）后的 sourceImages/
       // referenceImages 覆盖 persistedRequest 里的同名字段：persistImageResult
@@ -690,12 +741,23 @@ export class ImageGenerationFlowService {
         persistedRequestWithDispatchedRefs,
         uploadedImages,
         Date.now() - startedAt,
-        { confirmHoldId: holdId, membershipLevel, heldImageCount: normalizedCount, appliedSettings },
+        {
+          confirmHoldId: holdId,
+          membershipLevel,
+          heldImageCount: normalizedCount,
+          appliedSettings,
+          generationTaskId,
+          startedAt,
+        },
+      );
+      await this.taskRecorder.recordBilling(
+        generationTaskId,
+        GenerationBillingStatus.CONFIRMED,
       );
 
       const generationId = resolvePersistedGenerationId(
         persisted.generation,
-        billingTaskId,
+        generationTaskId,
       );
 
       this.campaignRewardService
@@ -712,10 +774,51 @@ export class ImageGenerationFlowService {
         request,
       });
     } catch (err) {
+      // 先落任务终态，再退款：退款把钱还回去，任务行才是「这次为什么失败」的唯一证据。
+      // 两者都不得掩盖原始异常 —— 用户/上层看到的必须还是那个真实的错误。
+      await this.failTask(generationTaskId, resolveImageGenerationFailure(err, stage));
       if (holdId) {
-        await this.safeRefundImageHold(holdId, '图片生成失败');
+        const refunded = await this.safeRefundImageHold(holdId, '图片生成失败');
+        await this.taskRecorder.recordBilling(
+          generationTaskId,
+          refunded
+            ? GenerationBillingStatus.REFUNDED
+            : GenerationBillingStatus.REFUND_FAILED,
+        );
       }
       throw err;
+    }
+  }
+
+  /**
+   * 失败终态落库。**永不抛** —— 它跑在 catch 里，抛出去只会把真正的失败原因换成
+   * 一条数据库错误，用户与上层都再也看不到根因。
+   *
+   * CAS 判负在图片侧的含义与视频侧不同：视频侧要区分「行不存在（本特性上线前的存量
+   * 生成）」与「行已终态（两表分叉）」；图片侧的任务行是本次请求刚 `start()` 出来的，
+   * 不存在存量行，`start()` 失败已让请求中止。因此判负只剩一种成因：同一个
+   * generationTaskId 被写了两次终态。那是真异常，记 error 级日志留证；但**不抛**，
+   * 理由同上——此刻已经在处理另一个失败了，退款还没做，抛出会连退款一起跳过。
+   */
+  private async failTask(
+    generationTaskId: string,
+    failure: GenerationFailure,
+  ): Promise<void> {
+    try {
+      const won = await this.repository.runInTransaction((tx) =>
+        this.taskRecorder.fail(generationTaskId, failure, tx),
+      );
+      if (!won) {
+        this.logger.error(
+          `generation task 终态 CAS 判负：task=${generationTaskId} stage=${failure.stage} —— ` +
+            `该行本次请求刚创建，判负只可能是被重复写了终态，请查是否有并发路径在写同一 id`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `generation task 失败落库失败（原始失败仍会照常抛出）：task=${generationTaskId} ` +
+          `stage=${failure.stage} reason=${String(err instanceof Error ? err.message : err)}`,
+      );
     }
   }
 
@@ -779,6 +882,9 @@ export class ImageGenerationFlowService {
       membershipLevel?: number;
       heldImageCount?: number;
       appliedSettings?: AppliedImageSettings;
+      /** 提供时，成功终态在建 image_generations 的**同一事务**内写入。 */
+      generationTaskId?: string;
+      startedAt?: number;
     },
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
@@ -835,20 +941,65 @@ export class ImageGenerationFlowService {
               }
             }
           : undefined,
+        options?.generationTaskId
+          ? async (tx, generation) => {
+              // 必须在这个事务内：否则会出现「图片已入库、任务表仍 PENDING」。
+              const won = await this.taskRecorder.succeed(
+                options.generationTaskId!,
+                {
+                  imageGenerationId: generation.id,
+                  // imageGenerationId 只在成功时才有值（图片行只在成功时才建）——
+                  // 与视频侧 create 时就写 videoGenerationId 是**有意的不对称**。
+                  durationMs: options.startedAt ? Date.now() - options.startedAt : durationMs,
+                },
+                tx,
+              );
+              if (!won) {
+                // 抛错回滚整个事务 —— 图片成功与任务记录必须原子：任务行已被写成终态
+                // （唯一可能：并发重复写），此刻再提交图片会造出一条永远对不上账的记录。
+                throw new Error(
+                  `generation task ${options.generationTaskId} already terminal`,
+                );
+              }
+            }
+          : undefined,
       );
 
     return { generation, images: imageItems };
   }
 
-  private async safeRefundImageHold(holdId: string, reason: string) {
+  /** @returns 是否真的退成了 —— 调用方据此记 REFUNDED / REFUND_FAILED，不再靠猜。 */
+  private async safeRefundImageHold(holdId: string, reason: string): Promise<boolean> {
     try {
       await this.pointsService.refundHold(holdId, reason);
+      return true;
     } catch (err) {
       this.logger.error(
         `image generation point hold refund failed: hold=${holdId} reason=${String(
           err instanceof Error ? err.message : err,
         )}`,
       );
+      return false;
     }
   }
+}
+
+/**
+ * 把任意抛出物还原成 `GenerationFailure`，优先级：
+ *   1. 异常上挂着的 failure（params 类失败在 `callImageApi` 里就压成了 BadRequestException，
+ *      结构化上游字段只存在于这个挂载里）；
+ *   2. 裸的 `ImageUpstreamError`（5xx / 超时等未被压过的上游失败）；
+ *   3. 兜底 `fromUnknown`（转存失败、结算失败、落库失败……）。
+ * 顺序不能反：反过来第 2 条永远轮不到，第 1 条的挂载也会被 fromUnknown 吃掉。
+ */
+function resolveImageGenerationFailure(
+  err: unknown,
+  stage: GenerationErrorStage,
+): GenerationFailure {
+  return (
+    readGenerationFailure(err) ??
+    (err instanceof ImageUpstreamError
+      ? fromImageUpstreamError(err, stage)
+      : fromUnknown(err, stage))
+  );
 }

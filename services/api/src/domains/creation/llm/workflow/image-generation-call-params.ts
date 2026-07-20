@@ -10,7 +10,12 @@ import {
 } from '@autix/ai-adapters/image';
 import { readImageModelMetadata } from '@autix/domain/model';
 import { pickWireParams, type ParamsSchema } from '@autix/domain/pricing';
-import type { Prisma } from '../../../platform/prisma/generated';
+import { GenerationErrorStage, type Prisma } from '../../../platform/prisma/generated';
+import {
+  attachGenerationFailure,
+  fromImageUpstreamError,
+  type GenerationFailure,
+} from '../../../platform/generation-tasks/generation-failure';
 import { resolveApiKey, resolveBaseUrl } from '../../model-config/model-gateway-credentials';
 
 /**
@@ -242,4 +247,25 @@ export function buildUnsupportedImageParamsException(
       upstreamError: error.message,
     },
   });
+}
+
+/**
+ * params 类上游失败的**唯一**构造点：先建 `GenerationFailure`（结构化上游字段完整），
+ * 再派生给用户看的 `BadRequestException`，最后把 failure 挂到异常上。
+ *
+ * 顺序是刻意的 —— `buildUnsupportedImageParamsException` 只保留 httpStatus + message，
+ * 一旦先派生用户异常再想还原 upstreamBody / requestId / classification 就已经晚了。
+ * 挂载而非返回二元组，是为了让 `callImageApi` 的调用方（它只看得见抛出的异常）
+ * 也能把结构化失败落库。
+ */
+export function buildImageParamsFailure(
+  request: ResolvedImageRequest,
+  error: ImageUpstreamError,
+): { failure: GenerationFailure; exception: BadRequestException } {
+  const failure = fromImageUpstreamError(error, GenerationErrorStage.SUBMIT);
+  const exception = attachGenerationFailure(
+    buildUnsupportedImageParamsException(request, error),
+    failure,
+  );
+  return { failure, exception };
 }

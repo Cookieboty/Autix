@@ -31,6 +31,16 @@ type PersistedImageItemBase = {
 export class LlmRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * 失败路径专用的最小事务外壳：`GenerationTaskRecorder.fail` 强制要求 tx（终态是 CAS，
+   * 必须和业务表写在同一事务里）。图片失败时没有别的表要一起写，但仍需要一个
+   * TransactionClient 才能调用它 —— 与其把 PrismaService 再注入一遍到 flow service，
+   * 不如在仓储层开一个口子，保持「flow service 不直接碰 prisma」这条既有边界。
+   */
+  runInTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
+  }
+
   findUserPoints(userId: string) {
     return this.prisma.user_points.findUnique({ where: { userId } });
   }
@@ -345,7 +355,19 @@ export class LlmRepository {
       generationId: string,
       imageItems: TImageItem[],
     ) => Prisma.InputJsonValue;
-  }, beforeCreate?: (tx: Prisma.TransactionClient) => Promise<void>) {
+  },
+    beforeCreate?: (tx: Prisma.TransactionClient) => Promise<void>,
+    /**
+     * 在 `image_generations.create` **之后**、同一事务内执行 —— `beforeCreate` 拿不到
+     * 刚建出来的行 id。生成任务的成功终态（generation_tasks.imageGenerationId）就靠它
+     * 落进同一个事务：否则会出现「图片已入库、任务表仍 PENDING」，或反过来任务标了
+     * SUCCEEDED 但图片事务回滚了。抛错即回滚整个事务，这是刻意的。
+     */
+    afterCreate?: (
+      tx: Prisma.TransactionClient,
+      generation: { id: string },
+    ) => Promise<void>,
+  ) {
     return this.prisma.$transaction(async (tx) => {
       await beforeCreate?.(tx);
 
@@ -364,6 +386,8 @@ export class LlmRepository {
           durationMs: input.durationMs,
         },
       });
+
+      await afterCreate?.(tx, generation);
 
       await tx.image_templates.update({
         where: { id: input.templateId },

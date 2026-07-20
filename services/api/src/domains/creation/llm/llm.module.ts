@@ -15,6 +15,7 @@ import { MembershipModule } from '../../billing/membership/membership.module';
 import { VideoModule } from '../video/video.module';
 import { CampaignModule } from '../../billing/campaign/campaign.module';
 import { LlmRepository } from './llm.repository';
+import { GenerationTasksModule } from '../../platform/generation-tasks/generation-tasks.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { LlmRepository } from './llm.repository';
     MembershipModule,
     forwardRef(() => VideoModule),
     CampaignModule,
+    GenerationTasksModule,
   ],
   providers: [
     LlmService,

@@ -1,5 +1,9 @@
 import type { Mock } from 'vitest';
-import { ModelType, PointHoldStatus } from '../../../platform/prisma/generated';
+import {
+  GenerationErrorStage,
+  ModelType,
+  PointHoldStatus,
+} from '../../../platform/prisma/generated';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
 import { ImageConcurrencyLimitException } from '../../../billing/membership/image-entitlement.helpers';
 
@@ -146,8 +150,15 @@ function createService() {
         orderBy: { createdAt: 'asc' },
       }),
     ),
+    runInTransaction: vi.fn(async (fn: (tx: any) => Promise<unknown>) =>
+      prisma.$transaction(fn),
+    ),
     createCompletedImageGenerationResult: vi.fn(
-      async (input: any, beforeCreate?: (tx: any) => Promise<void>) =>
+      async (
+        input: any,
+        beforeCreate?: (tx: any) => Promise<void>,
+        afterCreate?: (tx: any, generation: { id: string }) => Promise<void>,
+      ) =>
         prisma.$transaction(async (tx: typeof prisma) => {
           await beforeCreate?.(tx);
           const generation = await tx.image_generations.create({
@@ -163,6 +174,7 @@ function createService() {
               durationMs: input.durationMs,
             },
           });
+          await afterCreate?.(tx, generation);
           await tx.image_templates.update({
             where: { id: input.templateId },
             data: { useCount: { increment: 1 } },
@@ -233,6 +245,12 @@ function createService() {
     assertImageEntitlement: vi.fn(),
     assertImageConcurrency: vi.fn(),
   };
+  const taskRecorder = {
+    start: vi.fn().mockResolvedValue(undefined),
+    succeed: vi.fn().mockResolvedValue(true),
+    fail: vi.fn().mockResolvedValue(true),
+    recordBilling: vi.fn().mockResolvedValue(undefined),
+  };
   return {
     service: new ImageGenerationFlowService(
       repository as never,
@@ -242,8 +260,10 @@ function createService() {
       campaignRewardService as never,
       systemPromptService as never,
       membershipService as never,
+      taskRecorder as never,
     ),
     prisma,
+    taskRecorder,
     repository,
     modelConfigService,
     imageTemplatesService,
@@ -1650,5 +1670,191 @@ describe('ImageGenerationFlowService', () => {
     // 自有模型不再免费：即使 createdBy === userId 也照常估价 + 冻结积分。
     expect(pointsService.estimateCost).toHaveBeenCalled();
     expect(pointsService.createHold).toHaveBeenCalled();
+  });
+
+  describe('生图失败必须留下任务行（回归）', () => {
+    // 此前生图失败**零落库**：llm.repository.ts 的 image_generations.create 硬编码
+    // status:'completed'（只有成功才建行），而失败分支只退款 + 抛出 —— 数据库里
+    // 一条痕迹都没有。这条测试若早存在，该缺口不会出现。
+    const failingInput = {
+      userId: 'user-1',
+      templateId: 'tpl-1',
+      modelConfigId: 'image-model-1',
+    };
+    const failingRequest = () =>
+      imageRequest({ settings: { size: '1024x1024@1K', quality: 'high' } });
+
+    it('上游 400 时写入 FAILED + errorStage=SUBMIT + 结构化上游字段', async () => {
+      const { service, taskRecorder } = createService();
+      const originalFetch = global.fetch;
+      global.fetch = vi
+        .fn()
+        .mockResolvedValue(
+          upstreamError(400, '{"error":{"code":"bad_size","message":"unsupported"}}'),
+        ) as never;
+
+      await expect(
+        service.generateAndPersistImage(failingInput, failingRequest(), 1),
+      ).rejects.toThrow();
+
+      expect(taskRecorder.fail).toHaveBeenCalledTimes(1);
+      const [taskId, failure] = taskRecorder.fail.mock.calls[0];
+      expect(taskId).toEqual(expect.any(String));
+      // start 建的那一行，和失败落库的必须是同一个 id —— 否则失败写去了别处。
+      expect(taskId).toBe(taskRecorder.start.mock.calls[0][0].id);
+      expect(failure.stage).toBe(GenerationErrorStage.SUBMIT);
+      expect(failure.upstreamStatus).toBe(400);
+      expect(failure.upstreamBody).toContain('bad_size');
+      // classification 由 preset 的 errorMapping 给出；params 类失败在 callImageApi
+      // 内就被压成 BadRequestException，这个字段是「压之前挂上去了」的证据。
+      expect(failure.class).toBe('params');
+      // fail 是 CAS，必须拿到 tx —— 第三参不能是 undefined。
+      expect(taskRecorder.fail.mock.calls[0][2]).toBeDefined();
+
+      global.fetch = originalFetch;
+    });
+
+    it('上游 5xx 也留行：stage=SUBMIT，class 不是 params', async () => {
+      // 变异测试：若失败落库把所有上游错误都当成 params 类（或反过来只在 params 类
+      // 才落库），这条会红。上游宕机必须与「参数不支持」在任务表里可区分。
+      const { service, taskRecorder } = createService();
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue(upstreamError(500, 'gateway exploded')) as never;
+
+      await expect(
+        service.generateAndPersistImage(failingInput, failingRequest(), 1),
+      ).rejects.toThrow();
+
+      const [, failure] = taskRecorder.fail.mock.calls[0];
+      expect(failure.stage).toBe(GenerationErrorStage.SUBMIT);
+      expect(failure.upstreamStatus).toBe(500);
+      expect(failure.upstreamBody).toContain('gateway exploded');
+      expect(failure.class).not.toBe('params');
+
+      global.fetch = originalFetch;
+    });
+
+    it('上游成功后的落库失败记 stage=PERSIST，不是 SUBMIT', async () => {
+      const { service, taskRecorder, pointsService } = createService();
+      vi.spyOn(service, 'callImageApi').mockResolvedValue({
+        images: ['https://img.test/1.png'],
+        appliedSettings: { size: '1024x1024', count: 1, coerced: false, notes: [] },
+      });
+      vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+      pointsService.confirmHoldWithinTx.mockRejectedValue(new Error('ledger confirm failed'));
+
+      await expect(
+        service.generateAndPersistImage(failingInput, failingRequest(), 1),
+      ).rejects.toThrow('ledger confirm failed');
+
+      const [, failure] = taskRecorder.fail.mock.calls[0];
+      expect(failure.stage).toBe(GenerationErrorStage.PERSIST);
+      expect(failure.message).toContain('ledger confirm failed');
+    });
+
+    it('start 在建 hold 之前调用 —— hold 指向的任务行必须已存在', async () => {
+      const { service, taskRecorder, pointsService } = createService();
+      const originalFetch = global.fetch;
+      const order: string[] = [];
+      taskRecorder.start.mockImplementation(async () => {
+        order.push('start');
+      });
+      pointsService.createHold.mockImplementation(async () => {
+        order.push('hold');
+        return { hold: { id: 'hold-1' }, balance: 910 };
+      });
+      global.fetch = vi.fn().mockResolvedValue(upstreamError(500, 'boom')) as never;
+
+      await expect(
+        service.generateAndPersistImage(failingInput, failingRequest(), 1),
+      ).rejects.toThrow();
+
+      expect(order).toEqual(['start', 'hold']);
+      // hold.taskId 与 generation_tasks.id 必须是同一个值，否则客服按 hold 反查落空。
+      expect(pointsService.createHold.mock.calls[0][1].taskId).toBe(
+        taskRecorder.start.mock.calls[0][0].id,
+      );
+
+      global.fetch = originalFetch;
+    });
+
+    it('start 失败时整个请求中止，不冻结积分、不调用上游', async () => {
+      const { service, taskRecorder, pointsService } = createService();
+      const originalFetch = global.fetch;
+      taskRecorder.start.mockRejectedValue(new Error('db down'));
+      const fetchMock = vi.fn();
+      global.fetch = fetchMock as never;
+
+      await expect(
+        service.generateAndPersistImage(failingInput, failingRequest(), 1),
+      ).rejects.toThrow('db down');
+
+      expect(pointsService.createHold).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      global.fetch = originalFetch;
+    });
+
+    it('冻结失败留行且 stage=BILLING（任务行已建，不能留 PENDING）', async () => {
+      const { service, taskRecorder, pointsService } = createService();
+      const originalFetch = global.fetch;
+      const fetchMock = vi.fn();
+      global.fetch = fetchMock as never;
+      pointsService.createHold.mockRejectedValue(new Error('积分不足'));
+
+      await expect(
+        service.generateAndPersistImage(failingInput, failingRequest(), 1),
+      ).rejects.toThrow('积分不足');
+
+      const [, failure] = taskRecorder.fail.mock.calls[0];
+      expect(failure.stage).toBe(GenerationErrorStage.BILLING);
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      global.fetch = originalFetch;
+    });
+
+    it('成功时在建 image_generations 的同一事务内写 SUCCEEDED，并带上 imageGenerationId', async () => {
+      const { service, taskRecorder, prisma } = createService();
+      const order: string[] = [];
+      prisma.image_generations.create.mockImplementation(async (args: any) => {
+        order.push('image_record');
+        return { id: 'gen-1', ...args.data };
+      });
+      taskRecorder.succeed.mockImplementation(async () => {
+        order.push('task_succeed');
+        return true;
+      });
+      vi.spyOn(service, 'callImageApi').mockResolvedValue({
+        images: ['https://img.test/1.png'],
+        appliedSettings: { size: '1024x1024', count: 1, coerced: false, notes: [] },
+      });
+      vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+
+      await service.generateAndPersistImage(failingInput, failingRequest(), 1);
+
+      // afterCreate 钩子：succeed 必须发生在 image_generations.create **之后**
+      // （否则拿不到 imageGenerationId），且在同一事务内。
+      expect(order).toEqual(['image_record', 'task_succeed']);
+      const [taskId, result, tx] = taskRecorder.succeed.mock.calls[0];
+      expect(taskId).toBe(taskRecorder.start.mock.calls[0][0].id);
+      expect(result.imageGenerationId).toBe('gen-1');
+      expect(result.durationMs).toEqual(expect.any(Number));
+      expect(tx).toBeDefined();
+      expect(taskRecorder.fail).not.toHaveBeenCalled();
+    });
+
+    it('succeed 的 CAS 判负会回滚整个成功事务（不留「图已入库、任务已终态」的分叉）', async () => {
+      const { service, taskRecorder } = createService();
+      taskRecorder.succeed.mockResolvedValue(false);
+      vi.spyOn(service, 'callImageApi').mockResolvedValue({
+        images: ['https://img.test/1.png'],
+        appliedSettings: { size: '1024x1024', count: 1, coerced: false, notes: [] },
+      });
+      vi.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+
+      await expect(
+        service.generateAndPersistImage(failingInput, failingRequest(), 1),
+      ).rejects.toThrow('already terminal');
+    });
   });
 });
