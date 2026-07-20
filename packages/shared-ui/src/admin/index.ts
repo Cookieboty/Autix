@@ -52,5 +52,8 @@ export * from './featured-slots/FeaturedSlotsAdminView';
 export * from './boosts/BoostAdminView';
 export * from './boosts/BoostDialog';
 
+// Generation Tasks
+export * from './generation-tasks/GenerationTaskAdminView';
+
 // System
 export * from './system';
