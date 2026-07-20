@@ -21,6 +21,7 @@
     "db:init-membership": "tsx scripts/init-membership-data.ts",
     "db:migrate-legacy": "tsx scripts/migrate-legacy-data.ts",
     "db:backfill-metrics": "dotenv -e ../../.env -- tsx scripts/backfill-resource-metrics.ts",
+    "db:backfill-generation-tasks": "dotenv -e ../../.env -- tsx scripts/backfill-generation-tasks.ts",
     "db:reconcile": "dotenv -e ../../.env -- prisma db push --schema prisma/schema.prisma",
     "db:prepare-cutover": "pnpm run db:flat-migrate && pnpm run db:deploy && pnpm run db:reconcile && pnpm run db:seed:prod && pnpm run db:init-membership && pnpm run db:seed:pricing",
     "db:seed:pricing": "pnpm --filter @autix/api run seed:pricing",
