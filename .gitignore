@@ -2,6 +2,7 @@ node_modules/
 dist/
 .next/
 out/
+tmp/
 *.lockb
 .turborepo/
 .worktrees/
@@ -24,7 +25,6 @@ packages/database/src/generated/
 
 .claude
 /docs/
-CLAUDE.md
 uploads/
 **/uploads/
 .cursor.agents/
