@@ -197,7 +197,7 @@ export class StepUpService {
       await this.mail.sendStepUpOtp(user.email, code, purpose, OTP_TTL_MS / 60_000);
     } catch (err) {
       await this.repository.invalidateOtp(record.id);
-      this.logger.error('Failed to send OTP email', err as Error);
+      this.logger.error('Failed to send OTP email', err instanceof Error ? err.stack : String(err));
       throw new StepUpHttpException('STEP_UP_UNAVAILABLE', '验证码发送失败，请稍后重试');
     }
 

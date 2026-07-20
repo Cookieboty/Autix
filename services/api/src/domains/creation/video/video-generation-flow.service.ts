@@ -280,7 +280,9 @@ export class VideoGenerationFlowService {
         userId: input.userId,
         variantLabel: input.variantLabel,
         requestLimits,
-        params,
+        // 投影而非整份 DTO：VideoGenerationClipParams 带 storyboardPrompt（用户隐私内容），
+        // toUnifiedVideoParams 只取 7 个标量参数，与 :334 / :924 两处口径一致。
+        params: toUnifiedVideoParams(params),
       })}`,
     );
     this.membershipService.assertVideoEntitlement(entitlement, {

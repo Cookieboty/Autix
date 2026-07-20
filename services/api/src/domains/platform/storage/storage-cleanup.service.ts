@@ -131,7 +131,10 @@ export class StorageCleanupService {
     const clock = now ? () => now : () => new Date();
     for (const id of ids) {
       const outcome = await this.processOne(id, clock).catch((err) => {
-        this.logger.error(`storage cleanup task ${id} unexpected crash`, err as Error);
+        this.logger.error(
+          `storage cleanup task ${id} unexpected crash`,
+          err instanceof Error ? err.stack : String(err),
+        );
         return 'retried' as const;
       });
       if (outcome === 'completed') completed += 1;
@@ -284,7 +287,10 @@ export class StorageCleanupService {
         },
       });
       if (settled.count === 0) return 'skipped';
-      this.logger.error(`storage cleanup task ${id} DEAD after ${attempts} attempts`, err);
+      this.logger.error(
+        `storage cleanup task ${id} DEAD after ${attempts} attempts`,
+        err instanceof Error ? err.stack : String(err),
+      );
       return 'dead';
     }
     const backoffIndex = Math.min(Math.max(attempts - 1, 0), this.retryBackoffSec.length - 1);

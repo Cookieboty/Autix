@@ -27,7 +27,7 @@ export class ResourceMetricsCron {
         const { updated } = await this.service.recomputeHotScores();
         this.logger.log(`hot scores recomputed: ${updated}`);
       } catch (error) {
-        this.logger.error('resource metrics aggregation failed', error as Error);
+        return { failed: true as const, error };
       }
     });
   }
@@ -40,7 +40,7 @@ export class ResourceMetricsCron {
         const { updated } = await this.service.recomputeHotScores();
         this.logger.log(`daily reconciliation done, hot scores recomputed: ${updated}`);
       } catch (error) {
-        this.logger.error('resource metrics daily reconciliation failed', error as Error);
+        return { failed: true as const, error };
       }
     });
   }

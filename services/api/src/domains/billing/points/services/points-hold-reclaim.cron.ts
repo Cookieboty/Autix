@@ -20,7 +20,7 @@ export class PointsHoldReclaimCron {
       try {
         await this.pointsHoldService.reclaimOrphanedHolds();
       } catch (error) {
-        this.logger.error('reclaim orphaned holds failed', error as Error);
+        return { failed: true as const, error };
       }
     });
   }

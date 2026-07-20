@@ -48,7 +48,7 @@ export class StorageCleanupCron {
           `storage cleanup tick done: processed=${summary.processed}, completed=${summary.completed}, skipped=${summary.skipped}, retried=${summary.retried}, dead=${summary.dead}`,
         );
       } catch (error) {
-        this.logger.error('storage cleanup tick crashed', error as Error);
+        return { failed: true as const, error };
       } finally {
         this.running = false;
       }

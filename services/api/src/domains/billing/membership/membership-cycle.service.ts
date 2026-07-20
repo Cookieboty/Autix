@@ -60,7 +60,7 @@ export class MembershipCycleService {
           `membership cycle done: pendingChanges=${pendingChanges.applied}, expiredGrants=${expiredGrants.expiredGrants}, expiredMemberships=${expiredMemberships.expiredMemberships}, cancelledMemberships=${expiredMemberships.cancelledMemberships}, monthlyGrants=${monthlyGrants.grantsCreated}, carryoverGrants=${monthlyGrants.carryoverGrantsCreated}`,
         );
       } catch (error) {
-        this.logger.error('membership cycle failed', error);
+        return { failed: true as const, error };
       }
     });
   }

@@ -24,7 +24,7 @@ export class StepUpCleanupCron {
           this.logger.log(`step-up cleanup: email_otps=${otps}, step_up_proofs=${proofs}`);
         }
       } catch (error) {
-        this.logger.error('step-up cleanup crashed', error as Error);
+        return { failed: true as const, error };
       }
     });
   }

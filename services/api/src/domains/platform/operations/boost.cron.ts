@@ -23,7 +23,7 @@ export class BoostCron {
       try {
         await this.boostService.aggregateActiveBoosts();
       } catch (error) {
-        this.logger.error('boost aggregation failed', error as Error);
+        return { failed: true as const, error };
       }
     });
   }

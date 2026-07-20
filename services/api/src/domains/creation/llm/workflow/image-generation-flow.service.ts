@@ -74,6 +74,19 @@ export type {
 
 const PROMPT_OPTIMIZE_TASK_TYPE = 'prompt_optimize_generation';
 
+/** 上游错误体单条日志上限：够看清错误码/message，又不至于把整份回显（可能含用户 prompt）灌进日志。 */
+const UPSTREAM_BODY_LOG_LIMIT = 512;
+
+/**
+ * 上游错误体完全由 provider 控制，长度无上限，且 classification='params' 时常把我们提交的
+ * 请求（含用户 prompt）原样回显。落日志前统一截断，超长时标注原始长度便于判断是否被截。
+ */
+function truncateUpstreamBody(body: string | undefined): string {
+  if (!body) return '-';
+  if (body.length <= UPSTREAM_BODY_LOG_LIMIT) return body;
+  return `${body.slice(0, UPSTREAM_BODY_LOG_LIMIT)}…[truncated, total=${body.length}]`;
+}
+
 export interface PersistedImageResult {
   generation: unknown;
   images: Array<{
@@ -550,7 +563,7 @@ export class ImageGenerationFlowService {
         // 把「打的是哪个端点、上游回了什么」摊开——否则 503(upstream) 这类只会被最外层
         // AllExceptionsFilter 打成一句没有 body 的 Unhandled exception，根因（上游原文）丢失。
         this.logger.error(
-          `image upstream failed: model=${callRequest.model} protocol=${callRequest.preset.key} operation=${callRequest.operation} status=${error.httpStatus ?? '-'} classification=${error.classification} retryable=${error.retryable} endpoint=${error.endpoint ?? '-'} requestId=${error.requestId ?? '-'} retryAfter=${error.retryAfter ?? '-'} body=${error.upstreamBody ?? '-'}`,
+          `image upstream failed: model=${callRequest.model} protocol=${callRequest.preset.key} operation=${callRequest.operation} status=${error.httpStatus ?? '-'} classification=${error.classification} retryable=${error.retryable} endpoint=${error.endpoint ?? '-'} requestId=${error.requestId ?? '-'} retryAfter=${error.retryAfter ?? '-'} body=${truncateUpstreamBody(error.upstreamBody)}`,
         );
       }
       if (error instanceof ImageUpstreamError && error.classification === 'params') {
@@ -560,7 +573,7 @@ export class ImageGenerationFlowService {
         // stripTierSuffix 根除。保存期的跨配置校验器保证 schema 与 preset 自洽，
         // 参数错误此刻是配置错误，不是可重试的抖动。
         this.logger.warn(
-          `image upstream rejected params: model=${callRequest.model} protocol=${callRequest.preset.key} status=${error.httpStatus ?? '-'} body=${error.upstreamBody ?? '-'}`,
+          `image upstream rejected params: model=${callRequest.model} protocol=${callRequest.preset.key} status=${error.httpStatus ?? '-'} body=${truncateUpstreamBody(error.upstreamBody)}`,
         );
         throw buildUnsupportedImageParamsException(request, error);
       }

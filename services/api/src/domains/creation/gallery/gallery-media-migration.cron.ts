@@ -16,7 +16,7 @@ export class GalleryMediaMigrationCron {
   constructor(private readonly service: GalleryMediaMigrationService) {}
 
   @Interval(60_000)
-  async tick(): Promise<void> {
+  async tick() {
     return runInJobContext({ name: 'creation.galleryMediaMigration', logger: this.logger }, async () => {
       if (this.running) return;
       this.running = true;
@@ -28,7 +28,7 @@ export class GalleryMediaMigrationCron {
           );
         }
       } catch (err) {
-        this.logger.error('gallery media migration tick failed', err as Error);
+        return { failed: true as const, error: err };
       } finally {
         this.running = false;
       }

@@ -20,7 +20,7 @@ export class RiskEvaluationCron {
         const n = await this.scoringService.evaluatePending();
         if (n > 0) this.logger.log(`risk evaluated users: ${n}`);
       } catch (error) {
-        this.logger.error('risk evaluation failed', error as Error);
+        return { failed: true as const, error };
       }
     });
   }

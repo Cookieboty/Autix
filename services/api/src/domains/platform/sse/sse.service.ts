@@ -102,7 +102,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   }
 
   @Cron('0 3 * * *') // 每天凌晨 3 点
-  async cleanupTaskEvents(): Promise<void> {
+  async cleanupTaskEvents() {
     return runInJobContext({ name: 'platform.sseDailyReport', logger: this.logger }, async () => {
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       let totalDeleted = 0;
@@ -113,8 +113,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
           totalDeleted += result;
         }
       } catch (err) {
-        this.logger.error('Failed to delete task events', err instanceof Error ? err.stack : String(err));
-        return;
+        return { failed: true as const, error: err };
       }
       if (totalDeleted > 0) {
         this.logger.log(`Deleted ${totalDeleted} task events older than 30 days`);

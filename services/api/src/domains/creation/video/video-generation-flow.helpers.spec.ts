@@ -23,6 +23,7 @@ import {
   normalizeVideoResolution,
   presentGenerateAllClipResults,
   redactProviderRequest,
+  redactProviderRequestForLog,
   resolveClipPrompt,
   resolveVideoPricingTaskType,
   resolveGenerateAllClipPlan,
@@ -612,18 +613,59 @@ describe('video generation flow helpers', () => {
 
 describe('redactProviderRequest', () => {
   it('masks callback_url (含 VIDEO_CALLBACK_SECRET) 但不改其他字段', () => {
-    const body = { model: 'ark', content: [{ type: 'text' }], callback_url: 'https://cb/x?token=secret' };
+    const body = { model: 'ark', content: [{ type: 'image_url' }], callback_url: 'https://cb/x?token=secret' };
     const redacted = redactProviderRequest(body);
     expect(redacted.callback_url).toBe('[REDACTED]');
     expect(redacted.model).toBe('ark');
-    expect(redacted.content).toBe(body.content);
-    // 返回浅拷贝，不改原对象（原对象仍带真实 token 发给上游）。
+    expect(redacted.content).toEqual(body.content);
+    // 不改原对象（原对象仍带真实 token 发给上游）。
     expect(body.callback_url).toBe('https://cb/x?token=secret');
   });
 
-  it('无 callback_url 时原样返回', () => {
-    const body = { model: 'poyo', input: { prompt: 'x' } };
+  // 用户 prompt 是隐私内容，不得落日志。两种 content 策略各有一种落点：
+  // typed 走 content[].text（vendors.ts textItem.field），flat-media 走 input.prompt
+  // （vendors.ts promptPath）。两者都必须被抹掉，只保留长度用于排障。
+  it('保留 prompt —— 落库快照需要可复现（prompt 本就存在业务表里）', () => {
+    const body = { model: 'ark', content: [{ type: 'text', text: '一只猫' }] };
     expect(redactProviderRequest(body)).toBe(body);
+  });
+});
+
+describe('redactProviderRequestForLog', () => {
+  it('抹掉 typed 策略的 content[].text，只留长度', () => {
+    const body = {
+      model: 'ark',
+      content: [
+        { type: 'text', text: '一只猫在下雨的东京街头跳舞' },
+        { type: 'image_url', image_url: { url: 'https://cdn/x.png' } },
+      ],
+    };
+    const redacted = redactProviderRequestForLog(body) as typeof body;
+    expect(redacted.content[0].text).toBe('[REDACTED:len=13]');
+    // 非 prompt 字段不受影响：素材 URL 仍需可见以便排障。
+    expect(redacted.content[1].image_url).toEqual({ url: 'https://cdn/x.png' });
+    // 原对象不被改动。
+    expect(body.content[0].text).toBe('一只猫在下雨的东京街头跳舞');
+  });
+
+  it('抹掉 flat-media 策略的 input.prompt，只留长度', () => {
+    const body = { model: 'poyo', input: { prompt: 'hello world', image_urls: ['https://cdn/a.png'] } };
+    const redacted = redactProviderRequestForLog(body) as typeof body;
+    expect(redacted.input.prompt).toBe('[REDACTED:len=11]');
+    expect(redacted.input.image_urls).toEqual(['https://cdn/a.png']);
+    expect(body.input.prompt).toBe('hello world');
+  });
+
+  it('同时抹掉 callback_url', () => {
+    const body = { model: 'ark', callback_url: 'https://cb/x?token=secret', input: { prompt: 'hi' } };
+    const redacted = redactProviderRequestForLog(body) as typeof body;
+    expect(redacted.callback_url).toBe('[REDACTED]');
+    expect(redacted.input.prompt).toBe('[REDACTED:len=2]');
+  });
+
+  it('无敏感字段时不改变内容', () => {
+    const body = { model: 'poyo', input: { duration: 5 } };
+    expect(redactProviderRequestForLog(body)).toEqual(body);
   });
 });
 

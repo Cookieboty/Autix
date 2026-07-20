@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLogger } from '../../platform/common/app-logger';
 import {
   MessageRole,
   VideoClipStatus,
@@ -11,7 +12,7 @@ import { buildGenerationMaterialRows } from '../materials/generation-library';
 
 @Injectable()
 export class VideoGenerationRepository {
-  private readonly logger = new Logger(VideoGenerationRepository.name);
+  private readonly logger = new AppLogger(VideoGenerationRepository.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -231,6 +232,7 @@ export class VideoGenerationRepository {
     } catch (error) {
       this.logger.error(
         `material sync failed for generation=${input.generationId}: ${(error as Error).message}`,
+        error instanceof Error ? error.stack : undefined,
       );
     }
   }

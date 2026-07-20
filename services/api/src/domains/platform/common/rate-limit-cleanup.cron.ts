@@ -24,7 +24,7 @@ export class RateLimitCleanupCron {
           this.logger.log(`rate_limit_counters cleanup: deleted=${deleted}`);
         }
       } catch (error) {
-        this.logger.error('rate_limit_counters cleanup crashed', error as Error);
+        return { failed: true as const, error };
       }
     });
   }

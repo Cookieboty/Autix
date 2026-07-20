@@ -524,12 +524,50 @@ export function toPrismaInputJson(value: unknown): Prisma.InputJsonValue {
  * 脱敏 provider 请求体里的 `callback_url` —— 它带 `?token=<VIDEO_CALLBACK_SECRET>`，
  * 任何拿到日志或 DB 只读权限的人凭它就能伪造回调、驱动状态与扣费。请求体本身仍带真实
  * callback_url 发给上游；**只有落日志/落库前**用本函数换成占位。返回浅拷贝，不改原对象。
+ *
+ * 注意本函数**保留 prompt**：落库快照（hold metadata / paramsSnapshot）需要能复现这次
+ * 生成，而 prompt 本就存在业务表里，抹掉只损失可复现性、没有隐私收益。
+ * 落日志请改用 {@link redactProviderRequestForLog}。
  */
 export function redactProviderRequest(
   body: Record<string, unknown>,
 ): Record<string, unknown> {
   if (!body || typeof body !== 'object' || !('callback_url' in body)) return body;
   return { ...body, callback_url: '[REDACTED]' };
+}
+
+/** 用户 prompt 的落点：typed 策略是 content[].text，flat-media 是 input.prompt（见 vendors.ts）。 */
+const PROMPT_KEYS: ReadonlySet<string> = new Set(['prompt', 'text']);
+
+function redactPromptsDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactPromptsDeep);
+  if (!value || typeof value !== 'object') return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (key === 'callback_url' && typeof val === 'string') {
+      out[key] = '[REDACTED]';
+    } else if (PROMPT_KEYS.has(key) && typeof val === 'string') {
+      // 保留长度：排障时"prompt 是不是空/超长"是最常问的问题，内容本身不需要。
+      out[key] = `[REDACTED:len=${val.length}]`;
+    } else {
+      out[key] = redactPromptsDeep(val);
+    }
+  }
+  return out;
+}
+
+/**
+ * 落日志专用脱敏：在 {@link redactProviderRequest} 的基础上，额外抹掉用户 prompt
+ * （任意层级的 `prompt` / `text` 字符串字段），只保留长度。
+ *
+ * 按字段名而非固定路径匹配，是为了让新增 protocol preset 默认被覆盖，而不是默认泄露。
+ * 返回深拷贝，不改原对象。
+ */
+export function redactProviderRequestForLog(
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!body || typeof body !== 'object') return body;
+  return redactPromptsDeep(body) as Record<string, unknown>;
 }
 
 export function buildVideoHoldInput(input: {
