@@ -7,11 +7,16 @@ import { PrismaPg } from '@prisma/adapter-pg';
  * 灌的内容（保持最小集，只满足超级管理员可用 + chat 服务依赖）：
  *   - System: admin-system, chat
  *   - Menu:  admin-system 下的 3 个（用户管理 / 角色管理 / 权限配置中心）
+ *            + chat 系统下的 15 个（chat-web /system 硬编码导航 + gallery 审核 /
+ *              运营位编排 / 内容加热 / 生成任务，与 seed.ts 的 chatMenuDefs 对齐）
  *   - Permission: admin-system 菜单关联的 BACKEND/FRONTEND 权限点
+ *              + chat 系统 generation-tasks 菜单的 generation:view / generation:view-content
  *   - Role:  chat 系统的 SYSTEM_ADMIN / USER（注册审批流程依赖）
+ *   - RoleMenu: chat SYSTEM_ADMIN ↔ chat 系统全部菜单（非超管管理员靠这个才能在侧边栏看到菜单）
+ *   - RolePermission: chat SYSTEM_ADMIN ↔ generation:* 两条权限（非超管调用生成任务接口需要）
  *
- * 不灌：cms-system、admin-system 的角色、role-permission / role-menu 关联。
- * 超管登录看菜单不依赖角色（menu.service.ts: isSuperAdmin 直接读全部 visible 菜单）。
+ * 不灌：cms-system、admin-system 的角色、admin-system 的 role-permission / role-menu 关联。
+ * 超管登录看菜单/权限不依赖角色（menu.service.ts、PermissionsGuard 对 isSuperAdmin 直接放行）。
  */
 const adapter = new PrismaPg({
   connectionString: getDatabaseUrl(),
@@ -83,7 +88,7 @@ const FIXED_CAMPAIGN_SEEDS: FixedCampaignSeed[] = [
       subtitleI18nKey: 'onboardSubBestImage',
       ctaI18nKey: 'onboardCtaTry',
       modelLabel: 'Nano Banana Pro',
-      hrefPath: '/workbench/image',
+      hrefPath: '/ai/image',
       sortOrder: 1,
     },
   },
@@ -105,7 +110,7 @@ const FIXED_CAMPAIGN_SEEDS: FixedCampaignSeed[] = [
       subtitleI18nKey: 'onboardSubBestVideo',
       ctaI18nKey: 'onboardCtaExplore',
       modelLabel: 'Seedance 2.0',
-      hrefPath: '/workbench/video',
+      hrefPath: '/ai/video',
       sortOrder: 2,
     },
   },
@@ -274,36 +279,36 @@ async function main() {
     type: 'BACKEND' | 'FRONTEND';
     action: 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXPORT';
   }> = [
-    // user-management
-    { menuId: userMenu.id, name: '创建用户', code: 'user:create', type: 'BACKEND', action: 'CREATE' },
-    { menuId: userMenu.id, name: '查看用户', code: 'user:read', type: 'BACKEND', action: 'READ' },
-    { menuId: userMenu.id, name: '更新用户', code: 'user:update', type: 'BACKEND', action: 'UPDATE' },
-    { menuId: userMenu.id, name: '删除用户', code: 'user:delete', type: 'BACKEND', action: 'DELETE' },
-    { menuId: userMenu.id, name: '导出用户', code: 'user:export', type: 'BACKEND', action: 'EXPORT' },
-    { menuId: userMenu.id, name: '新增按钮', code: 'user:btn:create', type: 'FRONTEND', action: 'CREATE' },
-    { menuId: userMenu.id, name: '编辑按钮', code: 'user:btn:edit', type: 'FRONTEND', action: 'UPDATE' },
-    { menuId: userMenu.id, name: '删除按钮', code: 'user:btn:delete', type: 'FRONTEND', action: 'DELETE' },
-    // role-management
-    { menuId: roleMenu.id, name: '创建角色', code: 'role:create', type: 'BACKEND', action: 'CREATE' },
-    { menuId: roleMenu.id, name: '查看角色', code: 'role:read', type: 'BACKEND', action: 'READ' },
-    { menuId: roleMenu.id, name: '更新角色', code: 'role:update', type: 'BACKEND', action: 'UPDATE' },
-    { menuId: roleMenu.id, name: '删除角色', code: 'role:delete', type: 'BACKEND', action: 'DELETE' },
-    { menuId: roleMenu.id, name: '新增按钮', code: 'role:btn:create', type: 'FRONTEND', action: 'CREATE' },
-    { menuId: roleMenu.id, name: '编辑按钮', code: 'role:btn:edit', type: 'FRONTEND', action: 'UPDATE' },
-    // permission-center
-    { menuId: permissionCenterMenu.id, name: '查看系统', code: 'system:read', type: 'BACKEND', action: 'READ' },
-    { menuId: permissionCenterMenu.id, name: '创建系统', code: 'system:create', type: 'BACKEND', action: 'CREATE' },
-    { menuId: permissionCenterMenu.id, name: '更新系统', code: 'system:update', type: 'BACKEND', action: 'UPDATE' },
-    { menuId: permissionCenterMenu.id, name: '删除系统', code: 'system:delete', type: 'BACKEND', action: 'DELETE' },
-    { menuId: permissionCenterMenu.id, name: '创建菜单', code: 'menu:create', type: 'BACKEND', action: 'CREATE' },
-    { menuId: permissionCenterMenu.id, name: '查看菜单', code: 'menu:read', type: 'BACKEND', action: 'READ' },
-    { menuId: permissionCenterMenu.id, name: '更新菜单', code: 'menu:update', type: 'BACKEND', action: 'UPDATE' },
-    { menuId: permissionCenterMenu.id, name: '删除菜单', code: 'menu:delete', type: 'BACKEND', action: 'DELETE' },
-    { menuId: permissionCenterMenu.id, name: '创建权限', code: 'permission:create', type: 'BACKEND', action: 'CREATE' },
-    { menuId: permissionCenterMenu.id, name: '查看权限', code: 'permission:read', type: 'BACKEND', action: 'READ' },
-    { menuId: permissionCenterMenu.id, name: '更新权限', code: 'permission:update', type: 'BACKEND', action: 'UPDATE' },
-    { menuId: permissionCenterMenu.id, name: '删除权限', code: 'permission:delete', type: 'BACKEND', action: 'DELETE' },
-  ];
+      // user-management
+      { menuId: userMenu.id, name: '创建用户', code: 'user:create', type: 'BACKEND', action: 'CREATE' },
+      { menuId: userMenu.id, name: '查看用户', code: 'user:read', type: 'BACKEND', action: 'READ' },
+      { menuId: userMenu.id, name: '更新用户', code: 'user:update', type: 'BACKEND', action: 'UPDATE' },
+      { menuId: userMenu.id, name: '删除用户', code: 'user:delete', type: 'BACKEND', action: 'DELETE' },
+      { menuId: userMenu.id, name: '导出用户', code: 'user:export', type: 'BACKEND', action: 'EXPORT' },
+      { menuId: userMenu.id, name: '新增按钮', code: 'user:btn:create', type: 'FRONTEND', action: 'CREATE' },
+      { menuId: userMenu.id, name: '编辑按钮', code: 'user:btn:edit', type: 'FRONTEND', action: 'UPDATE' },
+      { menuId: userMenu.id, name: '删除按钮', code: 'user:btn:delete', type: 'FRONTEND', action: 'DELETE' },
+      // role-management
+      { menuId: roleMenu.id, name: '创建角色', code: 'role:create', type: 'BACKEND', action: 'CREATE' },
+      { menuId: roleMenu.id, name: '查看角色', code: 'role:read', type: 'BACKEND', action: 'READ' },
+      { menuId: roleMenu.id, name: '更新角色', code: 'role:update', type: 'BACKEND', action: 'UPDATE' },
+      { menuId: roleMenu.id, name: '删除角色', code: 'role:delete', type: 'BACKEND', action: 'DELETE' },
+      { menuId: roleMenu.id, name: '新增按钮', code: 'role:btn:create', type: 'FRONTEND', action: 'CREATE' },
+      { menuId: roleMenu.id, name: '编辑按钮', code: 'role:btn:edit', type: 'FRONTEND', action: 'UPDATE' },
+      // permission-center
+      { menuId: permissionCenterMenu.id, name: '查看系统', code: 'system:read', type: 'BACKEND', action: 'READ' },
+      { menuId: permissionCenterMenu.id, name: '创建系统', code: 'system:create', type: 'BACKEND', action: 'CREATE' },
+      { menuId: permissionCenterMenu.id, name: '更新系统', code: 'system:update', type: 'BACKEND', action: 'UPDATE' },
+      { menuId: permissionCenterMenu.id, name: '删除系统', code: 'system:delete', type: 'BACKEND', action: 'DELETE' },
+      { menuId: permissionCenterMenu.id, name: '创建菜单', code: 'menu:create', type: 'BACKEND', action: 'CREATE' },
+      { menuId: permissionCenterMenu.id, name: '查看菜单', code: 'menu:read', type: 'BACKEND', action: 'READ' },
+      { menuId: permissionCenterMenu.id, name: '更新菜单', code: 'menu:update', type: 'BACKEND', action: 'UPDATE' },
+      { menuId: permissionCenterMenu.id, name: '删除菜单', code: 'menu:delete', type: 'BACKEND', action: 'DELETE' },
+      { menuId: permissionCenterMenu.id, name: '创建权限', code: 'permission:create', type: 'BACKEND', action: 'CREATE' },
+      { menuId: permissionCenterMenu.id, name: '查看权限', code: 'permission:read', type: 'BACKEND', action: 'READ' },
+      { menuId: permissionCenterMenu.id, name: '更新权限', code: 'permission:update', type: 'BACKEND', action: 'UPDATE' },
+      { menuId: permissionCenterMenu.id, name: '删除权限', code: 'permission:delete', type: 'BACKEND', action: 'DELETE' },
+    ];
 
   for (const p of permissions) {
     await prisma.permission.upsert({
@@ -403,9 +408,42 @@ async function main() {
       nameVi: 'Prompt hệ thống',
       path: '/prompts', icon: 'FileText', sort: 11,
     },
+    {
+      code: 'gallery-review',
+      name: '广场审核', nameEn: 'Gallery Review',
+      nameZhTW: '廣場審核', nameFr: 'Modération de la galerie',
+      nameJa: 'ギャラリー審査', nameRu: 'Модерация галереи',
+      nameVi: 'Duyệt thư viện',
+      path: '/gallery', icon: 'ShieldAlert', sort: 7,
+    },
+    {
+      code: 'featured-slots',
+      name: '运营位编排', nameEn: 'Featured Slots',
+      nameZhTW: '運營位編排', nameFr: 'Emplacements mis en avant',
+      nameJa: '注目枠', nameRu: 'Витрины',
+      nameVi: 'Vị trí nổi bật',
+      path: '/featured-slots', icon: 'LayoutGrid', sort: 8,
+    },
+    {
+      code: 'resource-boosts',
+      name: '内容加热', nameEn: 'Content Boost',
+      nameZhTW: '內容加熱', nameFr: 'Boost de contenu',
+      nameJa: 'コンテンツブースト', nameRu: 'Продвижение',
+      nameVi: 'Tăng nhiệt nội dung',
+      path: '/boosts', icon: 'Flame', sort: 9,
+    },
+    {
+      code: 'generation-tasks',
+      name: '生成任务', nameEn: 'Generation Tasks',
+      nameZhTW: '生成任務', nameFr: 'Tâches de génération',
+      nameJa: '生成タスク', nameRu: 'Задачи генерации',
+      nameVi: 'Tác vụ tạo',
+      path: '/generation-tasks', icon: 'ListChecks', sort: 10,
+    },
   ] as const;
 
   const chatMenus: { id: string }[] = [];
+  let generationTasksMenu: { id: string } | undefined;
   for (const def of chatMenuDefs) {
     const m = await prisma.menu.upsert({
       where: { systemId_code: { systemId: chatSystem.id, code: def.code } },
@@ -424,6 +462,34 @@ async function main() {
       },
     });
     chatMenus.push(m);
+    if (def.code === 'generation-tasks') generationTasksMenu = m;
+  }
+  if (!generationTasksMenu) {
+    throw new Error('Seed error: generation-tasks menu was not created');
+  }
+
+  // ── 3b. generation-tasks 菜单的权限点（chat 系统，非 admin-system） ──────
+  // menuId 需在上面的 chat 菜单循环之后才能拿到，所以单独放一段，字段口径与
+  // seed.ts 的 generationTaskPermissions 完全一致。
+  const generationTaskPermissions: Array<{
+    menuId: string;
+    name: string;
+    code: string;
+    type: 'BACKEND' | 'FRONTEND';
+    action: 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXPORT';
+  }> = [
+      { menuId: generationTasksMenu.id, name: '查看生成任务', code: 'generation:view', type: 'BACKEND', action: 'READ' },
+      { menuId: generationTasksMenu.id, name: '查看生成内容（prompt/参数快照/上游原文）', code: 'generation:view-content', type: 'BACKEND', action: 'READ' },
+    ];
+
+  const generationTaskPermissionRecords: { id: string }[] = [];
+  for (const p of generationTaskPermissions) {
+    const permission = await prisma.permission.upsert({
+      where: { code: p.code },
+      update: {},
+      create: p,
+    });
+    generationTaskPermissionRecords.push(permission);
   }
 
   // ── 5. chat 系统的角色（chat 注册审批依赖） ─────────────────────────────
@@ -457,6 +523,18 @@ async function main() {
       where: { roleId_menuId: { roleId: chatAdminRole.id, menuId: menu.id } },
       update: {},
       create: { roleId: chatAdminRole.id, menuId: menu.id },
+    });
+  }
+
+  // ── 7. chat SYSTEM_ADMIN 角色 ↔ generation:* 权限关联 ───────────────────
+  // 菜单可见性（roleMenu）不等于接口可调用性：PermissionsGuard 对非超管校验
+  // user.permissions.includes(code)，不建这条关联的话普通管理员能看见
+  // “生成任务”菜单、点进去调接口会 403。
+  for (const permission of generationTaskPermissionRecords) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: chatAdminRole.id, permissionId: permission.id } },
+      update: {},
+      create: { roleId: chatAdminRole.id, permissionId: permission.id },
     });
   }
 

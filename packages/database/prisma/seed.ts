@@ -81,7 +81,7 @@ const FIXED_CAMPAIGN_SEEDS: FixedCampaignSeed[] = [
       subtitleI18nKey: 'onboardSubBestImage',
       ctaI18nKey: 'onboardCtaTry',
       modelLabel: 'Nano Banana Pro',
-      hrefPath: '/workbench/image',
+      hrefPath: '/ai/image',
       sortOrder: 1,
     },
   },
@@ -103,7 +103,7 @@ const FIXED_CAMPAIGN_SEEDS: FixedCampaignSeed[] = [
       subtitleI18nKey: 'onboardSubBestVideo',
       ctaI18nKey: 'onboardCtaExplore',
       modelLabel: 'Seedance 2.0',
-      hrefPath: '/workbench/video',
+      hrefPath: '/ai/video',
       sortOrder: 2,
     },
   },
@@ -451,9 +451,20 @@ async function main() {
       nameVi: 'Tăng nhiệt nội dung',
       path: '/boosts', icon: 'Flame', sort: 9,
     },
+    {
+      code: 'generation-tasks',
+      name: '生成任务', nameEn: 'Generation Tasks',
+      nameZhTW: '生成任務', nameFr: 'Tâches de génération',
+      nameJa: '生成タスク', nameRu: 'Задачи генерации',
+      nameVi: 'Tác vụ tạo',
+      path: '/generation-tasks', icon: 'ListChecks', sort: 10,
+    },
   ] as const;
 
   const chatMenus: { id: string }[] = [];
+  // generation-tasks 菜单权限需在角色关联阶段显式挂到 chatSystemAdmin（见下方
+  // “生成任务管理权限” 小节），chatMenus 的 roleMenu 循环只处理菜单可见性，不处理权限。
+  let generationTasksMenu: { id: string } | undefined;
   for (const def of chatMenuDefs) {
     const m = await prisma.menu.upsert({
       where: { systemId_code: { systemId: chatSystem.id, code: def.code } },
@@ -472,6 +483,10 @@ async function main() {
       },
     });
     chatMenus.push(m);
+    if (def.code === 'generation-tasks') generationTasksMenu = m;
+  }
+  if (!generationTasksMenu) {
+    throw new Error('Seed error: generation-tasks menu was not created');
   }
 
   // ==================== 3. 创建权限点 ====================
@@ -538,12 +553,20 @@ async function main() {
     { menu: categoryMenu, name: '删除分类', code: 'category:delete', type: 'BACKEND', action: 'DELETE' },
   ];
 
+  // 生成任务管理权限（Chat 系统）——保护 admin/generation-tasks 的两个只读接口，
+  // 权限枚举里没有 view/view-content 动作，用最接近的 READ 语义表达。
+  const generationTaskPermissions: SeedPermission[] = [
+    { menu: generationTasksMenu, name: '查看生成任务', code: 'generation:view', type: 'BACKEND', action: 'READ' },
+    { menu: generationTasksMenu, name: '查看生成内容（prompt/参数快照/上游原文）', code: 'generation:view-content', type: 'BACKEND', action: 'READ' },
+  ];
+
   const allPermissions = [
     ...userPermissions,
     ...rolePermissions,
     ...permissionCenterPermissions,
     ...articlePermissions,
     ...categoryPermissions,
+    ...generationTaskPermissions,
   ];
 
   const createdPermissions: Array<{ id: string; code: string }> = [];
@@ -674,6 +697,23 @@ async function main() {
       where: { roleId_menuId: { roleId: chatSystemAdmin.id, menuId: menu.id } },
       update: {},
       create: { roleId: chatSystemAdmin.id, menuId: menu.id },
+    });
+  }
+
+  // Chat 系统管理员 - 生成任务权限
+  // 注意：Chat 系统的菜单历来只挂 roleMenu（控制侧边栏可见性），从不挂
+  // rolePermission——上面 adminSystemPermissions/cmsPermissions 的前缀过滤循环
+  // 只覆盖 adminSystemAdmin / cmsSystemAdmin，不会匹配也不会触达 chatSystemAdmin。
+  // 因此 generation:* 权限必须在这里显式关联，否则播种后仍只有 isSuperAdmin 能访问
+  // 这两个接口（和现有 payment:fulfill / payment:refund 一样的坑）。
+  const generationTaskRolePermissions = createdPermissions.filter(p =>
+    p.code.startsWith('generation:')
+  );
+  for (const permission of generationTaskRolePermissions) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: chatSystemAdmin.id, permissionId: permission.id } },
+      update: {},
+      create: { roleId: chatSystemAdmin.id, permissionId: permission.id },
     });
   }
 
