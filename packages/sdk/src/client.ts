@@ -2259,6 +2259,81 @@ export const galleryAdminApi = {
     chatApi.post<{ jobId: string }>('/api/admin/gallery/import', { items }),
 };
 
+// ── Generation Task Admin (生成任务后台观测) ────────────────────────────
+export interface GenerationTaskAdminItem {
+  id: string;
+  kind: 'IMAGE' | 'VIDEO';
+  userId: string;
+  status: 'PENDING' | 'QUEUED' | 'SUCCEEDED' | 'FAILED' | 'EXPIRED';
+  model: string;
+  provider: string | null;
+  protocolKey: string | null;
+  providerTaskId: string | null;
+  promptLength: number;
+  materialCount: number;
+  errorStage: 'SUBMIT' | 'POLL' | 'CALLBACK' | 'PERSIST' | 'BILLING' | null;
+  errorClass: string | null;
+  errorCode: string | null;
+  upstreamStatus: number | null;
+  billingStatus: 'HELD' | 'CONFIRMED' | 'REFUNDED' | 'REFUND_FAILED' | null;
+  pointsCost: number | null;
+  holdId: string | null;
+  createdAt: string;
+  submittedAt: string | null;
+  queuedAt: string | null;
+  finishedAt: string | null;
+  durationMs: number | null;
+  lateCallbackAt: string | null;
+  videoGenerationId: string | null;
+  imageGenerationId: string | null;
+}
+
+export interface GenerationTaskAdminListParams {
+  kind?: string;
+  status?: string;
+  errorStage?: string;
+  userId?: string;
+  model?: string;
+  provider?: string;
+  errorClass?: string;
+  q?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface GenerationTaskAdminListResult {
+  items: GenerationTaskAdminItem[];
+  nextCursor: string | null;
+}
+
+/** 详情比列表多出敏感字段，服务端挂的是 generation:view-content 权限。 */
+export interface GenerationTaskAdminDetail {
+  task: GenerationTaskAdminItem & {
+    prompt: string | null;
+    paramsSnapshot: unknown;
+    upstreamBody: string | null;
+    upstreamRequestId: string | null;
+    upstreamDiagnostics: unknown;
+    errorMessage: string | null;
+    billingError: string | null;
+    lateOutcome: string | null;
+    updatedAt: string;
+  };
+  hold: { id: string; status: string; estimatedAmount: number | null; confirmedAmount: number | null } | null;
+  pointsRecords: Array<{ id: string; amount: number; source: string; createdAt: string }>;
+  /** billingStatus=CONFIRMED 但查不到对应 hold 行等脏数据标记，供客服识别，避免重复退款/重复扣费。 */
+  dataInconsistent: boolean;
+}
+
+export const generationTaskAdminApi = {
+  list: (params?: GenerationTaskAdminListParams) =>
+    chatApi.get<GenerationTaskAdminListResult>('/api/admin/generation-tasks', { params }),
+  detail: (id: string) =>
+    chatApi.get<GenerationTaskAdminDetail>(`/api/admin/generation-tasks/${id}`),
+};
+
 // ── Gallery 公开热度 Feed (首页图片/视频画廊消费) ───────────────────────────
 export interface GalleryFeedPost {
   id: string;
