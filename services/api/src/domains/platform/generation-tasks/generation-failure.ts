@@ -19,7 +19,7 @@ export interface GenerationFailure {
 }
 
 function clipBody(body: string | undefined): string | undefined {
-  if (!body) return undefined;
+  if (body === undefined) return undefined;
   return truncateToBytes(body, UPSTREAM_BODY_BYTE_LIMIT);
 }
 
