@@ -305,7 +305,10 @@ export class VideoGenerationRepository {
     return true;
   }
 
-  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
+  /**
+   * @returns true = 本次抢到终态并已写完所有副作用；false = 已被并发的另一路径写成终态，
+   * 本次整体放弃（未确认 hold、未收敛分镜/项目、未落素材）。
+   */
   async markProjectGenerationCompletedAndConfirmHold(
     input: {
       generationId: string;
@@ -316,39 +319,45 @@ export class VideoGenerationRepository {
       durationSec: number | null;
     },
     confirmHold: (tx: Prisma.TransactionClient) => Promise<{ userId: string }>,
-  ): Promise<string | null> {
-    let confirmedUserId: string | null = null;
+  ): Promise<boolean> {
     let pendingAsset: Parameters<typeof this.persistGeneratedVideoAsset>[0] | null = null;
-    await this.prisma.$transaction(async (tx) => {
-      const confirmation = await confirmHold(tx);
-      confirmedUserId = confirmation.userId;
-
-      const generation = await tx.video_clip_generations.update({
-        where: { id: input.generationId },
-        data: {
-          status: VideoGenStatus.completed,
-          externalStatus: input.externalStatus,
-          videoUrl: input.videoUrl,
-          lastFrameUrl: input.lastFrameUrl,
-          durationSec: input.durationSec,
-          callbackReceivedAt: new Date(),
-          completedAt: new Date(),
-        },
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      // CAS 必须排在 confirmHold 之前：抢不到就不能确认扣费，否则并发下同一 hold
+      // 被确认两次。原实现先 confirmHold 再无条件 update，正是这个缺陷的来源。
+      const won = await claimVideoTerminal(tx, input.generationId, {
+        status: VideoGenStatus.completed,
+        externalStatus: input.externalStatus,
+        videoUrl: input.videoUrl,
+        lastFrameUrl: input.lastFrameUrl,
+        durationSec: input.durationSec,
+        callbackReceivedAt: new Date(),
+        completedAt: new Date(),
       });
+      // 输家整体放弃：不确认 hold、不把分镜/项目收敛成 completed、不落素材。
+      if (!won) return false;
+
+      // updateMany 不回行，落素材要的 userId/prompt/model/createdAt 在同一事务里重读。
+      const generation = await tx.video_clip_generations.findUnique({
+        where: { id: input.generationId },
+      });
+
+      await confirmHold(tx);
 
       // 素材同步挪到事务外（见 persistGeneratedVideoAsset 注释）：这里只留取数据。
       // userId 取生成记录本身而非 confirmation——素材归属该跟着生成走，
       // 而不是跟着谁付的款。
-      pendingAsset = {
-        userId: generation.userId,
-        generationId: input.generationId,
-        videoUrl: input.videoUrl,
-        lastFrameUrl: input.lastFrameUrl,
-        durationSec: input.durationSec,
-        prompt: generation.resolvedPrompt,
-        model: generation.model,
-        createdAt: generation.createdAt,
-      };
+      if (generation) {
+        pendingAsset = {
+          userId: generation.userId,
+          generationId: input.generationId,
+          videoUrl: input.videoUrl,
+          lastFrameUrl: input.lastFrameUrl,
+          durationSec: input.durationSec,
+          prompt: generation.resolvedPrompt,
+          model: generation.model,
+          createdAt: generation.createdAt,
+        };
+      }
 
       await tx.video_clips.updateMany({
         where: { projectId: input.projectId },
@@ -359,10 +368,12 @@ export class VideoGenerationRepository {
         where: { id: input.projectId },
         data: { status: VideoProjectStatus.completed },
       });
+      return true;
     });
+    if (!claimed) return false;
     // 事务已提交：扣费确认与生成状态已经落定，素材同步失败不再影响它们。
     if (pendingAsset) await this.persistGeneratedVideoAsset(pendingAsset);
-    return confirmedUserId;
+    return true;
   }
 
   async markGenerationFailedAndRefund(
@@ -429,7 +440,10 @@ export class VideoGenerationRepository {
     });
   }
 
-  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
+  /**
+   * @returns true = 本次抢到终态并已写完所有副作用；false = 已被并发的另一路径写成终态，
+   * 本次整体放弃（未把分镜/项目打成 failed、未退款）。
+   */
   async markProjectGenerationFailedAndRefund(
     input: {
       generationId: string;
@@ -439,17 +453,17 @@ export class VideoGenerationRepository {
       error: string;
     },
     refundHold: (tx: Prisma.TransactionClient) => Promise<unknown>,
-  ) {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.video_clip_generations.update({
-        where: { id: input.generationId },
-        data: {
-          status: input.status,
-          externalStatus: input.externalStatus,
-          error: input.error,
-          callbackReceivedAt: new Date(),
-        },
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const claimed = await claimVideoTerminal(tx, input.generationId, {
+        status: input.status,
+        externalStatus: input.externalStatus,
+        error: input.error,
+        callbackReceivedAt: new Date(),
       });
+      // 输家立即退出：真终态多半是赢家刚落的 completed，这里再走下去会把整个项目
+      // 连同所有分镜打成 failed，并且重复退款（凭空发积分）。
+      if (!claimed) return false;
 
       await tx.video_clips.updateMany({
         where: { projectId: input.projectId },
@@ -462,6 +476,7 @@ export class VideoGenerationRepository {
       });
 
       await refundHold(tx);
+      return true;
     });
   }
 
@@ -546,12 +561,15 @@ export class VideoGenerationRepository {
    * 与 markGenerationCreateTaskFailedAndRefund 的关键区别：直连行没有父 clip，
    * 不做任何父行 update，也不在这里退款（退款由调用方经 holdReconciliation.safeRefund
    * 单独完成，两者不共享事务，任一失败不影响另一个）。
+   *
+   * **刻意不开事务**：同 markDirectGenerationExpiredWithoutRefund —— CAS 是唯一写操作。
+   *
+   * @returns true = 本次抢到 failed；false = 已是终态，不得覆盖。调用方据此决定是否退款。
    */
-  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
-  markDirectGenerationFailed(generationId: string, error: string) {
-    return this.prisma.video_clip_generations.update({
-      where: { id: generationId },
-      data: { status: VideoGenStatus.failed, error },
+  markDirectGenerationFailed(generationId: string, error: string): Promise<boolean> {
+    return claimVideoTerminal(this.prisma, generationId, {
+      status: VideoGenStatus.failed,
+      error,
     });
   }
 
@@ -561,7 +579,10 @@ export class VideoGenerationRepository {
    * 直连行没有父 clip/project，只 update generation 行本身，不做任何
    * tx.video_clips.update —— 那个 where: { id: clipId } 在 clipId 为 null 时会抛。
    */
-  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
+  /**
+   * @returns true = 本次抢到终态并已确认扣费/落素材；false = 已被并发的另一路径写成终态，
+   * 本次整体放弃（未确认 hold、未落素材）。
+   */
   async markDirectGenerationCompletedAndConfirmHold(
     input: {
       generationId: string;
@@ -571,46 +592,57 @@ export class VideoGenerationRepository {
       durationSec: number | null;
     },
     confirmHold: (tx: Prisma.TransactionClient) => Promise<{ userId: string }>,
-  ): Promise<string | null> {
-    let confirmedUserId: string | null = null;
+  ): Promise<boolean> {
     let pendingAsset: Parameters<typeof this.persistGeneratedVideoAsset>[0] | null = null;
-    await this.prisma.$transaction(async (tx) => {
-      const confirmation = await confirmHold(tx);
-      confirmedUserId = confirmation.userId;
-
-      const generation = await tx.video_clip_generations.update({
-        where: { id: input.generationId },
-        data: {
-          status: VideoGenStatus.completed,
-          externalStatus: input.externalStatus,
-          videoUrl: input.videoUrl,
-          lastFrameUrl: input.lastFrameUrl,
-          durationSec: input.durationSec,
-          callbackReceivedAt: new Date(),
-          completedAt: new Date(),
-        },
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      // CAS 必须排在 confirmHold 之前：抢不到就不能确认扣费，否则并发下同一 hold
+      // 被确认两次。原实现先 confirmHold 再无条件 update，正是这个缺陷的来源。
+      const won = await claimVideoTerminal(tx, input.generationId, {
+        status: VideoGenStatus.completed,
+        externalStatus: input.externalStatus,
+        videoUrl: input.videoUrl,
+        lastFrameUrl: input.lastFrameUrl,
+        durationSec: input.durationSec,
+        callbackReceivedAt: new Date(),
+        completedAt: new Date(),
       });
+      // 输家整体放弃：不确认 hold、不落素材。
+      if (!won) return false;
+
+      // updateMany 不回行，落素材要的 userId/prompt/model/createdAt 在同一事务里重读。
+      const generation = await tx.video_clip_generations.findUnique({
+        where: { id: input.generationId },
+      });
+
+      await confirmHold(tx);
 
       // 素材同步挪到事务外（见 persistGeneratedVideoAsset 注释）：这里只留取数据。
       // userId 取生成记录本身而非 confirmation——素材归属该跟着生成走，
       // 而不是跟着谁付的款。
-      pendingAsset = {
-        userId: generation.userId,
-        generationId: input.generationId,
-        videoUrl: input.videoUrl,
-        lastFrameUrl: input.lastFrameUrl,
-        durationSec: input.durationSec,
-        prompt: generation.resolvedPrompt,
-        model: generation.model,
-        createdAt: generation.createdAt,
-      };
+      if (generation) {
+        pendingAsset = {
+          userId: generation.userId,
+          generationId: input.generationId,
+          videoUrl: input.videoUrl,
+          lastFrameUrl: input.lastFrameUrl,
+          durationSec: input.durationSec,
+          prompt: generation.resolvedPrompt,
+          model: generation.model,
+          createdAt: generation.createdAt,
+        };
+      }
+      return true;
     });
+    if (!claimed) return false;
     // 事务已提交：扣费确认与生成状态已经落定，素材同步失败不再影响它们。
     if (pendingAsset) await this.persistGeneratedVideoAsset(pendingAsset);
-    return confirmedUserId;
+    return true;
   }
 
-  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
+  /**
+   * @returns true = 本次抢到终态并已退款；false = 已被并发的另一路径写成终态，本次整体
+   * 放弃（未退款 —— 重复退款会凭空发积分）。
+   */
   async markDirectGenerationFailedAndRefund(
     input: {
       generationId: string;
@@ -619,36 +651,42 @@ export class VideoGenerationRepository {
       error: string;
     },
     refundHold: (tx: Prisma.TransactionClient) => Promise<unknown>,
-  ) {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.video_clip_generations.update({
-        where: { id: input.generationId },
-        data: {
-          status: input.status,
-          externalStatus: input.externalStatus,
-          error: input.error,
-          callbackReceivedAt: new Date(),
-        },
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const claimed = await claimVideoTerminal(tx, input.generationId, {
+        status: input.status,
+        externalStatus: input.externalStatus,
+        error: input.error,
+        callbackReceivedAt: new Date(),
       });
+      // 输家立即退出：真终态多半是赢家刚落的 completed，重复退款会凭空发积分。
+      if (!claimed) return false;
 
       await refundHold(tx);
+      return true;
     });
   }
 
-  // TODO: 仍是无条件 update,未做 CAS —— 见 Task 7 评审
+  /**
+   * 直连超时排水（不退款，退款交积分侧孤儿回收）。
+   *
+   * **刻意不开事务**：CAS 是本方法唯一的写操作，单条 updateMany 自身即原子，
+   * 包一层 $transaction 只是多一次往返。claimVideoTerminal 的形参类型
+   * `Prisma.TransactionClient` 是 PrismaClient 的结构子集，直接传 this.prisma 合法。
+   *
+   * @returns true = 本次抢到 expired；false = 已是终态（多半是赢家刚落的 completed），
+   * 不得覆盖。
+   */
   markDirectGenerationExpiredWithoutRefund(input: {
     generationId: string;
     externalStatus: string;
     error: string;
-  }) {
-    return this.prisma.video_clip_generations.update({
-      where: { id: input.generationId },
-      data: {
-        status: VideoGenStatus.expired,
-        externalStatus: input.externalStatus,
-        error: input.error,
-        callbackReceivedAt: new Date(),
-      },
+  }): Promise<boolean> {
+    return claimVideoTerminal(this.prisma, input.generationId, {
+      status: VideoGenStatus.expired,
+      externalStatus: input.externalStatus,
+      error: input.error,
+      callbackReceivedAt: new Date(),
     });
   }
 

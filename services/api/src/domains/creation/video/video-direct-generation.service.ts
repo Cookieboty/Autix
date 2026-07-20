@@ -221,11 +221,14 @@ export class VideoDirectGenerationService {
         ((err.httpStatus != null && err.httpStatus >= 400 && err.httpStatus < 500) ||
           err.httpStatus == null);
       if (definitiveReject) {
-        await this.repository.markDirectGenerationFailed(
+        const claimed = await this.repository.markDirectGenerationFailed(
           generationId,
           err instanceof Error ? err.message : String(err),
         );
-        await this.holdReconciliation.safeRefund(generationId, 'upstream rejected');
+        // CAS 输家才可能出现「行已是终态」——此时退款归赢家那条路径负责，这里再退一次
+        // 就是重复退款。故 safeRefund 必须被 claimed 守住。
+        if (claimed)
+          await this.holdReconciliation.safeRefund(generationId, 'upstream rejected');
       } else {
         this.logger.warn(
           `direct submit uncertain, keep hold generation=${generationId}: ${String(err)}`,

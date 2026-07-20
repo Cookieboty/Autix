@@ -216,3 +216,217 @@ describe('VideoGenerationRepository 终态方法：输家不得执行副作用',
     expect(tx.video_clips.update).toHaveBeenCalled();
   });
 });
+
+/**
+ * Task 7.5：项目级 / 直连级的另外 6 个终态方法。
+ * 与上面四个同构，但父行操作不同：
+ *   - 项目级：video_clips.updateMany（整个项目的分镜）+ video_projects.update
+ *   - 直连级：无父行，只写 generation 行本身
+ * 输家一旦漏防，后果是重复确认扣费（真实资金）或重复退款（凭空发积分）。
+ */
+describe('VideoGenerationRepository 项目级/直连级终态方法：输家不得执行副作用', () => {
+  function makeRepo(claimCount: number) {
+    const tx = {
+      video_clip_generations: {
+        updateMany: vi.fn(async () => ({ count: claimCount })),
+        findUnique: vi.fn(async () => ({
+          id: 'gen-1',
+          userId: 'user-1',
+          resolvedPrompt: 'a cat surfing',
+          model: 'seedance-2-0-fast',
+          createdAt: new Date('2026-01-01T00:00:00.123Z'),
+        })),
+      },
+      video_clips: { updateMany: vi.fn(async () => ({ count: 3 })) },
+      video_projects: { update: vi.fn(async () => ({})) },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (fn: any) => fn(tx)),
+      video_clip_generations: { updateMany: tx.video_clip_generations.updateMany },
+      material_assets: { createMany: vi.fn(async () => ({ count: 1 })) },
+    };
+    const repo = new VideoGenerationRepository(prisma as any);
+    return { repo, tx, prisma };
+  }
+
+  const projectCompletedInput = {
+    generationId: 'gen-1',
+    projectId: 'project-1',
+    externalStatus: 'succeeded',
+    videoUrl: 'https://cdn/v.mp4',
+    lastFrameUrl: null,
+    durationSec: 5,
+  };
+  const projectFailedInput = {
+    generationId: 'gen-1',
+    projectId: 'project-1',
+    status: VideoGenStatus.failed,
+    externalStatus: 'failed',
+    error: 'boom',
+  };
+  const directCompletedInput = {
+    generationId: 'gen-1',
+    externalStatus: 'succeeded',
+    videoUrl: 'https://cdn/v.mp4',
+    lastFrameUrl: null,
+    durationSec: 5,
+  };
+  const directFailedInput = {
+    generationId: 'gen-1',
+    status: VideoGenStatus.failed,
+    externalStatus: 'failed',
+    error: 'boom',
+  };
+
+  it('markProjectGenerationCompletedAndConfirmHold：输家返回 false，不确认 hold、不改分镜/项目、不落素材', async () => {
+    const { repo, tx, prisma } = makeRepo(0);
+    const confirmHold = vi.fn(async () => ({ userId: 'user-1' }));
+
+    await expect(
+      repo.markProjectGenerationCompletedAndConfirmHold(projectCompletedInput, confirmHold),
+    ).resolves.toBe(false);
+
+    // 语句顺序回归：confirmHold 必须排在 CAS 之后，否则输家会把扣费确认第二次。
+    expect(confirmHold).not.toHaveBeenCalled();
+    expect(tx.video_clips.updateMany).not.toHaveBeenCalled();
+    expect(tx.video_projects.update).not.toHaveBeenCalled();
+    expect(prisma.material_assets.createMany).not.toHaveBeenCalled();
+  });
+
+  it('markProjectGenerationCompletedAndConfirmHold：赢家确认 hold、收敛分镜与项目、落素材', async () => {
+    const { repo, tx, prisma } = makeRepo(1);
+    const confirmHold = vi.fn(async () => ({ userId: 'user-1' }));
+
+    await expect(
+      repo.markProjectGenerationCompletedAndConfirmHold(projectCompletedInput, confirmHold),
+    ).resolves.toBe(true);
+
+    expect(confirmHold).toHaveBeenCalledTimes(1);
+    expect(tx.video_clips.updateMany).toHaveBeenCalled();
+    expect(tx.video_projects.update).toHaveBeenCalled();
+    // updateMany 不回行，落素材所需字段必须在同一事务里重读
+    expect(tx.video_clip_generations.findUnique).toHaveBeenCalledWith({ where: { id: 'gen-1' } });
+    expect(prisma.material_assets.createMany).toHaveBeenCalledTimes(1);
+    const rows = (prisma.material_assets.createMany.mock.calls as any[])[0][0].data;
+    expect(rows[0].userId).toBe('user-1');
+  });
+
+  it('markProjectGenerationFailedAndRefund：输家返回 false，不退款、不把整个项目打成 failed', async () => {
+    const { repo, tx } = makeRepo(0);
+    const refundHold = vi.fn(async () => ({}));
+
+    await expect(
+      repo.markProjectGenerationFailedAndRefund(projectFailedInput, refundHold),
+    ).resolves.toBe(false);
+
+    expect(refundHold).not.toHaveBeenCalled();
+    expect(tx.video_clips.updateMany).not.toHaveBeenCalled();
+    expect(tx.video_projects.update).not.toHaveBeenCalled();
+  });
+
+  it('markProjectGenerationFailedAndRefund：赢家返回 true，收敛分镜与项目并退款一次', async () => {
+    const { repo, tx } = makeRepo(1);
+    const refundHold = vi.fn(async () => ({}));
+
+    await expect(
+      repo.markProjectGenerationFailedAndRefund(projectFailedInput, refundHold),
+    ).resolves.toBe(true);
+
+    expect(refundHold).toHaveBeenCalledTimes(1);
+    expect(tx.video_clips.updateMany).toHaveBeenCalled();
+    expect(tx.video_projects.update).toHaveBeenCalled();
+  });
+
+  it('markDirectGenerationCompletedAndConfirmHold：输家返回 false，不确认 hold、不落素材', async () => {
+    const { repo, prisma } = makeRepo(0);
+    const confirmHold = vi.fn(async () => ({ userId: 'user-1' }));
+
+    await expect(
+      repo.markDirectGenerationCompletedAndConfirmHold(directCompletedInput, confirmHold),
+    ).resolves.toBe(false);
+
+    expect(confirmHold).not.toHaveBeenCalled();
+    expect(prisma.material_assets.createMany).not.toHaveBeenCalled();
+  });
+
+  it('markDirectGenerationCompletedAndConfirmHold：赢家确认 hold 并落素材', async () => {
+    const { repo, tx, prisma } = makeRepo(1);
+    const confirmHold = vi.fn(async () => ({ userId: 'user-1' }));
+
+    await expect(
+      repo.markDirectGenerationCompletedAndConfirmHold(directCompletedInput, confirmHold),
+    ).resolves.toBe(true);
+
+    expect(confirmHold).toHaveBeenCalledTimes(1);
+    expect(tx.video_clip_generations.findUnique).toHaveBeenCalledWith({ where: { id: 'gen-1' } });
+    expect(prisma.material_assets.createMany).toHaveBeenCalledTimes(1);
+    // 直连无父 clip/project —— 一行都不能碰（where:{id:null} 会抛）
+    expect(tx.video_clips.updateMany).not.toHaveBeenCalled();
+    expect(tx.video_projects.update).not.toHaveBeenCalled();
+  });
+
+  it('markDirectGenerationFailedAndRefund：输家返回 false，不退款', async () => {
+    const { repo } = makeRepo(0);
+    const refundHold = vi.fn(async () => ({}));
+
+    await expect(
+      repo.markDirectGenerationFailedAndRefund(directFailedInput, refundHold),
+    ).resolves.toBe(false);
+
+    expect(refundHold).not.toHaveBeenCalled();
+  });
+
+  it('markDirectGenerationFailedAndRefund：赢家返回 true 并退款一次', async () => {
+    const { repo } = makeRepo(1);
+    const refundHold = vi.fn(async () => ({}));
+
+    await expect(
+      repo.markDirectGenerationFailedAndRefund(directFailedInput, refundHold),
+    ).resolves.toBe(true);
+
+    expect(refundHold).toHaveBeenCalledTimes(1);
+  });
+
+  it('markDirectGenerationExpiredWithoutRefund：输家返回 false，不把 completed 覆盖成 expired', async () => {
+    const { repo, prisma } = makeRepo(0);
+
+    await expect(
+      repo.markDirectGenerationExpiredWithoutRefund({
+        generationId: 'gen-1',
+        externalStatus: 'expired',
+        error: 'timeout',
+      }),
+    ).resolves.toBe(false);
+
+    // CAS 是唯一写入点：where 必须带旧状态条件
+    const where = (prisma.video_clip_generations.updateMany.mock.calls as any[])[0][0].where;
+    expect(where.status).toEqual({ in: [VideoGenStatus.pending, VideoGenStatus.queued] });
+  });
+
+  it('markDirectGenerationExpiredWithoutRefund：赢家返回 true', async () => {
+    const { repo } = makeRepo(1);
+
+    await expect(
+      repo.markDirectGenerationExpiredWithoutRefund({
+        generationId: 'gen-1',
+        externalStatus: 'expired',
+        error: 'timeout',
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it('markDirectGenerationFailed：输家返回 false，不覆盖已有终态', async () => {
+    const { repo, prisma } = makeRepo(0);
+
+    await expect(repo.markDirectGenerationFailed('gen-1', 'boom')).resolves.toBe(false);
+
+    const where = (prisma.video_clip_generations.updateMany.mock.calls as any[])[0][0].where;
+    expect(where.status).toEqual({ in: [VideoGenStatus.pending, VideoGenStatus.queued] });
+  });
+
+  it('markDirectGenerationFailed：赢家返回 true', async () => {
+    const { repo } = makeRepo(1);
+
+    await expect(repo.markDirectGenerationFailed('gen-1', 'boom')).resolves.toBe(true);
+  });
+});

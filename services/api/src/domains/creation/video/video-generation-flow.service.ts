@@ -584,7 +584,7 @@ export class VideoGenerationFlowService {
         lastFrameUrl: persistedLastFrameUrl,
       });
       if (isStoryboardProjectGeneration) {
-        await this.repository.markProjectGenerationCompletedAndConfirmHold(
+        const claimed = await this.repository.markProjectGenerationCompletedAndConfirmHold(
           {
             generationId: completedInput.generationId,
             projectId: generation.projectId!, // storyboard 行恒有 projectId（直连走 clipId===null 分支，不到这里）
@@ -599,6 +599,10 @@ export class VideoGenerationFlowService {
               generation.id,
             ),
         );
+        // CAS 输家：终态已由并发路径写定，事务内一行未写。后续 recalculateProjectStatus
+        // 由下方 `!isStoryboardProjectGeneration` 守卫本就跳过，这里显式退出以保证
+        // 未来在此分支后追加副作用时不会漏防。
+        if (!claimed) return;
       } else if (generation.clipId) {
         const claimed = await this.repository.markGenerationCompletedAndConfirmHold(
           // clipId 已在此分支确认非空
@@ -614,7 +618,7 @@ export class VideoGenerationFlowService {
         if (!claimed) return;
       } else {
         // 直连行（clipId=null）：只写 generation 行本身，不碰不存在的父 clip/project。
-        await this.repository.markDirectGenerationCompletedAndConfirmHold(
+        const claimed = await this.repository.markDirectGenerationCompletedAndConfirmHold(
           {
             generationId: completedInput.generationId,
             externalStatus: completedInput.externalStatus,
@@ -628,6 +632,9 @@ export class VideoGenerationFlowService {
               generation.id,
             ),
         );
+        // CAS 输家：终态已由并发路径写定。下方 recalculateProjectStatus 对直连行本就
+        // 跳过（clipId=null），这里显式退出以防后续在此追加事务外副作用。
+        if (!claimed) return;
       }
       if (!isStoryboardProjectGeneration && generation.clipId) {
         await this.projectStatusConvergence.recalculateProjectStatus(
@@ -643,7 +650,9 @@ export class VideoGenerationFlowService {
         generationParams.generationMode === 'storyboard';
       const failedInput = buildFailedGenerationInput({ generation, outcome: legacy });
       if (isStoryboardProjectGeneration) {
-        await this.repository.markProjectGenerationFailedAndRefund(
+        // 本分支胜负都就此结束（下方 convergeAfterClipFailure 走 clipId 分支，storyboard
+        // 不经过）。仍显式接住返回值并对输家告警 —— 空接返回值等于没接。
+        const claimed = await this.repository.markProjectGenerationFailedAndRefund(
           {
             generationId: failedInput.generationId,
             projectId: generation.projectId!, // storyboard 行恒有 projectId（直连走 clipId===null 分支，不到这里）
@@ -658,6 +667,10 @@ export class VideoGenerationFlowService {
               legacy.refundReason,
             ),
         );
+        if (!claimed)
+          this.logger.warn(
+            `storyboard 项目终态已被并发路径写定，本次放弃: generation=${generation.id}`,
+          );
         return;
       }
 
@@ -677,7 +690,7 @@ export class VideoGenerationFlowService {
         if (!claimed) return;
       } else {
         // 直连行（clipId=null）：只写 generation 行本身，不碰不存在的父 clip/project。
-        await this.repository.markDirectGenerationFailedAndRefund(
+        const claimed = await this.repository.markDirectGenerationFailedAndRefund(
           {
             generationId: failedInput.generationId,
             status: failedInput.status,
@@ -691,6 +704,9 @@ export class VideoGenerationFlowService {
               legacy.refundReason,
             ),
         );
+        // CAS 输家：下方 convergeAfterClipFailure 对直连行本就跳过（clipId=null），
+        // 显式退出以防后续在此追加事务外副作用。
+        if (!claimed) return;
       }
       if (generation.clipId && generation.projectId) {
         await this.projectStatusConvergence.convergeAfterClipFailure({
@@ -849,11 +865,14 @@ export class VideoGenerationFlowService {
       });
     } else {
       // 直连行（clipId=null）：cron 的排水口——只写 generation 行本身，无项目收敛。
-      await this.repository.markDirectGenerationExpiredWithoutRefund({
+      const claimed = await this.repository.markDirectGenerationExpiredWithoutRefund({
         generationId: generation.id,
         externalStatus: 'expired',
         error: reason,
       });
+      // CAS 输家：真终态（多半是刚落的 completed）已由赢家写好，下方那条「已标 expired」
+      // 的日志会误导排查，直接退出。
+      if (!claimed) return;
     }
 
     this.logger.warn(
@@ -1034,7 +1053,9 @@ export class VideoGenerationFlowService {
         );
       }
       try {
-        await this.repository.markProjectGenerationFailedAndRefund(
+        // 退款已在上方 safeRefund 完成（这里传 no-op refundHold），CAS 输家在仓储层内
+        // 就不会重复把项目打成 failed。返回值无下游副作用可挡，输家只记一条告警。
+        const claimed = await this.repository.markProjectGenerationFailedAndRefund(
           {
             generationId,
             projectId,
@@ -1044,9 +1065,15 @@ export class VideoGenerationFlowService {
           },
           async () => undefined,
         );
+        if (!claimed)
+          this.logger.warn(
+            `storyboard createTask 失败但终态已被并发路径写定，跳过项目收敛: generation=${generationId}`,
+          );
       } catch {
         // best effort: the generation may not have been persisted yet.
       }
+      // throw err 与 CAS 胜负无关：它是本次调用自身失败的传播路径。改成 return 会让
+      // generateAllClips 在上游拒绝时静默成功返回（Task 7 已认定的反模式），故无条件保留。
       throw err;
     }
   }
@@ -1076,7 +1103,7 @@ export class VideoGenerationFlowService {
       if (!claimed) return;
     } else {
       // 直连行（clipId=null）：succeeded 兜底也可能命中直连生成，只写 generation 行本身。
-      await this.repository.markDirectGenerationFailedAndRefund(
+      const claimed = await this.repository.markDirectGenerationFailedAndRefund(
         {
           generationId: failedInput.generationId,
           status: failedInput.status,
@@ -1090,6 +1117,9 @@ export class VideoGenerationFlowService {
             reason,
           ),
       );
+      // CAS 输家：下方 convergeAfterClipFailure 对直连行本就跳过（clipId=null），
+      // 显式退出以防后续在此追加事务外副作用。
+      if (!claimed) return;
     }
     if (generation.clipId && generation.projectId) {
       await this.projectStatusConvergence.convergeAfterClipFailure({
