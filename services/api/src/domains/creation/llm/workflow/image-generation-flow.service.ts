@@ -797,7 +797,7 @@ export class ImageGenerationFlowService {
         // 已经确认的 hold、更不把 billingStatus 从 CONFIRMED 覆写回去 —— 只记录，
         // 原始异常照常抛出，让上层知道收尾这一步没完全做完。
         this.logger.error(
-          `image generation 成功后的收尾步骤失败（任务已 SUCCEEDED，不回滚任务状态、不触发退款）：` +
+          `image generation post-success finalization failed (task already SUCCEEDED, not rolling back task status or triggering refund): ` +
             `task=${generationTaskId} reason=${String(err instanceof Error ? err.message : err)}`,
         );
         throw err;
@@ -806,7 +806,7 @@ export class ImageGenerationFlowService {
       // 两者都不得掩盖原始异常 —— 用户/上层看到的必须还是那个真实的错误。
       await this.failTask(generationTaskId, resolveImageGenerationFailure(err, stage));
       if (holdId) {
-        const refunded = await this.safeRefundImageHold(holdId, '图片生成失败');
+        const refunded = await this.safeRefundImageHold(holdId, 'image generation failed');
         await this.taskRecorder.recordBilling(
           generationTaskId,
           refunded
@@ -842,14 +842,14 @@ export class ImageGenerationFlowService {
       );
       if (!won) {
         this.logger.error(
-          `generation task 终态 CAS 判负：task=${generationTaskId} stage=${failure.stage} —— ` +
-            `该行已处于终态，可能原因：并发路径重复写了同一 id；` +
-            `或存在其它终态写入路径（如 PENDING/QUEUED 过期清扫）抢先落库；请结合并发上下文排查`,
+          `generation task terminal CAS lost: task=${generationTaskId} stage=${failure.stage} — ` +
+            `row is already terminal, possible causes: a concurrent path wrote the same id twice; ` +
+            `or another terminal-writing path (e.g. PENDING/QUEUED expiry sweep) landed first; investigate concurrent context`,
         );
       }
     } catch (err) {
       this.logger.error(
-        `generation task 失败落库失败（原始失败仍会照常抛出）：task=${generationTaskId} ` +
+        `generation task failure persist failed (original failure still rethrown as-is): task=${generationTaskId} ` +
           `stage=${failure.stage} reason=${String(err instanceof Error ? err.message : err)}`,
       );
     }

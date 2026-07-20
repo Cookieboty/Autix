@@ -719,7 +719,7 @@ export class VideoGenerationFlowService {
         );
         if (!claimed)
           this.logger.warn(
-            `storyboard 项目终态已被并发路径写定，本次放弃: generation=${generation.id}`,
+            `storyboard project terminal already claimed by a concurrent path, abandoning this attempt: generation=${generation.id}`,
           );
         return claimed ? 'applied' : 'skipped_terminal';
       }
@@ -1175,7 +1175,7 @@ export class VideoGenerationFlowService {
         );
         if (!claimed)
           this.logger.warn(
-            `storyboard createTask 失败但终态已被并发路径写定，跳过项目收敛: generation=${generationId}`,
+            `storyboard createTask failed but terminal already claimed by a concurrent path, skipping project convergence: generation=${generationId}`,
           );
       } catch {
         // best effort: the generation may not have been persisted yet.

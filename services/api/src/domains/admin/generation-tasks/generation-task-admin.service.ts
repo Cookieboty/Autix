@@ -30,7 +30,7 @@ export class GenerationTaskAdminService {
 
   async getDetail(id: string) {
     const detail = await this.repository.findDetail(id);
-    if (!detail) throw new NotFoundException('生成任务不存在');
+    if (!detail) throw new NotFoundException('generation task not found');
 
     const { task, hold, pointsRecords } = detail;
     // 脏数据/历史数据探测：billingStatus 已 CONFIRMED（即"计费已完成"）却查不到对应的

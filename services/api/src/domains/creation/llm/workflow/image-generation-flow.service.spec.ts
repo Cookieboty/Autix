@@ -1148,7 +1148,7 @@ describe('ImageGenerationFlowService', () => {
     });
 
     expect(pointsService.createHold).toHaveBeenCalled();
-    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'image generation failed');
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
 
@@ -1499,7 +1499,7 @@ describe('ImageGenerationFlowService', () => {
     ).rejects.toThrow('provider down');
 
     expect(pointsService.createHold).toHaveBeenCalled();
-    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'image generation failed');
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
     expect(persistSpy).not.toHaveBeenCalled();
   });
@@ -1576,7 +1576,7 @@ describe('ImageGenerationFlowService', () => {
 
     // Settlement must not fall back to estimateCost() when the snapshot quote fails.
     expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
-    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'image generation failed');
     expect(prisma.image_generations.create).not.toHaveBeenCalled();
   });
 
@@ -1620,7 +1620,7 @@ describe('ImageGenerationFlowService', () => {
     ).rejects.toThrow('ledger confirm failed');
 
     expect(prisma.image_generations.create).not.toHaveBeenCalled();
-    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'image generation failed');
   });
 
   it('charges platform points even for user-created image models', async () => {

@@ -69,16 +69,16 @@ export class VideoGenerationRepository {
 
     if (!task) {
       this.logger.warn(
-        `generation_tasks 终态未抢到（多半是本特性上线前的存量行，无任务记录）：` +
-          `generation=${generationId} target=${target} —— 以 video_clip_generations 为准，继续提交`,
+        `generation_tasks terminal not claimed (likely a pre-launch legacy row with no task record): ` +
+          `generation=${generationId} target=${target} — video_clip_generations is authoritative, continuing commit`,
       );
       return false;
     }
 
     const message =
-      `generation_tasks 与 video_clip_generations 两表分叉：任务行已是终态 ` +
-      `status=${task.status}，而本次视频终态 CAS 刚抢到 target=${target} —— ` +
-      `说明有人在视频事务之外写了任务终态。回滚本事务：generation=${generationId}`;
+      `generation_tasks/video_clip_generations diverged: task row is already terminal ` +
+      `status=${task.status}, but this video terminal CAS just claimed target=${target} — ` +
+      `someone wrote the task terminal status outside the video transaction. Rolling back this transaction: generation=${generationId}`;
     this.logger.error(message);
     throw new Error(message);
   }

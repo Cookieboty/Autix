@@ -737,7 +737,7 @@ describe('Task 8：generation_tasks 与视频行同事务', () => {
           },
           refundHold,
         ),
-      ).rejects.toThrow(/两表分叉/);
+      ).rejects.toThrow(/diverged/);
 
       // 抛出即回滚：事务提交之后才发生的 recordBilling 一定不能跑。
       expect(prisma.generation_tasks.update).not.toHaveBeenCalled();
@@ -767,10 +767,10 @@ describe('Task 8：generation_tasks 与视频行同事务', () => {
 
       expect(errorSpy).toHaveBeenCalledTimes(1);
       const message = String(errorSpy.mock.calls[0][0]);
-      expect(message).toMatch(/两表分叉/);
+      expect(message).toMatch(/diverged/);
       expect(message).toContain('FAILED');
       // 存量行那条 warn 的关键词不得出现在分叉日志里 —— 两条必须一眼可分。
-      expect(message).not.toMatch(/存量行/);
+      expect(message).not.toMatch(/legacy row/);
       // 分叉不是「继续提交」的情形，不得同时打那条安抚性的 warn。
       expect(warnSpy).not.toHaveBeenCalled();
     });
@@ -792,7 +792,7 @@ describe('Task 8：generation_tasks 与视频行同事务', () => {
           },
           vi.fn(async () => ({ userId: 'user-1' })),
         ),
-      ).rejects.toThrow(/两表分叉/);
+      ).rejects.toThrow(/diverged/);
     });
 
     it('任务 CAS 判负时才多读一次；正常胜出不读', async () => {
