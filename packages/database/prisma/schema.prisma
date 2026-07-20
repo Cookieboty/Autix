@@ -1482,6 +1482,10 @@ model point_holds {
 
   @@index([userId, status])
   @@index([taskType, taskId])
+  // 收敛 cron 按 taskId 反查 hold（generation_tasks.holdId 为 null 时的回退路径）。
+  // 不能复用 [taskType, taskId]：taskType 是发散的动态定价类型，无法参与过滤，
+  // 前导列不受约束会退化成顺序扫描，而 point_holds 随每次生成增长。
+  @@index([taskId])
 }
 
 model point_hold_items {
