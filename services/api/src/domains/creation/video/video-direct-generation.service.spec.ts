@@ -256,6 +256,23 @@ describe('VideoDirectGenerationService.generate', () => {
     expect(safeRefund).not.toHaveBeenCalled();
   });
 
+  /**
+   * Task 8 回归：直连提交成功后必须把 generation_tasks 推进到 QUEUED。
+   *
+   * 这条断言存在的理由：删掉 service 里的 `taskRecorder.queued(...)` 那一行，
+   * 视频行照样被 markGenerationQueued 写成 queued，返回值也完全正确 ——
+   * 除了本用例，全仓没有任何测试会因此变红，任务表会静默停在 PENDING。
+   */
+  it('提交成功 → generation_tasks 也推进到 QUEUED，且带上 providerTaskId', async () => {
+    const { service, taskRecorder } = makeService({
+      submitVideoTask: async () => ({ providerTaskId: 'direct-task-1' }),
+    });
+
+    const result = await service.generate(validInput());
+
+    expect(taskRecorder.queued).toHaveBeenCalledWith(result.generationId, 'direct-task-1');
+  });
+
   it('提交成功 → 直连落库、返回 generationId + taskId，且不携带父 clip/project', async () => {
     const { service, repository, pointsService } = makeService({
       submitVideoTask: async () => ({ providerTaskId: 'direct-task-1' }),

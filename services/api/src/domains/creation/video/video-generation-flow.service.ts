@@ -5,6 +5,7 @@ import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
+  GenerationBillingStatus,
   type GenerationErrorStage,
   type Prisma,
   VideoGenStatus,
@@ -712,6 +713,9 @@ export class VideoGenerationFlowService {
               generation.id,
               legacy.refundReason,
             ),
+          // 退款真的发生在本事务内：它抛出即整体回滚，能走到 recordBilling
+          // 就意味着退款已随事务提交，故 REFUNDED 是如实记录而非猜测。
+          { status: GenerationBillingStatus.REFUNDED },
         );
         if (!claimed)
           this.logger.warn(
@@ -1134,12 +1138,16 @@ export class VideoGenerationFlowService {
       );
       return [{ generationId, taskId: providerTaskId, clipId: anchorClip.id }];
     } catch (err) {
-      if (holdId) {
-        await this.holdReconciliation.safeRefund(
-          generationId,
-          'storyboard project createTask failed',
-        );
-      }
+      // 退款在**事务之外**先做掉，故必须接住 safeRefund 的返回值：它吞异常只打日志，
+      // 返回值是仓储层区分 REFUNDED / REFUND_FAILED 的唯一依据。丢掉它，
+      // 退款失败时 billingStatus 会谎报 REFUNDED 而 hold 仍是 PENDING。
+      // 同 video-direct-generation.service.ts 的直连路径。
+      const refunded = holdId
+        ? await this.holdReconciliation.safeRefund(
+            generationId,
+            'storyboard project createTask failed',
+          )
+        : null;
       try {
         // 退款已在上方 safeRefund 完成（这里传 no-op refundHold），CAS 输家在仓储层内
         // 就不会重复把项目打成 failed。返回值无下游副作用可挡，输家只记一条告警。
@@ -1155,6 +1163,15 @@ export class VideoGenerationFlowService {
             failure: toVideoGenerationFailure(err, 'SUBMIT'),
           },
           async () => undefined,
+          // 无 holdId = 压根没有 hold 可退，本路径没试过退款 → 不写 billing 字段。
+          refunded === null
+            ? null
+            : {
+                status: refunded.ok
+                  ? GenerationBillingStatus.REFUNDED
+                  : GenerationBillingStatus.REFUND_FAILED,
+                error: refunded.error,
+              },
         );
         if (!claimed)
           this.logger.warn(

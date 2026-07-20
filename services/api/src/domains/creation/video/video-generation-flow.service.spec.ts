@@ -458,6 +458,26 @@ describe('VideoGenerationFlowService billing', () => {
     );
   });
 
+  /**
+   * Task 8 回归：generateClip 提交成功后必须把 generation_tasks 推进到 QUEUED。
+   *
+   * 删掉 flow 里的 `taskRecorder.queued(...)` 那一行，video_clip_generations 照样被
+   * markGenerationQueued 写成 queued，返回值也完全正确 —— 若无本用例，
+   * 任务表会静默停在 PENDING 而没有一条测试变红。
+   */
+  it('generateClip 提交成功 → generation_tasks 也推进到 QUEUED，且带上 providerTaskId', async () => {
+    const { service, taskRecorder } = makeService();
+    const queuedSpy = vi.spyOn(taskRecorder, 'queued');
+
+    const result = await service.generateClip({
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+    });
+
+    expect(queuedSpy).toHaveBeenCalledWith(result.generationId, 'seedance-task-1');
+  });
+
   it('combines storyboard prompt and clip prompt for storyboard generation', async () => {
     const { service, prisma, submitVideoTaskMock } = makeService({
       clip: {
@@ -612,6 +632,44 @@ describe('VideoGenerationFlowService billing', () => {
         modelConfigId: 'model-config-1',
       }),
     );
+  });
+
+  /**
+   * Task 8 回归：storyboard 分支走的是**另一条** queued 调用点（flow :1126），
+   * generateClip 那条断言覆盖不到它 —— 与 createPendingProjectGenerationAndMarkRunning
+   * 是另一个方法同理。
+   */
+  it('storyboard 项目提交成功 → generation_tasks 也推进到 QUEUED，且带上 providerTaskId', async () => {
+    const projectClips = [
+      {
+        id: 'clip-1',
+        projectId: 'project-1',
+        order: 1,
+        title: '开场',
+        prompt: '赛博朋克城市远景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '720p',
+          duration: 2,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: false,
+        materials: [],
+      },
+    ];
+    const { service, taskRecorder, prisma } = makeService({ projectClips });
+    prisma.video_projects.findUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+    });
+    const queuedSpy = vi.spyOn(taskRecorder, 'queued');
+
+    const [created] = await service.generateAllClips('project-1', 'user-1');
+
+    expect(queuedSpy).toHaveBeenCalledWith(created.generationId, 'seedance-task-1');
   });
 
   it('passes storyboard clip materials into the single provider task', async () => {
