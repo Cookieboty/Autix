@@ -3,10 +3,16 @@ import {
   VideoGenStatus,
   VideoMaterialRole,
   VideoMaterialSourceType,
+  type GenerationErrorStage,
   type Prisma,
   type video_clip_generations,
   type video_clip_materials,
 } from '../../platform/prisma/generated';
+import {
+  fromUnknown,
+  fromVideoUpstreamError,
+  type GenerationFailure,
+} from '../../platform/generation-tasks/generation-failure';
 import {
   normalizeVideoResolution as normalizeDomainVideoResolution,
   normalizeVideoResolutionForModel,
@@ -16,9 +22,47 @@ import {
   type VideoResolution,
 } from '@autix/domain/video';
 import { readProtocolKey } from '@autix/domain/model';
-import { resolveVideoPreset, resolveWanMode, type VideoProtocolPreset } from '@autix/ai-adapters/video';
+import {
+  resolveVideoPreset,
+  resolveWanMode,
+  VideoUpstreamError,
+  type VideoProtocolPreset,
+} from '@autix/ai-adapters/video';
 
 export type { VideoGenerationClipParams };
+
+/**
+ * 把提交/查询抛出的异常转成 `GenerationFailure`，尽量保住上游的结构化字段
+ * （httpStatus / requestId / body / classification）——这些一旦被压成 `err.message`
+ * 就再也回不来了。
+ *
+ * `stage` **必须由调用方显式传入**：绝不能从 `callbackReceivedAt` 之类的列反推，
+ * 那一列被轮询路径也无条件写入，语义与列名不符，据此归因会系统性地错。
+ */
+export function toVideoGenerationFailure(
+  err: unknown,
+  stage: GenerationErrorStage,
+): GenerationFailure {
+  return err instanceof VideoUpstreamError
+    ? fromVideoUpstreamError(err, stage)
+    : fromUnknown(err, stage);
+}
+
+/**
+ * 把「上游已归一化的终态失败」转成 `GenerationFailure`。与 `toVideoGenerationFailure`
+ * 的区别：这里没有异常对象可拆（outcome 是解析后的结构），只有错误串与上游状态串。
+ */
+export function toVideoOutcomeFailure(input: {
+  stage: GenerationErrorStage;
+  error: string;
+  externalStatus?: string;
+}): GenerationFailure {
+  return {
+    stage: input.stage,
+    message: input.error,
+    code: input.externalStatus,
+  };
+}
 
 /**
  * 视频提交路由:把 (模型配置, 素材) 解析成实际要用的 preset 与上游 model ID。

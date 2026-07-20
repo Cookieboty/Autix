@@ -104,15 +104,25 @@ export class VideoGenerationHoldReconciliationService {
     }
   }
 
-  async safeRefund(generationId: string, reason: string) {
+  /**
+   * 吞异常的退款（调用方多半正在处理另一个更重要的失败，不该被退款失败打断）。
+   *
+   * 返回成败而不是 void：generation_tasks 的 `billingStatus` 要区分 REFUNDED 与
+   * REFUND_FAILED，而异常在这里就被咽下了，调用方没有别的途径知道退款到底成没成。
+   */
+  async safeRefund(
+    generationId: string,
+    reason: string,
+  ): Promise<{ ok: boolean; error?: string }> {
     try {
       await this.refundPendingHold(generationId, reason);
+      return { ok: true };
     } catch (err) {
+      const message = String(err instanceof Error ? err.message : err);
       this.logger.error(
-        `points refund failed: generation=${generationId} reason=${String(
-          err instanceof Error ? err.message : err,
-        )}`,
+        `points refund failed: generation=${generationId} reason=${message}`,
       );
+      return { ok: false, error: message };
     }
   }
 

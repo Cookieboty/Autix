@@ -5,6 +5,7 @@ import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
+  type GenerationErrorStage,
   type Prisma,
   VideoGenStatus,
   type video_clip_generations,
@@ -38,10 +39,13 @@ import {
   resolveVideoGenerationRequestLimits,
   resolveVideoRouting,
   toPrismaInputJson,
+  toVideoGenerationFailure,
+  toVideoOutcomeFailure,
   type VideoGenerationClipParams as ClipParams,
   splitQueuedGenerationsForPolling,
   summarizeDurations,
 } from './video-generation-flow.helpers';
+import { GenerationTaskRecorder } from '../../platform/generation-tasks/generation-task.recorder';
 import {
   assembleVideoRequest,
   parseVideoCallback,
@@ -74,6 +78,19 @@ function resolveEngineBaseUrl(baseUrl: string | null | undefined): string {
  * resolveLegacyApiContext 会先校验实时配置确实还指向这个协议，不是拿它直接信任。
  */
 const LEGACY_VIDEO_PROTOCOL_KEY = 'ark-video@v3';
+
+/**
+ * 收敛这次终态的来源。**必须由调用方显式传下来** —— 用于 `errorStage` 的 POLL/CALLBACK
+ * 归因。绝不能在下游从 `callbackReceivedAt` 反推：那一列被轮询路径也无条件写入，
+ * 语义与列名不符，据此判断会得到系统性错误的归因。
+ */
+export type VideoTerminalSource = 'poll' | 'callback';
+
+/**
+ * `applyTaskStatus` 的收敛结果。`skipped_terminal` = 本次一行未写（进入时已是终态，
+ * 或终态 CAS 判负）；回调路径据此识别迟到回调。
+ */
+export type ApplyTaskStatusResult = 'applied' | 'skipped_terminal';
 
 export interface ClipGenerateInput {
   clipId: string;
@@ -112,6 +129,7 @@ export class VideoGenerationFlowService {
     private readonly projectStatusConvergence: VideoProjectStatusConvergenceService,
     private readonly holdReconciliation: VideoGenerationHoldReconciliationService,
     private readonly terminalConvergence: VideoGenerationTerminalConvergenceService,
+    private readonly taskRecorder: GenerationTaskRecorder,
   ) { }
 
   @Cron('*/30 * * * * *')
@@ -443,6 +461,12 @@ export class VideoGenerationFlowService {
         // 供轮询/回调据此按快照凭证查询，不受 clip params 后续被改动的影响。
         protocolKey: preset.key,
         modelConfigId,
+        // generation_tasks 侧字段：start() 与 create 同事务（见仓储层注释）。
+        task: {
+          provider: modelConfig.provider,
+          materialCount: materials.length,
+          holdId,
+        },
       });
     } catch (err) {
       if (holdId) {
@@ -451,6 +475,8 @@ export class VideoGenerationFlowService {
           'video generation creation failed',
         );
       }
+      // 此处**不记 billingStatus**：create 事务已整体回滚，generation_tasks 根本没有行，
+      // recordBilling 只会 P2025 报错刷屏。
       throw err;
     }
 
@@ -471,6 +497,7 @@ export class VideoGenerationFlowService {
       const { providerTaskId } = await submitVideoTask(callRequest);
 
       await this.repository.markGenerationQueued(generationId, providerTaskId);
+      await this.taskRecorder.queued(generationId, providerTaskId);
       this.logger.log(
         `generateClip queued: ${JSON.stringify({
           generationId,
@@ -483,11 +510,15 @@ export class VideoGenerationFlowService {
       return { generationId, taskId: providerTaskId };
     } catch (err) {
       const claimed = await this.repository.markGenerationCreateTaskFailedAndRefund(
-        buildCreateTaskFailureInput({
-          generationId,
-          clipId: input.clipId,
-          error: err,
-        }),
+        {
+          ...buildCreateTaskFailureInput({
+            generationId,
+            clipId: input.clipId,
+            error: err,
+          }),
+          // 提交阶段失败 —— stage 显式给 SUBMIT。
+          failure: toVideoGenerationFailure(err, 'SUBMIT'),
+        },
         (tx) =>
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
@@ -517,15 +548,21 @@ export class VideoGenerationFlowService {
   async applyTaskStatus(
     generation: video_clip_generations,
     outcome: VideoTaskOutcome,
-  ) {
-    if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
+    /** POLL/CALLBACK 归因来源；见 VideoTerminalSource 的注释（不得由下游推断）。 */
+    source: VideoTerminalSource,
+  ): Promise<ApplyTaskStatusResult> {
+    // 失败终态的 errorStage：由 source 直译，不看任何数据库列。
+    const failStage: GenerationErrorStage = source === 'callback' ? 'CALLBACK' : 'POLL';
+
+    if (await this.terminalConvergence.reconcileIfTerminal(generation))
+      return 'skipped_terminal';
 
     const legacy = toLegacyVideoOutcome(outcome);
     if (legacy.kind === 'missing_status') {
       this.logger.warn(
         `applyTaskStatus: missing status for generation ${generation.id}`,
       );
-      return;
+      return 'applied';
     }
 
     if (legacy.kind === 'succeeded') {
@@ -542,12 +579,14 @@ export class VideoGenerationFlowService {
         this.logger.warn(
           `succeeded but missing video_url, generation=${generation.id}`,
         );
-        await this.markGenerationFailed(
+        // stage=PERSIST：上游说成功但没给产物地址，属产物落地阶段的失败。
+        // **不得**按调用来源记成 POLL/CALLBACK —— 那会把「上游没给 URL」误归因成查询失败。
+        return this.markGenerationFailed(
           generation,
           failureReason,
           legacy.externalStatus,
+          'PERSIST',
         );
-        return;
       }
 
       const videoUrl = await this.videoAssets.persistProviderVideo(
@@ -563,12 +602,13 @@ export class VideoGenerationFlowService {
         this.logger.warn(
           `succeeded but R2 persist failed, generation=${generation.id}`,
         );
-        await this.markGenerationFailed(
+        // 产物转存失败 → stage=PERSIST（同上，不按调用来源归因）。
+        return this.markGenerationFailed(
           generation,
           videoResolution.reason,
           legacy.externalStatus,
+          'PERSIST',
         );
-        return;
       }
 
       // 末帧同样要转存：它会成为素材库封面与链式生成的输入图，留供应商链接等于留 24h 死链。
@@ -602,7 +642,7 @@ export class VideoGenerationFlowService {
         // CAS 输家：终态已由并发路径写定，事务内一行未写。后续 recalculateProjectStatus
         // 由下方 `!isStoryboardProjectGeneration` 守卫本就跳过，这里显式退出以保证
         // 未来在此分支后追加副作用时不会漏防。
-        if (!claimed) return;
+        if (!claimed) return 'skipped_terminal';
       } else if (generation.clipId) {
         const claimed = await this.repository.markGenerationCompletedAndConfirmHold(
           // clipId 已在此分支确认非空
@@ -615,7 +655,7 @@ export class VideoGenerationFlowService {
         );
         // CAS 输家：终态已由并发路径写定，事务内一行未写。这里必须连事务外的副作用
         // 一起放弃 —— 重算虽幂等，但它读到的是赢家的状态，本次没有任何新信息可加。
-        if (!claimed) return;
+        if (!claimed) return 'skipped_terminal';
       } else {
         // 直连行（clipId=null）：只写 generation 行本身，不碰不存在的父 clip/project。
         const claimed = await this.repository.markDirectGenerationCompletedAndConfirmHold(
@@ -634,7 +674,7 @@ export class VideoGenerationFlowService {
         );
         // CAS 输家：终态已由并发路径写定。下方 recalculateProjectStatus 对直连行本就
         // 跳过（clipId=null），这里显式退出以防后续在此追加事务外副作用。
-        if (!claimed) return;
+        if (!claimed) return 'skipped_terminal';
       }
       if (!isStoryboardProjectGeneration && generation.clipId) {
         await this.projectStatusConvergence.recalculateProjectStatus(
@@ -659,6 +699,12 @@ export class VideoGenerationFlowService {
             status: failedInput.status,
             externalStatus: failedInput.externalStatus,
             error: failedInput.error,
+            // stage 由 source 直译（POLL / CALLBACK），见 failStage。
+            failure: toVideoOutcomeFailure({
+              stage: failStage,
+              error: failedInput.error,
+              externalStatus: failedInput.externalStatus,
+            }),
           },
           (tx) =>
             this.holdReconciliation.refundGenerationHoldWithinTx(
@@ -671,13 +717,21 @@ export class VideoGenerationFlowService {
           this.logger.warn(
             `storyboard 项目终态已被并发路径写定，本次放弃: generation=${generation.id}`,
           );
-        return;
+        return claimed ? 'applied' : 'skipped_terminal';
       }
 
       if (generation.clipId) {
         const claimed = await this.repository.markGenerationFailedAndRefund(
-          // clipId 已在此分支确认非空
-          { ...failedInput, clipId: generation.clipId },
+          {
+            // clipId 已在此分支确认非空
+            ...failedInput,
+            clipId: generation.clipId,
+            failure: toVideoOutcomeFailure({
+              stage: failStage,
+              error: failedInput.error,
+              externalStatus: failedInput.externalStatus,
+            }),
+          },
           (tx) =>
             this.holdReconciliation.refundGenerationHoldWithinTx(
               tx,
@@ -687,7 +741,7 @@ export class VideoGenerationFlowService {
         );
         // CAS 输家：真终态多半是刚落的 completed。此时 convergeAfterClipFailure 会把
         // 下游 pending 分镜批量写成 failed —— 不可逆的跨行破坏，必须整体放弃。
-        if (!claimed) return;
+        if (!claimed) return 'skipped_terminal';
       } else {
         // 直连行（clipId=null）：只写 generation 行本身，不碰不存在的父 clip/project。
         const claimed = await this.repository.markDirectGenerationFailedAndRefund(
@@ -696,6 +750,11 @@ export class VideoGenerationFlowService {
             status: failedInput.status,
             externalStatus: failedInput.externalStatus,
             error: failedInput.error,
+            failure: toVideoOutcomeFailure({
+              stage: failStage,
+              error: failedInput.error,
+              externalStatus: failedInput.externalStatus,
+            }),
           },
           (tx) =>
             this.holdReconciliation.refundGenerationHoldWithinTx(
@@ -706,7 +765,7 @@ export class VideoGenerationFlowService {
         );
         // CAS 输家：下方 convergeAfterClipFailure 对直连行本就跳过（clipId=null），
         // 显式退出以防后续在此追加事务外副作用。
-        if (!claimed) return;
+        if (!claimed) return 'skipped_terminal';
       }
       if (generation.clipId && generation.projectId) {
         await this.projectStatusConvergence.convergeAfterClipFailure({
@@ -720,6 +779,7 @@ export class VideoGenerationFlowService {
         legacy.externalStatus,
       );
     }
+    return 'applied';
   }
 
   /**
@@ -745,7 +805,15 @@ export class VideoGenerationFlowService {
       body: payload,
       onWarn: (m) => this.logger.warn(`generation ${generation.id}: ${m}`),
     });
-    await this.applyTaskStatus(generation, outcome);
+    const result = await this.applyTaskStatus(generation, outcome, 'callback');
+    if (result === 'skipped_terminal') {
+      // 迟到回调：generation 已是终态（本次回调到达前已由轮询/另一次回调写定）。
+      // **只记录不改状态** —— 终态不可变（spec §5.4），绝不得转 SUCCEEDED。
+      await this.taskRecorder.recordLateCallback(generation.id, outcome.kind);
+      this.logger.warn(
+        `late callback for terminal generation=${generation.id} outcome=${outcome.kind}`,
+      );
+    }
   }
 
   /**
@@ -801,7 +869,8 @@ export class VideoGenerationFlowService {
         taskId: generation.providerTaskId,
         onWarn: (m) => this.logger.warn(`generation ${generation.id}: ${m}`),
       });
-      await this.applyTaskStatus(generation, outcome);
+      // 手动刷新走的是主动查询，与 cron 轮询同源 —— stage 归 POLL。
+      await this.applyTaskStatus(generation, outcome, 'poll');
     } catch (err) {
       this.logger.warn(
         `refreshGeneration ${generation.id} failed: ${String(err instanceof Error ? err.message : err)}`,
@@ -827,7 +896,7 @@ export class VideoGenerationFlowService {
       try {
         if (await this.terminalConvergence.reconcileIfTerminal(generation))
           continue;
-        await this.applyTaskStatus(generation, outcome);
+        await this.applyTaskStatus(generation, outcome, 'poll');
       } catch (err) {
         this.logger.warn(
           `pollPendingByTaskIds: apply ${generation.id} failed: ${String(err instanceof Error ? err.message : err)}`,
@@ -854,6 +923,12 @@ export class VideoGenerationFlowService {
         // clipId 已在此分支确认非空
         ...expiredInput,
         clipId: generation.clipId,
+        // 排水恒由轮询 cron 触发 → stage=POLL；任务侧状态由 expiredInput.status 直译成 EXPIRED。
+        failure: toVideoOutcomeFailure({
+          stage: 'POLL',
+          error: expiredInput.error,
+          externalStatus: expiredInput.externalStatus,
+        }),
       });
       // CAS 输家：真终态（多半是刚落的 completed）已由赢家写好。仓储层已挡住把成功分镜
       // 打成 failed，但 convergeAfterClipFailure 在事务外做同一件事、且波及下游 pending
@@ -869,6 +944,12 @@ export class VideoGenerationFlowService {
         generationId: generation.id,
         externalStatus: 'expired',
         error: reason,
+        // 同上：排水恒由轮询 cron 触发 → stage=POLL。
+        failure: toVideoOutcomeFailure({
+          stage: 'POLL',
+          error: reason,
+          externalStatus: 'expired',
+        }),
       });
       // CAS 输家：真终态（多半是刚落的 completed）已由赢家写好，下方那条「已标 expired」
       // 的日志会误导排查，直接退出。
@@ -1021,6 +1102,12 @@ export class VideoGenerationFlowService {
         // 计划 3：protocolKey 快照改为提交时实际解析出的 preset.key（同 generateClip）。
         protocolKey: preset.key,
         modelConfigId,
+        // generation_tasks 侧字段：start() 与 create 同事务（见仓储层注释）。
+        task: {
+          provider: modelConfig.provider,
+          materialCount: storyboardMaterials.length,
+          holdId,
+        },
       });
 
       // 运行日志：同 generateClip —— 接口 + 调用参数，放在 submit 之前。
@@ -1036,6 +1123,7 @@ export class VideoGenerationFlowService {
       );
       const { providerTaskId } = await submitVideoTask(callRequest);
       await this.repository.markGenerationQueued(generationId, providerTaskId);
+      await this.taskRecorder.queued(generationId, providerTaskId);
       this.logger.log(
         `generateAllClips storyboard project queued: ${JSON.stringify({
           projectId,
@@ -1062,6 +1150,9 @@ export class VideoGenerationFlowService {
             status: VideoGenStatus.failed,
             externalStatus: 'create_task_failed',
             error: err instanceof Error ? err.message : String(err),
+            // 提交阶段失败 → stage=SUBMIT。上游异常在此仍是原对象，
+            // 结构化字段（httpStatus / requestId / body）不会被压成 message。
+            failure: toVideoGenerationFailure(err, 'SUBMIT'),
           },
           async () => undefined,
         );
@@ -1086,12 +1177,18 @@ export class VideoGenerationFlowService {
     generation: { id: string; clipId: string | null; projectId: string | null },
     reason: string,
     externalStatus: string,
-  ) {
+    /**
+     * 恒为 `PERSIST`（两个调用点都是「上游说成功、产物没落地」）。作为显式形参而非写死，
+     * 是为了让归因跟着调用点走 —— 与 `applyTaskStatus` 的 source→stage 同一条纪律。
+     */
+    stage: GenerationErrorStage,
+  ): Promise<ApplyTaskStatusResult> {
     const failedInput = buildExplicitFailedGenerationInput({ generation, reason, externalStatus });
+    const failure = toVideoOutcomeFailure({ stage, error: reason, externalStatus });
     if (generation.clipId) {
       const claimed = await this.repository.markGenerationFailedAndRefund(
         // clipId 已在此分支确认非空
-        { ...failedInput, clipId: generation.clipId },
+        { ...failedInput, clipId: generation.clipId, failure },
         (tx) =>
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
@@ -1100,7 +1197,7 @@ export class VideoGenerationFlowService {
           ),
       );
       // CAS 输家：终态已被并发路径写定，不做级联失败（会把下游 pending 分镜写成 failed）。
-      if (!claimed) return;
+      if (!claimed) return 'skipped_terminal';
     } else {
       // 直连行（clipId=null）：succeeded 兜底也可能命中直连生成，只写 generation 行本身。
       const claimed = await this.repository.markDirectGenerationFailedAndRefund(
@@ -1109,6 +1206,7 @@ export class VideoGenerationFlowService {
           status: failedInput.status,
           externalStatus: failedInput.externalStatus,
           error: failedInput.error,
+          failure,
         },
         (tx) =>
           this.holdReconciliation.refundGenerationHoldWithinTx(
@@ -1119,7 +1217,7 @@ export class VideoGenerationFlowService {
       );
       // CAS 输家：下方 convergeAfterClipFailure 对直连行本就跳过（clipId=null），
       // 显式退出以防后续在此追加事务外副作用。
-      if (!claimed) return;
+      if (!claimed) return 'skipped_terminal';
     }
     if (generation.clipId && generation.projectId) {
       await this.projectStatusConvergence.convergeAfterClipFailure({
@@ -1127,6 +1225,7 @@ export class VideoGenerationFlowService {
         projectId: generation.projectId,
       });
     }
+    return 'applied';
   }
 
   async persistVideoMessage(

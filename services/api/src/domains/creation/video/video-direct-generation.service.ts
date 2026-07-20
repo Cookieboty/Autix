@@ -17,8 +17,11 @@ import {
   redactProviderRequestForLog,
   resolveVideoGenerationRequestLimits,
   resolveVideoRouting,
+  toVideoGenerationFailure,
   type VideoGenerationClipParams as ClipParams,
 } from './video-generation-flow.helpers';
+import { GenerationBillingStatus } from '../../platform/prisma/generated';
+import { GenerationTaskRecorder } from '../../platform/generation-tasks/generation-task.recorder';
 import {
   assembleVideoRequest,
   submitVideoTask,
@@ -62,6 +65,7 @@ export class VideoDirectGenerationService {
     private readonly membershipService: MembershipService,
     private readonly riskService: RiskService,
     private readonly holdReconciliation: VideoGenerationHoldReconciliationService,
+    private readonly taskRecorder: GenerationTaskRecorder,
   ) {}
 
   async generate(input: DirectVideoGenerateInput) {
@@ -190,6 +194,12 @@ export class VideoDirectGenerationService {
         }),
         protocolKey: preset.key,
         modelConfigId,
+        // generation_tasks 侧字段：start() 与 create 同事务（见仓储层注释）。
+        task: {
+          provider: modelConfig.provider,
+          materialCount: input.materials.length,
+          holdId,
+        },
       });
     } catch (err) {
       this.logger.error(
@@ -224,11 +234,24 @@ export class VideoDirectGenerationService {
         const claimed = await this.repository.markDirectGenerationFailed(
           generationId,
           err instanceof Error ? err.message : String(err),
+          // 提交阶段被上游明确拒绝 → stage=SUBMIT。
+          toVideoGenerationFailure(err, 'SUBMIT'),
         );
         // CAS 输家才可能出现「行已是终态」——此时退款归赢家那条路径负责，这里再退一次
         // 就是重复退款。故 safeRefund 必须被 claimed 守住。
-        if (claimed)
-          await this.holdReconciliation.safeRefund(generationId, 'upstream rejected');
+        if (claimed) {
+          const refunded = await this.holdReconciliation.safeRefund(
+            generationId,
+            'upstream rejected',
+          );
+          // 退款在主事务之外（markDirectGenerationFailed 不退款），故 billingStatus
+          // 也在这里、退款结束之后记。safeRefund 吞掉异常只打日志，靠返回值区分成败。
+          await this.taskRecorder.recordBilling(
+            generationId,
+            refunded.ok ? GenerationBillingStatus.REFUNDED : GenerationBillingStatus.REFUND_FAILED,
+            refunded.error,
+          );
+        }
       } else {
         this.logger.warn(
           `direct submit uncertain, keep hold generation=${generationId}: ${String(err)}`,
@@ -239,6 +262,7 @@ export class VideoDirectGenerationService {
 
     try {
       await this.repository.markGenerationQueued(generationId, providerTaskId);
+      await this.taskRecorder.queued(generationId, providerTaskId);
     } catch (err) {
       // 上游已受理、仅本地落库失败：不退款、不标失败，交孤儿回收
       // （PointsHoldReclaimCron 60min）+ 告警。

@@ -5,6 +5,8 @@ import {
   VideoGenStatus,
   VideoProjectStatus,
 } from '../../platform/prisma/generated';
+import { GenerationTaskRecorder } from '../../platform/generation-tasks/generation-task.recorder';
+import { GenerationTaskRepository } from '../../platform/generation-tasks/generation-task.repository';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
 import { VideoGenerationRepository } from './video-generation.repository';
@@ -143,6 +145,13 @@ function makeService(options: {
         userId: 'user-1',
         status: PointHoldStatus.PENDING,
       })),
+    },
+    // generation_tasks 走真实 recorder + repository（只把 PrismaClient 换成 stub），
+    // 终态 updateMany 默认 count:1 —— 与 video_clip_generations 的 CAS 同款约定。
+    generation_tasks: {
+      create: vi.fn(async () => ({})),
+      updateMany: vi.fn(async () => ({ count: 1 })),
+      update: vi.fn(async () => ({})),
     },
   };
   const pointsService = {
@@ -323,7 +332,10 @@ function makeService(options: {
   const terminalConvergence = new VideoGenerationTerminalConvergenceService(
     holdReconciliation,
   );
-  const repository = new VideoGenerationRepository(prisma as never);
+  const taskRecorder = new GenerationTaskRecorder(
+    new GenerationTaskRepository(prisma as never),
+  );
+  const repository = new VideoGenerationRepository(prisma as never, taskRecorder);
 
   const service = new VideoGenerationFlowService(
     repository,
@@ -336,11 +348,13 @@ function makeService(options: {
     projectStatusConvergence as never,
     holdReconciliation,
     terminalConvergence,
+    taskRecorder,
   );
 
   return {
     service,
     repository,
+    taskRecorder,
     prisma,
     pointsService,
     r2Service,
@@ -1014,6 +1028,8 @@ describe('VideoGenerationFlowService billing', () => {
         lastFrameUrl: null,
         durationSec: 5,
       },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(r2Service.uploadBuffer).toHaveBeenCalled();
@@ -1056,6 +1072,8 @@ describe('VideoGenerationFlowService billing', () => {
           lastFrameUrl: null,
           durationSec: 5,
         },
+        // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+        'poll',
       ),
     ).rejects.toThrow('ledger confirm failed');
 
@@ -1084,6 +1102,8 @@ describe('VideoGenerationFlowService billing', () => {
         externalStatus: 'failed',
         error: 'provider rejected',
       },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(pointsService.refundHoldWithinTx).toHaveBeenCalledWith(
@@ -1112,6 +1132,8 @@ describe('VideoGenerationFlowService billing', () => {
         status: VideoGenStatus.completed,
       } as never,
       { kind: 'succeeded', externalStatus: 'succeeded', lastFrameUrl: null, durationSec: null },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
@@ -1130,6 +1152,8 @@ describe('VideoGenerationFlowService billing', () => {
         status: VideoGenStatus.failed,
       } as never,
       { kind: 'failed', externalStatus: 'failed', error: 'n/a' },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(pointsService.refundHold).toHaveBeenCalledWith(
@@ -1403,6 +1427,91 @@ describe('VideoGenerationFlowService callback routing', () => {
   });
 });
 
+// Task 8：回调路径的任务记录。两条不变量各自都能被单独破坏，故分开断言。
+describe('VideoGenerationFlowService 回调的 generation_tasks 记录', () => {
+  function queuedGeneration(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'gen-1',
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      model: 'seedance-pro',
+      protocolKey: 'ark-video@v3',
+      modelConfigId: 'model-config-1',
+      status: VideoGenStatus.queued,
+      params: {},
+      ...overrides,
+    };
+  }
+
+  it('回调失败落 errorStage=CALLBACK（而非 POLL）', async () => {
+    const { service, prisma } = makeService();
+    prisma.video_clip_generations.findFirst.mockResolvedValue(queuedGeneration());
+
+    await service.handleCallback('ark-video@v3', 'seedance-task-1', {
+      id: 'seedance-task-1',
+      status: 'failed',
+      error: { message: 'upstream exploded' },
+    });
+
+    const terminal = (prisma.generation_tasks.updateMany.mock.calls as any[]).at(-1)[0];
+    expect(terminal.data).toMatchObject({ status: 'FAILED', errorStage: 'CALLBACK' });
+  });
+
+  it('同一失败经轮询到达时落 errorStage=POLL —— stage 跟着调用来源走', async () => {
+    const { service, prisma } = makeService();
+
+    await service.applyTaskStatus(
+      queuedGeneration() as never,
+      { kind: 'failed', externalStatus: 'failed', error: 'upstream exploded' } as never,
+      'poll',
+    );
+
+    const terminal = (prisma.generation_tasks.updateMany.mock.calls as any[]).at(-1)[0];
+    expect(terminal.data).toMatchObject({ status: 'FAILED', errorStage: 'POLL' });
+  });
+
+  it('产物转存失败落 errorStage=PERSIST —— 不按调用来源记成 CALLBACK', async () => {
+    const { service, prisma, videoAssets } = makeService();
+    prisma.video_clip_generations.findFirst.mockResolvedValue(queuedGeneration());
+    // 上游说成功、R2 转存失败：这是产物落地阶段的失败，与「回调告诉我们的」无关。
+    videoAssets.persistProviderVideo.mockResolvedValue(null);
+
+    await service.handleCallback('ark-video@v3', 'seedance-task-1', {
+      id: 'seedance-task-1',
+      status: 'succeeded',
+      video_url: 'https://provider.test/video.mp4',
+      duration: 5,
+    });
+
+    const terminal = (prisma.generation_tasks.updateMany.mock.calls as any[]).at(-1)[0];
+    expect(terminal.data).toMatchObject({ status: 'FAILED', errorStage: 'PERSIST' });
+  });
+
+  it('迟到回调：只记 lateCallback，不得把终态转成 SUCCEEDED', async () => {
+    const { service, prisma } = makeService();
+    // 进入时已是终态 —— 回调比轮询晚到一步。
+    prisma.video_clip_generations.findFirst.mockResolvedValue(
+      queuedGeneration({ status: VideoGenStatus.failed }),
+    );
+
+    await service.handleCallback('ark-video@v3', 'seedance-task-1', {
+      id: 'seedance-task-1',
+      status: 'succeeded',
+      video_url: 'https://provider.test/video.mp4',
+      duration: 5,
+    });
+
+    expect(prisma.generation_tasks.update).toHaveBeenCalledTimes(1);
+    expect((prisma.generation_tasks.update.mock.calls as any[])[0][0]).toMatchObject({
+      where: { id: 'gen-1' },
+      data: { lateOutcome: 'succeeded' },
+    });
+    // 终态不可变：一次 CAS 都不该发生。
+    expect(prisma.generation_tasks.updateMany).not.toHaveBeenCalled();
+  });
+});
+
 // 直连（clipId=null, projectId=null）行的终态收敛：cron 轮询/回调都不 join clip，
 // 直连行会原样流进 applyTaskStatus/markExpired —— 这三个用例锁死"跳过 clip/project
 // 收敛，只写 generation 行本身"这条不变量。
@@ -1436,6 +1545,8 @@ describe('VideoGenerationFlowService applyTaskStatus 直连（clipId=null）', (
         lastFrameUrl: null,
         durationSec: 5,
       },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(projectStatusConvergence.recalculateProjectStatus).not.toHaveBeenCalled();
@@ -1460,6 +1571,8 @@ describe('VideoGenerationFlowService applyTaskStatus 直连（clipId=null）', (
         params: {},
       } as never,
       { kind: 'failed', externalStatus: 'failed', error: 'provider rejected' },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
@@ -1531,6 +1644,12 @@ describe('VideoGenerationFlowService markExpired (超时排水，不退款)', ()
       generationId: 'gen-1',
       externalStatus: 'expired',
       error: 'cron: 直连行超过 30 分钟未完成',
+      // 排水恒由轮询 cron 触发 —— stage 必须是 POLL，且由调用方显式传入。
+      failure: {
+        stage: 'POLL',
+        message: 'cron: 直连行超过 30 分钟未完成',
+        code: 'expired',
+      },
     });
     expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
   });
@@ -1599,6 +1718,8 @@ describe('VideoGenerationFlowService CAS 输家（updateMany count:0）不执行
         lastFrameUrl: null,
         durationSec: 5,
       },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(projectStatusConvergence.recalculateProjectStatus).not.toHaveBeenCalled();
@@ -1620,6 +1741,8 @@ describe('VideoGenerationFlowService CAS 输家（updateMany count:0）不执行
         status: VideoGenStatus.queued,
       } as never,
       { kind: 'failed', externalStatus: 'failed', error: 'provider rejected' },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();
@@ -1641,6 +1764,8 @@ describe('VideoGenerationFlowService CAS 输家（updateMany count:0）不执行
       } as never,
       // sourceUrl 缺失 → 走 markGenerationFailed 兜底（幽灵 completed 防线）。
       { kind: 'succeeded', externalStatus: 'succeeded', lastFrameUrl: null, durationSec: null },
+      // 既有用例都是轮询/手动刷新语义 —— 显式给 source，不再由下游推断。
+      'poll',
     );
 
     expect(projectStatusConvergence.convergeAfterClipFailure).not.toHaveBeenCalled();

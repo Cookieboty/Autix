@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../platform/prisma/prisma.module';
+import { GenerationTasksModule } from '../../platform/generation-tasks/generation-tasks.module';
 import { PointsModule } from '../../billing/points/points.module';
 import { StorageModule } from '../../platform/storage/storage.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
@@ -33,6 +34,8 @@ import { VideoGenController } from './video-gen.controller';
 @Module({
   imports: [
     PrismaModule,
+    // 视频三条 create 路径与全部终态点都经 GenerationTaskRecorder 写 generation_tasks。
+    GenerationTasksModule,
     PointsModule,
     StorageModule,
     ModelConfigModule,

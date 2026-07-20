@@ -101,8 +101,18 @@ function makeService(
   };
 
   const holdReconciliation = {
-    safeRefund: vi.fn(async () => undefined),
+    // safeRefund 现在回报成败（供 billingStatus 区分 REFUNDED / REFUND_FAILED）。
+    safeRefund: vi.fn(async () => ({ ok: true })),
     ...options.hold,
+  };
+
+  const taskRecorder = {
+    start: vi.fn(async () => undefined),
+    queued: vi.fn(async () => undefined),
+    succeed: vi.fn(async () => true),
+    fail: vi.fn(async () => true),
+    recordBilling: vi.fn(async () => undefined),
+    recordLateCallback: vi.fn(async () => undefined),
   };
 
   const service = new VideoDirectGenerationService(
@@ -113,11 +123,13 @@ function makeService(
     membershipService as never,
     riskService as never,
     holdReconciliation as never,
+    taskRecorder as never,
   );
 
   return {
     service,
     repository,
+    taskRecorder,
     pointsService,
     modelResolver,
     membershipService,
@@ -140,7 +152,7 @@ describe('VideoDirectGenerationService.generate', () => {
 
   it('submit 成功、markGenerationQueued 失败 → 不退款不标失败', async () => {
     const markQueued = vi.fn().mockRejectedValue(new Error('db down'));
-    const safeRefund = vi.fn();
+    const safeRefund = vi.fn(async () => ({ ok: true }));
     const markDirectGenerationFailed = vi.fn(async () => true);
     const { service } = makeService({
       submitVideoTask: async () => ({ providerTaskId: 't1' }),
@@ -155,7 +167,7 @@ describe('VideoDirectGenerationService.generate', () => {
   });
 
   it('上游明确拒绝（4xx httpStatus）→ 退款 + 标失败', async () => {
-    const safeRefund = vi.fn();
+    const safeRefund = vi.fn(async () => ({ ok: true }));
     const markDirectGenerationFailed = vi.fn(async () => true);
     const { service } = makeService({
       submitVideoTask: async () => {
@@ -177,7 +189,7 @@ describe('VideoDirectGenerationService.generate', () => {
   });
 
   it('提交失败（不确定：网络/超时）→ 保 hold，不退款也不标失败', async () => {
-    const safeRefund = vi.fn();
+    const safeRefund = vi.fn(async () => ({ ok: true }));
     const markDirectGenerationFailed = vi.fn(async () => true);
     const { service } = makeService({
       submitVideoTask: async () => {
@@ -195,7 +207,7 @@ describe('VideoDirectGenerationService.generate', () => {
 
   it('提交失败（无 task id：VideoUpstreamError 且无 httpStatus）→ 确定性失败 → 退款 + 标失败', async () => {
     // 收到了上游响应但没给任务 id → 无 id 可轮询、不可能恢复，必须立即关闭（否则一直挂 pending）。
-    const safeRefund = vi.fn();
+    const safeRefund = vi.fn(async () => ({ ok: true }));
     const markDirectGenerationFailed = vi.fn(async () => true);
     const { service } = makeService({
       submitVideoTask: async () => {
@@ -221,7 +233,7 @@ describe('VideoDirectGenerationService.generate', () => {
   // 仓储之外 —— 输家若继续退款，就是重复退款（凭空发积分）。Task 7 的 Critical 正是
   // 这种「仓储守住、调用方一步之遥泄漏」。
   it('CAS 输家（markDirectGenerationFailed 返回 false）不退款，但仍向上抛错', async () => {
-    const safeRefund = vi.fn();
+    const safeRefund = vi.fn(async () => ({ ok: true }));
     const markDirectGenerationFailed = vi.fn(async () => false);
     const { service } = makeService({
       submitVideoTask: async () => {
@@ -305,7 +317,7 @@ describe('VideoDirectGenerationService.generate', () => {
   });
 
   it('落库失败（提交前）→ 退款', async () => {
-    const safeRefund = vi.fn();
+    const safeRefund = vi.fn(async () => ({ ok: true }));
     const createDirectPendingGeneration = vi.fn().mockRejectedValue(new Error('db down before submit'));
     const { service } = makeService({
       repo: { createDirectPendingGeneration },
