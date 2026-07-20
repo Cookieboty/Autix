@@ -1,4 +1,5 @@
-import { GenerationTaskStatus } from '../prisma/generated';
+import { GenerationKind, GenerationTaskStatus } from '../prisma/generated';
+import { AppLogger } from '../common/app-logger';
 import { GenerationTaskRepository } from './generation-task.repository';
 
 function buildTx(updateManyResult: { count: number }) {
@@ -44,5 +45,73 @@ describe('GenerationTaskRepository.claimTerminal', () => {
     expect(allowed).not.toContain(GenerationTaskStatus.EXPIRED);
     expect(allowed).not.toContain(GenerationTaskStatus.SUCCEEDED);
     expect(allowed).not.toContain(GenerationTaskStatus.FAILED);
+  });
+});
+
+describe('GenerationTaskRepository.markQueued', () => {
+  it('count===0 时打 warn 日志（可能是终态已跳过，也可能是 id 不存在），且返回值/签名不变', async () => {
+    const tx = buildTx({ count: 0 });
+    const warnSpy = vi.spyOn(AppLogger.prototype, 'warn').mockImplementation(() => undefined);
+    const repo = new GenerationTaskRepository({} as any);
+
+    await expect(repo.markQueued('t-1', 'provider-task-1', tx)).resolves.toBeUndefined();
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const [message] = warnSpy.mock.calls[0];
+    expect(String(message)).toContain('t-1');
+    expect(String(message)).toContain('provider-task-1');
+
+    warnSpy.mockRestore();
+  });
+
+  it('count===1 时不打 warn 日志', async () => {
+    const tx = buildTx({ count: 1 });
+    const warnSpy = vi.spyOn(AppLogger.prototype, 'warn').mockImplementation(() => undefined);
+    const repo = new GenerationTaskRepository({} as any);
+
+    await repo.markQueued('t-1', 'provider-task-1', tx);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+});
+
+describe('GenerationTaskRepository.create', () => {
+  it('videoGenerationId 透传到 data（视频任务在 start 时就已知反向指针）', async () => {
+    const tx = buildTx({ count: 0 });
+    const repo = new GenerationTaskRepository({} as any);
+
+    await repo.create(
+      {
+        id: 't-1',
+        kind: GenerationKind.VIDEO,
+        userId: 'u-1',
+        model: 'm-1',
+        promptLength: 0,
+        videoGenerationId: 'vg-1',
+      },
+      tx,
+    );
+
+    expect(tx.generation_tasks.create.mock.calls[0][0].data.videoGenerationId).toBe('vg-1');
+  });
+
+  it('未传 videoGenerationId 时 data 中为 null', async () => {
+    const tx = buildTx({ count: 0 });
+    const repo = new GenerationTaskRepository({} as any);
+
+    await repo.create(
+      {
+        id: 't-1',
+        kind: GenerationKind.IMAGE,
+        userId: 'u-1',
+        model: 'm-1',
+        promptLength: 0,
+      },
+      tx,
+    );
+
+    expect(tx.generation_tasks.create.mock.calls[0][0].data.videoGenerationId).toBeNull();
   });
 });
