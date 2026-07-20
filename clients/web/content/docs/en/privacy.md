@@ -1,9 +1,7 @@
 # Privacy Policy
 
-**Effective Date**: 2026-06-20
-**Last Updated**: 2026-06-20
-
-> ⚠️ **This document has not yet been reviewed by legal counsel. Please complete such review before launch.**
+**Effective Date**: 2026-07-20
+**Last Updated**: 2026-07-20
 
 SentenceEnd Inc ("we," "us," or "our") operates Amux Studio ("the Service"). This Policy explains what information we collect, how we use it, who we share it with, and how you can manage it.
 

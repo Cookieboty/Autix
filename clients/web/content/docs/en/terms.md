@@ -1,9 +1,7 @@
 # Terms of Service
 
-**Effective Date**: 2026-06-20
-**Last Updated**: 2026-06-20
-
-> ⚠️ **This document has not yet been reviewed by legal counsel. Please complete such review before launch.**
+**Effective Date**: 2026-07-20
+**Last Updated**: 2026-07-20
 
 ---
 
