@@ -64,6 +64,14 @@ function walk(value: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
     return stripSignedUrl(value);
   }
 
+  // 函数/Symbol/BigInt 不满足 Prisma.InputJsonValue：函数和 Symbol 会被 JSON.stringify
+  // 静默丢弃（不报错但字段消失），BigInt 会直接让 JSON.stringify 抛 TypeError。三者
+  // 必须在通用 object 分支之前降级成字符串，否则调用方裸 `as Prisma.InputJsonValue`
+  // 断言在编译期放行、运行时才炸。
+  if (typeof value === 'function') return '[Function]';
+  if (typeof value === 'symbol') return String(value);
+  if (typeof value === 'bigint') return value.toString();
+
   // Date/Map/Set 的 typeof 是 object 但没有可枚举自有属性，走通用分支会被
   // Object.entries 判成空对象、静默清空，必须在通用分支之前特判。
   if (value instanceof Date) {
@@ -159,7 +167,10 @@ function truncateForJsonEmbedding(text: string, budgetBytes: number): string {
  * 与图片/视频领域解耦，故不复用视频域的 redactProviderRequest（那个只遮盖顶层 callback_url）。
  *
  * 返回契约：正常情况下返回净化后的值本身；超过 limitBytes 时返回
- * `{ truncated: true, totalBytes: number, preview: string }`，其中 preview 是
+ * `{ __snapshotTruncated: true, totalBytes: number, preview: string }`——截断标记用
+ * `__snapshotTruncated` 而非裸 `truncated`，避免与真实快照里恰好同名的业务字段
+ * （`truncated`/`totalBytes`/`preview` 三个都可能是合法业务键）产生双形态歧义，
+ * 让下游误把截断信封当成原始数据解析。其中 preview 是
  * `JSON.stringify(cleaned)` 的原始前缀（未经二次转义）。
  *
  * 调用方需要再对返回值 `JSON.stringify` 一次落库——这里保证的是「调用方那次
@@ -178,9 +189,9 @@ export function sanitizeSnapshot(
     return cleaned;
   }
 
-  const shapeWithEmptyPreview = { truncated: true, totalBytes, preview: '' };
+  const shapeWithEmptyPreview = { __snapshotTruncated: true, totalBytes, preview: '' };
   const fixedBytes = Buffer.byteLength(JSON.stringify(shapeWithEmptyPreview), 'utf8');
   const previewBudget = Math.max(0, limitBytes - fixedBytes);
   const preview = truncateForJsonEmbedding(serialized, previewBudget);
-  return { truncated: true, totalBytes, preview };
+  return { __snapshotTruncated: true, totalBytes, preview };
 }

@@ -57,6 +57,10 @@ export class GenerationTaskRecorder {
         protocolKey: input.protocolKey,
         prompt: input.prompt,
         promptLength: input.prompt?.length ?? 0,
+        // `as` 断言在此是安全的：sanitizeSnapshot 的 walk() 已把函数/Symbol/BigInt
+        // 降级成字符串（不再原样透传非 JSON 安全值），且截断路径用命名空间键
+        // `__snapshotTruncated` 与业务字段隔离，因此返回值的运行时形态始终满足
+        // Prisma.InputJsonValue（见 snapshot-sanitizer.ts 的契约注释与测试）。
         paramsSnapshot: sanitizeSnapshot(input.paramsSnapshot) as Prisma.InputJsonValue,
         materialCount: input.materialCount,
         holdId: input.holdId,

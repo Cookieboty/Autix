@@ -39,10 +39,15 @@ describe('sanitizeSnapshot', () => {
   });
 
   it('超过体积上限时截断并标注原始长度', () => {
-    const out = sanitizeSnapshot({ note: 'x'.repeat(SNAPSHOT_BYTE_LIMIT * 2) });
+    const out = sanitizeSnapshot({ note: 'x'.repeat(SNAPSHOT_BYTE_LIMIT * 2) }) as Record<
+      string,
+      unknown
+    >;
     const serialized = JSON.stringify(out);
     expect(Buffer.byteLength(serialized, 'utf8')).toBeLessThanOrEqual(SNAPSHOT_BYTE_LIMIT + 200);
-    expect(serialized).toContain('truncated');
+    // 用命名空间键而非裸 `truncated`，避免与业务快照里恰好同名的字段混淆。
+    expect(out.__snapshotTruncated).toBe(true);
+    expect(serialized).toContain('__snapshotTruncated');
   });
 
   it('降级路径的返回值二次序列化后仍不超过体积上限（即使原始内容全是引号）', () => {
@@ -86,6 +91,24 @@ describe('sanitizeSnapshot', () => {
     expect(out.m).not.toEqual({});
     expect(out.s).not.toEqual({});
     expect(JSON.stringify(out)).toContain('1');
+  });
+
+  it('函数值被降级成占位字符串，不会把非 JSON 安全值透传给 Prisma', () => {
+    const out = sanitizeSnapshot({ cb: function namedFn() {} }) as Record<string, unknown>;
+    expect(out.cb).toBe('[Function]');
+    expect(() => JSON.stringify(out)).not.toThrow();
+  });
+
+  it('Symbol 值被转成字符串，不被 JSON.stringify 静默丢弃', () => {
+    const out = sanitizeSnapshot({ tag: Symbol('marker') }) as Record<string, unknown>;
+    expect(out.tag).toBe('Symbol(marker)');
+    expect(typeof out.tag).toBe('string');
+  });
+
+  it('BigInt 值被转成十进制字符串，不触发 JSON.stringify 抛错', () => {
+    const out = sanitizeSnapshot({ big: 9007199254740993n }) as Record<string, unknown>;
+    expect(out.big).toBe('9007199254740993');
+    expect(() => JSON.stringify(out)).not.toThrow();
   });
 });
 

@@ -62,8 +62,30 @@ describe('GenerationTaskRecorder', () => {
     expect(next.status).toBe(GenerationTaskStatus.FAILED);
     expect(next.errorStage).toBe(GenerationErrorStage.SUBMIT);
     expect(next.errorClass).toBe('params');
+    expect(next.errorMessage).toBe('bad size');
     expect(next.upstreamStatus).toBe(400);
+    expect(next.upstreamBody).toBe('{"e":1}');
     expect(next.upstreamRequestId).toBe('req-1');
+  });
+
+  it('succeed 把 imageGenerationId/durationMs 透传给终态更新，返回值即 claimTerminal 的布尔结果', async () => {
+    const repo = buildRepo();
+    repo.claimTerminal.mockResolvedValue(false);
+    const recorder = new GenerationTaskRecorder(repo as any);
+    const tx = {} as any;
+
+    const result = await recorder.succeed(
+      't-1',
+      { imageGenerationId: 'img-1', durationMs: 1234 },
+      tx,
+    );
+
+    const [, next] = repo.claimTerminal.mock.calls[0];
+    expect(next.status).toBe(GenerationTaskStatus.SUCCEEDED);
+    expect(next.imageGenerationId).toBe('img-1');
+    expect(next.durationMs).toBe(1234);
+    // claimTerminal mock 显式设成 false，验证 succeed 直接透传返回值而非恒返回 true。
+    expect(result).toBe(false);
   });
 
   it('recordBilling 失败只吞掉，不影响调用方', async () => {
