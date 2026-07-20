@@ -178,3 +178,16 @@ describe('PointsHoldService.quoteHoldFromSnapshot', () => {
     expect(result).toBe(90);
   });
 });
+
+describe('PointsHoldService.findByIds', () => {
+  it('delegates to PointsRepository.findHoldsByIds unchanged（收敛 cron 批量核对 hold 状态用）', async () => {
+    const rows = [{ id: 'hold-1', status: 'REFUNDED' }];
+    const pointsRepo = { findHoldsByIds: vi.fn().mockResolvedValue(rows) };
+    const service = new PointsHoldService(pointsRepo as never, {} as never);
+
+    const result = await service.findByIds(['hold-1']);
+
+    expect(pointsRepo.findHoldsByIds).toHaveBeenCalledWith(['hold-1']);
+    expect(result).toBe(rows);
+  });
+});

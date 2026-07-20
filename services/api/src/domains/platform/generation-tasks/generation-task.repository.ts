@@ -49,6 +49,12 @@ export interface TerminalUpdate {
   upstreamDiagnostics?: Prisma.InputJsonValue;
   imageGenerationId?: string;
   durationMs?: number;
+  /**
+   * 仅收敛 cron 用：hold 已确认 REFUNDED 时随 CAS 一并把 billingStatus 打成 REFUNDED。
+   * 未传时**不进 data**（不是 `?? null`）——succeed/fail 等既有调用方从不传这个字段，
+   * 若默认置 null 会把 recordBilling 早先写入的 HELD/CONFIRMED 覆写掉。
+   */
+  billingStatus?: GenerationBillingStatus;
 }
 
 @Injectable()
@@ -127,9 +133,32 @@ export class GenerationTaskRepository {
         imageGenerationId: next.imageGenerationId ?? null,
         durationMs: next.durationMs ?? null,
         finishedAt,
+        // 有意不用 `?? null`：省略时字段完全不出现在 data 里，undefined 对 Prisma
+        // 等同"未传"，不会覆写已有的 billingStatus（见 TerminalUpdate.billingStatus 注释）。
+        ...(next.billingStatus !== undefined ? { billingStatus: next.billingStatus } : {}),
       },
     });
     return count === 1;
+  }
+
+  /**
+   * 悬挂任务：PENDING 且从未拿到 providerTaskId（即 submit 从未成功过）。
+   * 收敛 cron 唯一的候选来源；`take` 做防御性上限，避免单轮扫出过多行拖垮 cron。
+   */
+  async findDanglingPending() {
+    return this.prisma.generation_tasks.findMany({
+      where: { status: GenerationTaskStatus.PENDING, providerTaskId: null },
+      select: { id: true, holdId: true, submittedAt: true, createdAt: true },
+      take: 500,
+    });
+  }
+
+  /**
+   * 无外部事务时的 CAS（收敛 cron 专用）。收敛 cron 是运维路径，独立起自己的短事务，
+   * 不借用调用方事务——这里没有"调用方事务"可借。
+   */
+  async claimTerminalStandalone(id: string, next: TerminalUpdate): Promise<boolean> {
+    return this.prisma.$transaction((tx) => this.claimTerminal(id, next, tx));
   }
 
   /**

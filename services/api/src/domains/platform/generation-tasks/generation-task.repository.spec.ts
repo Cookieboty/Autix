@@ -1,4 +1,4 @@
-import { GenerationKind, GenerationTaskStatus } from '../prisma/generated';
+import { GenerationBillingStatus, GenerationKind, GenerationTaskStatus } from '../prisma/generated';
 import { AppLogger } from '../common/app-logger';
 import { GenerationTaskRepository } from './generation-task.repository';
 
@@ -45,6 +45,63 @@ describe('GenerationTaskRepository.claimTerminal', () => {
     expect(allowed).not.toContain(GenerationTaskStatus.EXPIRED);
     expect(allowed).not.toContain(GenerationTaskStatus.SUCCEEDED);
     expect(allowed).not.toContain(GenerationTaskStatus.FAILED);
+  });
+
+  it('billingStatus 传入时写进 data（收敛 cron 用于把 EXPIRED 和 hold 已退款的事实一起落库）', async () => {
+    const tx = buildTx({ count: 1 });
+    const repo = new GenerationTaskRepository({} as any);
+
+    await repo.claimTerminal(
+      't-1',
+      { status: GenerationTaskStatus.EXPIRED, billingStatus: GenerationBillingStatus.REFUNDED },
+      tx,
+    );
+
+    expect(tx.generation_tasks.updateMany.mock.calls[0][0].data.billingStatus).toBe(
+      GenerationBillingStatus.REFUNDED,
+    );
+  });
+
+  it('billingStatus 未传时 data 中不含该键（不得覆写 succeed/fail 场景下已有的 HELD/CONFIRMED 计费状态）', async () => {
+    const tx = buildTx({ count: 1 });
+    const repo = new GenerationTaskRepository({} as any);
+
+    await repo.claimTerminal('t-1', { status: GenerationTaskStatus.SUCCEEDED }, tx);
+
+    expect('billingStatus' in tx.generation_tasks.updateMany.mock.calls[0][0].data).toBe(false);
+  });
+});
+
+describe('GenerationTaskRepository.findDanglingPending', () => {
+  it('只查 PENDING 且 providerTaskId 为空的行', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const repo = new GenerationTaskRepository({ generation_tasks: { findMany } } as any);
+
+    await repo.findDanglingPending();
+
+    const args = findMany.mock.calls[0][0];
+    expect(args.where).toEqual({ status: GenerationTaskStatus.PENDING, providerTaskId: null });
+    expect(args.select).toMatchObject({
+      id: true,
+      holdId: true,
+      submittedAt: true,
+      createdAt: true,
+    });
+  });
+});
+
+describe('GenerationTaskRepository.claimTerminalStandalone', () => {
+  it('自行开启事务并复用 claimTerminal 的 CAS 逻辑', async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const tx = { generation_tasks: { updateMany } };
+    const $transaction = vi.fn((cb: (tx: unknown) => unknown) => cb(tx));
+    const repo = new GenerationTaskRepository({ $transaction } as any);
+
+    const won = await repo.claimTerminalStandalone('t-1', { status: GenerationTaskStatus.EXPIRED });
+
+    expect($transaction).toHaveBeenCalledTimes(1);
+    expect(won).toBe(true);
+    expect(updateMany).toHaveBeenCalledTimes(1);
   });
 });
 

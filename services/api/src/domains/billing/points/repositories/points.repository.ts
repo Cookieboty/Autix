@@ -225,6 +225,18 @@ export class PointsRepository {
     return client.point_holds.findUnique({ where: { id: holdId } });
   }
 
+  /**
+   * 批量核对 hold 状态（生成任务收敛 cron 用）：只选 id/status，避免拉整行
+   * （pricingSnapshot 等大字段）。空数组直接短路，不打一次没有意义的 `IN ()` 查询。
+   */
+  async findHoldsByIds(ids: string[]): Promise<Array<{ id: string; status: PointHoldStatus }>> {
+    if (ids.length === 0) return [];
+    return this.prisma.point_holds.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, status: true },
+    });
+  }
+
   async createHoldWithinTx(
     tx: Prisma.TransactionClient,
     data: Prisma.point_holdsUncheckedCreateInput,

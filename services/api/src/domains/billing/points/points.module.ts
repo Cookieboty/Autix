@@ -32,6 +32,11 @@ import { PointsController } from './points.controller';
   // `UndefinedModuleException` on OrderModule's AuthModule import). TasksModule is
   // a new leaf only BillingDomainModule imports, so it can depend on both
   // PointsModule and MembershipModule with plain imports and no forwardRef at all.
-  exports: [PointsService, TaskPricingRepository],
+  // PointsHoldService is also exported so GenerationTasksModule's dangling-task
+  // reconciliation cron can batch-check hold statuses (findByIds) without standing
+  // up a second PointsHoldService instance. This is a plain one-way edge — nothing
+  // PointsModule imports (only PrismaModule, which is @Global()) ever imports
+  // GenerationTasksModule back, so no forwardRef is needed here.
+  exports: [PointsService, TaskPricingRepository, PointsHoldService],
 })
 export class PointsModule {}

@@ -76,6 +76,13 @@ export class PointsHoldService {
     return this.pointsRepo.countActiveHoldsByType(userId, taskType);
   }
 
+  /**
+   * 批量核对 hold 状态（生成任务收敛 cron 用）：只返回 id/status，不含金额/明细。
+   */
+  async findByIds(ids: string[]): Promise<Array<{ id: string; status: PointHoldStatus }>> {
+    return this.pointsRepo.findHoldsByIds(ids);
+  }
+
   async createHold(userId: string, input: CreateHoldInput) {
     this.ledgerService.assertPositiveAmount(input.amount);
 

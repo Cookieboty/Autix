@@ -63,3 +63,28 @@ describe('PointsRepository.findHoldByIdWithinTx', () => {
     expect(result).toEqual({ id: 'hold-2' });
   });
 });
+
+describe('PointsRepository.findHoldsByIds', () => {
+  it('queries by id-in and selects only id/status（收敛 cron 批量核对 hold 状态用）', async () => {
+    const findMany = vi.fn().mockResolvedValue([{ id: 'hold-1', status: 'REFUNDED' }]);
+    const repo = new PointsRepository({ point_holds: { findMany } } as never);
+
+    const result = await repo.findHoldsByIds(['hold-1', 'hold-2']);
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['hold-1', 'hold-2'] } },
+      select: { id: true, status: true },
+    });
+    expect(result).toEqual([{ id: 'hold-1', status: 'REFUNDED' }]);
+  });
+
+  it('空数组直接短路，不打一次全表 IN () 查询', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const repo = new PointsRepository({ point_holds: { findMany } } as never);
+
+    const result = await repo.findHoldsByIds([]);
+
+    expect(findMany).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
+  });
+});
