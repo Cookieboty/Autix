@@ -32,6 +32,19 @@
     {
       "label": "更新日志",
       "href": "/docs/changelog"
+    },
+    {
+      "label": "法律条款",
+      "children": [
+        {
+          "label": "隐私政策",
+          "href": "/docs/privacy"
+        },
+        {
+          "label": "用户协议",
+          "href": "/docs/terms"
+        }
+      ]
     }
   ],
   "ui": {

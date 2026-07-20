@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Cookie } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { useLanguageStore } from '@autix/shared-store';
 
 const STORAGE_KEY = 'cookie-consent';
 type ConsentValue = 'accepted' | 'rejected';
@@ -29,6 +29,9 @@ function writeConsent(value: ConsentValue) {
 
 export function CookieConsent() {
   const t = useTranslations('cookieConsent');
+  const { language } = useLanguageStore();
+  // docs 只有 en/zh-CN 两版，与 Footer 同一映射规则。
+  const docsLocale = language === 'zh-CN' || language === 'zh-TW' ? 'zh-CN' : 'en';
   // 初始 false：避免 SSR 预渲染出 banner 后客户端读到已存在的 consent 造成闪烁。
   const [visible, setVisible] = useState(false);
 
@@ -58,9 +61,14 @@ export function CookieConsent() {
               <Cookie className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
               <p className="text-sm leading-6 text-muted-foreground">
                 {t('message')}{' '}
-                <Link href="#" className="font-medium text-link underline-offset-2 hover:underline">
+                {/* 裸 <a> + 显式 docs-locale 前缀：/docs 下的路径已带 locale，
+                    next-intl 的 <Link> 会再叠一层站点 locale 造成双重前缀 404。 */}
+                <a
+                  href={`/${docsLocale}/docs/privacy`}
+                  className="font-medium text-link underline-offset-2 hover:underline"
+                >
                   {t('learnMore')}
-                </Link>
+                </a>
               </p>
             </div>
             <div className="flex shrink-0 gap-2 sm:ml-auto">

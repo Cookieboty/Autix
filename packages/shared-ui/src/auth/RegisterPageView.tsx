@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { ThemeLogo } from '../brand';
 import { Button } from '../ui';
 import { cn } from '../ui/utils';
+import { Link } from '../navigation';
 import {
   AuthErrorAlert,
   AuthInputField,
@@ -183,6 +184,21 @@ export function RegisterFormPanel({
           {loading ? t('registering') : t('registerButton')}
         </Button>
       </form>
+
+      <p className="pt-2 text-center text-xs leading-5 text-white/30">
+        {t.rich('modalTerms', {
+          privacy: (chunks) => (
+            <Link href="/docs/privacy" className="underline underline-offset-4 hover:text-white">
+              {chunks}
+            </Link>
+          ),
+          terms: (chunks) => (
+            <Link href="/docs/terms" className="underline underline-offset-4 hover:text-white">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
 
       <p className="text-center text-sm text-white/45">
         {t('hasAccount')}{' '}

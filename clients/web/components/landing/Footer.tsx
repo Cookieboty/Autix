@@ -33,8 +33,10 @@ export function Footer() {
     ],
     [t('footerAbout')]: [
       { label: t('footerAbout'), href: '#' },
-      { label: t('footerTerms'), href: '#' },
-      { label: t('footerPrivacy'), href: '#' },
+      // 与上面 navDocs 同理：法律文档也在 /docs 下，只有 en/zh-CN 两版，
+      // 需要 plain + 显式 docs-locale 前缀，避免 next-intl <Link> 再叠一层站点 locale。
+      { label: t('footerTerms'), href: `/${docsLocale}/docs/terms`, plain: true },
+      { label: t('footerPrivacy'), href: `/${docsLocale}/docs/privacy`, plain: true },
     ],
   };
 
@@ -71,8 +73,10 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6" style={{ borderTop: '1px solid var(--border)' }}>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>{t('footerCopyright')}</p>
           <div className="flex gap-4">
-            <Link href="#" className="text-xs" style={{ color: 'var(--muted)' }}>{t('footerTerms')}</Link>
-            <Link href="#" className="text-xs" style={{ color: 'var(--muted)' }}>{t('footerPrivacy')}</Link>
+            {/* 裸 <a> + 显式 docs-locale 前缀：/docs 下的路径已带 locale，
+                next-intl 的 <Link> 会再叠一层站点 locale 造成双重前缀 404。 */}
+            <a href={`/${docsLocale}/docs/terms`} className="text-xs" style={{ color: 'var(--muted)' }}>{t('footerTerms')}</a>
+            <a href={`/${docsLocale}/docs/privacy`} className="text-xs" style={{ color: 'var(--muted)' }}>{t('footerPrivacy')}</a>
           </div>
         </div>
       </div>

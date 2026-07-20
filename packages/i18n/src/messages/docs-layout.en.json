@@ -32,6 +32,19 @@
     {
       "label": "Changelog",
       "href": "/docs/changelog"
+    },
+    {
+      "label": "Legal",
+      "children": [
+        {
+          "label": "Privacy Policy",
+          "href": "/docs/privacy"
+        },
+        {
+          "label": "Terms of Service",
+          "href": "/docs/terms"
+        }
+      ]
     }
   ],
   "ui": {

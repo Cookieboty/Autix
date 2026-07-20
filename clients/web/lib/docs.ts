@@ -12,6 +12,8 @@ export const DOC_SLUGS = [
   'gallery',
   'faq',
   'changelog',
+  'privacy',
+  'terms',
 ] as const;
 
 /** `/docs` 的可用 locale 唯一由 `ROUTE_POLICY` 定义，不再维护并行列表。 */
