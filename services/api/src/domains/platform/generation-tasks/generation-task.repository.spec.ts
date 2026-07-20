@@ -173,6 +173,82 @@ describe('GenerationTaskRepository.create', () => {
   });
 });
 
+describe('GenerationTaskRepository.deleteOlderThan', () => {
+  function buildPrisma(batches: Array<{ id: string }[]>, deleteCounts: number[]) {
+    const findMany = vi.fn();
+    const deleteMany = vi.fn();
+    batches.forEach((rows) => findMany.mockResolvedValueOnce(rows));
+    findMany.mockResolvedValue([]);
+    deleteCounts.forEach((count) => deleteMany.mockResolvedValueOnce({ count }));
+    return { prisma: { generation_tasks: { findMany, deleteMany } } as any, findMany, deleteMany };
+  }
+
+  it('按 statuses + cutoff（days 天前）查询，一批删完即返回该批 count', async () => {
+    const { prisma, findMany, deleteMany } = buildPrisma([[{ id: 'a' }, { id: 'b' }]], [2]);
+    const repo = new GenerationTaskRepository(prisma);
+    const before = Date.now();
+
+    const result = await repo.deleteOlderThan({
+      statuses: [GenerationTaskStatus.SUCCEEDED],
+      days: 30,
+    });
+
+    expect(result).toEqual({ count: 2 });
+    const findArgs = findMany.mock.calls[0][0];
+    expect(findArgs.where.status).toEqual({ in: [GenerationTaskStatus.SUCCEEDED] });
+    const cutoff: Date = findArgs.where.createdAt.lt;
+    // cutoff 应约为 30 天前（允许测试执行耗时的毫秒级误差）。
+    const expected = before - 30 * 24 * 60 * 60 * 1000;
+    expect(Math.abs(cutoff.getTime() - expected)).toBeLessThan(2000);
+    expect(deleteMany.mock.calls[0][0].where.id).toEqual({ in: ['a', 'b'] });
+  });
+
+  it('多状态（FAILED + EXPIRED）一起传入 where.status.in', async () => {
+    const { prisma, findMany } = buildPrisma([[{ id: 'a' }]], [1]);
+    const repo = new GenerationTaskRepository(prisma);
+
+    await repo.deleteOlderThan({
+      statuses: [GenerationTaskStatus.FAILED, GenerationTaskStatus.EXPIRED],
+      days: 90,
+    });
+
+    expect(findMany.mock.calls[0][0].where.status).toEqual({
+      in: [GenerationTaskStatus.FAILED, GenerationTaskStatus.EXPIRED],
+    });
+  });
+
+  it('单批达到 10000 条上限时继续下一批，直到不足上限为止', async () => {
+    const fullBatch = Array.from({ length: 10000 }, (_, i) => ({ id: `id-${i}` }));
+    const { prisma, findMany, deleteMany } = buildPrisma(
+      [fullBatch, [{ id: 'last' }]],
+      [10000, 1],
+    );
+    const repo = new GenerationTaskRepository(prisma);
+
+    const result = await repo.deleteOlderThan({
+      statuses: [GenerationTaskStatus.SUCCEEDED],
+      days: 30,
+    });
+
+    expect(result).toEqual({ count: 10001 });
+    expect(findMany).toHaveBeenCalledTimes(2);
+    expect(deleteMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('一行都没有时返回 count: 0，且不调用 deleteMany', async () => {
+    const { prisma, deleteMany } = buildPrisma([[]], []);
+    const repo = new GenerationTaskRepository(prisma);
+
+    const result = await repo.deleteOlderThan({
+      statuses: [GenerationTaskStatus.SUCCEEDED],
+      days: 30,
+    });
+
+    expect(result).toEqual({ count: 0 });
+    expect(deleteMany).not.toHaveBeenCalled();
+  });
+});
+
 describe('GenerationTaskRepository.recordBilling', () => {
   function buildPrisma() {
     return { generation_tasks: { update: vi.fn().mockResolvedValue({}) } } as any;

@@ -185,6 +185,35 @@ export class GenerationTaskRepository {
   }
 
   /**
+   * 分级清理 cron 专用：按状态集合 + 保留天数删除过期行。分批删（10000 条/批，
+   * 参照 `sse.repository.ts` 的写法），避免单条超大 `deleteMany` 长时间持锁。
+   * 调用方（`GenerationTaskCleanupCron`）不得传入 PENDING/QUEUED —— 那两个状态
+   * 必须先经收敛 cron 转 EXPIRED，直接按时间删会掩盖悬挂问题。
+   */
+  async deleteOlderThan(rule: {
+    statuses: GenerationTaskStatus[];
+    days: number;
+  }): Promise<{ count: number }> {
+    const cutoff = new Date(Date.now() - rule.days * 24 * 60 * 60 * 1000);
+    const batchSize = 10000;
+    let total = 0;
+    for (;;) {
+      const rows = await this.prisma.generation_tasks.findMany({
+        where: { status: { in: rule.statuses }, createdAt: { lt: cutoff } },
+        select: { id: true },
+        take: batchSize,
+      });
+      if (rows.length === 0) break;
+      const { count } = await this.prisma.generation_tasks.deleteMany({
+        where: { id: { in: rows.map((row) => row.id) } },
+      });
+      total += count;
+      if (rows.length < batchSize) break;
+    }
+    return { count: total };
+  }
+
+  /**
    * 迟到回调只记录，不改 status —— 终态不可变。本方法会如实抛出
    * （行不存在时 Prisma 抛 `P2025`）——同 `recordBilling`，异常保护由调用方
    * `GenerationTaskRecorder` 负责（只 log 不抛），这里不做 try/catch。
