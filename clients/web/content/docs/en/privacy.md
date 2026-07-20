@@ -3,7 +3,7 @@
 **Effective Date**: {{EFFECTIVE_DATE}}
 **Last Updated**: {{EFFECTIVE_DATE}}
 
-> ⚠️ **Placeholders to be replaced**: `{{COMPANY_NAME}}` (full legal name of the operating entity), `{{COMPANY_ADDRESS}}` (registered address), `{{EFFECTIVE_DATE}}` (effective date), `{{GOVERNING_LAW}}` (governing law), `{{DISPUTE_VENUE}}` (dispute venue). **All placeholders must be replaced before launch, and this document must be reviewed by legal counsel.**
+> ⚠️ **Placeholders to be replaced**: `{{COMPANY_NAME}}` (full legal name of the operating entity), `{{COMPANY_ADDRESS}}` (registered address), `{{EFFECTIVE_DATE}}` (effective date). **All placeholders must be replaced before launch, and this document must be reviewed by legal counsel.**
 
 {{COMPANY_NAME}} ("we," "us," or "our") operates Amux Studio ("the Service"). This Policy explains what information we collect, how we use it, who we share it with, and how you can manage it.
 

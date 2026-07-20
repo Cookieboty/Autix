@@ -3,7 +3,7 @@
 **生效日期**：{{EFFECTIVE_DATE}}
 **最近更新**：{{EFFECTIVE_DATE}}
 
-> ⚠️ **待替换占位符**：`{{COMPANY_NAME}}`（运营主体全称）、`{{COMPANY_ADDRESS}}`（注册地址）、`{{EFFECTIVE_DATE}}`（生效日期）、`{{GOVERNING_LAW}}`（适用法律）、`{{DISPUTE_VENUE}}`（争议管辖）。**上线前必须全部替换，并经法务审核。**
+> ⚠️ **待替换占位符**：`{{COMPANY_NAME}}`（运营主体全称）、`{{COMPANY_ADDRESS}}`（注册地址）、`{{EFFECTIVE_DATE}}`（生效日期）。**上线前必须全部替换，并经法务审核。**
 
 {{COMPANY_NAME}}（以下称"我们"）运营 Amux Studio（以下称"本服务"）。本政策说明我们收集哪些信息、如何使用、与谁共享，以及你可以如何管理这些信息。
 

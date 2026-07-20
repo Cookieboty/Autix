@@ -3,7 +3,7 @@
 **Effective Date**: {{EFFECTIVE_DATE}}
 **Last Updated**: {{EFFECTIVE_DATE}}
 
-> ⚠️ **Placeholders to be replaced**: `{{COMPANY_NAME}}` (full legal name of the operating entity), `{{COMPANY_ADDRESS}}` (registered address), `{{EFFECTIVE_DATE}}` (effective date), `{{GOVERNING_LAW}}` (governing law), `{{DISPUTE_VENUE}}` (dispute venue). **All placeholders must be replaced before launch, and this document must be reviewed by legal counsel.**
+> ⚠️ **Placeholders to be replaced**: `{{COMPANY_NAME}}` (full legal name of the operating entity), `{{COMPANY_ADDRESS}}` (registered address), `{{EFFECTIVE_DATE}}` (effective date). **All placeholders must be replaced before launch, and this document must be reviewed by legal counsel.**
 
 ---
 
@@ -205,9 +205,9 @@ Your continued use of the Service after a change takes effect constitutes accept
 
 ## 14. Governing Law and Dispute Resolution
 
-The formation, validity, interpretation, performance, and dispute resolution of this Agreement are governed by {{GOVERNING_LAW}}.
+This Agreement is governed by the laws of the State of Wyoming, United States, without regard to its conflict of laws rules.
 
-Disputes arising from this Agreement shall first be resolved through good-faith negotiation between the parties; if negotiation fails, either party may bring a lawsuit before {{DISPUTE_VENUE}}.
+Disputes arising from this Agreement shall first be resolved through good-faith negotiation between the parties; if negotiation fails, the dispute shall be submitted to the state or federal courts of competent jurisdiction located in the State of Wyoming, United States.
 
 ---
 
