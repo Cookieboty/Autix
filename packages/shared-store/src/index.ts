@@ -17,6 +17,8 @@ export * from './risk-admin.actions';
 export * from './risk-admin.queries';
 export * from './gallery-admin.actions';
 export * from './gallery-admin.queries';
+export * from './generation-task-admin.actions';
+export * from './generation-task-admin.queries';
 export * from './featured-slots-admin.actions';
 export * from './featured-slots-admin.queries';
 export * from './boost-admin.actions';
