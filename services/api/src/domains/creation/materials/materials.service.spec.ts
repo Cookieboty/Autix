@@ -234,8 +234,8 @@ describe('MaterialsService — Plan C Task 10：download / useAsset 的 sourceSt
   });
 });
 
-describe('MaterialsService — 素材库对全用户开放：move 不受限制', () => {
-  it('update：默认(null)→其他文件夹 → 放行', async () => {
+describe('MaterialsService.update / batchMove — 文件夹移动路由', () => {
+  it('update：默认(null)→其他文件夹 → 走 folder.connect', async () => {
     const { service, repo } = buildService();
     await expect(service.update('user-1', 'm1', { folderId: 'folder-x' })).resolves.toBeDefined();
     expect(repo.update).toHaveBeenCalledWith(
@@ -244,7 +244,7 @@ describe('MaterialsService — 素材库对全用户开放：move 不受限制',
     );
   });
 
-  it('update：其他文件夹→默认(null) → 放行', async () => {
+  it('update：其他文件夹→默认(null) → 走 folder.disconnect', async () => {
     const { service, repo } = buildService();
     await expect(service.update('user-1', 'm1', { folderId: null })).resolves.toBeDefined();
     expect(repo.update).toHaveBeenCalledWith(
@@ -253,13 +253,13 @@ describe('MaterialsService — 素材库对全用户开放：move 不受限制',
     );
   });
 
-  it('batchMove：目标为具体文件夹 → 放行', async () => {
+  it('batchMove：目标为具体文件夹 → moveMany 收到该 folderId', async () => {
     const { service, repo } = buildService();
     await expect(service.batchMove('user-1', ['m1'], 'folder-x')).resolves.toEqual({ count: 2 });
     expect(repo.moveMany).toHaveBeenCalledWith('user-1', ['m1'], 'folder-x');
   });
 
-  it('batchMove：目标为 null（移回默认） → 放行', async () => {
+  it('batchMove：目标为 null（移回默认） → moveMany 收到 null', async () => {
     const { service, repo } = buildService();
     await expect(service.batchMove('user-1', ['m1'], null)).resolves.toEqual({ count: 2 });
     expect(repo.moveMany).toHaveBeenCalledWith('user-1', ['m1'], null);
