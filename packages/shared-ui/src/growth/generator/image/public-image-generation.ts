@@ -22,6 +22,7 @@ export interface PublicImageGenerationPayload {
   settings: Record<string, unknown>;
   model: string;
   visibility: 'private' | 'public';
+  count: number;
 }
 
 export interface PublicImageHistoryImage {

@@ -21,6 +21,6 @@ import { GenerationTaskCleanupCron } from './generation-task-cleanup.cron';
     GenerationTaskReconciliationCron,
     GenerationTaskCleanupCron,
   ],
-  exports: [GenerationTaskRecorder],
+  exports: [GenerationTaskRecorder, GenerationTaskRepository],
 })
 export class GenerationTasksModule {}

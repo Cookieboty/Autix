@@ -5,6 +5,7 @@ import type { ClipboardEvent } from 'react';
 import {
   Coins,
   Globe2,
+  Images as ImagesIcon,
   ImagePlus,
   Loader2,
   Lock,
@@ -43,6 +44,117 @@ function limitPublicUploadedReferences(
 ) {
   if (limit <= 0) return [];
   return refs.slice(-limit);
+}
+
+/** 单次生成张数选项：1-4；默认 2。 */
+const GENERATE_COUNT_OPTIONS = [1, 2, 3, 4] as const;
+const GENERATE_COUNT_MIN = 1;
+const GENERATE_COUNT_MAX = 4;
+const GENERATE_COUNT_DEFAULT = 2;
+const GENERATE_COUNT_STORAGE_KEY = 'autix.image.generateCount';
+
+function clampGenerateCount(raw: unknown): number {
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(n)) return GENERATE_COUNT_DEFAULT;
+  const int = Math.trunc(n);
+  if (int < GENERATE_COUNT_MIN) return GENERATE_COUNT_MIN;
+  if (int > GENERATE_COUNT_MAX) return GENERATE_COUNT_MAX;
+  return int;
+}
+
+function readStoredGenerateCount(): number {
+  if (typeof window === 'undefined') return GENERATE_COUNT_DEFAULT;
+  try {
+    const raw = window.localStorage.getItem(GENERATE_COUNT_STORAGE_KEY);
+    if (raw == null) return GENERATE_COUNT_DEFAULT;
+    return clampGenerateCount(raw);
+  } catch {
+    // localStorage 被禁用（隐私模式/权限等）时静默回退默认值，不影响生成流程。
+    return GENERATE_COUNT_DEFAULT;
+  }
+}
+
+function persistGenerateCount(count: number): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      GENERATE_COUNT_STORAGE_KEY,
+      String(clampGenerateCount(count)),
+    );
+  } catch {
+    // 写失败也静默：仅影响下次记忆，不影响当前生成。
+  }
+}
+
+function GenerateCountPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        title={label}
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-background/22 px-2.5 text-foreground/78 transition hover:bg-secondary hover:text-foreground ${open ? 'bg-secondary text-foreground' : ''}`}
+      >
+        <ImagesIcon className="size-4" />
+        <span className="text-sm font-semibold tabular-nums">×{value}</span>
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          aria-label={label}
+          className="absolute bottom-full left-0 z-50 mb-2 w-32 rounded-xl border border-border bg-popover p-2 shadow-lg"
+        >
+          <div className="mb-1.5 px-1 text-[11px] font-medium text-foreground/60">
+            {label}
+          </div>
+          <div className="grid grid-cols-4 gap-1">
+            {GENERATE_COUNT_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                role="option"
+                aria-selected={value === opt}
+                onClick={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                className={`rounded-lg px-2 py-1.5 text-xs font-semibold tabular-nums transition-colors ${
+                  value === opt
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-foreground hover:bg-secondary/80'
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function ImageComposer({
@@ -109,6 +221,21 @@ export function ImageComposer({
   );
   // 用户本次是否手动切过；切过后本会话内不再被设置默认值覆盖，且绝不回写设置。
   const visibilityTouchedRef = useRef(false);
+
+  // 首帧用默认值以避开 SSR/CSR hydration mismatch，挂载后再补 localStorage 记忆值。
+  const [generateCount, setGenerateCount] = useState<number>(GENERATE_COUNT_DEFAULT);
+  const generateCountHydratedRef = useRef(false);
+  useEffect(() => {
+    const stored = readStoredGenerateCount();
+    if (stored !== GENERATE_COUNT_DEFAULT) {
+      setGenerateCount(stored);
+    }
+    generateCountHydratedRef.current = true;
+  }, []);
+  useEffect(() => {
+    if (!generateCountHydratedRef.current) return;
+    persistGenerateCount(generateCount);
+  }, [generateCount]);
 
   // 进入页面拉一次 DB 最新 autoPublish(hydrate 只读本地，不打 /auth/profile)。非阻塞。
   useEffect(() => {
@@ -230,7 +357,11 @@ export function ImageComposer({
       taskFixedSchema: null,
       params,
     });
-    setEstimateCost(result.violations.length > 0 ? null : result.total);
+    // 单张价 × 张数：controller 会为每张各自建 hold/扣费，展示的总价须与实扣一致。
+    const normalizedCount = clampGenerateCount(generateCount);
+    setEstimateCost(
+      result.violations.length > 0 ? null : result.total * normalizedCount,
+    );
   }, [
     selectedModelId,
     selectedModel,
@@ -240,6 +371,7 @@ export function ImageComposer({
     pricingContext,
     form.params,
     uploadedRefs.length,
+    generateCount,
   ]);
 
   const openUploadDialog = () => {
@@ -324,6 +456,7 @@ export function ImageComposer({
       referenceImages: uploadedRefs.map((ref) => ref.url),
       settings,
       visibility,
+      count: clampGenerateCount(generateCount),
     });
   };
 
@@ -432,7 +565,12 @@ export function ImageComposer({
                     resolutionTitle={t('selectResolution')}
                   />
                 ) : null}
-                {/* 可见性：排在所有参数之后，只给图标（语义由 aria-label + tooltip 承担） */}
+                <GenerateCountPicker
+                  value={clampGenerateCount(generateCount)}
+                  onChange={(next) => setGenerateCount(clampGenerateCount(next))}
+                  label={t('generateCount')}
+                />
+
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button

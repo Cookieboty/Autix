@@ -994,6 +994,11 @@ export interface ImageWorkbenchGenerateInput {
   referenceImages?: ConversationSourceImage[];
   settings?: ConversationImageSettings & Record<string, unknown>;
   visibility?: 'private' | 'public';
+  /**
+   * 单次请求生成张数（多图并发）。后端会用同一 prompt/参数并发调用 N 次生图；
+   * 未传或非法时默认 1。上限受会员并发权益约束（超限直接失败）。
+   */
+  count?: number;
 }
 
 export interface ImageWorkbenchRefinePromptInput {
@@ -1103,10 +1108,32 @@ export interface ImageWorkbenchHistoryResult {
   hasMore: boolean;
 }
 
+/**
+ * Workbench 侧「进行中」的单条图片任务：workbench 生成是同步 HTTP，浏览器 refresh
+ * 会中断请求但后端仍在跑；前端刷新 / 定时轮询用这个接口把骨架卡还原出来。
+ *
+ * `status` 与后端 GenerationTaskStatus 对齐（未终态仅 PENDING / QUEUED）；`settings`
+ * 从 paramsSnapshot.settings 里安全解出，方便前端解析比例参数决定占位卡宽高。
+ */
+export interface ImageWorkbenchActiveTaskItem {
+  id: string;
+  prompt: string;
+  model: string;
+  status: 'PENDING' | 'QUEUED';
+  createdAt: string;
+  settings: Record<string, unknown>;
+}
+
+export interface ImageWorkbenchActiveTasksResult {
+  items: ImageWorkbenchActiveTaskItem[];
+}
+
 export type PublicImageGenerateInput = ImageWorkbenchGenerateInput;
 export type PublicImageGenerateResult = ImageWorkbenchGenerateResult;
 export type PublicImageHistoryItem = ImageWorkbenchHistoryItem;
 export type PublicImageHistoryResult = ImageWorkbenchHistoryResult;
+export type PublicImageActiveTaskItem = ImageWorkbenchActiveTaskItem;
+export type PublicImageActiveTasksResult = ImageWorkbenchActiveTasksResult;
 
 const IMAGE_WORKBENCH_GENERATE_TIMEOUT_MS = 15 * 60 * 1000;
 const IMAGE_WORKBENCH_REFINE_PROMPT_TIMEOUT_MS = 3 * 60 * 1000;
@@ -1126,6 +1153,8 @@ export const imageWorkbenchApi = {
     }),
   history: (params?: { page?: number; pageSize?: number }) =>
     chatApi.get<ImageWorkbenchHistoryResult>('/api/image-gen/workbench/history', { params }),
+  activeTasks: () =>
+    chatApi.get<ImageWorkbenchActiveTasksResult>('/api/image-gen/workbench/active-tasks'),
   deleteHistory: (id: string) =>
     chatApi.delete(`/api/image-gen/workbench/history/${id}`),
 };

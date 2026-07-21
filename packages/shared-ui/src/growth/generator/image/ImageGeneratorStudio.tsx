@@ -37,6 +37,15 @@ import {
   type PublicImageHistoryImage,
   type PublicImageHistoryItem,
 } from './public-image-generation';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from '../../../ui/dialog';
+import { Button } from '../../../ui/button';
 
 /** 广场墙每页条数：首屏与续页同宽，首屏这批同时也是唯一播入场动画的一批。 */
 const GALLERY_PAGE_SIZE = 30;
@@ -95,6 +104,40 @@ function collectAspectRatios(items: GalleryFeedItem[]): Record<string, number> {
     if (ratio) map[item.post.id] = ratio;
   }
   return map;
+}
+
+/** SDK 会把服务端 envelope 的 `code` 平铺到 Error 对象上（见 client-core interceptor）。 */
+function extractErrorCode(err: unknown): string | undefined {
+  if (err && typeof err === 'object' && 'code' in err) {
+    const raw = (err as { code?: unknown }).code;
+    if (typeof raw === 'string') return raw;
+  }
+  return undefined;
+}
+
+/**
+ * 从被拒绝的并发请求错误里读回 `{ concurrency, activeCount, requestedCount }`
+ * —— 后端把它塞在 exception body 的 `data` 里，AllExceptionsFilter 会平铺到
+ * response envelope 的 data 字段，SDK 再把整个 data 塞到 error.data。
+ */
+function extractConcurrencyDetails(err: unknown): {
+  concurrency: number;
+  activeCount: number;
+  requestedCount: number;
+} {
+  const fallback = { concurrency: 0, activeCount: 0, requestedCount: 0 };
+  if (!err || typeof err !== 'object' || !('data' in err)) return fallback;
+  const data = (err as { data?: unknown }).data;
+  if (!data || typeof data !== 'object') return fallback;
+  const record = data as Record<string, unknown>;
+  return {
+    concurrency:
+      typeof record.concurrency === 'number' ? record.concurrency : fallback.concurrency,
+    activeCount:
+      typeof record.activeCount === 'number' ? record.activeCount : fallback.activeCount,
+    requestedCount:
+      typeof record.requestedCount === 'number' ? record.requestedCount : fallback.requestedCount,
+  };
 }
 
 /** feed → 互动态：登录态才有 liked/favorited（匿名是 undefined，不是 false）。 */
@@ -180,6 +223,16 @@ export function ImageGeneratorStudio({
     id: string;
     prompt: string;
     referenceImages: string[];
+  } | null>(null);
+  /**
+   * 并发超限弹窗上下文。后端在 body.data 里给了会员等级实际的 concurrency 上限、当前
+   * 在途张数、以及本次请求的张数，全部展示给用户，方便一眼看清「多点了几张」。null
+   * 表示不显示。
+   */
+  const [concurrencyModal, setConcurrencyModal] = useState<{
+    limit: number;
+    active: number;
+    requested: number;
   } | null>(null);
 
   /**
@@ -336,6 +389,92 @@ export function ImageGeneratorStudio({
     void loadHistory();
   }, [loadHistory]);
 
+  /** 刷新后从后端反查未终态图片任务并合并为骨架卡；有活跃任务时以 5s 间隔轮询。 */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+
+    const restoredIdsRef = { current: new Set<string>() };
+
+    const buildRestoredCard = (task: {
+      id: string;
+      prompt: string;
+      model: string;
+      settings: Record<string, unknown>;
+    }): PendingImageGenerationCard => ({
+      id: `restored-image-${task.id}`,
+      prompt: task.prompt,
+      model: task.model,
+      count: 1,
+      settings: task.settings,
+    });
+
+    const pull = async (): Promise<boolean> => {
+      try {
+        const active = await publicGeneratorActions.listActiveImageTasks();
+        if (cancelled) return false;
+        const nextIds = new Set(active.map((task) => task.id));
+        const disappeared = [...restoredIdsRef.current].filter((id) => !nextIds.has(id));
+        restoredIdsRef.current = nextIds;
+
+        // 先 await history 拿到成品再抹骨架，避免"骨架消失→图片出现"的中间空窗。
+        if (disappeared.length > 0) {
+          await loadHistory();
+          if (cancelled) return false;
+        }
+
+        setPendingGenerations((prev) => {
+          const preserved = prev.filter((card) => !card.id.startsWith('restored-image-'));
+          const restored = active.map(buildRestoredCard);
+          return [...restored, ...preserved];
+        });
+
+        return active.length > 0;
+      } catch {
+        return false;
+      }
+    };
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      timerId = setTimeout(async () => {
+        timerId = null;
+        const hasActive = await pull();
+        if (!cancelled && hasActive) scheduleNext();
+      }, 5000);
+    };
+
+    const primeAndMaybePoll = async () => {
+      const hasActive = await pull();
+      if (!cancelled && hasActive) scheduleNext();
+    };
+
+    const handleVisibility = () => {
+      if (cancelled) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        if (timerId) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+        void primeAndMaybePoll();
+      }
+    };
+
+    void primeAndMaybePoll();
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+    return () => {
+      cancelled = true;
+      if (timerId) clearTimeout(timerId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
+    };
+  }, [isAuthenticated, loadHistory]);
+
   // 广场「recreate」跳转预填：挂载时若带 initialPrompt 则应用一次（不随后续 props 变化重复触发）。
   useEffect(() => {
     if (!initialPrompt) return;
@@ -416,24 +555,18 @@ export function ImageGeneratorStudio({
       openAuthModal({ mode: 'entry', returnTo: '/ai/image' });
       return;
     }
-    const cardId = `pending-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setPendingGenerations((prev) => [
-      {
-        id: cardId,
-        prompt: payload.prompt,
-        model: selectedModel?.name ?? payload.model,
-        // 生成张数已下线为用户可调项（业务逻辑固定吃掉），settings 里也不再携带
-        // count（spec §11 第 2 期：透传 schema 参数，count 从不是 schema 属性）——
-        // 骨架占位卡的张数改用 imageCapability 的模型默认值，目前所有能力表都是 1。
-        count: imageCapability.defaults.count,
-        // 整个 schema 参数包交给占位块自己解析比例：比例参数的键名逐模型不同
-        // （多数模型是 aspectRatio，只有 size-grid 模型才有 size），这里不能只挑 size。
-        settings: payload.settings,
-      },
-      ...prev,
-    ]);
+    // 张数：1-4；ImageComposer 已 clamp 过，这里再兜底一次防脏参数被塞进请求。
+    const requestedCount = Math.min(4, Math.max(1, Math.floor(Number(payload.count ?? 1))));
+    // 为每一张预生成一个骨架占位卡（同一次请求内 id 不重复），后端全部并发落库后统一收敛。
+    const pendingCards = Array.from({ length: requestedCount }, (_, idx) => ({
+      id: `pending-image-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 8)}`,
+      prompt: payload.prompt,
+      model: selectedModel?.name ?? payload.model,
+      count: imageCapability.defaults.count,
+      settings: payload.settings,
+    }));
+    setPendingGenerations((prev) => [...pendingCards, ...prev]);
     changeMode('history');
-    // 被计费拦截时弹框要说清「解锁的是哪个模型」，HTTP 层拿不到这个上下文
     setBillingGateContext({ featureName: selectedModel?.name ?? payload.model });
     try {
       const data = await publicGeneratorActions.generateImage({
@@ -442,21 +575,33 @@ export function ImageGeneratorStudio({
         referenceImages: payload.referenceImages.map((url, index) => ({ url, index })),
         settings: payload.settings,
         visibility: payload.visibility,
+        count: requestedCount,
       });
       const nextHistoryItem = buildPublicImageHistoryItem({
         data,
         request: payload,
         createdAt: new Date().toISOString(),
-        // 刚生成的这条也要能 Recreate：模型 id / 参考图不在 generate 的响应里，
-        // 从本次请求补上（重拉历史时服务端会给同样的值）。
         modelConfigId: selectedModelId,
       });
       setHistoryItems((prev) => [nextHistoryItem, ...prev]);
     } catch (err) {
-      // 服务端错误（含并发上限）统一 toast —— 多张并行时 inline 单槽无法表达哪张失败。
-      toast.error(err instanceof Error ? err.message : t('generateFailed'));
+      // 并发超限：后端把 code 塞在 response.data.code；SDK 会把 code 透传到 Error。
+      // spec §4/5 明确要求「弹 modal 提示超过当前会员等级的并发数量」——不能只 toast。
+      const errCode = extractErrorCode(err);
+      if (errCode === 'IMAGE_CONCURRENCY_LIMIT_EXCEEDED') {
+        const details = extractConcurrencyDetails(err);
+        setConcurrencyModal({
+          limit: details.concurrency,
+          active: details.activeCount,
+          requested: details.requestedCount || requestedCount,
+        });
+      } else {
+        toast.error(err instanceof Error ? err.message : t('generateFailed'));
+      }
     } finally {
-      setPendingGenerations((prev) => prev.filter((card) => card.id !== cardId));
+      // 用一次请求的 pendingIds 做集合过滤，避免把用户在此期间发起的其他生成骨架也一起清掉。
+      const pendingIds = new Set(pendingCards.map((c) => c.id));
+      setPendingGenerations((prev) => prev.filter((card) => !pendingIds.has(card.id)));
     }
   };
 
@@ -670,6 +815,35 @@ export function ImageGeneratorStudio({
           />
         </div>
       </div>
+
+      {/* 并发超限弹窗：单次生成张数 + 在途张数 > 会员等级 concurrency 时，服务端拒绝，
+          这里根据 error.data 里的 concurrency/activeCount/requestedCount 提示用户。 */}
+      <Dialog
+        open={concurrencyModal !== null}
+        onOpenChange={(open) => {
+          if (!open) setConcurrencyModal(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('concurrencyLimitTitle')}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-foreground/80">
+              {t('concurrencyLimitDescription', {
+                limit: concurrencyModal?.limit ?? 0,
+                active: concurrencyModal?.active ?? 0,
+                requested: concurrencyModal?.requested ?? 0,
+              })}
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setConcurrencyModal(null)}>
+              {t('concurrencyLimitOk')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

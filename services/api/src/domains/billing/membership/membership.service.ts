@@ -168,8 +168,12 @@ export class MembershipService {
     assertImageEntitlement(entitlement, requested);
   }
 
-  assertImageConcurrency(activeCount: number, entitlement: ImageEntitlement): void {
-    assertImageConcurrency(activeCount, entitlement);
+  assertImageConcurrency(
+    activeCount: number,
+    entitlement: ImageEntitlement,
+    requestedCount = 1,
+  ): void {
+    assertImageConcurrency(activeCount, entitlement, requestedCount);
   }
 
   async getPublicLevels() {

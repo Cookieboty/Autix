@@ -35,7 +35,7 @@ const FREE_IMAGE_ENTITLEMENT: ImageEntitlement = {
   enabled: true,
   maxPixels: IMAGE_PIXELS_HARD_CEILING,
   allowedQualities: [],
-  concurrency: 1,
+  concurrency: 2,
   levelName: 'Free',
   level: 0,
   source: 'free_default',
@@ -67,7 +67,7 @@ export function resolveImageEntitlement(
     allowedQualities: Array.isArray(image.allowedQualities)
       ? image.allowedQualities.filter((q): q is string => typeof q === 'string')
       : [],
-    concurrency: positiveIntOrDefault(image.concurrency, 1),
+    concurrency: positiveIntOrDefault(image.concurrency, 2),
     levelName: membership.level.name,
     level: membership.level.level,
     source: 'membership',
@@ -110,11 +110,19 @@ export function assertImageEntitlement(
 }
 
 export class ImageConcurrencyLimitException extends HttpException {
-  constructor(levelName: string, concurrency: number) {
+  constructor(levelName: string, concurrency: number, activeCount = 0, requestedCount = 1) {
     super(
       {
         code: 'IMAGE_CONCURRENCY_LIMIT_EXCEEDED',
-        message: `当前会员等级（${levelName}）最多同时生成 ${concurrency} 张图片，请等进行中的任务完成后再试`,
+        message: `当前会员等级（${levelName}）最多同时生成 ${concurrency} 张图片，当前还有 ${activeCount} 张在生成中，本次请求 ${requestedCount} 张会超过上限，请等进行中的任务完成后再试`,
+        // `data` 会被 AllExceptionsFilter 平铺进错误响应 envelope 的 data 字段，
+        // 前端据此在弹窗里显示具体的 limit / active / requested。
+        data: {
+          levelName,
+          concurrency,
+          activeCount,
+          requestedCount,
+        },
       },
       HttpStatus.TOO_MANY_REQUESTS,
     );
@@ -123,15 +131,22 @@ export class ImageConcurrencyLimitException extends HttpException {
 
 /**
  * FIX: 图片生成并发闸门。activeCount 为该用户在途（PENDING/PROCESSING）的
- * image_generation hold 数；达到或超过等级 concurrency 即拒绝。
+ * image_generation hold 数；activeCount + requestedCount 超过等级 concurrency 即拒绝。
  * 必须在创建本次 hold「之前」调用，否则会把自己算进去。
  */
 export function assertImageConcurrency(
   activeCount: number,
   entitlement: ImageEntitlement,
+  requestedCount = 1,
 ): void {
-  if (activeCount >= entitlement.concurrency) {
-    throw new ImageConcurrencyLimitException(entitlement.levelName, entitlement.concurrency);
+  const safeRequested = Math.max(1, Math.floor(requestedCount));
+  if (activeCount + safeRequested > entitlement.concurrency) {
+    throw new ImageConcurrencyLimitException(
+      entitlement.levelName,
+      entitlement.concurrency,
+      activeCount,
+      safeRequested,
+    );
   }
 }
 

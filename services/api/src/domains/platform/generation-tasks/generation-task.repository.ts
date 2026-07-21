@@ -158,6 +158,28 @@ export class GenerationTaskRepository {
     });
   }
 
+  /** 未终态（PENDING/QUEUED）的指定 kind 任务，供客户端刷新后还原骨架卡。 */
+  async findActiveTasksByUserAndKind(userId: string, kind: GenerationKind) {
+    return this.prisma.generation_tasks.findMany({
+      where: {
+        userId,
+        kind,
+        status: { in: [GenerationTaskStatus.PENDING, GenerationTaskStatus.QUEUED] },
+      },
+      select: {
+        id: true,
+        model: true,
+        prompt: true,
+        paramsSnapshot: true,
+        createdAt: true,
+        status: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 32,
+    });
+  }
+
+
   /**
    * 无外部事务时的 CAS（收敛 cron 专用）。收敛 cron 是运维路径，独立起自己的短事务，
    * 不借用调用方事务——这里没有"调用方事务"可借。
