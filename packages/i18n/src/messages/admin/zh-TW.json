@@ -726,6 +726,17 @@
     "perUserDailyCap": "使用者日上限",
     "perUserTotalCap": "使用者總上限",
     "blockSeedance": "贈送點數預設不可用於影片生成",
+    "registrationBonus": {
+      "title": "註冊獎勵",
+      "hint": "當新用戶完成信箱啟用或首次 OAuth 登入時自動發放。",
+      "badgeActive": "已啟用",
+      "badgePaused": "已暫停",
+      "badgeUnconfigured": "未設定",
+      "enable": "啟用",
+      "pause": "暫停",
+      "notConfigured": "此內建活動尚未建立。",
+      "create": "立即建立"
+    },
     "type": {
       "CONTINUOUS_USE": "連續使用",
       "INVITATION": "邀請返利",

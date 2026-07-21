@@ -726,6 +726,17 @@
     "perUserDailyCap": "Limite quotidienne par utilisateur",
     "perUserTotalCap": "Limite totale par utilisateur",
     "blockSeedance": "Les points offerts ne peuvent pas être utilisés par défaut pour la génération vidéo",
+    "registrationBonus": {
+      "title": "Bonus d'inscription",
+      "hint": "Attribué automatiquement à l'activation de l'e-mail ou à la première connexion OAuth.",
+      "badgeActive": "Actif",
+      "badgePaused": "En pause",
+      "badgeUnconfigured": "Non configuré",
+      "enable": "Activer",
+      "pause": "Mettre en pause",
+      "notConfigured": "Cette campagne intégrée n'a pas encore été créée.",
+      "create": "Créer maintenant"
+    },
     "type": {
       "CONTINUOUS_USE": "Utilisation continue",
       "INVITATION": "Prime d’invitation",

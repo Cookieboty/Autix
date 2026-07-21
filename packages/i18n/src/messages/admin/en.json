@@ -726,6 +726,17 @@
     "perUserDailyCap": "User daily cap",
     "perUserTotalCap": "User total cap",
     "blockSeedance": "Gift points cannot be used for video generation by default",
+    "registrationBonus": {
+      "title": "Registration bonus",
+      "hint": "Grant points to new users after email activation or first OAuth login.",
+      "badgeActive": "Active",
+      "badgePaused": "Paused",
+      "badgeUnconfigured": "Not configured",
+      "enable": "Enable",
+      "pause": "Pause",
+      "notConfigured": "This built-in campaign has not been created yet.",
+      "create": "Create now"
+    },
     "type": {
       "CONTINUOUS_USE": "Continuous use",
       "INVITATION": "Invitation rebate",

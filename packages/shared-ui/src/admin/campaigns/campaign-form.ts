@@ -157,6 +157,27 @@ export function campaignTotals(campaigns: Campaign[]) {
   return { active, used, rewardsCount };
 }
 
+export function sanitizeRewardPoints(value: number | string): number {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.floor(parsed));
+}
+
+export function buildRegistrationBonusCreateForm(
+  code: string,
+  name: string,
+): CampaignForm {
+  return {
+    ...EMPTY_FORM,
+    code,
+    name,
+    type: 'REGISTRATION',
+    status: 'ACTIVE',
+    rewardPoints: '100',
+    rewardExpiresInDays: '7',
+  };
+}
+
 export function errorMessage(error: unknown, fallback: string) {
   const responseMessage = (error as { response?: { data?: { message?: unknown } } })
     .response?.data?.message;

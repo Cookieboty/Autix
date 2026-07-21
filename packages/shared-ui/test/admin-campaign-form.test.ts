@@ -1,10 +1,12 @@
 import type { Campaign } from '@autix/shared-store';
 import {
+  buildRegistrationBonusCreateForm,
   campaignTotals,
   formFromCampaign,
   isFixedCampaign,
   payloadFromForm,
   rewardPoints,
+  sanitizeRewardPoints,
 } from '../src/admin/campaigns/campaign-form';
 
 function campaign(overrides: Partial<Campaign> = {}): Campaign {
@@ -101,5 +103,27 @@ describe('admin campaign form helpers', () => {
     expect(isFixedCampaign(campaign({ code: 'custom', metadata: { fixed: true } }))).toBe(true);
     expect(isFixedCampaign(campaign({ code: 'custom', metadata: { builtin: true } }))).toBe(true);
     expect(isFixedCampaign(campaign({ code: 'custom', metadata: null }))).toBe(false);
+  });
+
+  test('sanitizes reward point drafts to non-negative integers', () => {
+    expect(sanitizeRewardPoints('120')).toBe(120);
+    expect(sanitizeRewardPoints('99.8')).toBe(99);
+    expect(sanitizeRewardPoints('-10')).toBe(0);
+    expect(sanitizeRewardPoints('')).toBe(0);
+    expect(sanitizeRewardPoints('abc')).toBe(0);
+    expect(sanitizeRewardPoints(50)).toBe(50);
+  });
+
+  test('builds a create form preset for the registration bonus card', () => {
+    expect(
+      buildRegistrationBonusCreateForm('REGISTRATION_BONUS', 'Registration bonus'),
+    ).toMatchObject({
+      code: 'REGISTRATION_BONUS',
+      name: 'Registration bonus',
+      type: 'REGISTRATION',
+      status: 'ACTIVE',
+      rewardPoints: '100',
+      rewardExpiresInDays: '7',
+    });
   });
 });

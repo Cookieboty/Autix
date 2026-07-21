@@ -1,4 +1,5 @@
-import { Gift, Pencil, Plus, RefreshCw, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Gift, Pencil, Plus, RefreshCw, Sparkles, X } from 'lucide-react';
 import type {
   Campaign,
   CampaignReward,
@@ -7,7 +8,7 @@ import type {
 } from '@autix/shared-store';
 import { Button, Input } from '../../ui';
 import type { CampaignForm, CampaignModalState } from './campaign-form';
-import { rewardPoints } from './campaign-form';
+import { rewardPoints, sanitizeRewardPoints } from './campaign-form';
 
 type TranslateValues = Record<string, string | number | Date>;
 type Translate = (key: string, values?: TranslateValues) => string;
@@ -53,6 +54,149 @@ export function AdminCampaignsHeader({
           <Plus className="mr-1 h-3.5 w-3.5" />
           {t('createCampaign')}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+export function RegistrationBonusCard({
+  campaign,
+  onCreate,
+  onEdit,
+  onSaveRewardPoints,
+  onToggleStatus,
+  saving,
+  t,
+  tCommon,
+}: {
+  campaign: Campaign | null;
+  onCreate: () => void;
+  onEdit: (campaign: Campaign) => void;
+  onSaveRewardPoints: (campaign: Campaign, points: number) => void;
+  onToggleStatus: (campaign: Campaign, status: CampaignStatus) => void;
+  saving: boolean;
+  t: Translate;
+  tCommon: CommonTranslate;
+}) {
+  const currentPoints = campaign ? rewardPoints(campaign.rewardPointsExpression) : 0;
+  const [draft, setDraft] = useState<string>(String(currentPoints));
+
+  useEffect(() => {
+    setDraft(String(currentPoints));
+  }, [currentPoints, campaign?.id, campaign?.status]);
+
+  const active = campaign?.status === 'ACTIVE';
+  const trimmedDraft = draft.trim();
+  // Number('') === 0 and Number('   ') === 0, so treat blank input as invalid
+  // instead of silently saving 0 points.
+  const validDraft = trimmedDraft !== '' && Number.isFinite(Number(trimmedDraft));
+  const sanitized = sanitizeRewardPoints(draft);
+  const dirty = validDraft && sanitized !== currentPoints;
+
+  return (
+    <div
+      className="mx-4 mt-3 rounded-lg p-4"
+      style={{
+        border: '1px solid var(--border)',
+        backgroundColor: 'var(--surface)',
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-md"
+          style={{ backgroundColor: 'var(--panel)', color: 'var(--brand)' }}
+        >
+          <Sparkles className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2
+              className="text-sm font-semibold"
+              style={{ color: 'var(--foreground)' }}
+            >
+              {t('registrationBonus.title')}
+            </h2>
+            <span
+              className="rounded border px-1.5 py-0.5 text-[11px]"
+              style={{
+                borderColor: 'var(--border)',
+                color: active ? 'var(--success)' : 'var(--muted)',
+              }}
+            >
+              {active
+                ? t('registrationBonus.badgeActive')
+                : campaign
+                  ? t('registrationBonus.badgePaused')
+                  : t('registrationBonus.badgeUnconfigured')}
+            </span>
+          </div>
+          <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+            {t('registrationBonus.hint')}
+          </p>
+
+          {campaign ? (
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <label
+                className="text-xs"
+                style={{ color: 'var(--muted)' }}
+              >
+                {t('rewardPoints')}
+                <Input
+                  className="mt-1 w-32"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                />
+              </label>
+              <div className="text-xs" style={{ color: 'var(--muted)' }}>
+                {t('rewardValidityValue', { days: campaign.rewardExpiresInDays ?? 7 })}
+              </div>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={saving || !dirty}
+                  onClick={() => {
+                    if (!dirty) return;
+                    onSaveRewardPoints(campaign, sanitized);
+                  }}
+                >
+                  {tCommon('save')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={active ? 'ghost' : 'default'}
+                  disabled={saving}
+                  onClick={() =>
+                    onToggleStatus(campaign, active ? 'PAUSED' : 'ACTIVE')
+                  }
+                >
+                  {active
+                    ? t('registrationBonus.pause')
+                    : t('registrationBonus.enable')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onEdit(campaign)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs" style={{ color: 'var(--muted)' }}>
+                {t('registrationBonus.notConfigured')}
+              </span>
+              <Button size="sm" variant="outline" disabled={saving} onClick={onCreate}>
+                {t('registrationBonus.create')}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

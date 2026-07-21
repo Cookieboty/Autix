@@ -726,6 +726,17 @@
     "perUserDailyCap": "用户日上限",
     "perUserTotalCap": "用户总上限",
     "blockSeedance": "赠送积分默认不可用于视频生成",
+    "registrationBonus": {
+      "title": "注册奖励",
+      "hint": "在新用户完成邮箱激活或首次 OAuth 登录时自动发放。",
+      "badgeActive": "已启用",
+      "badgePaused": "已暂停",
+      "badgeUnconfigured": "未配置",
+      "enable": "启用",
+      "pause": "暂停",
+      "notConfigured": "该内建活动尚未创建。",
+      "create": "立即创建"
+    },
     "type": {
       "CONTINUOUS_USE": "连续使用",
       "INVITATION": "邀请返利",

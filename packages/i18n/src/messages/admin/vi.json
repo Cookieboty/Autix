@@ -726,6 +726,17 @@
     "perUserDailyCap": "Giới hạn ngày/người dùng",
     "perUserTotalCap": "Tổng giới hạn/người dùng",
     "blockSeedance": "Điểm tặng mặc định không dùng được cho tạo video",
+    "registrationBonus": {
+      "title": "Thưởng đăng ký",
+      "hint": "Tự động cấp khi người dùng mới kích hoạt email hoặc đăng nhập OAuth lần đầu.",
+      "badgeActive": "Đang bật",
+      "badgePaused": "Đang tạm dừng",
+      "badgeUnconfigured": "Chưa cấu hình",
+      "enable": "Bật",
+      "pause": "Tạm dừng",
+      "notConfigured": "Chiến dịch tích hợp này chưa được tạo.",
+      "create": "Tạo ngay"
+    },
     "type": {
       "CONTINUOUS_USE": "Sử dụng liên tục",
       "INVITATION": "Hoàn thưởng mời bạn",

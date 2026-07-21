@@ -17,6 +17,7 @@ import {
   EMPTY_CAMPAIGNS,
   EMPTY_FORM,
   EMPTY_REWARDS,
+  buildRegistrationBonusCreateForm,
   campaignTotals,
   errorMessage,
   formFromCampaign,
@@ -29,7 +30,14 @@ import {
   CampaignDetailPanel,
   CampaignModal,
   CampaignsTable,
+  RegistrationBonusCard,
 } from './campaigns-view-parts';
+
+const REGISTRATION_BONUS_CODE = 'REGISTRATION_BONUS';
+// Stable, locale-independent default name for the built-in registration bonus.
+// Admins can rename it afterwards; we must not bake the creating admin's UI
+// language into the persisted campaign name.
+const REGISTRATION_BONUS_NAME = 'Registration Bonus';
 
 export type AdminCampaignsViewProps = Record<string, never>;
 
@@ -66,7 +74,13 @@ export function AdminCampaignsView() {
 
   const totals = useMemo(() => campaignTotals(campaigns), [campaigns]);
   const fixedCampaigns = useMemo(
-    () => campaigns.filter((campaign) => isFixedCampaign(campaign)),
+    // The registration bonus has its own dedicated card above the table, so
+    // exclude it here to avoid showing (and counting) it twice.
+    () =>
+      campaigns.filter(
+        (campaign) =>
+          isFixedCampaign(campaign) && campaign.code !== REGISTRATION_BONUS_CODE,
+      ),
     [campaigns],
   );
   const dynamicCampaigns = useMemo(
@@ -126,6 +140,31 @@ export function AdminCampaignsView() {
     }
   };
 
+  const saveRewardPoints = async (campaign: Campaign, points: number) => {
+    setError(null);
+    try {
+      await updateCampaignMutation.mutateAsync({
+        id: campaign.id,
+        data: { rewardPoints: points },
+      });
+    } catch (saveError) {
+      setError(errorMessage(saveError, t('saveFailed')));
+    }
+  };
+
+  const openRegistrationBonusCreate = () => {
+    setModal({
+      mode: 'create',
+      form: buildRegistrationBonusCreateForm(
+        REGISTRATION_BONUS_CODE,
+        REGISTRATION_BONUS_NAME,
+      ),
+    });
+  };
+
+  const registrationBonus =
+    campaigns.find((campaign) => campaign.code === REGISTRATION_BONUS_CODE) ?? null;
+
   const grantOnce = async () => {
     if (!selected || !manualUserId.trim()) return;
     setError(null);
@@ -161,6 +200,21 @@ export function AdminCampaignsView() {
           {currentError}
         </div>
       )}
+
+      <RegistrationBonusCard
+        campaign={registrationBonus}
+        onCreate={openRegistrationBonusCreate}
+        onEdit={(campaign) =>
+          setModal({ mode: 'edit', form: formFromCampaign(campaign) })
+        }
+        onSaveRewardPoints={(campaign, points) =>
+          void saveRewardPoints(campaign, points)
+        }
+        onToggleStatus={(campaign, status) => void updateStatus(campaign, status)}
+        saving={saving}
+        t={t}
+        tCommon={tCommon}
+      />
 
       <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
         <button
