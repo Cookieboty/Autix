@@ -440,21 +440,12 @@ export interface MaterialCounts {
   file: number;
 }
 
-export interface MaterialEntitlement {
-  canAdd: boolean;
-  canUse: boolean;
-  reason?: string | null;
-  levelName?: string | null;
-  expiresAt?: string | null;
-}
-
 export interface MaterialListResult {
   items: MaterialAsset[];
   total: number;
   page: number;
   pageSize: number;
   hasMore: boolean;
-  entitlement: MaterialEntitlement;
 }
 
 export interface MaterialCreateInput {
@@ -509,7 +500,6 @@ export interface MaterialHistoryResult {
 }
 
 export const materialsApi = {
-  entitlement: () => chatApi.get<MaterialEntitlement>('/api/materials/entitlement'),
   /** /asset 左侧导航角标计数（文件夹计数另见 materialFoldersApi.list 的 assetCount）。 */
   counts: () => chatApi.get<MaterialCounts>('/api/materials/counts'),
   list: (params?: {

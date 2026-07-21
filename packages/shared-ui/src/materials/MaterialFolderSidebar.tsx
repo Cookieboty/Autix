@@ -201,7 +201,6 @@ export interface MaterialFolderNavProps {
   rootAssetCount?: number;
   activeFolderId: ActiveFolderKey;
   onSelectFolder: (key: ActiveFolderKey) => void;
-  canCreateFolder: boolean;
   /** 只关心「建完了」，不看返回值——store 的 createFolder 现在会回新建的行。 */
   onCreateFolder: (name: string) => Promise<unknown>;
   onRenameFolder: (id: string, name: string) => Promise<void>;
@@ -215,7 +214,6 @@ export function MaterialFolderSidebarNav({
   rootAssetCount,
   activeFolderId,
   onSelectFolder,
-  canCreateFolder,
   onCreateFolder,
   onRenameFolder,
   onRequestDeleteFolder,
@@ -291,32 +289,30 @@ export function MaterialFolderSidebarNav({
             onDelete={() => onRequestDeleteFolder(f)}
           />
         ))}
-        {canCreateFolder && (
-          <div className="mt-2">
-            {creatingFolder ? (
-              <div className="flex items-center gap-1 px-2 py-1.5">
-                <Input
-                  ref={newFolderInputRef}
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onBlur={() => void handleCreateFolderCommit()}
-                  onKeyDown={handleCreateFolderKeyDown}
-                  placeholder={t('folderNamePlaceholder')}
-                  className="h-7 text-sm"
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleStartCreateFolder}
-                className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-              >
-                <Plus className="size-3.5" />
-                {t('newFolder')}
-              </button>
-            )}
-          </div>
-        )}
+        <div className="mt-2">
+          {creatingFolder ? (
+            <div className="flex items-center gap-1 px-2 py-1.5">
+              <Input
+                ref={newFolderInputRef}
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onBlur={() => void handleCreateFolderCommit()}
+                onKeyDown={handleCreateFolderKeyDown}
+                placeholder={t('folderNamePlaceholder')}
+                className="h-7 text-sm"
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleStartCreateFolder}
+              className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <Plus className="size-3.5" />
+              {t('newFolder')}
+            </button>
+          )}
+        </div>
       </nav>
     </aside>
   );

@@ -1,12 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { MaterialFoldersService } from './material-folders.service';
 
-function buildService(overrides: { repo?: any; canUse?: boolean; favoriteLibrary?: any } = {}) {
+function buildService(overrides: { repo?: any; favoriteLibrary?: any } = {}) {
   const repo = {
     findManyByUser: vi.fn().mockResolvedValue([]),
     countAssetsGroupedByFolder: vi.fn().mockResolvedValue([]),
@@ -16,18 +15,12 @@ function buildService(overrides: { repo?: any; canUse?: boolean; favoriteLibrary
     update: vi.fn().mockImplementation((id: string, d: any) => ({ id, ...d })),
     ...(overrides.repo ?? {}),
   };
-  const materialsService = {
-    assertCanAddOrUse: vi.fn().mockImplementation(async () => {
-      if (overrides.canUse === false) throw new ForbiddenException('需要有效会员');
-      return { canUse: true };
-    }),
-  };
   const favoriteLibrary = {
     deleteFolder: vi.fn().mockResolvedValue(undefined),
     ...(overrides.favoriteLibrary ?? {}),
   };
-  const service = new MaterialFoldersService(repo as never, materialsService as never, favoriteLibrary as never);
-  return { service, repo, materialsService, favoriteLibrary };
+  const service = new MaterialFoldersService(repo as never, favoriteLibrary as never);
+  return { service, repo, favoriteLibrary };
 }
 
 describe('MaterialFoldersService', () => {
@@ -46,11 +39,6 @@ describe('MaterialFoldersService', () => {
     expect(result.folders[0].assetCount).toBe(3);
     expect(result.rootAssetCount).toBe(2);
     expect(result.totalAssetCount).toBe(5);
-  });
-
-  it('create 非会员被拒', async () => {
-    const { service } = buildService({ canUse: false });
-    await expect(service.create('u1', { name: 'A' })).rejects.toThrow(ForbiddenException);
   });
 
   it('create 同名(大小写不敏感)抛 ConflictException', async () => {
@@ -126,11 +114,10 @@ describe('MaterialFoldersService', () => {
     await expect(service.update('u1', 'f1', { name: 'Logo' })).rejects.toThrow(ConflictException);
   });
 
-  it('update 文件夹不存在抛 NotFound(仅归属,不校验会员)', async () => {
-    const { service, repo, materialsService } = buildService();
+  it('update 文件夹不存在抛 NotFound(仅归属)', async () => {
+    const { service, repo } = buildService();
     repo.findOwned.mockResolvedValue(null);
     await expect(service.update('u1', 'fX', { name: 'B' })).rejects.toThrow(NotFoundException);
-    expect(materialsService.assertCanAddOrUse).not.toHaveBeenCalled();
   });
 
   it('update 成功改名:名称空闲则调用 repo.update', async () => {
@@ -157,10 +144,9 @@ describe('MaterialFoldersService', () => {
   });
 
   it('remove 走 FavoriteLibraryService.deleteFolder(仅归属，FAVORITE 联动取消收藏)', async () => {
-    const { service, repo, materialsService, favoriteLibrary } = buildService();
+    const { service, repo, favoriteLibrary } = buildService();
     repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
     await service.remove('u1', 'f1');
     expect(favoriteLibrary.deleteFolder).toHaveBeenCalledWith('u1', 'f1');
-    expect(materialsService.assertCanAddOrUse).not.toHaveBeenCalled();
   });
 });

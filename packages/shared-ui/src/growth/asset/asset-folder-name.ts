@@ -24,7 +24,7 @@ export function nextFolderName(baseName: string, existingNames: string[]): strin
  *
  * 形状照 galleryErrorMessage：本仓库 API 的错误体是 `msg` 而**不是** `message`，
  * SDK 拦截器又把它挂到 error.msg 上。按 `response.data.message` 去读只会拿到 undefined，
- * 于是「需要有效会员才能使用素材」「已存在同名文件夹」这些真实原因全被退化成通用兜底文案。
+ * 于是「已存在同名文件夹」这些真实原因全被退化成通用兜底文案。
  */
 export function folderErrorMessage(error: unknown, fallback: string): string {
   const err = error as { msg?: string; response?: { data?: { msg?: string } } };

@@ -1,12 +1,10 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, ResourceType } from '../../platform/prisma/generated';
-import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import {
   MarketplaceActivityRepository,
@@ -80,37 +78,12 @@ export interface MaterialUpdateInput {
 export class MaterialsService {
   constructor(
     private readonly materialsRepository: MaterialsRepository,
-    private readonly membershipService: MembershipService,
     private readonly r2Service: CloudflareR2Service,
     @Inject(MATERIAL_FOLDERS_SERVICE)
     private readonly foldersService: MaterialFoldersService,
     private readonly favoriteLibrary: FavoriteLibraryService,
     private readonly activityRepository: MarketplaceActivityRepository,
   ) {}
-
-  async getEntitlement(userId: string) {
-    const { membership } = await this.membershipService.getUserMembership(userId);
-    const active =
-      Boolean(membership) &&
-      membership!.status === 'ACTIVE' &&
-      membership!.expiresAt > new Date() &&
-      Number(membership!.level?.level ?? 0) > 0;
-    return {
-      canAdd: active,
-      canUse: active,
-      reason: active ? null : '需要有效会员才能新增或使用素材',
-      levelName: active ? membership?.level?.name ?? '会员' : null,
-      expiresAt: active ? membership?.expiresAt ?? null : null,
-    };
-  }
-
-  async assertCanAddOrUse(userId: string) {
-    const entitlement = await this.getEntitlement(userId);
-    if (!entitlement.canUse) {
-      throw new ForbiddenException(entitlement.reason ?? '需要有效会员才能使用素材');
-    }
-    return entitlement;
-  }
 
   /**
    * /asset 左侧导航的角标计数：全部 / 收藏 / 各类型，一次算完。
@@ -182,10 +155,11 @@ export class MaterialsService {
       ];
     }
 
-    const [[items, total], entitlement] = await Promise.all([
-      this.materialsRepository.findMany({ where, skip, pageSize }),
-      this.getEntitlement(userId),
-    ]);
+    const [items, total] = await this.materialsRepository.findMany({
+      where,
+      skip,
+      pageSize,
+    });
 
     // Plan C Task 11：批量推导每个素材背后引用资源的可用性（一次 deriveSourceState 调用，
     // 不逐条查询——见 FavoriteLibraryService.deriveSourceState 的批量实现，避免列表页 N+1）。
@@ -201,7 +175,6 @@ export class MaterialsService {
       page,
       pageSize,
       hasMore: skip + items.length < total,
-      entitlement,
     };
   }
 
@@ -288,7 +261,6 @@ export class MaterialsService {
     userId: string,
     opts: { fileName: string; contentType: string; folder?: string },
   ) {
-    await this.assertCanAddOrUse(userId);
     return this.r2Service.createPresignedUpload({
       fileName: opts.fileName,
       contentType: opts.contentType,
@@ -302,7 +274,6 @@ export class MaterialsService {
    * `sourceType='external'`（该值曾允许直接登记外链素材，是"所有资源来自站内"的一个写入口子）。
    */
   async create(userId: string, input: MaterialCreateInput) {
-    await this.assertCanAddOrUse(userId);
     await this.foldersService.assertFolderExists(userId, input.folderId ?? null);
     const type = this.normalizeType(input.type);
     const sourceType = this.normalizeSourceType(input.sourceType);
@@ -356,7 +327,6 @@ export class MaterialsService {
     }
     if (input.folderId !== undefined) {
       await this.foldersService.assertFolderExists(userId, input.folderId);
-      await this.assertMoveAllowed(userId, input.folderId);
       data.folder = input.folderId
         ? { connect: { id: input.folderId } }
         : { disconnect: true };
@@ -374,37 +344,23 @@ export class MaterialsService {
     return this.favoriteLibrary.deleteMaterials(userId, ids);
   }
 
-  /**
-   * Plan C Task 10：会员过期规则——只允许"其他文件夹 → 默认(folderId=null)"，
-   * 不允许移入任何具体文件夹（含默认→其他、其他→其他）。folderId=null 恒放行。
-   */
-  private async assertMoveAllowed(userId: string, targetFolderId: string | null) {
-    if (targetFolderId === null) return;
-    const entitlement = await this.getEntitlement(userId);
-    if (!entitlement.canUse) {
-      throw new ForbiddenException('会员已过期，仅可将素材移回默认文件夹');
-    }
-  }
-
   async batchMove(userId: string, ids: string[], folderId: string | null) {
     const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
     if (uniqueIds.length === 0) return { count: 0 };
     await this.foldersService.assertFolderExists(userId, folderId);
-    await this.assertMoveAllowed(userId, folderId);
     const result = await this.materialsRepository.moveMany(userId, uniqueIds, folderId);
     return { count: result.count };
   }
 
   async useAsset(userId: string, id: string) {
-    await this.assertCanAddOrUse(userId);
     const asset = await this.ensureOwned(userId, id);
     await this.favoriteLibrary.assertUsable(asset);
     return asset;
   }
 
   /**
-   * Plan C Task 10：`POST /materials/:id/download`——sourceState 拦截（blocked/missing → 403），
-   * 不复用 useAsset 的会员校验（brief：download 不要求会员，只拦截来源已失效的素材）。
+   * `POST /materials/:id/download`——仅按 sourceState 拦截（blocked/missing → 403），
+   * 拦截来源已失效的素材；不涉及会员校验。
    */
   async download(userId: string, id: string): Promise<{ downloadUrl: string | null }> {
     const asset = await this.ensureOwned(userId, id);

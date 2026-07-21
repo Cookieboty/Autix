@@ -5,7 +5,6 @@ export type {
   MaterialAssetSourceType,
   MaterialAssetType,
   MaterialCreateInput,
-  MaterialEntitlement,
   MaterialListResult,
   MaterialFolder,
   MaterialFolderRow,

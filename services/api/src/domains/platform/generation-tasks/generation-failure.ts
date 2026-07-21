@@ -1,5 +1,6 @@
 import type { GenerationErrorStage } from '../prisma/generated';
 import { truncateToBytes, UPSTREAM_BODY_BYTE_LIMIT } from '../common/snapshot-sanitizer';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import type { ImageUpstreamError } from '@autix/ai-adapters/image';
 import type { VideoUpstreamError } from '@autix/ai-adapters/video';
 
@@ -78,6 +79,12 @@ export function fromVideoUpstreamError(
 }
 
 export function fromUnknown(err: unknown, stage: GenerationErrorStage): GenerationFailure {
+  // I18nHttpException 的 response 是对象且不含 message 字段，NestJS `HttpException.initMessage`
+  // 会退化成按构造名拆词（"I18nHttpException" → "18 Http Exception"），直接读 err.message
+  // 会把这段无意义兜底串落库、盖掉真正的业务错误。改取稳定的 i18nKey。
+  if (err instanceof I18nHttpException) {
+    return { stage, message: err.i18nKey, code: err.code };
+  }
   return {
     stage,
     message: err instanceof Error ? err.message : String(err),

@@ -20,8 +20,6 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  MaterialMembershipError,
-  openBillingGate,
   useMaterialStore,
   type MaterialAsset,
   type MaterialAssetType,
@@ -576,13 +574,9 @@ export function VideoAssetPanel({
       const refs = created.map((asset) => assetToReference(asset, 'library'));
       onChangeRefs([...selectedRefsRef.current, ...refs].slice(-uploadLimit));
       await fetchAssets();
-    } catch (error) {
-      // 非会员被后端 403 拦下 → 直接唤起付费弹框，不在面板里显示一句干巴巴的报错
-      if (error instanceof MaterialMembershipError) {
-        openBillingGate({ msg: error.reason ?? t('assetUploadFailed') });
-      } else {
-        setError('upload');
-      }
+    } catch {
+      // 素材库已对全用户开放，不再有会员拦截路径；上传失败统一走面板错误态。
+      setError('upload');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

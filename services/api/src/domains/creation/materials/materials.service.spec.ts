@@ -8,7 +8,6 @@ function buildService(
   overrides: {
     repo?: any;
     folders?: any;
-    membership?: any;
     r2?: any;
     favoriteLibrary?: any;
     activityRepository?: any;
@@ -23,15 +22,6 @@ function buildService(
     softDelete: vi.fn(),
     softDeleteMany: vi.fn().mockResolvedValue({ count: 0 }),
     ...(overrides.repo ?? {}),
-  };
-  const membership = overrides.membership ?? {
-    getUserMembership: vi.fn().mockResolvedValue({
-      membership: {
-        status: 'ACTIVE',
-        expiresAt: new Date(Date.now() + 86_400_000),
-        level: { level: 1, name: '会员' },
-      },
-    }),
   };
   const r2 = {
     createPresignedUpload: vi.fn(),
@@ -57,13 +47,12 @@ function buildService(
   };
   const service = new MaterialsService(
     repo as never,
-    membership as never,
     r2 as never,
     foldersService as never,
     favoriteLibrary as never,
     activityRepository as never,
   );
-  return { service, repo, foldersService, membership, r2, favoriteLibrary, activityRepository };
+  return { service, repo, foldersService, r2, favoriteLibrary, activityRepository };
 }
 
 describe('MaterialsService folder support', () => {
@@ -108,21 +97,19 @@ describe('MaterialsService folder support', () => {
     );
   });
 
-  it('batchMove 校验目标文件夹并返回 count（Plan C Task 10：非 null 目标需过一次会员校验）', async () => {
-    const { service, repo, foldersService, membership } = buildService();
+  it('batchMove 校验目标文件夹并返回 count（素材库对全用户开放）', async () => {
+    const { service, repo, foldersService } = buildService();
     const res = await service.batchMove('u1', ['m1', 'm2'], 'f1');
     expect(foldersService.assertFolderExists).toHaveBeenCalledWith('u1', 'f1');
     expect(repo.moveMany).toHaveBeenCalledWith('u1', ['m1', 'm2'], 'f1');
     expect(res).toEqual({ count: 2 });
-    expect(membership.getUserMembership).toHaveBeenCalled(); // 活跃会员：放行但仍需查一次
   });
 
   it('batchMove folderId=null → assertFolderExists called with null (no-op)', async () => {
-    const { service, foldersService, repo, membership } = buildService();
+    const { service, foldersService, repo } = buildService();
     await service.batchMove('u1', ['m1'], null);
     expect(foldersService.assertFolderExists).toHaveBeenCalledWith('u1', null);
     expect(repo.moveMany).toHaveBeenCalledWith('u1', ['m1'], null);
-    expect(membership.getUserMembership).not.toHaveBeenCalled();
   });
 
   it('update with folderId="f1" → assertFolderExists called and folder connect used', async () => {
@@ -143,34 +130,22 @@ describe('MaterialsService folder support', () => {
   });
 });
 
-describe('MaterialsService entitlement', () => {
-  it('allows expired members to list assets but blocks add and use', async () => {
-    const expiredMembershipMock = {
-      getUserMembership: vi.fn().mockResolvedValue({
-        membership: {
-          status: 'ACTIVE',
-          expiresAt: new Date(Date.now() - 86_400_000),
-          level: { level: 1, name: 'Starter' },
-        },
-      }),
-    };
-    const { service } = buildService({ membership: expiredMembershipMock });
+describe('MaterialsService — 素材库对全用户开放', () => {
+  it('任意用户 create / useAsset 都放行（不再有会员门禁）', async () => {
+    const { service } = buildService();
 
-    await expect(service.list('user-1', {})).resolves.toMatchObject({
-      entitlement: { canAdd: false, canUse: false },
-    });
     await expect(
       service.create('user-1', {
         type: 'image',
         title: 'asset',
-        url: 'https://example.com/a.png',
+        url: `${R2_PUBLIC_BASE}/a.png`,
         sourceType: 'upload',
       }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(service.useAsset('user-1', 'asset-1')).rejects.toBeInstanceOf(ForbiddenException);
+    ).resolves.toBeDefined();
+    await expect(service.useAsset('user-1', 'asset-1')).resolves.toBeDefined();
   });
 
-  it('creates and uses assets for active members; remove/useAsset 走 FavoriteLibraryService', async () => {
+  it('creates and uses assets for any user; remove/useAsset 走 FavoriteLibraryService', async () => {
     const asset = {
       id: 'asset-1',
       userId: 'user-1',
@@ -248,7 +223,7 @@ describe('MaterialsService — Plan C Task 10：download / useAsset 的 sourceSt
     expect(favoriteLibrary.assertUsable).toHaveBeenCalledWith(usableAsset);
   });
 
-  it('useAsset：sourceState blocked/missing → ForbiddenException（会员校验通过后仍拦截）', async () => {
+  it('useAsset：sourceState blocked/missing → ForbiddenException（由 favoriteLibrary.assertUsable 抛出）', async () => {
     const { service } = buildService({
       repo: { findOwned: vi.fn().mockResolvedValue(usableAsset) },
       favoriteLibrary: {
@@ -259,26 +234,18 @@ describe('MaterialsService — Plan C Task 10：download / useAsset 的 sourceSt
   });
 });
 
-describe('MaterialsService — Plan C Task 10：move 会员规则（过期只能 其他→默认）', () => {
-  const expiredMembership = {
-    getUserMembership: vi.fn().mockResolvedValue({
-      membership: {
-        status: 'ACTIVE',
-        expiresAt: new Date(Date.now() - 86_400_000),
-        level: { level: 1, name: 'Starter' },
-      },
-    }),
-  };
-
-  it('update：会员过期，默认(null)→其他文件夹 → ForbiddenException', async () => {
-    const { service } = buildService({ membership: expiredMembership });
-    await expect(service.update('user-1', 'm1', { folderId: 'folder-x' })).rejects.toBeInstanceOf(
-      ForbiddenException,
+describe('MaterialsService — 素材库对全用户开放：move 不受限制', () => {
+  it('update：默认(null)→其他文件夹 → 放行', async () => {
+    const { service, repo } = buildService();
+    await expect(service.update('user-1', 'm1', { folderId: 'folder-x' })).resolves.toBeDefined();
+    expect(repo.update).toHaveBeenCalledWith(
+      'm1',
+      expect.objectContaining({ folder: { connect: { id: 'folder-x' } } }),
     );
   });
 
-  it('update：会员过期，其他文件夹→默认(null) → 放行', async () => {
-    const { service, repo } = buildService({ membership: expiredMembership });
+  it('update：其他文件夹→默认(null) → 放行', async () => {
+    const { service, repo } = buildService();
     await expect(service.update('user-1', 'm1', { folderId: null })).resolves.toBeDefined();
     expect(repo.update).toHaveBeenCalledWith(
       'm1',
@@ -286,23 +253,16 @@ describe('MaterialsService — Plan C Task 10：move 会员规则（过期只能
     );
   });
 
-  it('batchMove：会员过期，目标为具体文件夹 → ForbiddenException', async () => {
-    const { service } = buildService({ membership: expiredMembership });
-    await expect(service.batchMove('user-1', ['m1'], 'folder-x')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+  it('batchMove：目标为具体文件夹 → 放行', async () => {
+    const { service, repo } = buildService();
+    await expect(service.batchMove('user-1', ['m1'], 'folder-x')).resolves.toEqual({ count: 2 });
+    expect(repo.moveMany).toHaveBeenCalledWith('user-1', ['m1'], 'folder-x');
   });
 
-  it('batchMove：会员过期，目标为 null（移回默认） → 放行', async () => {
-    const { service, repo } = buildService({ membership: expiredMembership });
+  it('batchMove：目标为 null（移回默认） → 放行', async () => {
+    const { service, repo } = buildService();
     await expect(service.batchMove('user-1', ['m1'], null)).resolves.toEqual({ count: 2 });
     expect(repo.moveMany).toHaveBeenCalledWith('user-1', ['m1'], null);
-  });
-
-  it('update/batchMove：活跃会员不受限，任意方向都放行', async () => {
-    const { service } = buildService();
-    await expect(service.update('user-1', 'm1', { folderId: 'folder-x' })).resolves.toBeDefined();
-    await expect(service.batchMove('user-1', ['m1'], 'folder-x')).resolves.toEqual({ count: 2 });
   });
 });
 

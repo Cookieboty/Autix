@@ -12,7 +12,6 @@ import {
 } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import { MaterialFilterBar, type FilterType, type LibrarySourceFilter } from './MaterialFilterBar';
@@ -45,7 +44,6 @@ export function MaterialLibraryView() {
 
   const {
     items,
-    entitlement,
     loading,
     loadMaterials: loadStoredMaterials,
     uploadMaterialFiles,
@@ -73,9 +71,6 @@ export function MaterialLibraryView() {
 
   const isHistoryMode = librarySource === 'HISTORY';
   const selectedCount = selectedIds.size;
-  const canAdd = Boolean(entitlement?.canAdd);
-  // Plan C Task 10：会员过期只允许"其他文件夹 → 默认"——移入任何具体文件夹前统一按此禁用。
-  const moveRestricted = !entitlement?.canUse;
 
   const selectedItems = useMemo(() => items.filter((item) => selectedIds.has(item.id)), [items, selectedIds]);
   const folders = sidebar?.folders ?? [];
@@ -116,10 +111,6 @@ export function MaterialLibraryView() {
 
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length || uploading) return;
-    if (!canAdd) {
-      toast.error(entitlement?.reason ?? t('membershipRequired'));
-      return;
-    }
 
     const uploadFiles = Array.from(files);
     const uploadFolderId = activeFolderId === 'all' || activeFolderId === 'root' ? null : activeFolderId;
@@ -184,10 +175,6 @@ export function MaterialLibraryView() {
   };
 
   const handleMove = async (ids: string[], folderId: string | null) => {
-    if (folderId !== null && moveRestricted) {
-      toast.error(t('moveRestrictedHint'));
-      return;
-    }
     await moveMaterials(ids, folderId);
     clearSelection();
     await loadFolders();
@@ -237,13 +224,6 @@ export function MaterialLibraryView() {
             <p className="mt-1 text-sm text-muted-foreground">{t('description')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={canAdd ? 'default' : 'outline'}>
-              {canAdd
-                ? entitlement?.levelName
-                  ? t('membershipAvailableWithLevel', { level: entitlement.levelName })
-                  : t('membershipAvailable')
-                : t('viewOnly')}
-            </Badge>
             <Button
               type="button"
               variant="outline"
@@ -255,21 +235,14 @@ export function MaterialLibraryView() {
             </Button>
             <Button
               type="button"
-              disabled={!canAdd || uploading}
+              disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
-              title={!canAdd ? (entitlement?.reason ?? t('membershipRequired')) : undefined}
             >
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
               {t('upload')}
             </Button>
           </div>
         </div>
-        {!canAdd && entitlement?.reason && (
-          <div className="mt-3 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-200">
-            {entitlement.reason}
-            {t('expiredHintSuffix')}
-          </div>
-        )}
       </header>
 
       {!isHistoryMode && (
@@ -311,8 +284,6 @@ export function MaterialLibraryView() {
               onMove={(folderId) => handleMove(Array.from(selectedIds), folderId)}
               label={t('moveTo')}
               uncategorizedLabel={t('uncategorized')}
-              moveRestricted={moveRestricted}
-              restrictedHint={t('moveRestrictedHint')}
             />
             <Button type="button" variant="destructive" size="sm" onClick={() => void deleteSelected()}>
               {t('deleteSelected')}
@@ -329,7 +300,6 @@ export function MaterialLibraryView() {
             rootAssetCount={sidebar?.rootAssetCount}
             activeFolderId={activeFolderId}
             onSelectFolder={setActiveFolder}
-            canCreateFolder={canAdd}
             onCreateFolder={createFolder}
             onRenameFolder={renameFolder}
             onRequestDeleteFolder={requestDeleteFolder}
@@ -358,8 +328,6 @@ export function MaterialLibraryView() {
               onDownload={(asset) => void openDownload(asset)}
               folders={folders}
               onMove={handleMove}
-              moveRestricted={moveRestricted}
-              restrictedHint={t('moveRestrictedHint')}
             />
           )}
         </main>

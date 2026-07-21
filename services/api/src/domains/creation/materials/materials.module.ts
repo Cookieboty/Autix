@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { MembershipModule } from '../../billing/membership/membership.module';
 import { PrismaModule } from '../../platform/prisma/prisma.module';
 import { StorageModule } from '../../platform/storage/storage.module';
 // Plan C Task 11：saveFromHistory 复用市场域的浏览记录仓储；该仓储只依赖 PrismaService（叶子
@@ -15,7 +14,7 @@ import { MaterialFoldersRepository } from './material-folders.repository';
 import { MaterialFoldersService } from './material-folders.service';
 
 @Module({
-  imports: [MembershipModule, PrismaModule, StorageModule, FavoriteLibraryModule],
+  imports: [PrismaModule, StorageModule, FavoriteLibraryModule],
   controllers: [MaterialsController, MaterialFoldersController],
   providers: [
     MaterialsService,

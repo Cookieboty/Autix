@@ -1,14 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
-  Inject,
   Injectable,
   NotFoundException,
-  forwardRef,
 } from '@nestjs/common';
 import { FavoriteLibraryService } from './favorite-library.service';
 import { MaterialFoldersRepository } from './material-folders.repository';
-import { MaterialsService } from './materials.service';
 
 export interface MaterialFolderDto {
   id: string;
@@ -29,10 +26,6 @@ const ICON_MAX_CODE_POINTS = 16;
 export class MaterialFoldersService {
   constructor(
     private readonly repository: MaterialFoldersRepository,
-    // forwardRef breaks the MaterialsService <-> MaterialFoldersService DI cycle:
-    // without it Nest deadlocks resolving the useExisting token alias at boot.
-    @Inject(forwardRef(() => MaterialsService))
-    private readonly materialsService: MaterialsService,
     private readonly favoriteLibrary: FavoriteLibraryService,
   ) {}
 
@@ -63,7 +56,6 @@ export class MaterialFoldersService {
   }
 
   async create(userId: string, input: { name: string; icon?: string | null }) {
-    await this.materialsService.assertCanAddOrUse(userId);
     const name = this.normalizeName(input.name);
     await this.assertNameAvailable(userId, name);
     return this.runWithUniqueNameGuard(() =>

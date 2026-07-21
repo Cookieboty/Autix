@@ -17,8 +17,6 @@ import { useTranslations } from 'next-intl';
 import { computeTaskEstimate, type ParamsSchema, type PricingSchema } from '@autix/domain/pricing';
 import {
   authActions,
-  MaterialMembershipError,
-  openBillingGate,
   useAuthStore,
   useMaterialStore,
   type ModelConfigItem,
@@ -276,11 +274,9 @@ export function ImageComposer({
           uploadLimit,
         ),
       );
-    } catch (error) {
-      // 非会员会在预签名那一步被 403 拦下 → 唤起付费弹框，交互与其它计费拦截一致
-      if (error instanceof MaterialMembershipError) {
-        openBillingGate({ msg: error.reason ?? t('uploadImage') });
-      }
+    } catch {
+      // 上传失败静默吞掉：既没有面板级 error 状态可供承载，也不打扰生成流；
+      // 会员门槛已下线，此处不再有付费拦截路径。
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

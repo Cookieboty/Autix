@@ -6,7 +6,6 @@ import {
   materialsApi,
   type MaterialAsset,
   type MaterialCounts,
-  type MaterialEntitlement,
 } from '@autix/sdk';
 import { useAuthStore } from './auth.store';
 
@@ -134,7 +133,6 @@ export function useAssetLibraryController(query: AssetLibraryQuery) {
   const canFetch = hydrated && isAuthenticated;
 
   const [items, setItems] = useState<MaterialAsset[]>([]);
-  const [entitlement, setEntitlement] = useState<MaterialEntitlement | null>(null);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -172,7 +170,6 @@ export function useAssetLibraryController(query: AssetLibraryQuery) {
       if (seq !== requestSeqRef.current) return;
       pageRef.current = result.page;
       setItems((prev) => (append ? [...prev, ...result.items] : result.items));
-      setEntitlement(result.entitlement);
       setTotal(result.total);
       setHasMore(result.hasMore);
     } catch (err) {
@@ -232,7 +229,6 @@ export function useAssetLibraryController(query: AssetLibraryQuery) {
 
   return {
     items,
-    entitlement,
     total,
     loading,
     loadingMore,

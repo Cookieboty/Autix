@@ -25,12 +25,6 @@ import type { AuthUser } from '@autix/domain';
 export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
-  @Get('entitlement')
-  entitlement(@CurrentUser() user: AuthUser) {
-    const userId = getCurrentUserId(user);
-    return this.materialsService.getEntitlement(userId);
-  }
-
   /** /asset 左侧导航角标：全部/收藏/各类型的素材数。注意须在 @Get() 之前声明，否则被通配吃掉。 */
   @Get('counts')
   counts(@CurrentUser() user: AuthUser) {

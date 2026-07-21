@@ -6,7 +6,6 @@ import {
   type MaterialAsset,
   type MaterialAssetSourceType,
   type MaterialAssetType,
-  type MaterialEntitlement,
   type MaterialLibrarySource,
   type MaterialSourceState,
 } from '@autix/sdk';
@@ -15,7 +14,6 @@ export type {
   MaterialAsset,
   MaterialAssetSourceType,
   MaterialAssetType,
-  MaterialEntitlement,
   MaterialLibrarySource,
   MaterialSourceState,
 } from '@autix/sdk';
@@ -32,43 +30,6 @@ export interface MaterialUploadInput {
   sourceType?: MaterialAssetSourceType;
 }
 
-/**
- * 素材上传被会员门槛挡下。
- *
- * 后端在 `createUploadUrl` 和 `create` 两处都会 `assertCanAddOrUse`，非会员抛 403
- * `需要有效会员才能使用素材`。SDK 的积分不足拦截器只认「积分不足 / insufficient points」
- * 这几个关键词，接不住会员错误，所以在这里显式识别并抛成专用错误，由调用方唤起付费弹框。
- */
-export class MaterialMembershipError extends Error {
-  constructor(public readonly reason?: string) {
-    super(reason ?? 'membership required');
-    this.name = 'MaterialMembershipError';
-  }
-}
-
-/**
- * 会员门槛的判定关键词。仅凭 403 不够 —— 会话过期、CSRF 失败、对象存储拒绝
- * 同样是 403，全都弹付费框会让用户完全找不到真实原因（该去重新登录的却在看套餐）。
- * 后端这条错误来自 materials.service 的 assertCanAddOrUse。
- */
-const MEMBERSHIP_KEYWORDS = ['会员', 'membership', 'entitlement'];
-
-/** 403 且报错文案指向会员门槛，才判定为需要付费拦截 */
-function isMembershipBlocked(error: unknown): boolean {
-  const err = error as { status?: number; response?: { status?: number; data?: { msg?: string } }; msg?: string };
-  const status = err?.status ?? err?.response?.status;
-  if (status !== 403) return false;
-  const msg = (err?.msg ?? err?.response?.data?.msg ?? '').toLowerCase();
-  // 拿不到文案时保守判为会员门槛：该接口的 403 绝大多数来自会员校验
-  if (!msg) return true;
-  return MEMBERSHIP_KEYWORDS.some((keyword) => msg.includes(keyword.toLowerCase()));
-}
-
-function membershipReason(error: unknown): string | undefined {
-  const err = error as { msg?: string; response?: { data?: { msg?: string } } };
-  return err?.msg ?? err?.response?.data?.msg;
-}
-
 export class MaterialUploadError extends Error {
   constructor(public readonly fileName: string) {
     super(fileName);
@@ -78,7 +39,6 @@ export class MaterialUploadError extends Error {
 
 interface MaterialState {
   items: MaterialAsset[];
-  entitlement: MaterialEntitlement | null;
   loading: boolean;
   loadMaterials: (params?: {
     type?: MaterialFilterType;
@@ -107,7 +67,6 @@ const inferContentType = (file: File) => file.type || 'application/octet-stream'
 
 export const useMaterialStore = create<MaterialState>((set) => ({
   items: [],
-  entitlement: null,
   loading: false,
   loadMaterials: async (params) => {
     set({ loading: true });
@@ -116,7 +75,6 @@ export const useMaterialStore = create<MaterialState>((set) => ({
       const items = res.data.items ?? [];
       set({
         items,
-        entitlement: res.data.entitlement,
         loading: false,
       });
       return items;
@@ -129,18 +87,11 @@ export const useMaterialStore = create<MaterialState>((set) => ({
     const created: MaterialAsset[] = [];
     for (const input of files) {
       const contentType = inferContentType(input.file);
-      let presign;
-      try {
-        presign = await materialsApi.uploadUrl({
-          fileName: input.file.name,
-          contentType,
-          ...(input.folder ? { folder: input.folder } : {}),
-        });
-      } catch (error) {
-        // 会员门槛在拿预签名这一步就会拦下，不用等到 create
-        if (isMembershipBlocked(error)) throw new MaterialMembershipError(membershipReason(error));
-        throw error;
-      }
+      const presign = await materialsApi.uploadUrl({
+        fileName: input.file.name,
+        contentType,
+        ...(input.folder ? { folder: input.folder } : {}),
+      });
       const uploadRes = await uploadToPresignedUrl(presign.data.uploadUrl, input.file, {
         contentType,
       });
@@ -148,9 +99,7 @@ export const useMaterialStore = create<MaterialState>((set) => ({
       const title =
         (input.title ?? input.file.name.replace(/\.[^.]+$/, '')) ||
         input.file.name;
-      let res;
-      try {
-        res = await materialsApi.create({
+      const res = await materialsApi.create({
         type: input.type,
         title,
         url: presign.data.publicUrl,
@@ -165,11 +114,7 @@ export const useMaterialStore = create<MaterialState>((set) => ({
         storageKey: presign.data.key,
         sourceType: input.sourceType ?? 'upload',
         folderId: input.folderId ?? null,
-        });
-      } catch (error) {
-        if (isMembershipBlocked(error)) throw new MaterialMembershipError(membershipReason(error));
-        throw error;
-      }
+      });
       created.push(res.data);
     }
     set((state) => ({ items: [...created, ...state.items] }));

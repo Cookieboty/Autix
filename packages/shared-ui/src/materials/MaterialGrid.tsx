@@ -55,9 +55,6 @@ export interface MoveToMenuProps {
   onMove: (folderId: string | null) => Promise<void>;
   label: string;
   uncategorizedLabel: string;
-  /** Plan C Task 10：会员过期只允许"其他文件夹 → 默认"，此处禁用移入任何具体文件夹的选项。 */
-  moveRestricted?: boolean;
-  restrictedHint?: string;
 }
 
 export function MoveToMenu({
@@ -65,8 +62,6 @@ export function MoveToMenu({
   onMove,
   label,
   uncategorizedLabel,
-  moveRestricted,
-  restrictedHint,
 }: MoveToMenuProps) {
   return (
     <DropdownMenu>
@@ -80,12 +75,7 @@ export function MoveToMenu({
         <DropdownMenuItem onClick={() => void onMove(null)}>{uncategorizedLabel}</DropdownMenuItem>
         {folders.length > 0 && <DropdownMenuSeparator />}
         {folders.map((f) => (
-          <DropdownMenuItem
-            key={f.id}
-            disabled={moveRestricted}
-            title={moveRestricted ? restrictedHint : undefined}
-            onClick={() => !moveRestricted && void onMove(f.id)}
-          >
+          <DropdownMenuItem key={f.id} onClick={() => void onMove(f.id)}>
             {f.name}
           </DropdownMenuItem>
         ))}
@@ -159,8 +149,6 @@ function MaterialCard({
   onDownload,
   folders,
   onMove,
-  moveRestricted,
-  restrictedHint,
 }: {
   asset: MaterialAsset;
   selected: boolean;
@@ -169,8 +157,6 @@ function MaterialCard({
   onDownload: () => void;
   folders: MaterialFolder[];
   onMove: (folderId: string | null) => Promise<void>;
-  moveRestricted?: boolean;
-  restrictedHint?: string;
 }) {
   const t = useTranslations('materials');
 
@@ -263,8 +249,6 @@ function MaterialCard({
             onMove={onMove}
             label={t('moveTo')}
             uncategorizedLabel={t('uncategorized')}
-            moveRestricted={moveRestricted}
-            restrictedHint={restrictedHint}
           />
           <Button
             type="button"
@@ -290,8 +274,6 @@ export function MaterialGrid({
   onDownload,
   folders,
   onMove,
-  moveRestricted,
-  restrictedHint,
 }: {
   items: MaterialAsset[];
   selectedIds: Set<string>;
@@ -300,8 +282,6 @@ export function MaterialGrid({
   onDownload: (asset: MaterialAsset) => void;
   folders: MaterialFolder[];
   onMove: (ids: string[], folderId: string | null) => Promise<void>;
-  moveRestricted?: boolean;
-  restrictedHint?: string;
 }) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 min-[1920px]:grid-cols-7">
@@ -315,8 +295,6 @@ export function MaterialGrid({
           onDownload={() => onDownload(asset)}
           folders={folders}
           onMove={(folderId) => onMove([asset.id], folderId)}
-          moveRestricted={moveRestricted}
-          restrictedHint={restrictedHint}
         />
       ))}
     </div>

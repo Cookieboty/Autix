@@ -1,5 +1,7 @@
+import { HttpStatus } from '@nestjs/common';
 import { GenerationErrorStage } from '../prisma/generated';
 import { fromUnknown, fromImageUpstreamError, fromVideoUpstreamError } from './generation-failure';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { ImageUpstreamError } from '@autix/ai-adapters/image';
 import { VideoUpstreamError } from '@autix/ai-adapters/video';
 
@@ -164,6 +166,32 @@ describe('GenerationFailure', () => {
     const failure = fromVideoUpstreamError(err, GenerationErrorStage.SUBMIT);
 
     expect(failure.diagnostics).toBeUndefined();
+  });
+
+  it('I18nHttpException 用 i18nKey 作为 message —— 而非 NestJS 按构造名派生的 "18 Http Exception" 兜底串', () => {
+    // I18nHttpException 的 response 是对象且无 message 字段，NestJS HttpException.initMessage
+    // 会退化成用构造函数名拆词："I18nHttpException" → /[A-Z][a-z]+|[0-9]+/g → "18 Http Exception"。
+    // 落库若直接读 err.message，业务错误码就被这段无意义串覆盖。
+    const err = new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.balance_insufficient');
+    expect(err.message).toBe('18 Http Exception'); // 固化 NestJS 的兜底行为，说明我们在绕开什么
+
+    const failure = fromUnknown(err, GenerationErrorStage.BILLING);
+    expect(failure.stage).toBe(GenerationErrorStage.BILLING);
+    expect(failure.message).toBe('points.balance_insufficient');
+    // 未带业务码时 code 保持 undefined（兜底列宁缺失勿留空占位）
+    expect(failure.code).toBeUndefined();
+  });
+
+  it('I18nHttpException 携带业务码时把 code 透出到 failure.code', () => {
+    const err = new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'points.hold_grant_insufficient',
+      { grantId: 'g1', required: 5 },
+      { code: 'INSUFFICIENT_GRANT' as never },
+    );
+    const failure = fromUnknown(err, GenerationErrorStage.BILLING);
+    expect(failure.message).toBe('points.hold_grant_insufficient');
+    expect(failure.code).toBe('INSUFFICIENT_GRANT');
   });
 
   it('fromUnknown 不填 diagnostics', () => {

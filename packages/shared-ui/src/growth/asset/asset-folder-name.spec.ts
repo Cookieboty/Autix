@@ -33,8 +33,8 @@ describe('folderErrorMessage', () => {
 
   it('退而读 response.data.msg', () => {
     expect(
-      folderErrorMessage({ response: { data: { msg: '需要有效会员才能使用素材' } } }, 'fallback'),
-    ).toBe('需要有效会员才能使用素材');
+      folderErrorMessage({ response: { data: { msg: '文件夹不存在' } } }, 'fallback'),
+    ).toBe('文件夹不存在');
   });
 
   it('拿不到后端原因才用兜底文案', () => {
