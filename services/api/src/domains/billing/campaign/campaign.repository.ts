@@ -16,7 +16,7 @@ import {
 
 @Injectable()
 export class CampaignRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   listActiveCampaigns(where: Prisma.campaignsWhereInput) {
     return this.prisma.campaigns.findMany({
@@ -34,7 +34,12 @@ export class CampaignRepository {
       definitions.map((def) =>
         this.prisma.campaigns.upsert({
           where: { code: def.code },
-          update: {},
+          // 内置活动的 metadata 由代码权威定义（hrefPath / modelMatchers /
+          // completionKind 等内置字段绝不允许运营在 admin 里改，否则一旦漂移，
+          // 首页任务的跳转参数与完成态判定就会失效）。因此 upsert 每次都用最新
+          // 定义覆盖 metadata；status / rewardPoints / 时间窗口等运营字段仍由
+          // admin 控制，故不动。
+          update: { metadata: def.metadata },
           create: {
             code: def.code,
             name: def.name,
@@ -272,9 +277,12 @@ function modelMatchersToImageModelWhere(
   return modelMatchers
     .map((matcher) => matcher.trim())
     .filter(Boolean)
-    .map((matcher) => ({
-      modelUsed: { contains: matcher, mode: 'insensitive' },
-    }));
+    .map((matcher) => {
+      if (matcher.startsWith('=')) {
+        return { modelUsed: { equals: matcher.slice(1), mode: 'insensitive' as const } };
+      }
+      return { modelUsed: { contains: matcher, mode: 'insensitive' as const } };
+    });
 }
 
 function modelMatchersToClipModelWhere(
@@ -283,7 +291,10 @@ function modelMatchersToClipModelWhere(
   return modelMatchers
     .map((matcher) => matcher.trim())
     .filter(Boolean)
-    .map((matcher) => ({
-      model: { contains: matcher, mode: 'insensitive' },
-    }));
+    .map((matcher) => {
+      if (matcher.startsWith('=')) {
+        return { model: { equals: matcher.slice(1), mode: 'insensitive' as const } };
+      }
+      return { model: { contains: matcher, mode: 'insensitive' as const } };
+    });
 }
