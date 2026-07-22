@@ -217,7 +217,7 @@ export class PointsRepository {
     taskType: string,
   ): Promise<void> {
     const key = `hold-concurrency:${taskType}:${userId}`;
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${key})::bigint)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key})::bigint)`;
   }
 
   // FIX-9b: 事务内查找同任务的活跃 hold（PENDING/PROCESSING），用于创建前去重，
