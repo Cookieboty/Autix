@@ -131,8 +131,17 @@ export function PublicImageHistoryPanel({
    * 等于请求值。
    */
   const [naturalRatios, setNaturalRatios] = useState<Record<string, number>>({});
+  // 图片解码完成前该格保持骨架（与 GeneratingCell 同款），解码后再淡入 —— 否则骨架卡
+  // 一撤，图片格会先露出灰底再突然出图，产生「骨架消失→空窗→出图」的闪烁。
+  const [loadedKeys, setLoadedKeys] = useState<Set<string>>(new Set());
 
   const rememberNaturalRatio = (key: string, element: HTMLImageElement) => {
+    setLoadedKeys((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
     const ratio = naturalAspectRatio(element);
     if (ratio === undefined) return;
     setNaturalRatios((prev) => (prev[key] === ratio ? prev : { ...prev, [key]: ratio }));
@@ -342,17 +351,25 @@ export function PublicImageHistoryPanel({
               }
               const { item, image, key } = cell;
               const selected = selectedKeys.has(key);
+              const loaded = loadedKeys.has(key);
               return (
                 <div
                   key={key}
                   className={`group relative min-w-0 overflow-hidden border-solid border-white bg-secondary transition-all duration-75 ${selected ? 'border-[3px]' : 'border-0'}`}
                   style={{ width, height: row.height }}
                 >
+                  {!loaded ? (
+                    <div className="pointer-events-none absolute inset-0">
+                      <div className="absolute inset-0 growth-history-empty-bg" />
+                      <div className="growth-scan absolute inset-x-0 top-0 h-24 opacity-30" />
+                    </div>
+                  ) : null}
                   <img
                     src={image.url}
                     alt={image.prompt ?? item.prompt}
                     loading="lazy"
-                    className="h-full w-full object-cover"
+                    className="relative h-full w-full object-cover transition-opacity duration-300"
+                    style={{ opacity: loaded ? 1 : 0 }}
                     // 命中缓存的图不会触发 onLoad（挂载时已 complete），两条路都要读
                     ref={(element) => {
                       if (element?.complete) rememberNaturalRatio(key, element);

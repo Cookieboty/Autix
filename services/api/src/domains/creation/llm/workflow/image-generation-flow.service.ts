@@ -19,8 +19,12 @@ import {
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { ImageTemplatesService } from '../../../marketplace/image-templates/image-templates.service';
-import { PointsService } from '../../../billing/points/points.service';
+import {
+  PointsService,
+  HoldConcurrencyLimitExceededError,
+} from '../../../billing/points/points.service';
 import { MembershipService } from '../../../billing/membership/membership.service';
+import { ImageConcurrencyLimitException } from '../../../billing/membership/image-entitlement.helpers';
 import { CampaignRewardService } from '../../../billing/campaign/campaign-reward.service';
 import { createChatModelFromDbConfig } from '../model.factory';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
@@ -706,11 +710,22 @@ export class ImageGenerationFlowService {
           count: normalizedCount,
           requestInput: input,
           request,
+          // 原子并发闸门：createHold 在事务内串行校验，闭合预检查的 TOCTOU 竞态。
+          concurrencyLimit: imageEntitlement.concurrency,
         }),
       ));
     } catch (err) {
       // 任务行已存在，冻结失败必须留痕（stage=BILLING），否则这行会永远 PENDING。
       await this.failTask(generationTaskId, fromUnknown(err, GenerationErrorStage.BILLING));
+      // 原子闸门命中：换成用户可见的会员并发异常（含 code / data，供前端弹 modal）。
+      if (err instanceof HoldConcurrencyLimitExceededError) {
+        throw new ImageConcurrencyLimitException(
+          imageEntitlement.levelName,
+          imageEntitlement.concurrency,
+          err.activeCount,
+          1,
+        );
+      }
       throw err;
     }
     holdId = hold.id;

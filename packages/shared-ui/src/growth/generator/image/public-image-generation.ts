@@ -114,3 +114,46 @@ export function buildPublicImageHistoryItem({
     referenceImages: request.referenceImages,
   };
 }
+
+/**
+ * 一次请求并发跑 N 次独立生成，服务端各落一条记录（各有 generationId），历史接口按
+ * 记录 1:1 返回。乐观视图必须同样按 generationId 拆成 N 条，否则删除/投稿/Recreate
+ * （都以 generationId 为单位）会错位，且刷新后卡片数量会变。
+ */
+export function buildPublicImageHistoryItems({
+  data,
+  request,
+  createdAt,
+  modelConfigId,
+}: {
+  data: PublicImageGenerateResult;
+  request: PublicImageGenerationPayload;
+  createdAt: string;
+  modelConfigId?: string | null;
+}): PublicImageHistoryItem[] {
+  const fallbackId = `public-image-${Date.now()}`;
+  const groups = new Map<string, PublicImageHistoryImage[]>();
+
+  for (const image of data.images ?? []) {
+    const generationId = image.generationId ?? fallbackId;
+    const bucket = groups.get(generationId) ?? [];
+    bucket.push({
+      url: image.url,
+      prompt: image.prompt ?? data.prompt ?? request.prompt,
+      generationId,
+      index: bucket.length,
+    });
+    groups.set(generationId, bucket);
+  }
+
+  return [...groups.entries()].map(([generationId, images]) => ({
+    id: generationId,
+    prompt: data.prompt ?? request.prompt,
+    model: data.model ?? request.model,
+    createdAt,
+    images: images.map((image, index) => ({ ...image, index })),
+    settings: request.settings,
+    modelConfigId: modelConfigId ?? null,
+    referenceImages: request.referenceImages,
+  }));
+}

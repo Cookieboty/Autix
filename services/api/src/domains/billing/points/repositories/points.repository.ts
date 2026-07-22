@@ -189,13 +189,35 @@ export class PointsRepository {
   }
 
   async countActiveHoldsByType(userId: string, taskType: string): Promise<number> {
-    return this.prisma.point_holds.count({
+    return this.countActiveHoldsByTypeWithinTx(this.prisma, userId, taskType);
+  }
+
+  async countActiveHoldsByTypeWithinTx(
+    client: Prisma.TransactionClient | PrismaService,
+    userId: string,
+    taskType: string,
+  ): Promise<number> {
+    return client.point_holds.count({
       where: {
         userId,
         taskType,
         status: { in: [PointHoldStatus.PENDING, PointHoldStatus.PROCESSING] },
       },
     });
+  }
+
+  /**
+   * 事务级 advisory lock，按 userId+taskType 串行化并发闸门临界区。xact 锁随事务
+   * 提交/回滚自动释放；同 key 的并发事务会阻塞到前一个提交后再读计数，因此读到的
+   * 活跃 hold 数不会漏算刚提交的那些。
+   */
+  async acquireHoldConcurrencyLockWithinTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    taskType: string,
+  ): Promise<void> {
+    const key = `hold-concurrency:${taskType}:${userId}`;
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${key})::bigint)`;
   }
 
   // FIX-9b: 事务内查找同任务的活跃 hold（PENDING/PROCESSING），用于创建前去重，

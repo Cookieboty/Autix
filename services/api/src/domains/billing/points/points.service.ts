@@ -9,6 +9,7 @@ import { PointsRepository } from './repositories/points.repository';
 import { PointsSource, Prisma } from '../../platform/prisma/generated';
 
 export type { TaskEstimateInput, TaskEstimateResult } from './services/task-pricing-estimator.service';
+export { HoldConcurrencyLimitExceededError } from './services/points-hold.helpers';
 
 @Injectable()
 export class PointsService {

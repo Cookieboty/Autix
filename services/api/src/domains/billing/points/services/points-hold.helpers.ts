@@ -23,6 +23,26 @@ export interface CreateHoldInput {
   refundPolicySnapshot?: Prisma.InputJsonValue;
   metadata?: Prisma.InputJsonValue;
   remark?: string;
+  /**
+   * 设置后，createHold 在同一事务内（advisory lock 串行化）统计该 userId+taskType
+   * 的活跃 hold，达到上限即抛 HoldConcurrencyLimitExceededError。把「读计数→建 hold」
+   * 收进一个事务，闭合并发闸门的 TOCTOU 竞态。
+   */
+  concurrencyLimit?: number;
+}
+
+/** createHold 原子并发校验命中上限时抛出，由调用域映射成各自的用户可见异常。 */
+export class HoldConcurrencyLimitExceededError extends Error {
+  constructor(
+    readonly taskType: string,
+    readonly limit: number,
+    readonly activeCount: number,
+  ) {
+    super(
+      `hold concurrency limit exceeded: taskType=${taskType} limit=${limit} active=${activeCount}`,
+    );
+    this.name = 'HoldConcurrencyLimitExceededError';
+  }
 }
 
 type HeldGrantItem = Pick<point_hold_items, 'grantId' | 'grantType' | 'amount'>;

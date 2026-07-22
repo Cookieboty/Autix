@@ -24,6 +24,7 @@ import {
   parsePricingSnapshot,
   presentConfirmedHoldStatus,
   sumHoldItemAmount,
+  HoldConcurrencyLimitExceededError,
   type CreateHoldInput,
 } from './points-hold.helpers';
 
@@ -98,6 +99,7 @@ export class PointsHoldService {
 
     return this.pointsRepo.runInTransaction(async (tx) => {
       // FIX-9b: 同一任务已有活跃 hold 时直接返回，幂等去重（防重试/并发重复冻结）。
+      // 放在并发校验之前：重试同一 taskId 不该被算作「又占一个并发槽」。
       if (input.taskId) {
         const existing = await this.pointsRepo.findPendingHoldByTaskWithinTx(tx, {
           taskType: input.taskType,
@@ -106,6 +108,22 @@ export class PointsHoldService {
         if (existing) {
           const points = await this.pointsRepo.findBalanceWithinTx(tx, userId);
           return { hold: existing, balance: points.balance };
+        }
+      }
+
+      if (input.concurrencyLimit != null) {
+        await this.pointsRepo.acquireHoldConcurrencyLockWithinTx(tx, userId, input.taskType);
+        const active = await this.pointsRepo.countActiveHoldsByTypeWithinTx(
+          tx,
+          userId,
+          input.taskType,
+        );
+        if (active >= input.concurrencyLimit) {
+          throw new HoldConcurrencyLimitExceededError(
+            input.taskType,
+            input.concurrencyLimit,
+            active,
+          );
         }
       }
 

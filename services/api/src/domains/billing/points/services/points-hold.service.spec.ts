@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { PointsHoldService } from './points-hold.service';
+import { HoldConcurrencyLimitExceededError } from './points-hold.helpers';
 
 /**
  * These tests deliberately exercise the *real* quoteTaskFromSnapshot from
@@ -189,5 +190,92 @@ describe('PointsHoldService.findByIds', () => {
 
     expect(pointsRepo.findHoldsByIds).toHaveBeenCalledWith(['hold-1']);
     expect(result).toBe(rows);
+  });
+});
+
+describe('PointsHoldService.createHold concurrency guard', () => {
+  // 命中后短路的哨兵：断言 createHold 越过并发闸门后确实继续走到取 grant 那一步。
+  const reachedGrants = new Error('reached-grants');
+
+  function buildService(overrides: Record<string, unknown> = {}) {
+    const pointsRepo = {
+      runInTransaction: vi.fn(async (fn: (t: unknown) => unknown) => fn({})),
+      findPendingHoldByTaskWithinTx: vi.fn().mockResolvedValue(null),
+      findBalanceWithinTx: vi.fn().mockResolvedValue({ balance: 0 }),
+      acquireHoldConcurrencyLockWithinTx: vi.fn().mockResolvedValue(undefined),
+      countActiveHoldsByTypeWithinTx: vi.fn().mockResolvedValue(0),
+      findAvailableGrantsWithinTx: vi.fn().mockRejectedValue(reachedGrants),
+      ...overrides,
+    };
+    const ledgerService = { assertPositiveAmount: vi.fn() };
+    const service = new PointsHoldService(pointsRepo as never, ledgerService as never);
+    return { service, pointsRepo };
+  }
+
+  it('rejects when active holds already reach the limit, before touching grants', async () => {
+    const { service, pointsRepo } = buildService({
+      countActiveHoldsByTypeWithinTx: vi.fn().mockResolvedValue(2),
+    });
+
+    await expect(
+      service.createHold('user-1', {
+        taskType: 'image_generation',
+        amount: 10,
+        concurrencyLimit: 2,
+      }),
+    ).rejects.toBeInstanceOf(HoldConcurrencyLimitExceededError);
+
+    expect(pointsRepo.acquireHoldConcurrencyLockWithinTx).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      'image_generation',
+    );
+    expect(pointsRepo.findAvailableGrantsWithinTx).not.toHaveBeenCalled();
+  });
+
+  it('acquires the lock and counts within the tx, then proceeds when under the limit', async () => {
+    const { service, pointsRepo } = buildService({
+      countActiveHoldsByTypeWithinTx: vi.fn().mockResolvedValue(1),
+    });
+
+    await expect(
+      service.createHold('user-1', {
+        taskType: 'image_generation',
+        amount: 10,
+        concurrencyLimit: 2,
+      }),
+    ).rejects.toBe(reachedGrants);
+
+    expect(pointsRepo.acquireHoldConcurrencyLockWithinTx).toHaveBeenCalledTimes(1);
+    expect(pointsRepo.countActiveHoldsByTypeWithinTx).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips the guard entirely when no concurrencyLimit is given', async () => {
+    const { service, pointsRepo } = buildService();
+
+    await expect(
+      service.createHold('user-1', { taskType: 'image_generation', amount: 10 }),
+    ).rejects.toBe(reachedGrants);
+
+    expect(pointsRepo.acquireHoldConcurrencyLockWithinTx).not.toHaveBeenCalled();
+    expect(pointsRepo.countActiveHoldsByTypeWithinTx).not.toHaveBeenCalled();
+  });
+
+  it('does not consume a slot when an active hold for the same taskId already exists', async () => {
+    const existing = { id: 'hold-existing' };
+    const { service, pointsRepo } = buildService({
+      findPendingHoldByTaskWithinTx: vi.fn().mockResolvedValue(existing),
+      countActiveHoldsByTypeWithinTx: vi.fn().mockResolvedValue(5),
+    });
+
+    const result = await service.createHold('user-1', {
+      taskType: 'image_generation',
+      amount: 10,
+      taskId: 'task-1',
+      concurrencyLimit: 2,
+    });
+
+    expect(result.hold).toBe(existing);
+    expect(pointsRepo.acquireHoldConcurrencyLockWithinTx).not.toHaveBeenCalled();
   });
 });

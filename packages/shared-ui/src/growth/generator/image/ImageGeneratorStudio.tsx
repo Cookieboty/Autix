@@ -32,7 +32,7 @@ import { PublicImageTemplateWall, type GalleryCardInteraction } from './ImageTem
 import { PublicImageHistoryPanel, type PendingImageGenerationCard } from './PublicImageHistoryPanel';
 import { buildStudioSearch, parseStudioMode } from './gallery-url';
 import {
-  buildPublicImageHistoryItem,
+  buildPublicImageHistoryItems,
   type PublicImageGenerationPayload,
   type PublicImageHistoryImage,
   type PublicImageHistoryItem,
@@ -426,7 +426,13 @@ export function ImageGeneratorStudio({
 
         setPendingGenerations((prev) => {
           const preserved = prev.filter((card) => !card.id.startsWith('restored-image-'));
-          const restored = active.map(buildRestoredCard);
+          // 本地乐观骨架（pending-image-*）已覆盖进行中的生成；restored 只补本地未覆盖的
+          // 活跃任务（典型是刷新后本地状态丢失），避免同一任务出现双份骨架。
+          const localPendingCount = preserved.filter((card) =>
+            card.id.startsWith('pending-image-'),
+          ).length;
+          const restoredNeeded = Math.max(0, active.length - localPendingCount);
+          const restored = active.slice(0, restoredNeeded).map(buildRestoredCard);
           return [...restored, ...preserved];
         });
 
@@ -577,13 +583,14 @@ export function ImageGeneratorStudio({
         visibility: payload.visibility,
         count: requestedCount,
       });
-      const nextHistoryItem = buildPublicImageHistoryItem({
+      // 按 generationId 拆成 N 条，与历史接口 / 删除 / 投稿的 1:1 口径一致。
+      const nextHistoryItems = buildPublicImageHistoryItems({
         data,
         request: payload,
         createdAt: new Date().toISOString(),
         modelConfigId: selectedModelId,
       });
-      setHistoryItems((prev) => [nextHistoryItem, ...prev]);
+      setHistoryItems((prev) => [...nextHistoryItems, ...prev]);
     } catch (err) {
       // 并发超限：后端把 code 塞在 response.data.code；SDK 会把 code 透传到 Error。
       // spec §4/5 明确要求「弹 modal 提示超过当前会员等级的并发数量」——不能只 toast。

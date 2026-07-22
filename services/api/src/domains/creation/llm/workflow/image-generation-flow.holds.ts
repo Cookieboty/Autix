@@ -189,6 +189,8 @@ export function buildImageGenerationHoldCreateInput(input: {
     conversationId?: string;
   };
   request: ResolvedImageRequest;
+  /** 会员等级的图片并发上限，交给 createHold 在事务内原子校验。 */
+  concurrencyLimit?: number;
 }) {
   return {
     taskType: input.estimate.taskType,
@@ -199,5 +201,6 @@ export function buildImageGenerationHoldCreateInput(input: {
       buildImageGenerationHoldMetadata(input.requestInput, input.request),
     ),
     remark: buildImageGenerationHoldRemark(input.estimate.taskType),
+    concurrencyLimit: input.concurrencyLimit,
   };
 }
