@@ -44,6 +44,7 @@ import {
   type DefaultDraftMap,
   type TaskBindingPatch,
 } from './task-bindings-helpers';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 export interface TaskBindingsViewProps {
   bindings: TaskModelBinding[];
@@ -160,6 +161,13 @@ export function TaskBindingsView({
     ?? selectedRows.find((row) => row.isDefault)?.modelConfigId
     ?? '';
   const filteredRows = filterTaskBindings(selectedRows, modelQuery, statusFilter, drafts);
+  const {
+    items: pagedRows,
+    page: rowsPage,
+    setPage: setRowsPage,
+    pageSize: rowsPageSize,
+    total: rowsTotal,
+  } = useClientPagination(filteredRows, 20, `${selectedTaskType}|${modelQuery}|${statusFilter}`);
   const { patches, invalidKeys } = buildTaskBindingPatches(bindings, drafts, defaultDrafts);
   const invalidKeySet = new Set(invalidKeys);
   const dirtyKeySet = new Set(patches.map((patch) => bindingDraftKey(patch.taskType, patch.modelConfigId)));
@@ -508,7 +516,7 @@ export function TaskBindingsView({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRows.map((row) => {
+                  {pagedRows.map((row) => {
                     const key = bindingDraftKey(row.taskType, row.modelConfigId);
                     const draft = drafts[key];
                     const active = draft?.isActive ?? row.isActive;
@@ -588,6 +596,13 @@ export function TaskBindingsView({
             </RadioGroup>
           )}
         </div>
+
+        <AdminPaginationFooter
+          page={rowsPage}
+          pageSize={rowsPageSize}
+          total={rowsTotal}
+          onPageChange={setRowsPage}
+        />
 
         {(patches.length > 0 || invalidKeys.length > 0 || localError || error) && (
           <div className="flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur">

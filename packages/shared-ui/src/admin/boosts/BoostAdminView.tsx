@@ -28,6 +28,7 @@ import {
   TableRow,
 } from '../../ui/table';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../../ui/empty';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 import { BoostDialog, BOOST_RESOURCE_TYPE_OPTIONS, BOOST_REASON_OPTIONS } from './BoostDialog';
 
 const RESOURCE_TYPE_OPTIONS = BOOST_RESOURCE_TYPE_OPTIONS;
@@ -60,7 +61,8 @@ export function BoostAdminView() {
 
   const { revoke } = useBoostAdmin();
 
-  const items = useMemo(() => boosts ?? [], [boosts]);
+  const allBoosts = useMemo(() => boosts ?? [], [boosts]);
+  const { items, page, setPage, pageSize, total } = useClientPagination(allBoosts, 20);
   const loading = isLoading || isFetching;
 
   const handleRevoke = (boost: ResourceBoostAdminItem) => {
@@ -150,56 +152,58 @@ export function BoostAdminView() {
               {items.map((boost) => {
                 const reasonOption = REASON_OPTIONS.find((r) => r.value === boost.reason);
                 return (
-                <TableRow key={boost.id}>
-                  <TableCell>
-                    <div className="text-sm font-medium text-foreground">{boost.resourceType}</div>
-                    <div className="font-mono text-xs text-muted-foreground">{boost.resourceId}</div>
-                  </TableCell>
-                  <TableCell className="text-sm text-foreground">
-                    <div className="flex items-center gap-1">
-                      <Flame className="h-3.5 w-3.5 text-orange-500" />
-                      {boost.boostScore}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {reasonOption ? t(reasonOption.labelKey) : boost.reason}
-                    {boost.note && (
-                      <div className="mt-0.5 max-w-40 truncate text-xs text-muted-foreground">
-                        {boost.note}
+                  <TableRow key={boost.id}>
+                    <TableCell>
+                      <div className="text-sm font-medium text-foreground">{boost.resourceType}</div>
+                      <div className="font-mono text-xs text-muted-foreground">{boost.resourceId}</div>
+                    </TableCell>
+                    <TableCell className="text-sm text-foreground">
+                      <div className="flex items-center gap-1">
+                        <Flame className="h-3.5 w-3.5 text-orange-500" />
+                        {boost.boostScore}
                       </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatTime(boost.startsAt, locale)} ~ {formatTime(boost.endsAt, locale)}
-                  </TableCell>
-                  <TableCell>
-                    {boost.isActive && boost.isCurrentlyActive ? (
-                      <Badge variant="secondary">{t('boost.status.active')}</Badge>
-                    ) : boost.isActive ? (
-                      <Badge variant="outline">{t('boost.status.outsideWindow')}</Badge>
-                    ) : (
-                      <Badge variant="outline">{t('boost.status.revoked')}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={!boost.isActive || revoke.isPending}
-                      className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => handleRevoke(boost)}
-                    >
-                      <XCircle className="h-3.5 w-3.5 mr-1" />
-                      {t('boost.revoke')}
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {reasonOption ? t(reasonOption.labelKey) : boost.reason}
+                      {boost.note && (
+                        <div className="mt-0.5 max-w-40 truncate text-xs text-muted-foreground">
+                          {boost.note}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatTime(boost.startsAt, locale)} ~ {formatTime(boost.endsAt, locale)}
+                    </TableCell>
+                    <TableCell>
+                      {boost.isActive && boost.isCurrentlyActive ? (
+                        <Badge variant="secondary">{t('boost.status.active')}</Badge>
+                      ) : boost.isActive ? (
+                        <Badge variant="outline">{t('boost.status.outsideWindow')}</Badge>
+                      ) : (
+                        <Badge variant="outline">{t('boost.status.revoked')}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!boost.isActive || revoke.isPending}
+                        className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => handleRevoke(boost)}
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                        {t('boost.revoke')}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         )}
       </div>
+
+      <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
       <BoostDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>

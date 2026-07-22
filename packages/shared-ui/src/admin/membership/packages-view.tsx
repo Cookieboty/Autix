@@ -12,6 +12,7 @@ import {
   useDeleteAdminPointsPackageMutation,
   type PointsPackage,
 } from '@autix/shared-store';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 const EMPTY_PKG = {
   code: '',
@@ -30,6 +31,13 @@ export function PointsPackagesView() {
   const tCommon = useTranslations('common');
 
   const { data: packages = [], isLoading: loading } = useAdminPointsPackagesQuery();
+  const {
+    items: pagedPackages,
+    page,
+    setPage,
+    pageSize,
+    total,
+  } = useClientPagination(packages, 20);
   const createPackageMutation = useCreateAdminPointsPackageMutation();
   const updatePackageMutation = useUpdateAdminPointsPackageMutation();
   const deletePackageMutation = useDeleteAdminPointsPackageMutation();
@@ -116,7 +124,7 @@ export function PointsPackagesView() {
               </tr>
             </thead>
             <tbody>
-              {packages.map((pkg) => (
+              {pagedPackages.map((pkg) => (
                 <tr key={pkg.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{pkg.name}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(pkg.price)}</td>
@@ -153,6 +161,8 @@ export function PointsPackagesView() {
           </table>
         )}
       </div>
+
+      <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
       {modal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

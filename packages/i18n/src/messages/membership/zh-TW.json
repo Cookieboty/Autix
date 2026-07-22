@@ -180,6 +180,7 @@
     "addTaskCost": "新增任務成本",
     "editTaskCost": "編輯任務成本",
     "searchPlaceholder": "搜尋使用者名稱/電子郵件...",
+    "totalUsers": "共 {total} 位使用者",
     "userDetail": "使用者詳情",
     "membershipInfo": "會員資訊",
     "recentPointsRecords": "近期點數紀錄",

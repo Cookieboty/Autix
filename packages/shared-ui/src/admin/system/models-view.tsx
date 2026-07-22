@@ -39,6 +39,7 @@ import {
   systemModelFormFromModel,
   type SystemModelForm,
 } from './system-models-helpers';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 export function AdminSystemModelsView() {
   const t = useTranslations('adminSystemModels');
@@ -73,7 +74,15 @@ export function AdminSystemModelsView() {
     : null;
   const displayError = error ?? queryError;
 
-  const groupedModels = useMemo(() => groupSystemModels(models), [models]);
+  // 先分组再分页：保证同一分组不会被页边界拆开（与 prompts-view 一致）。
+  const groupEntries = useMemo(() => Object.entries(groupSystemModels(models)), [models]);
+  const {
+    items: pagedGroups,
+    page,
+    setPage,
+    pageSize,
+    total,
+  } = useClientPagination(groupEntries, 20);
 
   const openCreate = () => {
     setForm(createEmptySystemModelForm());
@@ -237,7 +246,7 @@ export function AdminSystemModelsView() {
           </div>
         ) : (
           <div className="space-y-7">
-            {Object.entries(groupedModels).map(([type, items]) => (
+            {pagedGroups.map(([type, items]) => (
               <section key={type} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground text-xs font-semibold uppercase tracking-[0.18em]">
@@ -266,6 +275,8 @@ export function AdminSystemModelsView() {
           </div>
         )}
       </div>
+
+      <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
       <SystemModelFormSheet
         form={form}

@@ -180,6 +180,7 @@
     "addTaskCost": "タスクコストを追加",
     "editTaskCost": "タスクコストを編集",
     "searchPlaceholder": "ユーザー名/メールで検索...",
+    "totalUsers": "合計 {total} ユーザー",
     "userDetail": "ユーザー詳細",
     "membershipInfo": "メンバーシップ情報",
     "recentPointsRecords": "最近のポイント履歴",

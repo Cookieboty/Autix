@@ -97,6 +97,7 @@
     "addTaskCost": "Add Pricing Rule",
     "editTaskCost": "Edit Pricing Rule",
     "searchPlaceholder": "Search username/email...",
+    "totalUsers": "Total {total} users",
     "userDetail": "User Detail",
     "membershipInfo": "Membership Info",
     "recentPointsRecords": "Recent Points Records",

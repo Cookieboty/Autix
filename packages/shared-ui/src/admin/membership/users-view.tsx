@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle, KeyRound } from 'lucide-react';
+import { Gift, Coins, X, CheckCircle, KeyRound } from 'lucide-react';
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui';
+import { AdminPaginationFooter } from '../layout';
 import { toast } from 'sonner';
 import {
   useAdminMembershipUsersQuery,
@@ -16,7 +17,7 @@ import {
   type MembershipLevel,
 } from '@autix/shared-store';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
 function readErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
@@ -54,7 +55,6 @@ export function AdminMembershipUsersView({ onOpenUserDetail }: Props) {
   });
   const users: AdminMembershipUser[] = usersData?.items ?? [];
   const total = usersData?.total ?? 0;
-  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const { data: levels = [] } = useAdminMembershipLevelsQuery();
   const approveMutation = useApproveAdminMembershipUserMutation();
@@ -238,17 +238,13 @@ export function AdminMembershipUsersView({ onOpenUserDetail }: Props) {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 border-t p-3" style={{ borderColor: 'var(--border)' }}>
-          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} className="cursor-pointer">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="cursor-pointer">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <AdminPaginationFooter
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onPageChange={setPage}
+        totalLabel={t('totalUsers', { total })}
+      />
 
       {grantTarget && grantType && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

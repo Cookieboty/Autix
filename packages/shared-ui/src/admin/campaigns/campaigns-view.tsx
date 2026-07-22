@@ -32,6 +32,7 @@ import {
   CampaignsTable,
   RegistrationBonusCard,
 } from './campaigns-view-parts';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 const REGISTRATION_BONUS_CODE = 'REGISTRATION_BONUS';
 // Stable, locale-independent default name for the built-in registration bonus.
@@ -88,6 +89,13 @@ export function AdminCampaignsView() {
     [campaigns],
   );
   const visibleCampaigns = campaignScope === 'fixed' ? fixedCampaigns : dynamicCampaigns;
+  const {
+    items: pagedCampaigns,
+    page: campaignsPage,
+    setPage: setCampaignsPage,
+    pageSize: campaignsPageSize,
+    total: campaignsTotal,
+  } = useClientPagination(visibleCampaigns, 20, campaignScope);
   const fixedCampaignIds = useMemo(
     () => new Set(fixedCampaigns.map((campaign) => campaign.id)),
     [fixedCampaigns],
@@ -244,19 +252,27 @@ export function AdminCampaignsView() {
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_420px]">
-        <div className="min-h-0 overflow-y-auto">
-          <CampaignsTable
-            campaigns={visibleCampaigns}
-            campaignStatusLabel={campaignStatusLabel}
-            campaignTypeLabel={campaignTypeLabel}
-            fixedCampaignIds={fixedCampaignIds}
-            loading={loading}
-            onEdit={(campaign) => setModal({ mode: 'edit', form: formFromCampaign(campaign) })}
-            onSelect={setSelected}
-            onStatusChange={(campaign, status) => void updateStatus(campaign, status)}
-            selectedId={selected?.id}
-            t={t}
-            tCommon={tCommon}
+        <div className="flex min-h-0 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <CampaignsTable
+              campaigns={pagedCampaigns}
+              campaignStatusLabel={campaignStatusLabel}
+              campaignTypeLabel={campaignTypeLabel}
+              fixedCampaignIds={fixedCampaignIds}
+              loading={loading}
+              onEdit={(campaign) => setModal({ mode: 'edit', form: formFromCampaign(campaign) })}
+              onSelect={setSelected}
+              onStatusChange={(campaign, status) => void updateStatus(campaign, status)}
+              selectedId={selected?.id}
+              t={t}
+              tCommon={tCommon}
+            />
+          </div>
+          <AdminPaginationFooter
+            page={campaignsPage}
+            pageSize={campaignsPageSize}
+            total={campaignsTotal}
+            onPageChange={setCampaignsPage}
           />
         </div>
 

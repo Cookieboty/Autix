@@ -22,6 +22,7 @@ import type {
   PricingDiscountScope,
   UpdateDiscountInput,
 } from '@autix/shared-store';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 export interface DiscountsViewProps {
   discounts: PricingDiscount[];
@@ -187,6 +188,13 @@ export function DiscountsView({ discounts, saving, error, onCreate, onUpdate, on
   const tCommon = useTranslations('common');
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; id?: string; form: DiscountForm } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const {
+    items: pagedDiscounts,
+    page,
+    setPage,
+    pageSize,
+    total,
+  } = useClientPagination(discounts, 20);
 
   const openCreate = () => setModal({ mode: 'create', form: { ...EMPTY_FORM } });
   const openEdit = (discount: PricingDiscount) =>
@@ -266,7 +274,7 @@ export function DiscountsView({ discounts, saving, error, onCreate, onUpdate, on
               </TableRow>
             </TableHeader>
             <TableBody>
-              {discounts.map((discount) => (
+              {pagedDiscounts.map((discount) => (
                 <TableRow key={discount.id}>
                   <TableCell className="font-mono text-xs">{discount.code}</TableCell>
                   <TableCell>{discount.name}</TableCell>
@@ -340,6 +348,8 @@ export function DiscountsView({ discounts, saving, error, onCreate, onUpdate, on
           </Table>
         )}
       </div>
+
+      <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
       <Dialog open={!!modal} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="max-w-lg">

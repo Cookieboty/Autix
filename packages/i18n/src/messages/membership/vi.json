@@ -180,6 +180,7 @@
     "addTaskCost": "Thêm chi phí tác vụ",
     "editTaskCost": "Sửa chi phí tác vụ",
     "searchPlaceholder": "Tìm theo tên/email...",
+    "totalUsers": "Tổng {total} người dùng",
     "userDetail": "Chi tiết người dùng",
     "membershipInfo": "Thông tin hội viên",
     "recentPointsRecords": "Lịch sử điểm gần đây",

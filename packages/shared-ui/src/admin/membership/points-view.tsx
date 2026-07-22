@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui';
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui';
+import { AdminPaginationFooter } from '../layout';
 import { useAdminPointsRecordsQuery, type PointsRecord } from '@autix/shared-store';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
 const SOURCE_OPTIONS = ['', 'MEMBERSHIP', 'PACKAGE', 'TASK', 'INVITATION', 'ADMIN_GRANT', 'AGENT_CALL'] as const;
 
@@ -27,7 +27,6 @@ export function AdminMembershipPointsView() {
   });
   const records: PointsRecord[] = data?.items ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const handleSearch = () => {
     setSearchUserId(filterUserId);
@@ -125,17 +124,7 @@ export function AdminMembershipPointsView() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 border-t p-3" style={{ borderColor: 'var(--border)' }}>
-          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} className="cursor-pointer">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="cursor-pointer">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <AdminPaginationFooter page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
     </div>
   );
 }

@@ -15,10 +15,10 @@ import {
 import {
   AdminTemplateDetailAside,
   AdminTemplatesBatchBar,
-  AdminTemplatesPagination,
   AdminTemplatesTable,
   AdminTemplatesToolbar,
 } from './AdminTemplatesViewParts';
+import { AdminPaginationFooter } from '../layout';
 import {
   PAGE_SIZE,
   defaultCapabilities,
@@ -231,7 +231,12 @@ export function AdminTemplatesView({
         </div>
 
         {showPagination && (
-          <AdminTemplatesPagination page={page} total={total} onPageChange={(nextPage) => void fetchList(nextPage)} />
+          <AdminPaginationFooter
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPageChange={(nextPage) => void fetchList(nextPage)}
+          />
         )}
       </div>
 

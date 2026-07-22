@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react';
-import { Check, ChevronLeft, ChevronRight, Eye, Flame, RotateCcw, X } from 'lucide-react';
+import { Check, Eye, Flame, RotateCcw, X } from 'lucide-react';
 import type {
   AdminTemplateItem,
   AdminTemplateResourceType,
@@ -8,7 +8,7 @@ import type {
 import { getTemplateCategoryI18nKey } from '../../template';
 import { Button, Checkbox } from '../../ui';
 import { CdnImage } from '../../image';
-import { PAGE_SIZE, filterButtonClass, statusStyle } from './template-review-helpers';
+import { filterButtonClass, statusStyle } from './template-review-helpers';
 
 type Translate = (key: string, values?: Record<string, string | number | Date>) => string;
 type CommonTranslate = (key: string) => string;
@@ -235,30 +235,6 @@ export function AdminTemplatesTable({
         ))}
       </tbody>
     </table>
-  );
-}
-
-export function AdminTemplatesPagination({
-  page,
-  total,
-  onPageChange,
-}: {
-  page: number;
-  total: number;
-  onPageChange: (page: number) => void;
-}) {
-  return (
-    <div className="flex items-center justify-center gap-2 p-3" style={{ borderTop: '1px solid var(--border)' }}>
-      <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="cursor-pointer">
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <span className="text-xs" style={{ color: 'var(--muted)' }}>
-        {page} / {Math.ceil(total / PAGE_SIZE)}
-      </span>
-      <Button size="sm" variant="ghost" disabled={page * PAGE_SIZE >= total} onClick={() => onPageChange(page + 1)} className="cursor-pointer">
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-    </div>
   );
 }
 

@@ -10,8 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui';
+import { AdminPaginationFooter } from '../layout';
 import { formatCurrency } from '../../format';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   useAdminMembershipOrdersQuery,
@@ -20,7 +20,7 @@ import {
   type Order,
 } from '@autix/shared-store';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
 const STATUS_OPTIONS = ['', 'PENDING', 'PAID', 'CANCELLED', 'REFUNDED'] as const;
 const TYPE_OPTIONS = ['', 'MEMBERSHIP', 'POINTS_PACKAGE'] as const;
@@ -91,8 +91,6 @@ export function MembershipOrdersView() {
     };
     return s ? map[s] ?? s : '-';
   };
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const handleFulfill = async (order: Order) => {
     setFulfilling(order.id);
@@ -213,50 +211,50 @@ export function MembershipOrdersView() {
               {orders.map((o) => {
                 const order = o as OrderWithAdminFields;
                 return (
-                <tr key={order.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--foreground)' }}>{o.orderNo}</td>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--muted)' }}>{o.userId}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{order.productName}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{businessTypeLabel(order.businessType)}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(o.amount, o.currency)}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className="text-[11px] px-2 py-0.5 rounded-full font-medium"
-                      style={statusStyleMap[o.status] ?? { backgroundColor: 'var(--muted-soft)', color: 'var(--muted)' }}
-                    >
-                      {statusLabel(o.status)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3" style={{ color: o.fulfilledAt ? 'var(--success)' : 'var(--muted)' }}>
-                    {o.fulfilledAt ? t('fulfilled') : t('unfulfilled')}
-                    {order.refundedAt ? <span className="ml-2" style={{ color: 'var(--danger)' }}>{t('refunded')}</span> : null}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-right">
-                    {o.status === 'PENDING' && !o.fulfilledAt && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="cursor-pointer"
-                        disabled={fulfilling === o.id}
-                        onClick={() => handleFulfill(o)}
+                  <tr key={order.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--foreground)' }}>{o.orderNo}</td>
+                    <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--muted)' }}>{o.userId}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{order.productName}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{businessTypeLabel(order.businessType)}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(o.amount, o.currency)}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className="text-[11px] px-2 py-0.5 rounded-full font-medium"
+                        style={statusStyleMap[o.status] ?? { backgroundColor: 'var(--muted-soft)', color: 'var(--muted)' }}
                       >
-                        {t('confirmPayment')}
-                      </Button>
-                    )}
-                    {o.status === 'PAID' && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="ml-2 cursor-pointer"
-                        disabled={refunding === o.id}
-                        onClick={() => handleRefund(o)}
-                      >
-                        {t('refund')}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
+                        {statusLabel(o.status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3" style={{ color: o.fulfilledAt ? 'var(--success)' : 'var(--muted)' }}>
+                      {o.fulfilledAt ? t('fulfilled') : t('unfulfilled')}
+                      {order.refundedAt ? <span className="ml-2" style={{ color: 'var(--danger)' }}>{t('refunded')}</span> : null}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-right">
+                      {o.status === 'PENDING' && !o.fulfilledAt && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="cursor-pointer"
+                          disabled={fulfilling === o.id}
+                          onClick={() => handleFulfill(o)}
+                        >
+                          {t('confirmPayment')}
+                        </Button>
+                      )}
+                      {o.status === 'PAID' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="ml-2 cursor-pointer"
+                          disabled={refunding === o.id}
+                          onClick={() => handleRefund(o)}
+                        >
+                          {t('refund')}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
@@ -264,17 +262,7 @@ export function MembershipOrdersView() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 p-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} className="cursor-pointer">
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="cursor-pointer">
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
+      <AdminPaginationFooter page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
     </div>
   );
 }

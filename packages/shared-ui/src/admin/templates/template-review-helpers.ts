@@ -6,7 +6,7 @@ import type {
   AdminVideoTemplate,
 } from '@autix/shared-store';
 
-export const PAGE_SIZE = 15;
+export const PAGE_SIZE = 20;
 
 export type TemplateCapability =
   | 'resourceSwitcher'

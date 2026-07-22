@@ -97,6 +97,7 @@
     "addTaskCost": "新增计费规则",
     "editTaskCost": "编辑计费规则",
     "searchPlaceholder": "搜索用户名/邮箱...",
+    "totalUsers": "共 {total} 位用户",
     "userDetail": "用户详情",
     "membershipInfo": "会员信息",
     "recentPointsRecords": "近期积分记录",

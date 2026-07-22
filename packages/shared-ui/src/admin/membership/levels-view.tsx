@@ -34,6 +34,7 @@ import {
   toFeatureConfig,
   serializeFeatures,
 } from './levels-view.features';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };
 
@@ -70,6 +71,13 @@ export function MembershipLevelsView() {
   const tCommon = useTranslations('common');
 
   const { data: levels = [], isLoading: loading } = useAdminMembershipLevelsQuery();
+  const {
+    items: pagedLevels,
+    page,
+    setPage,
+    pageSize,
+    total,
+  } = useClientPagination(levels, 20);
   const createLevelMutation = useCreateAdminMembershipLevelMutation();
   const updateLevelMutation = useUpdateAdminMembershipLevelMutation();
   const deleteLevelMutation = useDeleteAdminMembershipLevelMutation();
@@ -199,7 +207,7 @@ export function MembershipLevelsView() {
                 <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('operations')}</th>
               </tr>
             </thead>
-            {levels.map((lv) => {
+            {pagedLevels.map((lv) => {
               const isExpanded = expanded.has(lv.id);
               return (
                 <tbody key={lv.id}>
@@ -312,6 +320,8 @@ export function MembershipLevelsView() {
           </table>
         )}
       </div>
+
+      <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
       {levelModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -111,7 +111,7 @@ export function AdminUsersView() {
 
   const { data, isLoading, refetch } = useAdminUsersQuery({
     page,
-    pageSize: 10,
+    pageSize: 20,
     username: search,
     includeDeleted: isSuperAdmin && includeDeleted,
   });

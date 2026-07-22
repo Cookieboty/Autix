@@ -51,6 +51,7 @@ import {
   DialogFooter,
 } from '../../ui/dialog';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../../ui/empty';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 const DEFAULT_PLACEMENT = 'home_hero';
 
@@ -161,6 +162,13 @@ export function FeaturedSlotsAdminView({
     () => [...(slots ?? [])].sort((a, b) => a.position - b.position),
     [slots],
   );
+  const {
+    items: pagedItems,
+    page,
+    setPage,
+    pageSize,
+    total,
+  } = useClientPagination(items, 20);
   const loading = isLoading || isFetching;
   const saving = create.isPending || update.isPending;
 
@@ -264,7 +272,8 @@ export function FeaturedSlotsAdminView({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((slot, index) => {
+              {pagedItems.map((slot) => {
+                const index = items.findIndex((entry) => entry.id === slot.id);
                 const thumb = thumbnailOf(slot);
                 return (
                   <TableRow key={slot.id}>
@@ -358,6 +367,8 @@ export function FeaturedSlotsAdminView({
         )}
       </div>
 
+      <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+
       <Dialog open={!!modal} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{modal?.mode === 'create' ? t('featured.add') : t('featured.edit')}</DialogTitle></DialogHeader>
@@ -426,9 +437,8 @@ export function FeaturedSlotsAdminView({
                         <button
                           key={c.id}
                           type="button"
-                          className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs hover:bg-muted ${
-                            modal.form.resourceId === c.id ? 'bg-muted' : ''
-                          }`}
+                          className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs hover:bg-muted ${modal.form.resourceId === c.id ? 'bg-muted' : ''
+                            }`}
                           onClick={() =>
                             setModal({
                               ...modal,

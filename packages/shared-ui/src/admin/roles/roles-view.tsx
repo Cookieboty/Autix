@@ -32,6 +32,7 @@ import {
 } from '@autix/shared-store';
 import { PermissionDrawer } from './permission-drawer';
 import { RoleDrawer } from './role-drawer';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 type Role = AdminRoleListItem;
 
@@ -49,6 +50,13 @@ export function AdminRolesView() {
   const canDelete = hasPermission('role:delete');
 
   const { data: roles = [], isLoading, refetch } = useAdminRolesQuery();
+  const {
+    items: pagedRoles,
+    page,
+    setPage,
+    pageSize,
+    total,
+  } = useClientPagination(roles, 20);
   const deleteMutation = useDeleteAdminRoleMutation();
 
   const openCreate = () => {
@@ -128,7 +136,7 @@ export function AdminRolesView() {
                 </TableCell>
               </TableRow>
             ) : (
-              roles.map((role) => (
+              pagedRoles.map((role) => (
                 <TableRow key={role.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">{role.name}</TableCell>
                   <TableCell className="text-muted-foreground font-mono text-sm">
@@ -188,6 +196,8 @@ export function AdminRolesView() {
           </TableBody>
         </Table>
       </div>
+
+      <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
       <RoleDrawer
         open={roleDrawerOpen}

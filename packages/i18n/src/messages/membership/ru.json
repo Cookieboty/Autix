@@ -180,6 +180,7 @@
     "addTaskCost": "Добавить стоимость задачи",
     "editTaskCost": "Редактировать стоимость задачи",
     "searchPlaceholder": "Поиск по имени/почте...",
+    "totalUsers": "Всего {total} пользователей",
     "userDetail": "Данные пользователя",
     "membershipInfo": "Информация о подписке",
     "recentPointsRecords": "Недавние начисления баллов",

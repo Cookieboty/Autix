@@ -136,6 +136,7 @@
     "rewardValidityDaysLabel": "Validité de la récompense (jours)",
     "saveSuccess": "Enregistrement réussi",
     "searchPlaceholder": "Rechercher par utilisateur, e-mail ou commande",
+    "totalUsers": "{total} utilisateurs au total",
     "selectLevel": "Choisir un niveau",
     "shareDesc": "Partagez votre lien d’invitation pour gagner 100 points après leur première inscription réussie.",
     "sharePromotion": "Partager la promotion",

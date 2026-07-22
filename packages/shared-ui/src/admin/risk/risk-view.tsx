@@ -13,6 +13,9 @@ import {
   type RiskUserListItem,
 } from '@autix/shared-store';
 import { Button } from '../../ui';
+import { AdminPaginationFooter } from '../layout';
+
+const PAGE_SIZE = 20;
 
 const LEVELS: RiskLevel[] = ['L0', 'L1', 'L2', 'L3'];
 const LEVEL_COLOR: Record<RiskLevel, string> = {
@@ -45,10 +48,18 @@ export interface AdminRiskViewProps {
 export function AdminRiskView(_props: AdminRiskViewProps = {}) {
   const t = useTranslations('adminOperations');
   const [level, setLevel] = useState<string>('');
+  const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data, isFetching, refetch } = useRiskUsersQuery({ level: level || undefined, page: 1, pageSize: 50 });
+  // 切换风险等级筛选时回到第 1 页，避免停在超出范围的空页。
+  const changeLevel = (next: string) => {
+    setLevel(next);
+    setPage(1);
+  };
+
+  const { data, isFetching, refetch } = useRiskUsersQuery({ level: level || undefined, page, pageSize: PAGE_SIZE });
   const items = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -64,9 +75,9 @@ export function AdminRiskView(_props: AdminRiskViewProps = {}) {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <div className="flex gap-1">
-            <FilterChip active={level === ''} onClick={() => setLevel('')}>{t('common.all')}</FilterChip>
+            <FilterChip active={level === ''} onClick={() => changeLevel('')}>{t('common.all')}</FilterChip>
             {LEVELS.map((lv) => (
-              <FilterChip key={lv} active={level === lv} onClick={() => setLevel(lv)}>
+              <FilterChip key={lv} active={level === lv} onClick={() => changeLevel(lv)}>
                 {t(levelLabelKey(lv))}
               </FilterChip>
             ))}
@@ -79,35 +90,38 @@ export function AdminRiskView(_props: AdminRiskViewProps = {}) {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <div className="min-w-0 flex-1 overflow-auto">
-          {isFetching && items.length === 0 ? (
-            <Centered>{t('common.loading')}</Centered>
-          ) : items.length === 0 ? (
-            <Centered>{t('risk.emptyUsers')}</Centered>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <Th>{t('risk.columns.user')}</Th>
-                  <Th>{t('risk.columns.securityLevel')}</Th>
-                  <Th>{t('risk.columns.score')}</Th>
-                  <Th>{t('risk.columns.inviter')}</Th>
-                  <Th>{t('risk.columns.inviteCount')}</Th>
-                  <Th>{t('risk.columns.signals')}</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row) => (
-                  <RiskRow
-                    key={row.user.id}
-                    row={row}
-                    selected={selectedId === row.user.id}
-                    onSelect={() => setSelectedId(row.user.id)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          )}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-auto">
+            {isFetching && items.length === 0 ? (
+              <Centered>{t('common.loading')}</Centered>
+            ) : items.length === 0 ? (
+              <Centered>{t('risk.emptyUsers')}</Centered>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <Th>{t('risk.columns.user')}</Th>
+                    <Th>{t('risk.columns.securityLevel')}</Th>
+                    <Th>{t('risk.columns.score')}</Th>
+                    <Th>{t('risk.columns.inviter')}</Th>
+                    <Th>{t('risk.columns.inviteCount')}</Th>
+                    <Th>{t('risk.columns.signals')}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((row) => (
+                    <RiskRow
+                      key={row.user.id}
+                      row={row}
+                      selected={selectedId === row.user.id}
+                      onSelect={() => setSelectedId(row.user.id)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <AdminPaginationFooter page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
         </div>
 
         {selectedId && (

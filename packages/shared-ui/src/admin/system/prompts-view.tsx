@@ -30,6 +30,7 @@ import {
   type SystemPromptInput,
   type SystemPromptItem,
 } from '@autix/shared-store';
+import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 type PromptForm = SystemPromptInput & { id?: string };
 
@@ -106,6 +107,13 @@ export function AdminSystemPromptsView() {
       }),
     }));
   }, [prompts]);
+  const {
+    items: pagedGrouped,
+    page,
+    setPage,
+    pageSize,
+    total,
+  } = useClientPagination(grouped, 20);
 
   const load = async () => {
     setError(null);
@@ -195,7 +203,7 @@ export function AdminSystemPromptsView() {
           <div className="text-muted-foreground text-sm">{t('common.loading')}</div>
         ) : (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            {grouped.map((group) => (
+            {pagedGrouped.map((group) => (
               <Card key={group.key} className="rounded-lg">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
@@ -261,6 +269,8 @@ export function AdminSystemPromptsView() {
           </div>
         )}
       </div>
+
+      <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
       <Sheet open={!!form} onOpenChange={(open) => !open && setForm(null)}>
         <SheetContent side="right" className="flex w-full flex-col overflow-hidden sm:max-w-2xl">
