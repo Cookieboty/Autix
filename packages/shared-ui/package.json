@@ -8,7 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./navigation": "./src/navigation.tsx",
-    "./image": "./src/next-compat.tsx",
+    "./image": "./src/image/index.ts",
     "./ui": "./src/ui/index.ts",
     "./chat": "./src/chat/index.ts",
     "./artifact": "./src/artifact/index.ts",

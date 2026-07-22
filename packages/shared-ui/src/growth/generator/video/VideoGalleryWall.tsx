@@ -9,6 +9,7 @@ import { AuthorAvatar } from '../../AuthorAvatar';
 import { formatMetricCount } from '../metric-format';
 import { galleryHoverPlayHandlers } from '../../GalleryMediaThumb';
 import { VideoEmptyShowcase } from './VideoEmptyShowcase';
+import { CdnImage, CdnVideo } from '../../../image';
 
 /**
  * 视频广场瀑布流。
@@ -151,9 +152,10 @@ function VideoGalleryCard({
       style={{ aspectRatio: String(ratio) }}
     >
       {src ? (
-        <video
+        <CdnVideo
           src={src}
           poster={cover}
+          posterWidth={720}
           muted
           loop
           playsInline
@@ -168,7 +170,16 @@ function VideoGalleryCard({
           }}
         />
       ) : cover ? (
-        <img src={cover} alt="" className="size-full object-cover" />
+        <CdnImage
+          src={cover}
+          alt=""
+          width={720}
+          widths={[360, 720, 1080]}
+          sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"
+          priority={index < 4}
+          loading={index < 8 ? 'eager' : 'lazy'}
+          className="size-full object-cover"
+        />
       ) : null}
 
       {/* 整卡热区：hover 播放预览、点击进详情。放在浮层之下，浮层里的按钮自己 stopPropagation */}

@@ -7,6 +7,7 @@ import type {
 } from '@autix/shared-store';
 import { getTemplateCategoryI18nKey } from '../../template';
 import { Button, Checkbox } from '../../ui';
+import { CdnImage } from '../../image';
 import { PAGE_SIZE, filterButtonClass, statusStyle } from './template-review-helpers';
 
 type Translate = (key: string, values?: Record<string, string | number | Date>) => string;
@@ -299,7 +300,16 @@ export function AdminTemplateDetailAside({
       </div>
 
       {selected.coverImage && (
-        <img src={selected.coverImage} alt="" className="w-full rounded-lg" style={{ border: '1px solid var(--border)' }} />
+        <CdnImage
+          src={selected.coverImage}
+          alt=""
+          width={800}
+          widths={[400, 800, 1200]}
+          quality={82}
+          sizes="(max-width: 640px) 100vw, 400px"
+          className="w-full rounded-lg"
+          style={{ border: '1px solid var(--border)' }}
+        />
       )}
 
       <div className="space-y-3">
@@ -327,7 +337,15 @@ export function AdminTemplateDetailAside({
             <p className="mb-1 text-[11px] font-medium" style={{ color: 'var(--muted)' }}>{tTemplate('exampleImages')}</p>
             <div className="grid grid-cols-2 gap-2">
               {mediaList.map((img, index) => (
-                <img key={index} src={img} alt="" className="aspect-square w-full rounded object-cover" />
+                <CdnImage
+                  key={index}
+                  src={img}
+                  alt=""
+                  width={480}
+                  widths={[240, 480]}
+                  sizes="(max-width: 640px) 45vw, 200px"
+                  className="aspect-square w-full rounded object-cover"
+                />
               ))}
             </div>
           </div>

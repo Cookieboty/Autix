@@ -11,6 +11,10 @@ import {
 } from '@autix/shared-store';
 import { readFilesAsDataUrls } from '../media-inputs';
 import type { PublicVideoReference } from '../generator-studio-helpers';
+import { CdnImage } from '../../../image';
+
+const THUMB_WIDTHS = [240, 480];
+const THUMB_SIZES = '(max-width: 640px) 45vw, 220px';
 
 type PublicVideoMediaTab = 'uploads' | 'generations';
 
@@ -284,7 +288,14 @@ export function PublicVideoMediaDialog({
                   aria-label={ref.name}
                   className="group relative block aspect-square cursor-pointer overflow-hidden rounded-[15px] border-2 border-growth-accent bg-background text-left shadow-lg outline-none ring-2 ring-growth-accent/30 focus-visible:ring-2 focus-visible:ring-growth-accent/55"
                 >
-                  <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
+                  <CdnImage
+                    src={ref.url}
+                    alt={ref.name}
+                    width={480}
+                    widths={THUMB_WIDTHS}
+                    sizes={THUMB_SIZES}
+                    className="h-full w-full object-cover"
+                  />
                   <div className="pointer-events-none absolute inset-0 bg-growth-accent/12 transition group-hover:bg-background/45" />
                   <span className="pointer-events-none absolute bottom-1.5 left-1.5 grid size-4 place-items-center rounded-full bg-growth-accent text-[10px] font-bold text-background shadow-sm">
                     {selectedOrder.get(ref.url)}
@@ -355,7 +366,14 @@ export function PublicVideoMediaDialog({
                         ? 'border-2 border-growth-accent ring-2 ring-growth-accent/30'
                         : 'border border-border hover:border-input'} ${disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'}`}
                     >
-                      <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
+                      <CdnImage
+                        src={ref.url}
+                        alt={ref.name}
+                        width={480}
+                        widths={THUMB_WIDTHS}
+                        sizes={THUMB_SIZES}
+                        className="h-full w-full object-cover"
+                      />
                       <div
                         className={`pointer-events-none absolute inset-0 transition ${selected
                           ? 'bg-growth-accent/12 group-hover:bg-background/45'
@@ -423,9 +441,14 @@ export function PublicVideoMediaDialog({
             onClick={(event) => event.stopPropagation()}
             className="relative flex max-h-[90vh] max-w-[min(960px,90vw)] flex-col items-center"
           >
-            <img
+            <CdnImage
               src={previewRef.url}
               alt={previewRef.name}
+              width={1600}
+              widths={[960, 1600, 2400]}
+              quality={85}
+              sizes="90vw"
+              priority
               className="max-h-[80vh] max-w-full rounded-[18px] object-contain shadow-2xl"
             />
             {previewRef.name ? (

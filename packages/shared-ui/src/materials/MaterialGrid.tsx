@@ -21,6 +21,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '../ui/utils';
+import { CdnImage, CdnVideo } from '../image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -182,16 +183,19 @@ function MaterialCard({
     >
       <div className="relative aspect-square overflow-hidden bg-muted">
         {asset.type === 'image' ? (
-          <img
+          <CdnImage
             src={asset.url}
             alt={asset.title}
+            width={480}
+            widths={[240, 480, 720]}
+            sizes="(max-width: 640px) 45vw, (max-width: 1280px) 25vw, 200px"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
           />
         ) : asset.type === 'video' ? (
-          <video
+          <CdnVideo
             src={asset.url}
-            poster={asset.thumbnailUrl ?? undefined}
+            poster={asset.thumbnailUrl}
+            posterWidth={480}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             muted
             preload="metadata"

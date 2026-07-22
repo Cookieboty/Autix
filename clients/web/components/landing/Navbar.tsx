@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { Menu, X, Sun, Moon, Languages, ChevronDown, ImageIcon, Video, ArrowRight } from 'lucide-react';
@@ -12,6 +11,7 @@ import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@a
 import { useAuthStore, useMarketplaceHomeController, useUiStore } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
+import { CdnImage } from '@autix/shared-ui/image';
 
 const MEGA_CATEGORIES = [
   // 暂时移除 agents 模板市场入口，专注图片与视频模板
@@ -314,11 +314,12 @@ export function Navbar() {
                         onClick={() => setMegaOpen(false)}
                       >
                         {item.coverImage ? (
-                          <Image
+                          <CdnImage
                             src={item.coverImage}
                             alt={item.title}
-                            width={48}
-                            height={48}
+                            width={96}
+                            widths={[48, 96, 144]}
+                            sizes="48px"
                             className="h-12 w-12 shrink-0 rounded-md object-cover"
                           />
                         ) : (

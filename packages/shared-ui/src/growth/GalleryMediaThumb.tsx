@@ -3,6 +3,10 @@
 import { useRef, useState } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import type { GalleryFeedItem } from '@autix/shared-store';
+import { CdnImage, CdnVideo } from '../image';
+
+const THUMB_WIDTHS = [320, 480, 720, 960];
+const THUMB_SIZES = '(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw';
 
 /**
  * 广场作品在瀑布流里的缩略媒体。首页、个人主页、视频广场墙三处共用。
@@ -37,10 +41,11 @@ export function GalleryMediaThumb({
 
   if (isVideo && videoSrc) {
     return (
-      <video
+      <CdnVideo
         ref={videoRef}
         src={videoSrc}
-        poster={cover ?? undefined}
+        poster={cover}
+        posterWidth={720}
         muted
         loop
         playsInline
@@ -57,9 +62,14 @@ export function GalleryMediaThumb({
 
   if (cover) {
     return (
-      <img
+      <CdnImage
         src={cover}
         alt={post.title ?? ''}
+        width={720}
+        widths={THUMB_WIDTHS}
+        quality={78}
+        sizes={THUMB_SIZES}
+        priority={index < 4}
         loading={index < 8 ? 'eager' : 'lazy'}
         className={`block h-auto w-full ${className}`}
       />

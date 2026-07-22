@@ -4,6 +4,7 @@ import { Play, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { VideoClipGeneration } from '@autix/shared-store';
 import { Button } from '../ui/button';
+import { CdnImage } from '../image';
 
 interface VariantGridProps {
   generations: VideoClipGeneration[];
@@ -33,13 +34,19 @@ export function VariantGrid({ generations, onSelect, onGenerateNew, primaryId }:
         {completed.map((gen) => (
           <div
             key={gen.id}
-            className={`relative group rounded-lg border overflow-hidden ${
-              gen.id === primaryId ? 'border-primary ring-1 ring-primary/20' : 'border-border'
-            }`}
+            className={`relative group rounded-lg border overflow-hidden ${gen.id === primaryId ? 'border-primary ring-1 ring-primary/20' : 'border-border'
+              }`}
           >
             <div className="aspect-video bg-muted relative">
               {gen.thumbnailUrl ? (
-                <img src={gen.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                <CdnImage
+                  src={gen.thumbnailUrl}
+                  alt=""
+                  width={480}
+                  widths={[320, 480, 720]}
+                  sizes="(max-width: 640px) 45vw, 240px"
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
                   <Play className="size-6 text-muted-foreground" />
