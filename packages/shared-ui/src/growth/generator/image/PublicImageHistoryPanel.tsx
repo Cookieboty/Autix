@@ -21,6 +21,7 @@ import { buildImageActionMenuItems } from './image-action-items';
 import { resolveGalleryShareUrl } from './gallery-share-link';
 import { useLocalizePath } from '../../../navigation';
 import { buildJustifiedRows, useElementWidth } from '../justified-rows';
+import { CdnImage } from '../../../image/CdnImage';
 
 export type PendingImageGenerationCard = {
   id: string;
@@ -364,7 +365,7 @@ export function PublicImageHistoryPanel({
                       <div className="growth-scan absolute inset-x-0 top-0 h-24 opacity-30" />
                     </div>
                   ) : null}
-                  <img
+                  <CdnImage
                     src={image.url}
                     alt={image.prompt ?? item.prompt}
                     loading="lazy"
@@ -500,10 +501,11 @@ export function PublicImageHistoryPanel({
             {selectedImageList.length > 0 ? (
               <span className="flex items-center">
                 {selectedImageList.slice(0, 3).map(({ image }, index, arr) => (
-                  <img
+                  <CdnImage
                     key={index}
                     src={image.url}
                     alt=""
+                    small
                     className="size-6 shrink-0 rounded-md border border-white/15 object-cover shadow-md"
                     style={{
                       marginLeft: index === 0 ? 0 : -10,

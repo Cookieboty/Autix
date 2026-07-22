@@ -22,6 +22,7 @@ import { buildImageActionMenuItems } from './image-action-items';
 import { resolveGalleryShareUrl } from './gallery-share-link';
 import { useLocalizePath } from '../../../navigation';
 import { DetailPanelButton, MediaDetailShell, type MediaDetailRow } from '../../detail/MediaDetailShell';
+import { CdnImage } from '../../../image/CdnImage';
 
 export function PublicImageDetailDialog({
   item,
@@ -168,7 +169,7 @@ export function PublicImageDetailDialog({
                       : 'border-white/15 hover:border-white/40'
                   }`}
                 >
-                  <img src={candidate.url} alt="" className="h-full w-full object-cover" />
+                  <CdnImage src={candidate.url} alt="" small className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>

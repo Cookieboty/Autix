@@ -9,6 +9,7 @@ import type { PublicGrowthMediaItem } from '../../types';
 import { imageTemplateCover, type TemplateDensity } from '../generator-studio-helpers';
 import { formatMetricCount } from '../metric-format';
 import { AuthorAvatar } from '../../AuthorAvatar';
+import { CdnImage } from '../../../image/CdnImage';
 
 /**
  * 每档密度的列数：[最小视口宽度, 列数] 降序，与此前 CSS columns 的断点逐档对齐
@@ -155,7 +156,7 @@ function TemplateCard({
             style={animated ? { animationDelay: `${(index % 9) * 80}ms` } : undefined}
           >
             {cover ? (
-              <img
+              <CdnImage
                 src={cover}
                 alt={template.title}
                 loading={index < 8 ? 'eager' : 'lazy'}
