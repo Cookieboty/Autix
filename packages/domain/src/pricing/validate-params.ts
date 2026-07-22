@@ -14,6 +14,12 @@ export interface ParamViolation {
  * `x-ui` 是本项目的非标扩展，ajv 默认 strict 模式会把未知关键字当错误抛出，
  * 用 `addKeyword` 声明为已知关键字后 ajv 会跳过它。
  *
+ * `x-media` 是视频模型 paramsSchema 顶层用的非标扩展（见 domain/src/video/input-media.ts:
+ * VIDEO_INPUT_MEDIA_KEY），声明该模型接受哪些输入媒体（image/video/audio 的数量与角色）。
+ * 与 `x-ui` 同样在 strict 模式下会被 ajv 视为未知关键字而抛异常 —— 抛异常会被
+ * compileParamsSchema 收成根级 violation，导致该模型所有参数组合都无法通过校验，
+ * 前端计价被置空、服务端扣费被拒。因此在这里显式声明为已知关键字、跳过校验。
+ *
  * 定价 schema 常见写法是 `allOf[].then.properties.<x>`，其中 `then` 分支必须
  * 自带 `type`（例如 `{ type: 'integer', maximum: 8 }`），不能只写 `{ maximum: 8 }`
  * 指望复用外层 `properties.<x>.type`——strict 模式下的类型检查是逐子 schema
@@ -24,6 +30,7 @@ export interface ParamViolation {
  */
 const ajv = new Ajv2020({ allErrors: true, strict: true });
 ajv.addKeyword({ keyword: 'x-ui', valid: true });
+ajv.addKeyword({ keyword: 'x-media', valid: true });
 
 /** 编译结果按 schema 对象身份缓存 —— schema 来自 DB，每次请求是新对象时缓存不命中，属可接受成本。 */
 const compiled = new WeakMap<ParamsSchema, ValidateFunction>();

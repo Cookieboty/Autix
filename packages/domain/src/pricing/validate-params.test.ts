@@ -60,6 +60,43 @@ describe('validateParams', () => {
     expect(() => validateParams(schema, { resolution: '1K' })).not.toThrow();
   });
 
+  it('ignores the x-media annotation on video model paramsSchema (bug: 所有 video 模型计价 = 0)', () => {
+    // 真实生产事故复现：seedance/veo/wan 等视频模型 paramsSchema 顶层带 x-media，
+    // 声明输入媒体能力（image/video/audio）。ajv strict 遇到未知关键字会**抛异常**，
+    // 被 compileParamsSchema 收成根级 violation → computeTaskEstimate 返回
+    // violations 非空 → 前端置价为空、服务端扣费拒绝。
+    const videoSchema = {
+      type: 'object' as const,
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      'x-media': {
+        image: { max: 9, roles: ['first_frame', 'last_frame', 'reference_image'] },
+        video: { max: 3, maxSeconds: 15, totalSeconds: 15 },
+        audio: { max: 3, maxSeconds: 15, totalSeconds: 15 },
+      },
+      required: ['resolution', 'duration'],
+      properties: {
+        resolution: {
+          type: 'string' as const,
+          enum: ['720p'],
+          default: '720p',
+          'x-ui': { control: 'chips' as const },
+        },
+        duration: {
+          type: 'integer' as const,
+          minimum: 4,
+          maximum: 15,
+          default: 5,
+          'x-ui': { control: 'stepper' as const },
+        },
+      },
+    } as unknown as ParamsSchema;
+
+    expect(() =>
+      validateParams(videoSchema, { resolution: '720p', duration: 5 }),
+    ).not.toThrow();
+    expect(validateParams(videoSchema, { resolution: '720p', duration: 5 })).toEqual([]);
+  });
+
   it('rejects a then-branch constraint whose type is not declared — as a violation, not a throw', () => {
     // 意图不变（没声明 type 的 then 分支必须被拒），机制改了：这个函数跑在扣费链路上，
     // 让 ajv 的编译异常穿出去就是一个 500。现在它返回 violation → 调用方转成 400。
