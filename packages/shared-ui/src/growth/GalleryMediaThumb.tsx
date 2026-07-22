@@ -5,7 +5,6 @@ import { Image as ImageIcon } from 'lucide-react';
 import type { GalleryFeedItem } from '@autix/shared-store';
 import { CdnImage, CdnVideo } from '../image';
 
-const THUMB_WIDTHS = [320, 480, 720, 960];
 const THUMB_SIZES = '(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw';
 
 /**
@@ -45,7 +44,6 @@ export function GalleryMediaThumb({
         ref={videoRef}
         src={videoSrc}
         poster={cover}
-        posterWidth={720}
         muted
         loop
         playsInline
@@ -65,9 +63,6 @@ export function GalleryMediaThumb({
       <CdnImage
         src={cover}
         alt={post.title ?? ''}
-        width={720}
-        widths={THUMB_WIDTHS}
-        quality={78}
         sizes={THUMB_SIZES}
         priority={index < 4}
         loading={index < 8 ? 'eager' : 'lazy'}

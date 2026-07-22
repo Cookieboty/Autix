@@ -186,8 +186,6 @@ function MaterialCard({
           <CdnImage
             src={asset.url}
             alt={asset.title}
-            width={480}
-            widths={[240, 480, 720]}
             sizes="(max-width: 640px) 45vw, (max-width: 1280px) 25vw, 200px"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
@@ -195,7 +193,6 @@ function MaterialCard({
           <CdnVideo
             src={asset.url}
             poster={asset.thumbnailUrl}
-            posterWidth={480}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             muted
             preload="metadata"

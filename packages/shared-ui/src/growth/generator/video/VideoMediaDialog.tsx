@@ -13,7 +13,6 @@ import { readFilesAsDataUrls } from '../media-inputs';
 import type { PublicVideoReference } from '../generator-studio-helpers';
 import { CdnImage } from '../../../image';
 
-const THUMB_WIDTHS = [240, 480];
 const THUMB_SIZES = '(max-width: 640px) 45vw, 220px';
 
 type PublicVideoMediaTab = 'uploads' | 'generations';
@@ -291,8 +290,6 @@ export function PublicVideoMediaDialog({
                   <CdnImage
                     src={ref.url}
                     alt={ref.name}
-                    width={480}
-                    widths={THUMB_WIDTHS}
                     sizes={THUMB_SIZES}
                     className="h-full w-full object-cover"
                   />
@@ -369,8 +366,6 @@ export function PublicVideoMediaDialog({
                       <CdnImage
                         src={ref.url}
                         alt={ref.name}
-                        width={480}
-                        widths={THUMB_WIDTHS}
                         sizes={THUMB_SIZES}
                         className="h-full w-full object-cover"
                       />
@@ -444,9 +439,6 @@ export function PublicVideoMediaDialog({
             <CdnImage
               src={previewRef.url}
               alt={previewRef.name}
-              width={1600}
-              widths={[960, 1600, 2400]}
-              quality={85}
               sizes="90vw"
               priority
               className="max-h-[80vh] max-w-full rounded-[18px] object-contain shadow-2xl"

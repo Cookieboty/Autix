@@ -317,9 +317,7 @@ export function Navbar() {
                           <CdnImage
                             src={item.coverImage}
                             alt={item.title}
-                            width={96}
-                            widths={[48, 96, 144]}
-                            sizes="48px"
+                            small
                             className="h-12 w-12 shrink-0 rounded-md object-cover"
                           />
                         ) : (

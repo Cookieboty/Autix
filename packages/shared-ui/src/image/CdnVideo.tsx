@@ -1,24 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { buildImageUrl } from './url';
+import { buildTieredImageUrl } from './url';
 
-/** `<video>` 组件；`poster` 会自动过 CF Image Resizing 变换。 */
+/** `<video>` 组件；`poster` 会复用与 <CdnImage> 相同的 pad 档变换 URL。 */
 export interface CdnVideoProps
   extends Omit<React.VideoHTMLAttributes<HTMLVideoElement>, 'poster' | 'src'> {
   src: string | null | undefined;
   poster?: string | null;
-  posterWidth?: number;
-  posterQuality?: number;
 }
 
 export const CdnVideo = React.forwardRef<HTMLVideoElement, CdnVideoProps>(function CdnVideo(
-  { src, poster, posterWidth = 720, posterQuality = 75, ...rest },
+  { src, poster, ...rest },
   ref,
 ) {
   if (!src) return null;
-  const finalPoster = poster
-    ? buildImageUrl(poster, { width: posterWidth, quality: posterQuality })
-    : undefined;
+  const finalPoster = poster ? buildTieredImageUrl(poster, 'pad') : undefined;
   return <video ref={ref} src={src} poster={finalPoster} {...rest} />;
 });

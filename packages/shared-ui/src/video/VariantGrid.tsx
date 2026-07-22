@@ -42,8 +42,6 @@ export function VariantGrid({ generations, onSelect, onGenerateNew, primaryId }:
                 <CdnImage
                   src={gen.thumbnailUrl}
                   alt=""
-                  width={480}
-                  widths={[320, 480, 720]}
                   sizes="(max-width: 640px) 45vw, 240px"
                   className="h-full w-full object-cover"
                 />

@@ -155,7 +155,6 @@ function VideoGalleryCard({
         <CdnVideo
           src={src}
           poster={cover}
-          posterWidth={720}
           muted
           loop
           playsInline
@@ -173,8 +172,6 @@ function VideoGalleryCard({
         <CdnImage
           src={cover}
           alt=""
-          width={720}
-          widths={[360, 720, 1080]}
           sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"
           priority={index < 4}
           loading={index < 8 ? 'eager' : 'lazy'}

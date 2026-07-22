@@ -1,15 +1,20 @@
-/** CF Image Resizing 支持的核心变换参数。字段名与 CF 官方参数一一对应。 */
-export interface CfImageTransform {
-  width?: number;
-  height?: number;
-  quality?: number;
-  format?: 'auto' | 'avif' | 'webp' | 'jpeg' | 'baseline-jpeg';
-  fit?: 'cover' | 'contain' | 'scale-down' | 'crop' | 'pad';
-  blur?: number;
-  dpr?: number;
-  background?: string;
-  metadata?: 'keep' | 'copyright' | 'none';
-}
+/** CF Image Resizing 全站 3 档；一张源图最多 3 次转换费用。 */
+export const IMAGE_TIERS = {
+  mobile: 640,
+  pad: 1024,
+  pc: 1920,
+} as const;
+
+export const IMAGE_TIER_WIDTHS = [
+  IMAGE_TIERS.mobile,
+  IMAGE_TIERS.pad,
+  IMAGE_TIERS.pc,
+] as const;
+
+export const IMAGE_QUALITY = 75;
+export const IMAGE_FIT = 'cover' as const;
+
+export type ImageTier = keyof typeof IMAGE_TIERS;
 
 const DEFAULT_ALLOWED_HOSTS = ['cdn.amux.ai', 'cdn.amux.test'];
 
@@ -42,33 +47,11 @@ function isTransformable(url: URL): boolean {
   return getAllowedHosts().has(url.hostname.toLowerCase());
 }
 
-function serializeTransform(t: CfImageTransform): string {
-  const parts: string[] = [];
-  if (t.width) parts.push(`w=${Math.round(t.width)}`);
-  if (t.height) parts.push(`h=${Math.round(t.height)}`);
-  if (t.quality) parts.push(`q=${Math.max(1, Math.min(100, Math.round(t.quality)))}`);
-  if (t.format) parts.push(`f=${t.format}`);
-  if (t.fit) parts.push(`fit=${t.fit}`);
-  if (t.blur) parts.push(`blur=${Math.max(1, Math.min(250, Math.round(t.blur)))}`);
-  if (t.dpr) parts.push(`dpr=${Math.max(1, Math.min(2, t.dpr))}`);
-  // 选项以逗号分隔，含逗号的颜色（rgb()/hsl()）会撕裂整个列表，只接受 hex / 颜色名
-  if (t.background && !t.background.includes(',')) {
-    parts.push(`background=${encodeURIComponent(t.background)}`);
-  }
-  if (t.metadata) parts.push(`metadata=${t.metadata}`);
-  if (!parts.some((p) => p.startsWith('f='))) parts.push('f=auto');
-  return parts.join(',');
+function tierOptions(width: number): string {
+  return `w=${width},q=${IMAGE_QUALITY},fit=${IMAGE_FIT},f=auto`;
 }
 
-/**
- * 把原图 URL 改写为 CF Image Resizing URL：`${origin}/cdn-cgi/image/${opts}/${rest}`。
- * 非白名单域 / data: / blob: / 相对路径 / 已带 `/cdn-cgi/image/` 前缀的一律原样返回。
- */
-export function buildImageUrl(src: string | null | undefined, transform: CfImageTransform = {}): string {
-  if (!src) return '';
-  if (src.startsWith('data:') || src.startsWith('blob:')) return src;
-  if (!/^https?:\/\//i.test(src)) return src;
-
+function rewrite(src: string, options: string): string {
   let url: URL;
   try {
     url = new URL(src);
@@ -76,34 +59,43 @@ export function buildImageUrl(src: string | null | undefined, transform: CfImage
     return src;
   }
   if (!isTransformable(url)) return src;
-
-  const options = serializeTransform(transform);
   const rest = `${url.pathname}${url.search}${url.hash}`.replace(/^\/+/, '');
   return `${url.origin}/cdn-cgi/image/${options}/${rest}`;
 }
 
-/** 为 `<img srcset>` 生成一串候选源。 */
-export function buildImageSrcSet(
-  src: string | null | undefined,
-  widths: number[],
-  transform: Omit<CfImageTransform, 'width'> = {},
-): string {
+function passthroughReason(src: string | null | undefined): string | null {
   if (!src) return '';
-  return widths
-    .filter((w) => Number.isFinite(w) && w > 0)
-    .map((w) => `${buildImageUrl(src, { ...transform, width: w })} ${Math.round(w)}w`)
-    .join(', ');
+  if (src.startsWith('data:') || src.startsWith('blob:')) return src;
+  if (!/^https?:\/\//i.test(src)) return src;
+  return null;
 }
 
-/** 生成 LQIP 占位图 URL（极小 + 强模糊）。 */
-export function buildImagePlaceholder(
+/** 返回指定档位的变换 URL。非白名单域 / data: / blob: / 相对路径原样返回。 */
+export function buildTieredImageUrl(
   src: string | null | undefined,
-  opts: { width?: number; blur?: number; quality?: number } = {},
+  tier: ImageTier = 'pad',
 ): string {
-  return buildImageUrl(src, {
-    width: opts.width ?? 32,
-    blur: opts.blur ?? 60,
-    quality: opts.quality ?? 40,
-    format: 'auto',
-  });
+  const bypass = passthroughReason(src);
+  if (bypass !== null) return bypass;
+  return rewrite(src as string, tierOptions(IMAGE_TIERS[tier]));
 }
+
+/** 生成三档 `srcSet`，形如 `url-640 640w, url-1024 1024w, url-1920 1920w`。 */
+export function buildTieredSrcSet(src: string | null | undefined): string {
+  const bypass = passthroughReason(src);
+  if (bypass !== null) return '';
+  return IMAGE_TIER_WIDTHS.map(
+    (w) => `${rewrite(src as string, tierOptions(w))} ${w}w`,
+  ).join(', ');
+}
+
+/**
+ * 下载专用：返回原图 URL，不走 CF 变换。已被 /cdn-cgi/image/... 包裹的会被剥回原图。
+ */
+export function buildOriginalDownloadUrl(src: string | null | undefined): string {
+  if (!src) return '';
+  const match = src.match(/^(https?:\/\/[^/]+)\/cdn-cgi\/image\/[^/]+\/(.*)$/i);
+  if (match) return `${match[1]}/${match[2]}`;
+  return src;
+}
+

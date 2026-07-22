@@ -1,9 +1,13 @@
 export {
-  buildImageUrl,
-  buildImageSrcSet,
-  buildImagePlaceholder,
+  IMAGE_TIERS,
+  IMAGE_TIER_WIDTHS,
+  IMAGE_QUALITY,
+  IMAGE_FIT,
+  buildTieredImageUrl,
+  buildTieredSrcSet,
+  buildOriginalDownloadUrl,
 } from './url';
-export type { CfImageTransform } from './url';
+export type { ImageTier } from './url';
 export { CdnImage } from './CdnImage';
 export type { CdnImageProps } from './CdnImage';
 export { CdnVideo } from './CdnVideo';

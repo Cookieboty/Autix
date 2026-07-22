@@ -303,9 +303,6 @@ export function AdminTemplateDetailAside({
         <CdnImage
           src={selected.coverImage}
           alt=""
-          width={800}
-          widths={[400, 800, 1200]}
-          quality={82}
           sizes="(max-width: 640px) 100vw, 400px"
           className="w-full rounded-lg"
           style={{ border: '1px solid var(--border)' }}
@@ -341,8 +338,6 @@ export function AdminTemplateDetailAside({
                   key={index}
                   src={img}
                   alt=""
-                  width={480}
-                  widths={[240, 480]}
                   sizes="(max-width: 640px) 45vw, 200px"
                   className="aspect-square w-full rounded object-cover"
                 />
