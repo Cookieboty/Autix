@@ -68,6 +68,21 @@ export class AuthIdentityRepository {
     });
   }
 
+  findLoginUserByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: { system: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
   findActiveSystems() {
     return this.prisma.system.findMany({
       where: { status: 'ACTIVE' },

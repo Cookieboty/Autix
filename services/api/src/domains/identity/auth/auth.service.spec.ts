@@ -247,6 +247,41 @@ describe('AuthService', () => {
         service.login({ username: 'testuser', password: 'correctpass' }, '127.0.0.1', 'agent'),
       ).rejects.toMatchObject({ i18nKey: 'auth.account.unavailable' });
     });
+
+    it('should allow login with email as identifier', async () => {
+      const bcrypt = await import('bcryptjs');
+      const hashed = await bcrypt.hash('correctpass', 4);
+      const { service, prisma, jwt } = buildService();
+      prisma.user.findUnique.mockImplementation(({ where }: any) => {
+        if (where?.email === 'test@example.com') {
+          return Promise.resolve({ ...VALID_USER, password: hashed });
+        }
+        return Promise.resolve(null);
+      });
+      jwt.sign.mockReturnValue('jwt-access-token');
+
+      const result = await service.login(
+        { username: 'Test@Example.com  ', password: 'correctpass' },
+        '127.0.0.1',
+        'test-agent',
+      );
+
+      expect(result.accessToken).toBe('jwt-access-token');
+      expect(prisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ email: 'test@example.com' }) }),
+      );
+    });
+
+    it('should throw invalid_credentials when email not found', async () => {
+      const { service, prisma } = buildService();
+      prisma.user.findUnique.mockResolvedValue(null);
+      await expect(
+        service.login({ username: 'ghost@example.com', password: 'whatever' }, '127.0.0.1', 'agent'),
+      ).rejects.toMatchObject({ i18nKey: 'auth.login.invalid_credentials' });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ email: 'ghost@example.com' }) }),
+      );
+    });
   });
 
   describe('refresh', () => {

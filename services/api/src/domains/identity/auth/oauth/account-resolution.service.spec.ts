@@ -57,4 +57,17 @@ describe('AccountResolutionService', () => {
       emailVerified: true, emailPlaceholder: false,
     }));
   });
+  it('provider 邮箱大小写归一后再撞库：混合大小写应命中已存在的小写账号（避免漏合并/重复账号）', async () => {
+    const repo = makeRepo({ findUserByEmail: vi.fn().mockResolvedValue({ id: 'u5' }) });
+    const svc = new AccountResolutionService(repo as any, cipher);
+    const out = await svc.resolve(profile({ email: '  John@X.com ' }), ctx);
+    expect(out).toEqual({ kind: 'login', userId: 'u5', created: false });
+    expect(repo.findUserByEmail).toHaveBeenCalledWith('john@x.com');
+  });
+  it('provider 邮箱大小写归一后入库', async () => {
+    const repo = makeRepo();
+    const svc = new AccountResolutionService(repo as any, cipher);
+    await svc.resolve(profile({ email: 'John@X.com', providerAccountId: 'sub9' }), ctx);
+    expect(repo.createOAuthUser).toHaveBeenCalledWith(expect.objectContaining({ email: 'john@x.com' }));
+  });
 });

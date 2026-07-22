@@ -110,6 +110,7 @@ export function RegisterFormPanel({
             required: t('usernameRequired'),
             minLength: { value: 3, message: t('usernameMinLength') },
             maxLength: { value: 20, message: t('usernameMaxLength') },
+            pattern: { value: /^[^@\s]+$/, message: t('usernameInvalidChars') },
           })}
           placeholder={t('usernamePlaceholder')}
           autoComplete="username"

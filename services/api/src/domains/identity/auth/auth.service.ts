@@ -60,7 +60,11 @@ export class AuthService {
   ) { }
 
   async login(dto: LoginDto, ip: string, userAgent: string): Promise<LoginResult> {
-    const user = await this.identityRepository.findLoginUserByUsername(dto.username);
+    const identifier = dto.username.trim();
+    const isEmail = identifier.includes('@');
+    const user = isEmail
+      ? await this.identityRepository.findLoginUserByEmail(identifier.toLowerCase())
+      : await this.identityRepository.findLoginUserByUsername(identifier);
     if (!user || !user.password || !(await bcrypt.compare(dto.password, user.password))) {
       throw new I18nHttpException(HttpStatus.UNAUTHORIZED, 'auth.login.invalid_credentials');
     }

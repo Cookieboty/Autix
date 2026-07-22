@@ -3,6 +3,7 @@ import { AuthIdentityRepository } from '../auth-identity.repository';
 import { TokenCipher } from './token-cipher';
 import { NormalizedProfile } from './provider.types';
 import { encryptProviderTokens } from './encrypt-tokens';
+import { normalizeEmail } from '../email-normalize';
 
 export type ResolveContext = {
   systemId: string; defaultRoleCode: string;
@@ -28,8 +29,9 @@ export class AccountResolutionService {
     const linked = await this.repo.findUserAccount(profile.provider, profile.providerAccountId);
     if (linked) return { kind: 'login', userId: linked.userId, created: false };
 
-    // 邮箱撞库判定
-    const existing = profile.email ? await this.repo.findUserByEmail(profile.email) : null;
+    // 归一后再查/存，与 register/admin 口径一致，否则大小写差异会漏掉已存在账号 → 开重复号。
+    const email = profile.email ? normalizeEmail(profile.email) : null;
+    const existing = email ? await this.repo.findUserByEmail(email) : null;
     if (existing) {
       if (profile.emailVerified) {
         // §6.2 自动关联
@@ -43,11 +45,11 @@ export class AccountResolutionService {
     // §6.4 全新用户
     const username = await this.generateUsername(profile);
     // 无邮箱占位（域名固定，便于回填/识别）；Plan 6 会据 emailVerified=false 引导补充真实邮箱
-    const emailPlaceholder = !profile.email;
-    const email = profile.email ?? `${profile.provider}_${profile.providerAccountId}@no-email.oauth.local`;
+    const emailPlaceholder = !email;
+    const storedEmail = email ?? `${profile.provider}_${profile.providerAccountId}@no-email.oauth.local`;
     const created = await this.repo.createOAuthUser({
-      username, email,
-      emailVerified: Boolean(profile.email && profile.emailVerified),
+      username, email: storedEmail,
+      emailVerified: Boolean(email && profile.emailVerified),
       emailPlaceholder,
       avatar: profile.avatar ?? undefined, realName: profile.displayName ?? undefined,
       systemId: ctx.systemId, defaultRoleCode: ctx.defaultRoleCode,

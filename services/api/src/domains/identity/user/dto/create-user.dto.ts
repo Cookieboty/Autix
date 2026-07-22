@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsEnum,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { UserStatus } from '@autix/database';
 import {
   PASSWORD_REGEX,
@@ -14,12 +15,14 @@ import {
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
 } from '@autix/domain';
+import { normalizeEmailTransform } from '../../auth/email-normalize';
 
 export class CreateUserDto {
   @IsString()
   username: string;
 
   @IsEmail()
+  @Transform(normalizeEmailTransform)
   email: string;
 
   @IsOptional()

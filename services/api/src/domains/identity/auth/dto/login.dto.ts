@@ -1,10 +1,12 @@
 import { IsString, MinLength, IsOptional, IsEmail, MaxLength, Matches } from 'class-validator';
+import { Transform } from 'class-transformer';
 import {
   PASSWORD_REGEX,
   PASSWORD_VALIDATION_MESSAGE,
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
 } from '@autix/domain';
+import { normalizeEmailTransform } from '../email-normalize';
 
 export class LoginDto {
   @IsString()
@@ -31,9 +33,11 @@ export class RegisterDto {
   @IsString()
   @MinLength(3)
   @MaxLength(20)
+  @Matches(/^[^@\s]+$/, { message: 'auth.usernameInvalidChars' })
   username: string;
 
   @IsEmail()
+  @Transform(normalizeEmailTransform)
   email: string;
 
   @IsString()
@@ -52,6 +56,7 @@ export class RegisterDto {
 
 export class ForgotPasswordDto {
   @IsEmail()
+  @Transform(normalizeEmailTransform)
   email: string;
 }
 
@@ -73,16 +78,19 @@ export class ActivateAccountDto {
 
 export class ResendActivationDto {
   @IsEmail()
+  @Transform(normalizeEmailTransform)
   email: string;
 }
 
 export class RequestEmailSupplementDto {
   @IsEmail()
+  @Transform(normalizeEmailTransform)
   email: string;
 }
 
 export class RequestEmailChangeDto {
   @IsEmail()
+  @Transform(normalizeEmailTransform)
   email: string;
 
   @IsString()
