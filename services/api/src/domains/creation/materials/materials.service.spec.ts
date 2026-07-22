@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { MaterialsService } from './materials.service';
 
 /** 测试用站内存储域名基准，与 r2 mock 的 getPublicBaseUrl 返回值保持一致（Task 4.5）。 */
@@ -276,7 +277,7 @@ describe('MaterialsService.create — Task 4.5：站内来源写入守卫', () =
         url: 'https://evil.com/x.png',
         sourceType: 'external',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow(I18nHttpException);
   });
 
   it('拒绝非站内 host 的 url（即便 sourceType 是合法的 upload）', async () => {
@@ -288,7 +289,7 @@ describe('MaterialsService.create — Task 4.5：站内来源写入守卫', () =
         url: 'https://evil.com/x.png',
         sourceType: 'upload',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('拒绝 sourceType=external（即使 url 本身是站内域名）', async () => {
@@ -300,7 +301,7 @@ describe('MaterialsService.create — Task 4.5：站内来源写入守卫', () =
         url: `${R2_PUBLIC_BASE}/a.png`,
         sourceType: 'external',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toThrow(I18nHttpException);
   });
 
   it('拒绝非站内 host 的 thumbnailUrl', async () => {
@@ -313,7 +314,7 @@ describe('MaterialsService.create — Task 4.5：站内来源写入守卫', () =
         thumbnailUrl: 'https://evil.com/thumb.png',
         sourceType: 'upload',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('站内 url（image_generation 来源）放行', async () => {
@@ -337,7 +338,7 @@ describe('MaterialsService.update — Task 4.6：thumbnailUrl 站内守卫', () 
     const { service } = buildService();
     await expect(
       service.update('u1', 'm1', { thumbnailUrl: 'https://evil.com/thumb.png' }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('站内 thumbnailUrl 放行并写入', async () => {
@@ -379,10 +380,10 @@ describe('MaterialsService.list — Plan C Task 11：librarySource 筛选 + sour
     expect('librarySource' in where).toBe(false);
   });
 
-  it('librarySource 传非法值 → BadRequestException', async () => {
+  it('librarySource 传非法值 → I18nHttpException', async () => {
     const { service } = buildService();
     await expect(service.list('u1', { librarySource: 'bogus' })).rejects.toBeInstanceOf(
-      BadRequestException,
+      I18nHttpException,
     );
   });
 
@@ -408,27 +409,27 @@ describe('MaterialsService.list — Plan C Task 11：librarySource 筛选 + sour
 });
 
 describe('MaterialsService.saveFromHistory — Plan C Task 11：反伪造 + 类型校验', () => {
-  it('resourceType 不属可映射类型（如 SKILL）→ BadRequestException，不查 resource_views', async () => {
+  it('resourceType 不属可映射类型（如 SKILL）→ I18nHttpException，不查 resource_views', async () => {
     const { service, activityRepository } = buildService();
     await expect(service.saveFromHistory('u1', 'SKILL', 'r1')).rejects.toBeInstanceOf(
-      BadRequestException,
+      I18nHttpException,
     );
     expect(activityRepository.hasViewed).not.toHaveBeenCalled();
   });
 
-  it('resourceId 为空 → BadRequestException', async () => {
+  it('resourceId 为空 → I18nHttpException', async () => {
     const { service } = buildService();
     await expect(service.saveFromHistory('u1', 'GALLERY_POST', '  ')).rejects.toBeInstanceOf(
-      BadRequestException,
+      I18nHttpException,
     );
   });
 
-  it('用户未浏览过该资源（hasViewed=false）→ BadRequestException，不落素材（反伪造历史保存）', async () => {
+  it('用户未浏览过该资源（hasViewed=false）→ I18nHttpException，不落素材（反伪造历史保存）', async () => {
     const { service, favoriteLibrary, activityRepository } = buildService({
       activityRepository: { hasViewed: vi.fn().mockResolvedValue(false) },
     });
     await expect(service.saveFromHistory('u1', 'GALLERY_POST', 'g1')).rejects.toBeInstanceOf(
-      BadRequestException,
+      I18nHttpException,
     );
     expect(activityRepository.hasViewed).toHaveBeenCalledWith('u1', 'GALLERY_POST', 'g1');
     expect(favoriteLibrary.saveHistoryMaterial).not.toHaveBeenCalled();
@@ -519,10 +520,10 @@ describe('MaterialsService.listHistory — Plan C Task 11：GET /materials/histo
         'utf8',
       ).toString('base64url'),
     ],
-  ])('畸形 cursor(%s) → BadRequestException，且绝不查询到仓储层', async (_label, cursor) => {
+  ])('畸形 cursor(%s) → I18nHttpException，且绝不查询到仓储层', async (_label, cursor) => {
     const { service, activityRepository } = buildService();
     await expect(service.listHistory('u1', { cursor: cursor as string })).rejects.toBeInstanceOf(
-      BadRequestException,
+      I18nHttpException,
     );
     expect(activityRepository.listHistory).not.toHaveBeenCalled();
   });

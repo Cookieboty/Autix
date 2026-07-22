@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Prisma, ResourceType } from '../../platform/prisma/generated';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import {
@@ -11,10 +6,23 @@ import {
   type HistoryCursor,
 } from '../../marketplace/marketplace-activity.repository';
 import { assertInStationMediaUrls } from '../gallery/gallery.helpers';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { FavoriteLibraryService } from './favorite-library.service';
 import { MaterialsRepository } from './materials.repository';
 // type-only import avoids the circular ESM TDZ at load time; the string injection token handles DI resolution
 import type { MaterialFoldersService } from './material-folders.service';
+
+function badMaterials(key: string, args?: Record<string, unknown>) {
+  return new I18nHttpException(HttpStatus.BAD_REQUEST, key, args, {
+    code: 'BAD_REQUEST',
+  });
+}
+
+function notFoundMaterials(key: string) {
+  return new I18nHttpException(HttpStatus.NOT_FOUND, key, undefined, {
+    code: 'NOT_FOUND',
+  });
+}
 
 /** Injection token exported so Task-5 module wiring can provide the service without a value import here. */
 export const MATERIAL_FOLDERS_SERVICE = 'MATERIAL_FOLDERS_SERVICE';
@@ -186,14 +194,14 @@ export class MaterialsService {
   async saveFromHistory(userId: string, resourceType: string, resourceId: string) {
     const normalizedType = resourceType as ResourceType;
     if (!HISTORY_MAPPABLE_TYPES.has(normalizedType)) {
-      throw new BadRequestException('该资源类型不支持保存到素材库');
+      throw badMaterials('creation.materials.history_type_unsupported');
     }
     const trimmedId = String(resourceId ?? '').trim();
-    if (!trimmedId) throw new BadRequestException('资源 ID 不能为空');
+    if (!trimmedId) throw badMaterials('creation.materials.resource_id_required');
 
     const viewed = await this.activityRepository.hasViewed(userId, normalizedType, trimmedId);
     if (!viewed) {
-      throw new BadRequestException('未浏览过该资源，无法保存到素材库');
+      throw badMaterials('creation.materials.resource_not_viewed');
     }
 
     return this.favoriteLibrary.saveHistoryMaterial(userId, normalizedType, trimmedId);
@@ -233,21 +241,21 @@ export class MaterialsService {
     try {
       parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
     } catch {
-      throw new BadRequestException('分页游标无效');
+      throw badMaterials('creation.materials.invalid_cursor');
     }
-    if (!parsed || typeof parsed !== 'object') throw new BadRequestException('分页游标无效');
+    if (!parsed || typeof parsed !== 'object') throw badMaterials('creation.materials.invalid_cursor');
 
     const { viewedAt, resourceType, resourceId } = parsed as Record<string, unknown>;
     if (typeof viewedAt !== 'string' || typeof resourceId !== 'string' || !resourceId.trim()) {
-      throw new BadRequestException('分页游标无效');
+      throw badMaterials('creation.materials.invalid_cursor');
     }
     const viewedAtDate = new Date(viewedAt);
-    if (Number.isNaN(viewedAtDate.getTime())) throw new BadRequestException('分页游标无效');
+    if (Number.isNaN(viewedAtDate.getTime())) throw badMaterials('creation.materials.invalid_cursor');
     if (
       typeof resourceType !== 'string' ||
       !RESOURCE_TYPES.has(resourceType as ResourceType)
     ) {
-      throw new BadRequestException('分页游标无效');
+      throw badMaterials('creation.materials.invalid_cursor');
     }
 
     return {
@@ -278,11 +286,11 @@ export class MaterialsService {
     const type = this.normalizeType(input.type);
     const sourceType = this.normalizeSourceType(input.sourceType);
     if (sourceType === 'external') {
-      throw new BadRequestException('不支持 external 来源，素材必须来自站内存储');
+      throw badMaterials('creation.materials.external_source_forbidden');
     }
     const title = this.normalizeTitle(input.title);
     const url = input.url?.trim();
-    if (!url) throw new BadRequestException('素材 URL 不能为空');
+    if (!url) throw badMaterials('creation.materials.url_required');
     const thumbnailUrl = input.thumbnailUrl?.trim() || null;
 
     const r2Base = await this.r2Service.getPublicBaseUrl();
@@ -370,31 +378,31 @@ export class MaterialsService {
 
   private async ensureOwned(userId: string, id: string) {
     const asset = await this.materialsRepository.findOwned(userId, id);
-    if (!asset) throw new NotFoundException('素材不存在');
+    if (!asset) throw notFoundMaterials('creation.materials.not_found');
     return asset;
   }
 
   private normalizeType(value: string): MaterialAssetType {
     const type = String(value ?? '').toLowerCase() as MaterialAssetType;
-    if (!MATERIAL_TYPES.has(type)) throw new BadRequestException('不支持的素材类型');
+    if (!MATERIAL_TYPES.has(type)) throw badMaterials('creation.materials.unsupported_type');
     return type;
   }
 
   private normalizeSourceType(value: string): MaterialAssetSourceType {
     const type = String(value ?? '').toLowerCase() as MaterialAssetSourceType;
-    if (!SOURCE_TYPES.has(type)) throw new BadRequestException('不支持的素材来源');
+    if (!SOURCE_TYPES.has(type)) throw badMaterials('creation.materials.unsupported_source_type');
     return type;
   }
 
   private normalizeLibrarySource(value: string): MaterialLibrarySource {
     const source = String(value ?? '').toUpperCase() as MaterialLibrarySource;
-    if (!LIBRARY_SOURCES.has(source)) throw new BadRequestException('不支持的素材库来源筛选');
+    if (!LIBRARY_SOURCES.has(source)) throw badMaterials('creation.materials.unsupported_library_source');
     return source;
   }
 
   private normalizeTitle(value: string): string {
     const title = String(value ?? '').trim();
-    if (!title) throw new BadRequestException('素材标题不能为空');
+    if (!title) throw badMaterials('creation.materials.title_required');
     return title.slice(0, 200);
   }
 

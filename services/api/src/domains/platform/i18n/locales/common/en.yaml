@@ -1,3 +1,4 @@
 common.request_success: "Success"
 common.internal_error: "Internal server error"
 common.invalid_params: "Invalid parameters"
+common.too_many_requests: "Too many requests, please try again later."

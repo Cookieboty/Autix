@@ -1,3 +1,4 @@
 common.request_success: "Thành công"
 common.internal_error: "Lỗi máy chủ nội bộ"
 common.invalid_params: "Tham số không hợp lệ"
+common.too_many_requests: "Quá nhiều yêu cầu, vui lòng thử lại sau."

@@ -2,6 +2,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import type { ArgumentsHost } from '@nestjs/common';
 import type { I18nService } from '../i18n/i18n.service';
 import { AllExceptionsFilter } from './all-exceptions.filter';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { RateLimitedException } from './rate-limit.service';
 
 function runFilter(exception: unknown) {
@@ -75,6 +76,57 @@ describe('AllExceptionsFilter error envelope', () => {
     expect(result.body).toMatchObject({
       code: 'TOO_MANY_REQUESTS',
       msg: 'Slow down',
+    });
+  });
+
+  it('translates I18nHttpException 429 message and promotes retryAfterMs to envelope', () => {
+    // 覆盖 throttler 出口路径：AppThrottlerGuard 抛出的 I18nHttpException 必须走
+    // i18n 翻译通道，并把 retryAfterMs 提升到 envelope 顶层，供前端做退避展示。
+    const result = runFilter(
+      new I18nHttpException(
+        HttpStatus.TOO_MANY_REQUESTS,
+        'common.too_many_requests',
+        undefined,
+        { code: 'TOO_MANY_REQUESTS', retryAfterMs: 12_000 },
+      ),
+    );
+
+    expect(result.status).toBe(429);
+    expect(result.body).toMatchObject({
+      success: false,
+      code: 'TOO_MANY_REQUESTS',
+      // spec 中的 stub i18n.t 直接回传 key，验证的是"翻译通道被走过"，
+      // 真实语言词条由 locales/common/*.yaml 保证。
+      msg: 'common.too_many_requests',
+      retryAfterMs: 12_000,
+      data: null,
+    });
+  });
+
+  it('translates I18nHttpException 400 message and passes structured data (violations) through envelope.data', () => {
+    // 覆盖全局 ValidationPipe.exceptionFactory 的产出路径：DTO 校验失败会以
+    // I18nHttpException('common.invalid_params') + data.violations 的形式抛出。
+    // 文案由 i18n 翻译，字段级明细通过 envelope.data 透出，前端可按 path/codes
+    // 做本地化字段提示。
+    const violations = [
+      { path: 'email', codes: ['isEmail'] },
+      { path: 'password', codes: ['minLength'] },
+    ];
+    const result = runFilter(
+      new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'common.invalid_params',
+        undefined,
+        { code: 'BAD_REQUEST', data: { violations } },
+      ),
+    );
+
+    expect(result.status).toBe(400);
+    expect(result.body).toMatchObject({
+      success: false,
+      code: 'BAD_REQUEST',
+      msg: 'common.invalid_params',
+      data: { violations },
     });
   });
 

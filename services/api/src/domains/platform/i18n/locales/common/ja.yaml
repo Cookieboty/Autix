@@ -1,3 +1,4 @@
 common.request_success: "リクエストに成功しました"
 common.internal_error: "サーバー内部エラーが発生しました"
 common.invalid_params: "パラメーターが正しくありません"
+common.too_many_requests: "リクエストが多すぎます。しばらくしてから再試行してください。"

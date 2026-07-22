@@ -1,3 +1,4 @@
 common.request_success: "Успешно"
 common.internal_error: "Внутренняя ошибка сервера"
 common.invalid_params: "Недопустимые параметры"
+common.too_many_requests: "Слишком много запросов, попробуйте позже."
