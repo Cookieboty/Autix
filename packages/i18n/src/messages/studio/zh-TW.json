@@ -150,7 +150,8 @@
       "add": "新增",
       "loading": "載入中...",
       "empty": "目前會話未啟用 Skills",
-      "remove": "移除"
+      "remove": "移除",
+      "skillsAndMcp": "技能 / MCP"
     },
     "resourceLauncher": {
       "addResource": "+ 新增資源",
@@ -214,7 +215,8 @@
       "executeAction": "執行操作：{action}"
     },
     "unknownError": "未知錯誤",
-    "dismiss": "關閉"
+    "dismiss": "關閉",
+    "openActions": "開啟操作"
   },
   "template": {
     "discover": "發現",
@@ -324,7 +326,9 @@
     "importFailed": "失敗：{count} 筆",
     "importSkipped": "跳過：{count} 筆",
     "templatesFound": "發現 {count} 個範本",
-    "viewSource": "查看來源"
+    "viewSource": "查看來源",
+    "headerHot": "熱門",
+    "prompt": "提示詞"
   },
   "imageUploader": {
     "defaultLabel": "點擊或拖曳上傳圖片",
@@ -1354,7 +1358,8 @@
       "useInChat": "會話使用",
       "useInChatAria": "在會話中使用模板 {title}",
       "useInWorkbench": "專業工作臺",
-      "useInWorkbenchAria": "應用到專業工作臺 {title}"
+      "useInWorkbenchAria": "應用到專業工作臺 {title}",
+      "toolCount": "{count} 個工具"
     },
     "sidebar": {
       "home": "推薦首頁",
@@ -1499,7 +1504,9 @@
         "platform": "平臺",
         "externalId": "外部 ID",
         "originalLink": "原始連結"
-      }
+      },
+      "byAuthor": "作者 {author}",
+      "promptTitle": "提示詞"
     }
   },
   "videoShare": {

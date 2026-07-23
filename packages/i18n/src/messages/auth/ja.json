@@ -250,7 +250,10 @@
       "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "ユーザー名の確認が一致しません",
       "PROVIDER_REAUTH_UNSUPPORTED": "現在のサインイン方法ではここで再認証できません",
       "CONTACT_SUPPORT": "サポートにお問い合わせください"
-    }
+    },
+    "modalA11yTitle": "Amux Studio にサインイン",
+    "modalA11yDescription": "続行するにはサインインまたはアカウントを作成してください。",
+    "creativeHighlights": "クリエイティブハイライト"
   },
   "login": {
     "console": "管理コンソール",

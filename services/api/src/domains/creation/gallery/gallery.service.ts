@@ -1,9 +1,6 @@
 import {
-  BadRequestException,
-  ForbiddenException,
   HttpStatus,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import type { AuthUser } from '@autix/domain';
@@ -902,7 +899,7 @@ export class GalleryService {
     ] as const;
     const normalized = allowed.find((s) => s === status);
     if (!normalized) {
-      throw new BadRequestException('status must be one of PENDING/PUBLISHED/HIDDEN/REJECTED');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.gallery.invalid_status');
     }
     return this.repo.findByStatusPage(normalized, cursor, take);
   }

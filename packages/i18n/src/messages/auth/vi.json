@@ -250,7 +250,10 @@
       "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "Xác nhận tên người dùng không khớp",
       "PROVIDER_REAUTH_UNSUPPORTED": "Phương thức đăng nhập hiện tại của bạn không thể xác thực lại tại đây",
       "CONTACT_SUPPORT": "Vui lòng liên hệ bộ phận hỗ trợ"
-    }
+    },
+    "modalA11yTitle": "Đăng nhập vào Amux Studio",
+    "modalA11yDescription": "Đăng nhập hoặc tạo tài khoản để tiếp tục.",
+    "creativeHighlights": "Điểm nhấn sáng tạo"
   },
   "login": {
     "console": "Bảng điều khiển quản trị",

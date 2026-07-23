@@ -1,8 +1,9 @@
 import {
-  BadRequestException,
   ForbiddenException,
+  HttpStatus,
   Injectable,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { AppLogger } from '../../platform/common/app-logger';
 import {
   type CanvasActionEstimate,
@@ -103,7 +104,11 @@ export class CanvasActionService {
     const state = await this.boardService.loadStateById(userId, boardId);
     const ctx = buildCanvasSelectionContext(state, dto.selectedNodeIds);
     const promptNode = ctx.prompts[0];
-    if (!promptNode) throw new BadRequestException('needs_prompt');
+    if (!promptNode) {
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.canvas.needs_prompt', undefined, {
+        data: { errorCode: 'needs_prompt' },
+      });
+    }
 
     const referenceImages = await this.buildReferenceImages(state, dto.selectedNodeIds);
 
@@ -204,7 +209,11 @@ export class CanvasActionService {
     }
 
     const prompt = dto.prompt.trim();
-    if (!prompt) throw new BadRequestException('needs_prompt');
+    if (!prompt) {
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.canvas.needs_prompt', undefined, {
+        data: { errorCode: 'needs_prompt' },
+      });
+    }
 
     const referenceImages: SourceImageRef[] = (dto.referenceImageUrls ?? [])
       .filter((url) => Boolean(url))

@@ -678,7 +678,11 @@
     "videoGenerateAudio": "ネイティブ音声を生成",
     "videoMaterialSlotsTitle": "素材スロット",
     "videoMaterialSlotsDescription": "このテンプレートで受け付ける入力アセットの種類を選択します。スロットは必須に設定できます。",
-    "videoRequiredMaterial": "必須素材"
+    "videoRequiredMaterial": "必須素材",
+    "workflowStepKey": "ステップキー",
+    "workflowStepKeyPlaceholder": "例: prd, visual_design",
+    "workflowCriticPromptLabel": "レビュー用プロンプト",
+    "promptLabel": "プロンプト"
   },
   "adminCampaigns": {
     "title": "キャンペーン報酬センター",
@@ -765,7 +769,11 @@
     "viewJson": "JSON を表示",
     "loadingMore": "読み込み中…",
     "loadMore": "さらに読み込む",
-    "allLoaded": "すべて読み込み済み"
+    "allLoaded": "すべて読み込み済み",
+    "columnId": "識別子",
+    "columnAction": "アクション",
+    "columnActor": "実行者",
+    "columnPayload": "ペイロード"
   },
   "adminSystemModels": {
     "title": "システムモデル設定",

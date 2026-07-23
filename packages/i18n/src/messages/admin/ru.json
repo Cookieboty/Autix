@@ -678,7 +678,11 @@
     "videoGenerateAudio": "Генерировать нативное аудио",
     "videoMaterialSlotsTitle": "Слоты материалов",
     "videoMaterialSlotsDescription": "Выберите типы входных ассетов, которые открывает этот шаблон. Слоты можно отметить обязательными.",
-    "videoRequiredMaterial": "Обязательный материал"
+    "videoRequiredMaterial": "Обязательный материал",
+    "workflowStepKey": "Ключ шага",
+    "workflowStepKeyPlaceholder": "напр. prd, visual_design",
+    "workflowCriticPromptLabel": "Промпт критика",
+    "promptLabel": "Промпт"
   },
   "adminCampaigns": {
     "title": "Центр наград кампаний",
@@ -765,7 +769,11 @@
     "viewJson": "Показать JSON",
     "loadingMore": "Загрузка…",
     "loadMore": "Загрузить еще",
-    "allLoaded": "Все загружено"
+    "allLoaded": "Все загружено",
+    "columnId": "Идентификатор",
+    "columnAction": "Действие",
+    "columnActor": "Исполнитель",
+    "columnPayload": "Полезная нагрузка"
   },
   "adminSystemModels": {
     "title": "Настройка системных моделей",

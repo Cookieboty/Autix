@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { BoostReason, Prisma, ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { isMetricResourceType } from '../prisma/resource-type.helpers';
 import { BoostRepository, UpdateBoostData } from './boost.repository';
 import { isBoostActiveAt } from './boost.helpers';
 import { ResourceVisibilityRepository } from './resource-visibility.repository';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 
 /** 控制器传入的创建入参：日期为 ISO 字符串（DTO 层已用 @IsDateString 校验）。 */
 export interface CreateBoostInput {
@@ -66,7 +67,7 @@ export class BoostService {
   async updateBoost(actorId: string, id: string, input: UpdateBoostInput) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('Boost record not found');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'platform.boost.record_not_found');
     }
 
     const updated = await this.repo.update(id, {
@@ -85,7 +86,7 @@ export class BoostService {
   async revokeBoost(actorId: string, id: string) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('Boost record not found');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'platform.boost.record_not_found');
     }
 
     const revoked = await this.repo.revoke(id);
@@ -127,7 +128,11 @@ export class BoostService {
 
   private assertResourceType(raw: string): ResourceType {
     if (!isMetricResourceType(raw as ResourceType)) {
-      throw new BadRequestException(`Unsupported resource type: ${raw}`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.boost.unsupported_resource_type',
+        { type: raw },
+      );
     }
     return raw as ResourceType;
   }

@@ -296,7 +296,7 @@ function VideoHero() {
           >
             <div>
               <p className="mb-5 text-xs font-semibold uppercase tracking-[0.26em] text-white/70">
-                + VIDEO PRODUCT STUDIO
+                + {t('videoHeroEyebrow')}
               </p>
               <h1 className="max-w-5xl text-5xl font-bold leading-none tracking-tight text-white md:text-7xl">
                 {t('videoHeroTitle1')}

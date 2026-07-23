@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, ResourceType } from '../prisma/generated';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import {
   isGalleryResourceType,
   isMetricResourceType,
@@ -157,7 +158,11 @@ export class ResourceMetricsService {
     type: ResourceType | undefined,
   ): asserts type is ResourceType {
     if (!type || !isMetricResourceType(type)) {
-      throw new BadRequestException(`Unsupported resource type: ${type ?? '(empty)'}`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.metrics.unsupported_resource_type',
+        { type: type ?? '(empty)' },
+      );
     }
   }
 }

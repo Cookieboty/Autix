@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { OrderStatus, OrderType, Prisma } from '../../../platform/prisma/generated';
 import { DEFAULT_PAYMENT_CURRENCY, optionalDecimal, toJsonInput } from './order-fulfillment.helpers';
 
@@ -73,7 +74,7 @@ export function assertRefundAmountWithinPaidAmount(
       ? paid
       : Number(input.amount);
   if (Number.isFinite(requested) && requested > paid + 0.000001) {
-    throw new BadRequestException('Refund amount cannot exceed the paid amount');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.refund.exceeds_paid');
   }
 }
 

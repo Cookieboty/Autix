@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, type OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Injectable,
+  type OnModuleInit,
+} from '@nestjs/common';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import {
   SystemSettingsRepository,
   type SystemSettingRow,
@@ -65,7 +71,11 @@ export class SystemSettingsService implements OnModuleInit {
       .map(([key]) => key)
       .filter((key) => !EDITABLE_SYSTEM_SETTING_KEYS.has(key));
     if (invalidKeys.length > 0) {
-      throw new BadRequestException(`Non-configurable system setting: `);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.non_configurable',
+        { keys: invalidKeys.join(', ') },
+      );
     }
 
     const writes: Array<{ key: string; value: string }> = [];
@@ -90,7 +100,11 @@ export class SystemSettingsService implements OnModuleInit {
   ): Promise<ResolvedSystemSetting> {
     const definition = findSystemSettingDefinition(key);
     if (!definition) {
-      throw new BadRequestException(`Unknown system setting: `);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.unknown',
+        { key },
+      );
     }
     const rows = await this.readRows();
     return this.resolveSetting(definition, rows, options);
@@ -120,16 +134,28 @@ export class SystemSettingsService implements OnModuleInit {
         if (['1', 'true', 'yes', 'on', 'enabled'].includes(normalized)) return 'true';
         if (['0', 'false', 'no', 'off', 'disabled'].includes(normalized)) return 'false';
       }
-      throw new BadRequestException(` must be a boolean`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.must_be_boolean',
+        { label: definition.label },
+      );
     }
 
     if (typeof rawValue !== 'string') {
-      throw new BadRequestException(` must be a string`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.must_be_string',
+        { label: definition.label },
+      );
     }
 
     const value = rawValue.trim();
     if (!value && !definition.allowEmpty) {
-      throw new BadRequestException(` cannot be empty`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.cannot_be_empty',
+        { label: definition.label },
+      );
     }
     return value;
   }

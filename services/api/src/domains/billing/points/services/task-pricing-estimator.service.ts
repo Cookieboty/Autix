@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import {
   computeTaskEstimate,
   validatePricingSchema,
@@ -90,10 +91,10 @@ export class TaskPricingEstimatorService {
   async estimateCost(input: TaskEstimateInput): Promise<TaskEstimateResult> {
     const task = await this.repo.findTaskDefinition(input.taskType);
     if (!task) {
-      throw new BadRequestException(`Task not configured: ${input.taskType}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.not_configured", { task: input.taskType });
     }
     if (!task.isActive) {
-      throw new BadRequestException(`Task is disabled: ${input.taskType}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.disabled", { task: input.taskType });
     }
 
     const binding = await this.resolveBinding(input.taskType, input.modelConfigId);
@@ -101,15 +102,15 @@ export class TaskPricingEstimatorService {
 
     const model = await this.repo.findModelPricingConfig(modelConfigId);
     if (!model) {
-      throw new BadRequestException(`Model not found: ${modelConfigId}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.model_not_found", { model: modelConfigId });
     }
     // NULL means "not configured". Falling back to {} / { terms: [] } here would make
     // evaluatePricing return total: 0 — silent free generation. Reject instead.
     if (model.pricingSchema === null) {
-      throw new BadRequestException(`Model has no pricing rule (pricingSchema) configured: ${modelConfigId}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.model_no_pricing_rule", { model: modelConfigId });
     }
     if (model.paramsSchema === null) {
-      throw new BadRequestException(`Model has no params rule (paramsSchema) configured: ${modelConfigId}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.model_no_params_rule", { model: modelConfigId });
     }
 
     const pricingSchema = this.narrowPricingSchema(
@@ -162,7 +163,7 @@ export class TaskPricingEstimatorService {
       usage: input.usage,
     });
     if (result.violations.length > 0) {
-      throw new BadRequestException({ message: 'Invalid parameters', violations: result.violations });
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'task.invalid_params', undefined, { data: { violations: result.violations } });
     }
     // computeTaskEstimate 已跑 applyParamDefaults → deriveParams，返回派生后的参数，
     // 用它冻快照（结算按同一份参数复价）。
@@ -213,14 +214,10 @@ export class TaskPricingEstimatorService {
     if (modelConfigId) {
       const binding = await this.repo.findBinding(taskType, modelConfigId);
       if (!binding) {
-        throw new BadRequestException(
-          `Model not bound to task: task ${taskType} has no binding configured with model ${modelConfigId}`,
-        );
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.task_pricing.model_not_bound', { taskType, modelConfigId });
       }
       if (!binding.isActive) {
-        throw new BadRequestException(
-          `Binding is disabled: task ${taskType} binding with model ${modelConfigId} has been disabled`,
-        );
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.task_pricing.binding_disabled', { taskType, modelConfigId });
       }
       return binding;
     }
@@ -230,10 +227,10 @@ export class TaskPricingEstimatorService {
     // default exists but was deactivated" surface as different errors here.
     const defaultBinding = await this.repo.findDefaultBinding(taskType);
     if (!defaultBinding) {
-      throw new BadRequestException(`Task ${taskType} has no default model binding configured`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.task_pricing.no_default_binding', { taskType });
     }
     if (!defaultBinding.isActive) {
-      throw new BadRequestException(`Task ${taskType} default model binding is disabled`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.task_pricing.default_binding_disabled', { taskType });
     }
     return defaultBinding;
   }

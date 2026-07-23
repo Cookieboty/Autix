@@ -150,7 +150,8 @@
       "add": "Ajouter",
       "loading": "Chargement...",
       "empty": "Aucun Skill actif dans cette session",
-      "remove": "Supprimer"
+      "remove": "Supprimer",
+      "skillsAndMcp": "Compétences / MCP"
     },
     "resourceLauncher": {
       "addResource": "+ Ajouter une ressource",
@@ -214,7 +215,8 @@
       "confirmSubmit": "Confirmer l’envoi",
       "cancelAction": "Annuler l’action",
       "executeAction": "Exécuter l’action : {action}"
-    }
+    },
+    "openActions": "Ouvrir les actions"
   },
   "template": {
     "discover": "Découvrir",
@@ -324,7 +326,9 @@
     "importFailed": "Échoués : {count}",
     "importSkipped": "Ignorés : {count}",
     "templatesFound": "{count} modèles trouvés",
-    "viewSource": "Voir la source"
+    "viewSource": "Voir la source",
+    "headerHot": "Populaire",
+    "prompt": "Invite"
   },
   "imageUploader": {
     "defaultLabel": "Cliquez ou glissez pour importer une image",
@@ -1354,7 +1358,8 @@
       "useInChat": "Utiliser en chat",
       "useInChatAria": "Utiliser le modèle {title} en chat",
       "useInWorkbench": "Atelier",
-      "useInWorkbenchAria": "Appliquer {title} à l’atelier professionnel"
+      "useInWorkbenchAria": "Appliquer {title} à l’atelier professionnel",
+      "toolCount": "{count} outils"
     },
     "sidebar": {
       "home": "Recommandés",
@@ -1499,7 +1504,9 @@
         "platform": "Plateforme",
         "externalId": "ID externe",
         "originalLink": "Lien original"
-      }
+      },
+      "byAuthor": "par {author}",
+      "promptTitle": "Invite"
     }
   },
   "myTemplates": {

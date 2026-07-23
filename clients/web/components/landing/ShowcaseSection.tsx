@@ -200,7 +200,7 @@ export function ShowcaseSection() {
           <div>
             <p className="mb-4 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/56">
               <span className="h-px w-8 bg-white/42" />
-              Studio Console
+              {t('showcaseConsoleEyebrow')}
             </p>
             <h2 className="max-w-4xl text-4xl font-bold leading-tight tracking-tight md:text-6xl">
               {t('showcaseConsoleTitle')}
@@ -264,7 +264,7 @@ export function ShowcaseSection() {
                     <p className="mt-2 max-w-md text-sm leading-6 text-white/62">{t('showcaseGalleryPreviewDesc')}</p>
                   </div>
                   <span className="hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-950 md:inline-flex">
-                    <Play className="size-3" /> Live
+                    <Play className="size-3" /> {t('showcaseLiveBadge')}
                   </span>
                 </div>
               </div>

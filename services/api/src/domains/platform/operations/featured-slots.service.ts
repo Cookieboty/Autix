@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import type {
   FeaturedSlot,
   MetricResourceType,
   ResolvedFeaturedSlot,
 } from '@autix/domain';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { FeaturedSlotKind, Prisma, ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -139,7 +140,7 @@ export class FeaturedSlotsService {
   ): Promise<FeaturedSlot> {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('Featured slot not found');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'platform.featured.slot_not_found');
     }
 
     const mergedKind = input.kind ?? existing.kind;
@@ -177,7 +178,7 @@ export class FeaturedSlotsService {
   async deleteSlot(actorId: string, id: string): Promise<void> {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('Featured slot not found');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'platform.featured.slot_not_found');
     }
     await this.repo.delete(id);
     await this.writeAudit('featured.delete', actorId, id, {
@@ -201,8 +202,9 @@ export class FeaturedSlotsService {
       uniqueProvidedIds.size === existingIds.size &&
       orderedIds.every((id) => existingIds.has(id));
     if (!isExactPermutation) {
-      throw new BadRequestException(
-        'orderedIds must correspond one-to-one with all slots under this placement (no missing/extra/duplicate)',
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.featured.ordered_ids_must_match_slots',
       );
     }
 

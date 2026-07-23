@@ -50,7 +50,12 @@
     "actions": "Actions",
     "none": "Aucun",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "like": "J’aime",
+    "favorite": "Favori",
+    "share": "Partager",
+    "jsonEmpty": "Le JSON est vide",
+    "invalidJson": "JSON invalide"
   },
   "aiUi": {
     "selected": "Sélectionné",
@@ -72,7 +77,10 @@
     "noData": "Aucune donnée",
     "loading": "Chargement",
     "actionMessage": "[Action : {action}]",
-    "serverError": "Le serveur a renvoyé une erreur"
+    "serverError": "Le serveur a renvoyé une erreur",
+    "thinking": "Réflexion…",
+    "thoughtForSeconds": "Réflexion pendant {seconds} secondes",
+    "thoughtForAFewSeconds": "Réflexion de quelques secondes"
   },
   "sidebar": {
     "newSession": "Nouvelle session",
@@ -124,7 +132,10 @@
     "inviteFriends": "Inviter des amis",
     "docs": "Documentation",
     "upgrade": "Améliorer l'abonnement",
-    "gallery": "Galerie"
+    "gallery": "Galerie",
+    "mobileTitle": "Barre latérale",
+    "mobileDescription": "Affiche la barre latérale mobile.",
+    "toggle": "Basculer la barre latérale"
   },
   "notification": {
     "title": "Notifications",

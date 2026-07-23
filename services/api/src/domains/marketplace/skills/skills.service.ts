@@ -1,4 +1,5 @@
-import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import type { ErrorCode } from '@autix/domain';
 import {
   TemplateStatus,
   ResourceType,
@@ -73,10 +74,12 @@ export class SkillsService extends BaseResourceService {
 
     // SUSPECTED_DESKTOP 必须由作者显式选择 → 强制要求 runtimeRequirement
     if (detection.level === 'SUSPECTED_DESKTOP' && !dto.runtimeRequirement) {
-      throw new BadRequestException({
-        code: 'SUSPECTED_DESKTOP',
-        message: detection.reason,
-      });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'skill.suspected_desktop_requires_runtime',
+        undefined,
+        { code: 'SUSPECTED_DESKTOP' as ErrorCode, data: { reason: detection.reason } },
+      );
     }
 
     const runtimeRequirement =
@@ -159,10 +162,12 @@ export class SkillsService extends BaseResourceService {
         >,
       });
       if (detection.level === 'SUSPECTED_DESKTOP' && !dto.runtimeRequirement) {
-        throw new BadRequestException({
-          code: 'SUSPECTED_DESKTOP',
-          message: detection.reason,
-        });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'skill.suspected_desktop_requires_runtime',
+          undefined,
+          { code: 'SUSPECTED_DESKTOP' as ErrorCode, data: { reason: detection.reason } },
+        );
       }
       data.runtimeRequirement = (dto.runtimeRequirement ??
         detection.level) as RuntimeReq;

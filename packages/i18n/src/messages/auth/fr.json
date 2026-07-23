@@ -250,7 +250,10 @@
       "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "La confirmation du nom d'utilisateur ne correspond pas",
       "PROVIDER_REAUTH_UNSUPPORTED": "Votre méthode de connexion actuelle ne permet pas de se ré-authentifier ici",
       "CONTACT_SUPPORT": "Veuillez contacter l'assistance"
-    }
+    },
+    "modalA11yTitle": "Connexion à Amux Studio",
+    "modalA11yDescription": "Connectez-vous ou créez un compte pour continuer.",
+    "creativeHighlights": "Points forts créatifs"
   },
   "login": {
     "console": "Console d'administration",

@@ -130,7 +130,8 @@
       "onboardCtaClaim": "Nhận",
       "onboardCtaClaimed": "Đã nhận",
       "prev": "Trước",
-      "next": "Tiếp"
+      "next": "Tiếp",
+      "badgeNew": "Mới"
     },
     "promoBar": {
       "discountBadge": "Giảm {percent}%",
@@ -404,7 +405,9 @@
         "pause": "Tạm dừng",
         "mediaTypeFull": "Mô hình này chỉ nhận tối đa {max} tệp {type}",
         "ratioFromImage": "Tỷ lệ theo ảnh",
-        "ratioFromImageHint": "Mô hình này lấy tỷ lệ khung hình từ ảnh đầu tiên, nên thiết lập ở đây không có tác dụng."
+        "ratioFromImageHint": "Mô hình này lấy tỷ lệ khung hình từ ảnh đầu tiên, nên thiết lập ở đây không có tác dụng.",
+        "selectedCount": "Đã chọn {count}",
+        "premium": "Cao cấp"
       },
       "privateFirst": "Ưu tiên riêng tư",
       "createPrivately": "Tạo tại đây",
@@ -1278,6 +1281,23 @@
     "videoDirectorEyebrow": "Đạo diễn AI",
     "videoTemplatesEyebrow": "Mẫu video",
     "videoQuickEyebrow": "Bắt đầu nhanh",
-    "videoQuickSelectedTemplate": "Mẫu đã chọn"
+    "videoQuickSelectedTemplate": "Mẫu đã chọn",
+    "workflowCreationFlow": "Quy trình sáng tạo",
+    "workflowTimelineLabel": "Dòng thời gian không gian làm việc",
+    "workflowStepsBadge": "{count} bước",
+    "workflowPreviewLabel": "Xem trước",
+    "workflowPreviewHeading": "Video + Sản phẩm",
+    "workflowContextTitle": "Trò chuyện lưu giữ ngữ cảnh",
+    "ctaStartBuilding": "Bắt đầu tạo",
+    "pricingMembershipLabel": "Thành viên",
+    "mktLivePreviewBadge": "Trực tiếp",
+    "featuresProductOs": "Hệ điều hành sản phẩm",
+    "featuresLiveWorkspace": "Không gian làm việc trực tiếp",
+    "featuresDirectorTitle": "Đạo diễn AI",
+    "heroVideoLabel": "Xưởng video",
+    "showcaseConsoleEyebrow": "Bảng điều khiển studio",
+    "showcaseLiveBadge": "Trực tiếp",
+    "testimonialsFeedbackTag": "Phản hồi",
+    "videoHeroEyebrow": "Xưởng sản xuất video"
   }
 }

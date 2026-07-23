@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { ImageUpstreamError } from '@autix/ai-adapters/image';
 import type { ParamsSchema } from '@autix/domain/pricing';
 import {
@@ -335,11 +336,11 @@ describe('buildUnsupportedImageParamsException', () => {
       }),
     );
 
-    expect(exception).toBeInstanceOf(BadRequestException);
+    expect(exception).toBeInstanceOf(I18nHttpException);
     expect(exception.getStatus()).toBe(400);
-    expect(exception.getResponse()).toMatchObject({
+    expect(exception.i18nKey).toBe('creation.image_gen.params_not_supported');
+    expect((exception.getResponse() as { data: unknown }).data).toMatchObject({
       errorCode: 'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
-      message: expect.stringContaining('The current model does not support the selected parameters'),
       details: {
         model: 'gemini-3-pro-image',
         protocolKey: 'openai-images@v1',

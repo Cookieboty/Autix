@@ -50,7 +50,12 @@
     "actions": "Thao tác",
     "none": "Không có",
     "yes": "Có",
-    "no": "Không"
+    "no": "Không",
+    "like": "Thích",
+    "favorite": "Yêu thích",
+    "share": "Chia sẻ",
+    "jsonEmpty": "JSON trống",
+    "invalidJson": "JSON không hợp lệ"
   },
   "aiUi": {
     "selected": "Đã chọn",
@@ -72,7 +77,10 @@
     "noData": "Không có dữ liệu",
     "loading": "Đang tải",
     "actionMessage": "[Thao tác: {action}]",
-    "serverError": "Máy chủ trả về lỗi"
+    "serverError": "Máy chủ trả về lỗi",
+    "thinking": "Đang suy nghĩ…",
+    "thoughtForSeconds": "Đã suy nghĩ {seconds} giây",
+    "thoughtForAFewSeconds": "Đã suy nghĩ vài giây"
   },
   "sidebar": {
     "newSession": "Phiên mới",
@@ -124,7 +132,10 @@
     "docs": "Tài liệu",
     "myTemplates": "Mẫu của tôi",
     "upgrade": "Nâng cấp thành viên",
-    "gallery": "Thư viện"
+    "gallery": "Thư viện",
+    "mobileTitle": "Thanh bên",
+    "mobileDescription": "Hiển thị thanh bên trên thiết bị di động.",
+    "toggle": "Bật/tắt thanh bên"
   },
   "notification": {
     "title": "Thông báo",

@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import {
   assertImageHardLimits,
   IMAGE_RISK_HARD_LIMITS,
@@ -33,13 +33,27 @@ describe('assertImageHardLimits', () => {
   });
 
   it('rejects a resolution above the absolute pixel ceiling', () => {
-    expect(() => assertImageHardLimits({ size: '8192x8192', count: 1 })).toThrow(BadRequestException);
+    let captured: unknown;
+    try {
+      assertImageHardLimits({ size: '8192x8192', count: 1 });
+    } catch (err) {
+      captured = err;
+    }
+    expect(captured).toBeInstanceOf(I18nHttpException);
+    expect((captured as I18nHttpException).getStatus()).toBe(400);
+    expect((captured as I18nHttpException).i18nKey).toBe('creation.image_gen.resolution_hard_limit');
   });
 
   it('rejects a count above the hard cap', () => {
-    expect(() =>
-      assertImageHardLimits({ size: '512x512', count: IMAGE_RISK_HARD_LIMITS.maxCount + 1 }),
-    ).toThrow(BadRequestException);
+    let captured: unknown;
+    try {
+      assertImageHardLimits({ size: '512x512', count: IMAGE_RISK_HARD_LIMITS.maxCount + 1 });
+    } catch (err) {
+      captured = err;
+    }
+    expect(captured).toBeInstanceOf(I18nHttpException);
+    expect((captured as I18nHttpException).getStatus()).toBe(400);
+    expect((captured as I18nHttpException).i18nKey).toBe('creation.image_gen.count_hard_limit');
   });
 
   it('does not throw for unknown size (cannot enforce pixels)', () => {

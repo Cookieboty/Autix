@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import {
   quoteTask,
   validateParamsSchema,
@@ -107,7 +108,7 @@ export class PricingConfigAdminService {
 
   async getModel(modelConfigId: string) {
     const model = await this.repo.findModelConfig(modelConfigId);
-    if (!model) throw new NotFoundException(`Model configuration not found: ${modelConfigId}`);
+    if (!model) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'pricing.model_config_not_found', { modelConfigId });
     return model;
   }
 
@@ -121,7 +122,7 @@ export class PricingConfigAdminService {
       paramsSchema: paramsSchema as unknown as Prisma.InputJsonValue,
       pricingSchema: pricingSchema as unknown as Prisma.InputJsonValue,
     });
-    if (!updated) throw new NotFoundException(`Model configuration not found: ${modelConfigId}`);
+    if (!updated) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'pricing.model_config_not_found', { modelConfigId });
     return updated;
   }
 
@@ -132,7 +133,7 @@ export class PricingConfigAdminService {
       modelConfigId,
       candidate as unknown as Prisma.InputJsonValue,
     );
-    if (!updated) throw new NotFoundException(`Model configuration not found: ${modelConfigId}`);
+    if (!updated) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'pricing.model_config_not_found', { modelConfigId });
     return updated;
   }
 
@@ -178,7 +179,9 @@ export class PricingConfigAdminService {
       ...validateParamsSchema(paramsCandidate, pricingCandidate),
     ];
     if (violations.length > 0) {
-      throw new BadRequestException({ message: 'schema validation failed', violations });
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.schema_validation_failed', undefined, {
+        data: { violations },
+      });
     }
 
     return { paramsSchema: paramsCandidate, pricingSchema: pricingCandidate };
@@ -189,10 +192,12 @@ export class PricingConfigAdminService {
     const candidate = raw as unknown as LocalizedText;
     const badLocales = validateDescription(candidate);
     if (badLocales.length > 0) {
-      throw new BadRequestException({
-        message: `description contains unsupported locales: ${badLocales.join(', ')}`,
-        violations: badLocales,
-      });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'admin.pricing.description_unsupported_locales',
+        { locales: badLocales.join(', ') },
+        { data: { violations: badLocales } },
+      );
     }
     return candidate;
   }
@@ -272,7 +277,9 @@ export class PricingConfigAdminService {
     const candidate = raw as unknown as PricingSchema;
     const violations = validatePricingSchema(candidate);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: 'fixedCostSchema validation failed', violations });
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.fixed_cost_schema_validation_failed', undefined, {
+        data: { violations },
+      });
     }
     return candidate;
   }
@@ -344,7 +351,7 @@ export class PricingConfigAdminService {
   /** multiplier is Decimal(6,3): a zero or negative multiplier would price every call at 0 or negative. */
   private assertPositiveFiniteMultiplier(multiplier: number) {
     if (!Number.isFinite(multiplier) || multiplier <= 0) {
-      throw new BadRequestException(`multiplier must be a positive number: ${multiplier}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.multiplier_positive', { multiplier });
     }
   }
 
@@ -358,12 +365,10 @@ export class PricingConfigAdminService {
   private async assertModelIsPriceable(modelConfigId: string) {
     const model = await this.repo.findModelConfig(modelConfigId);
     if (!model) {
-      throw new NotFoundException(`Model configuration not found: ${modelConfigId}`);
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'pricing.model_config_not_found', { modelConfigId });
     }
     if (model.pricingSchema === null) {
-      throw new BadRequestException(
-        `Model has no pricingSchema configured and cannot be bound: ${modelConfigId}`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'pricing.model_missing_pricing_schema', { modelConfigId });
     }
   }
 
@@ -389,18 +394,19 @@ export class PricingConfigAdminService {
     const model = await this.repo.findModelConfig(modelConfigId);
     const protocolKey = readProtocolKey(model?.metadata);
     if (!protocolKey) {
-      throw new BadRequestException(
-        `Task ${taskType} (${media}) requires the model to declare metadata.protocolKey`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'pricing.protocol_key_missing', { taskType, media });
     }
     const entry = tryResolveAnyPreset(protocolKey);
     if (!entry) {
-      throw new BadRequestException(`Unknown protocolKey: ${protocolKey}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'pricing.protocol_key_unknown', { protocolKey });
     }
     if (entry.media !== media) {
-      throw new BadRequestException(
-        `Media mismatch: task ${taskType} (${media}) cannot bind a model with ${entry.media} protocol (${protocolKey})`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'pricing.media_mismatch', {
+        taskType,
+        taskMedia: media,
+        modelMedia: entry.media,
+        protocolKey,
+      });
     }
   }
 
@@ -490,7 +496,7 @@ export class PricingConfigAdminService {
    */
   private assertPositiveFiniteFactor(factor: number) {
     if (!Number.isFinite(factor) || factor <= 0) {
-      throw new BadRequestException(`factor must be a positive number: ${factor}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.factor_positive', { factor });
     }
   }
 
@@ -505,20 +511,18 @@ export class PricingConfigAdminService {
    */
   private narrowDiscountScope(raw: unknown): AdminDiscountScope {
     if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-      throw new BadRequestException('scope must be an object');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.scope_must_be_object');
     }
     const candidate = raw as Record<string, unknown>;
 
     if (candidate.membershipLevelNumbers !== undefined && !this.isNumberArray(candidate.membershipLevelNumbers)) {
-      throw new BadRequestException(
-        'scope.membershipLevelNumbers must be number[] (membership level numbers, not cuid strings)',
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.scope_membership_level_numbers');
     }
     if (candidate.taskTypes !== undefined && !this.isStringArray(candidate.taskTypes)) {
-      throw new BadRequestException('scope.taskTypes must be string[]');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.scope_task_types');
     }
     if (candidate.modelConfigIds !== undefined && !this.isStringArray(candidate.modelConfigIds)) {
-      throw new BadRequestException('scope.modelConfigIds must be string[]');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.scope_model_config_ids');
     }
 
     return candidate as AdminDiscountScope;
@@ -547,7 +551,7 @@ export class PricingConfigAdminService {
     const effectiveTo = toRaw === undefined ? undefined : toRaw === null ? null : new Date(toRaw);
 
     if (effectiveFrom instanceof Date && effectiveTo instanceof Date && effectiveFrom >= effectiveTo) {
-      throw new BadRequestException('effectiveFrom must be earlier than effectiveTo');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.pricing.effective_order');
     }
 
     return { effectiveFrom, effectiveTo };

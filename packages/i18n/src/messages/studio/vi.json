@@ -150,7 +150,8 @@
       "add": "Thêm",
       "loading": "Đang tải...",
       "empty": "Chưa kích hoạt Skill nào cho phiên này",
-      "remove": "Xóa"
+      "remove": "Xóa",
+      "skillsAndMcp": "Kỹ năng / MCP"
     },
     "resourceLauncher": {
       "addResource": "+ Thêm tài nguyên",
@@ -214,7 +215,8 @@
       "executeAction": "Thực hiện thao tác: {action}"
     },
     "unknownError": "Lỗi không xác định",
-    "dismiss": "Bỏ qua"
+    "dismiss": "Bỏ qua",
+    "openActions": "Mở thao tác"
   },
   "template": {
     "discover": "Khám phá",
@@ -324,7 +326,9 @@
     "importFailed": "Thất bại: {count}",
     "importSkipped": "Bỏ qua: {count}",
     "templatesFound": "Tìm thấy {count} mẫu",
-    "viewSource": "Xem nguồn"
+    "viewSource": "Xem nguồn",
+    "headerHot": "Nổi bật",
+    "prompt": "Câu lệnh"
   },
   "imageUploader": {
     "defaultLabel": "Nhấn hoặc kéo thả để tải lên hình ảnh",
@@ -1354,7 +1358,8 @@
       "useInChat": "Dùng trong trò chuyện",
       "useInChatAria": "Dùng mẫu {title} trong trò chuyện",
       "useInWorkbench": "Bàn làm việc",
-      "useInWorkbenchAria": "Áp dụng {title} vào bàn làm việc chuyên nghiệp"
+      "useInWorkbenchAria": "Áp dụng {title} vào bàn làm việc chuyên nghiệp",
+      "toolCount": "{count} công cụ"
     },
     "sidebar": {
       "home": "Đề xuất",
@@ -1499,7 +1504,9 @@
         "platform": "Nền tảng",
         "externalId": "ID bên ngoài",
         "originalLink": "Liên kết gốc"
-      }
+      },
+      "byAuthor": "bởi {author}",
+      "promptTitle": "Câu lệnh"
     }
   },
   "videoShare": {

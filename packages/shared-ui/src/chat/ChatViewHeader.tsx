@@ -1,12 +1,14 @@
 'use client';
 
 import { PanelLeftIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export function ChatViewHeader({
   onToggleSidebar,
 }: {
   onToggleSidebar?: () => void;
 }) {
+  const t = useTranslations('sidebar');
   return (
     <header className="z-30 flex h-12 w-full min-w-0 shrink-0 items-center gap-2 border-b border-white/10 bg-black/12 px-3">
       {onToggleSidebar && (
@@ -16,7 +18,7 @@ export function ChatViewHeader({
           onClick={onToggleSidebar}
         >
           <PanelLeftIcon className="size-4" />
-          <span className="sr-only">Toggle Sidebar</span>
+          <span className="sr-only">{t('toggle')}</span>
         </button>
       )}
     </header>

@@ -13,3 +13,4 @@ mcp.update_forbidden: "Нет прав на изменение этого MCP-с
 acquisition.type_unsupported: "Тип ресурса {{type}} не поддерживает единоразовое получение (только SKILL, MCP, AGENT)"
 acquisition.already_owned: "Ресурс уже получен"
 acquisition.resource_not_found: "Ресурс не найден"
+skill.suspected_desktop_requires_runtime: "Похоже, этому навыку требуется настольная среда выполнения; явно укажите требование к среде выполнения."

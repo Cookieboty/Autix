@@ -35,6 +35,7 @@ const FEATURE_ICONS: Record<ImageNavFeatureKey, LucideIcon> = {
  */
 export function ImageNavFlyout({ children }: { children: ReactNode }) {
   const t = useTranslations('publicGrowth.imageNavFlyout');
+  const tShared = useTranslations('publicGrowth.generator.studio');
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   const models = useImageNavModels();
@@ -128,7 +129,7 @@ export function ImageNavFlyout({ children }: { children: ReactNode }) {
                 badge={
                   isPremium(model) ? (
                     <span className="shrink-0 rounded bg-growth-accent px-1.5 py-0.5 text-[10px] font-black uppercase italic text-background">
-                      Premium
+                      {tShared('premium')}
                     </span>
                   ) : undefined
                 }

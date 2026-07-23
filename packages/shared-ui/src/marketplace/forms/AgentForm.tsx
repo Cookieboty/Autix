@@ -85,11 +85,11 @@ function WorkflowStepEditor({
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <TextField
-              label="Step Key"
+              label={t('workflowStepKey')}
               required
               value={step.stepKey}
               onChange={(v) => onUpdate({ stepKey: v })}
-              placeholder="e.g. prd, visual_design"
+              placeholder={t('workflowStepKeyPlaceholder')}
             />
             <TextField
               label={t('workflowDisplayName')}
@@ -135,7 +135,7 @@ function WorkflowStepEditor({
                   .filter((s) => s && allStepKeys.includes(s) && s !== step.stepKey),
               })
             }
-            placeholder="e.g. prd, visual_design"
+            placeholder={t('workflowStepKeyPlaceholder')}
           />
 
           <TextAreaField
@@ -167,7 +167,7 @@ function WorkflowStepEditor({
 
           {step.criticEnabled && (
             <TextAreaField
-              label="Critic Prompt"
+              label={t('workflowCriticPromptLabel')}
               value={step.criticPromptTemplate ?? ''}
               onChange={(v) => onUpdate({ criticPromptTemplate: v })}
               rows={4}

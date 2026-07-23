@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Bell, Check, FileText, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useAuthStore, useTaskStore, type TaskEvent } from '@autix/shared-store';
 import { relativeTime } from '../format';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 export function GrowthNotificationMenu({ compact = false }: { compact?: boolean } = {}) {
   const t = useTranslations('publicGrowth.notifications');
   const tNotification = useTranslations('notification');
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
 
   const hydrated = useAuthStore((state) => state.hydrated);
@@ -130,7 +131,7 @@ export function GrowthNotificationMenu({ compact = false }: { compact?: boolean 
                       )}
                     </span>
                     <span className="mt-0.5 block text-xs text-foreground/45">
-                      {relativeTime(event.createdAt)}
+                      {relativeTime(event.createdAt, locale)}
                     </span>
                   </span>
                 </button>

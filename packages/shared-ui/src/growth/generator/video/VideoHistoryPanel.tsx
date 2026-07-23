@@ -487,14 +487,14 @@ export function VideoHistoryPanel({
                 })}
               </span>
             ) : null}
-            {selectedIds.size} selected
+            {t('selectedCount', { count: selectedIds.size })}
           </span>
           <button
             type="button"
             onClick={downloadSelected}
             className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-foreground/85 transition hover:bg-white/5"
           >
-            <Download className="size-4" /> Download
+            <Download className="size-4" /> {t('download')}
           </button>
           <button
             type="button"

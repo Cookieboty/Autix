@@ -1,4 +1,4 @@
-import { BadRequestException, HttpStatus } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import {
   PointGrantType,
   Prisma,
@@ -292,7 +292,7 @@ function assertRequired(input: Record<string, unknown>, fields: string[]) {
       input[field] === null ||
       input[field] === ''
     ) {
-      throw new BadRequestException(`Missing required field: ${field}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.missing_required', { field });
     }
   }
 }
@@ -303,11 +303,11 @@ function has(input: Record<string, unknown>, field: string) {
 
 function requiredString(value: unknown, field: string) {
   if (typeof value !== 'string') {
-    throw new BadRequestException(`${field} must be a string`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_be_string', { field });
   }
   const trimmed = value.trim();
   if (!trimmed) {
-    throw new BadRequestException(`${field} must not be empty`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_not_be_empty', { field });
   }
   return trimmed;
 }
@@ -315,7 +315,7 @@ function requiredString(value: unknown, field: string) {
 function nullableString(value: unknown, field: string) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value !== 'string') {
-    throw new BadRequestException(`${field} must be a string`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_be_string', { field });
   }
   const trimmed = value.trim();
   return trimmed || null;
@@ -324,7 +324,7 @@ function nullableString(value: unknown, field: string) {
 function nonNegativeInt(value: unknown, field: string) {
   const n = Number(value);
   if (!Number.isInteger(n) || n < 0) {
-    throw new BadRequestException(`${field} must be a non-negative integer`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_be_nonneg_int', { field });
   }
   return n;
 }
@@ -332,28 +332,28 @@ function nonNegativeInt(value: unknown, field: string) {
 function positiveInt(value: unknown, field: string) {
   const n = Number(value);
   if (!Number.isInteger(n) || n < 1) {
-    throw new BadRequestException(`${field} must be a positive integer`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_be_positive_int', { field });
   }
   return n;
 }
 
 function nonNegativeDecimal(value: unknown, field: string) {
   if (value === null || value === undefined || value === '') {
-    throw new BadRequestException(`${field} must not be empty`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_not_be_empty', { field });
   }
   if (typeof value !== 'string' && typeof value !== 'number') {
-    throw new BadRequestException(`${field} must be a monetary amount`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_be_monetary', { field });
   }
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) {
-    throw new BadRequestException(`${field} must be a non-negative amount`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_be_nonneg_amount', { field });
   }
   return typeof value === 'string' ? value.trim() : value;
 }
 
 function boolean(value: unknown, field: string) {
   if (typeof value !== 'boolean') {
-    throw new BadRequestException(`${field} must be a boolean`);
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'admin.field.must_be_boolean', { field });
   }
   return value;
 }

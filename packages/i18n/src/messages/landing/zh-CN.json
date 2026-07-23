@@ -320,7 +320,24 @@
     "videoDirectorEyebrow": "AI 导演",
     "videoTemplatesEyebrow": "视频模板",
     "videoQuickEyebrow": "快速开始",
-    "videoQuickSelectedTemplate": "已选模板"
+    "videoQuickSelectedTemplate": "已选模板",
+    "workflowCreationFlow": "创作流程",
+    "workflowTimelineLabel": "工作区时间线",
+    "workflowStepsBadge": "{count} 步",
+    "workflowPreviewLabel": "预览",
+    "workflowPreviewHeading": "视频 + 产品",
+    "workflowContextTitle": "对话保留上下文",
+    "ctaStartBuilding": "开始创作",
+    "pricingMembershipLabel": "会员",
+    "mktLivePreviewBadge": "实时",
+    "featuresProductOs": "产品操作系统",
+    "featuresLiveWorkspace": "实时工作台",
+    "featuresDirectorTitle": "AI 导演",
+    "heroVideoLabel": "视频工作室",
+    "showcaseConsoleEyebrow": "工作室控制台",
+    "showcaseLiveBadge": "实时",
+    "testimonialsFeedbackTag": "用户反馈",
+    "videoHeroEyebrow": "视频产品工作室"
   },
   "publicGrowth": {
     "nav": {
@@ -453,7 +470,8 @@
       "onboardCtaClaim": "领取",
       "onboardCtaClaimed": "已领取",
       "prev": "上一个",
-      "next": "下一个"
+      "next": "下一个",
+      "badgeNew": "新"
     },
     "promoBar": {
       "discountBadge": "立减 {percent}%",
@@ -727,7 +745,9 @@
         "pause": "暂停",
         "mediaTypeFull": "该模型最多可选 {max} 个{type}",
         "ratioFromImage": "比例随图",
-        "ratioFromImageHint": "该模型以首帧图片的画幅为准，此处的比例设置不会生效。"
+        "ratioFromImageHint": "该模型以首帧图片的画幅为准，此处的比例设置不会生效。",
+        "selectedCount": "已选 {count} 个",
+        "premium": "高级"
       },
       "privateFirst": "默认私有",
       "createPrivately": "当前页创作",

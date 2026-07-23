@@ -150,7 +150,8 @@
       "add": "追加",
       "loading": "読み込み中...",
       "empty": "このセッションで有効な Skills はありません",
-      "remove": "削除"
+      "remove": "削除",
+      "skillsAndMcp": "スキル / MCP"
     },
     "resourceLauncher": {
       "addResource": "+ リソースを追加",
@@ -214,7 +215,8 @@
       "executeAction": "操作を実行: {action}"
     },
     "unknownError": "不明なエラー",
-    "dismiss": "閉じる"
+    "dismiss": "閉じる",
+    "openActions": "アクションを開く"
   },
   "template": {
     "discover": "発見",
@@ -324,7 +326,9 @@
     "importFailed": "失敗：{count} 件",
     "importSkipped": "スキップ：{count} 件",
     "templatesFound": "{count} 件のテンプレートが見つかりました",
-    "viewSource": "ソースを表示"
+    "viewSource": "ソースを表示",
+    "headerHot": "人気",
+    "prompt": "プロンプト"
   },
   "imageUploader": {
     "defaultLabel": "クリックまたはドラッグして画像をアップロード",
@@ -1354,7 +1358,8 @@
       "useInChat": "チャットで使う",
       "useInChatAria": "テンプレート {title} をチャットで使う",
       "useInWorkbench": "ワークベンチ",
-      "useInWorkbenchAria": "{title} をプロフェッショナルワークベンチに適用"
+      "useInWorkbenchAria": "{title} をプロフェッショナルワークベンチに適用",
+      "toolCount": "ツール {count} 個"
     },
     "sidebar": {
       "home": "おすすめ",
@@ -1499,7 +1504,9 @@
         "platform": "プラットフォーム",
         "externalId": "外部 ID",
         "originalLink": "元リンク"
-      }
+      },
+      "byAuthor": "作成者 {author}",
+      "promptTitle": "プロンプト"
     }
   },
   "videoShare": {

@@ -1,5 +1,6 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import type { FeaturedSlot, ResolvedFeaturedSlot } from '@autix/domain';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 
 /** 来源资源在运营位展示所需的字段（模板/广场作品解析后传入）。 */
 export interface FeaturedSlotSource {
@@ -37,14 +38,18 @@ export function assertFeaturedSlot(
 ): void {
   if (slot.kind === 'RESOURCE') {
     if (!slot.resourceType || !slot.resourceId) {
-      throw new BadRequestException(
-        'kind=RESOURCE must provide resourceType + resourceId',
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.featured.resource_kind_requires_type_id',
       );
     }
     return;
   }
   // CUSTOM
   if (slot.resourceType || slot.resourceId) {
-    throw new BadRequestException('kind=CUSTOM must not carry resourceType/resourceId');
+    throw new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'platform.featured.custom_kind_forbids_type_id',
+    );
   }
 }

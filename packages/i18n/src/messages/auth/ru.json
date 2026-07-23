@@ -250,7 +250,10 @@
       "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "Подтверждение имени пользователя не совпадает",
       "PROVIDER_REAUTH_UNSUPPORTED": "Ваш текущий способ входа не позволяет пройти повторную аутентификацию здесь",
       "CONTACT_SUPPORT": "Обратитесь в поддержку"
-    }
+    },
+    "modalA11yTitle": "Вход в Amux Studio",
+    "modalA11yDescription": "Войдите или создайте аккаунт, чтобы продолжить.",
+    "creativeHighlights": "Творческие моменты"
   },
   "login": {
     "console": "Консоль администратора",

@@ -66,7 +66,7 @@ export function TemplateImportDialog({
       const json = JSON.parse(text);
       const items = Array.isArray(json) ? json : [json];
       if (items.length === 0) {
-        setError('JSON is empty');
+        setError(tCommon('jsonEmpty'));
         return;
       }
       setAllItems(items);
@@ -74,7 +74,7 @@ export function TemplateImportDialog({
       setError('');
       setStep('select');
     } catch {
-      setError('Invalid JSON');
+      setError(tCommon('invalidJson'));
     }
   }, []);
 

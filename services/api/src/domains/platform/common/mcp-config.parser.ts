@@ -1,5 +1,6 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import { McpTransport } from '../prisma/generated';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -35,7 +36,7 @@ function inferTransport(server: JsonRecord): McpTransport {
   const url = asString(server.url);
   if (url?.includes('/sse')) return McpTransport.sse;
   if (url) return McpTransport.http;
-  throw new BadRequestException('MCP config is missing command or url');
+  throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.mcp.missing_command_or_url');
 }
 
 function sanitizeValue(key: string, value: unknown) {
@@ -89,26 +90,28 @@ function pickServer(rawConfig: unknown, preferredName?: string): {
   server: JsonRecord;
 } {
   if (!isRecord(rawConfig)) {
-    throw new BadRequestException('MCP config must be a JSON object');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.mcp.not_json_object');
   }
 
   if (isRecord(rawConfig.mcpServers)) {
     const servers = rawConfig.mcpServers;
     const names = Object.keys(servers);
     if (names.length === 0) {
-      throw new BadRequestException('mcpServers cannot be empty');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.mcp.servers_empty');
     }
     const serverName = preferredName && servers[preferredName] ? preferredName : names[0];
     const server = servers[serverName];
     if (!isRecord(server)) {
-      throw new BadRequestException(`MCP server ${serverName} must be an object`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.mcp.server_must_be_object', {
+        serverName,
+      });
     }
     return { serverName, server };
   }
 
   const serverName = preferredName ?? asString(rawConfig.name) ?? asString(rawConfig.serverName);
   if (!serverName) {
-    throw new BadRequestException('Single-server MCP config requires name/serverName');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.mcp.single_server_requires_name');
   }
   return { serverName, server: rawConfig };
 }

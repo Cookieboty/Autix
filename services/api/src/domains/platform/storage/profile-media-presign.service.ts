@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { AppLogger } from '../common/app-logger';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudflareR2Service } from './cloudflare-r2.service';
 import {
@@ -51,11 +52,16 @@ export class ProfileMediaPresignService {
   ): Promise<AvatarPresignResult> {
     const spec = MEDIA_KINDS[kind];
     if (!spec.limits.allowedContentTypes.includes(input.contentType as never)) {
-      throw new BadRequestException(`Unsupported ${spec.label} upload type: ${input.contentType}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.upload.unsupported_type', {
+        label: spec.label,
+        contentType: input.contentType,
+      });
     }
     // DTO 已按 kind 校验体积，这里兜底一次（深度防御：别的调用方绕过 DTO 时仍成立）
     if (input.sizeBytes > spec.limits.maxSizeBytes) {
-      throw new BadRequestException(`${spec.label} exceeds the size limit`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.upload.size_limit_exceeded', {
+        label: spec.label,
+      });
     }
 
     // 走 R2 presign：folder 强制拼进 userId，保证 keyBelongsToOwner 分段校验成立

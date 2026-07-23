@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import {
   resolveImageOperation,
   resolveImagePreset,
@@ -235,18 +236,24 @@ export function toImageUrlOrDataUri(artifact: ImageArtifact): string {
 export function buildUnsupportedImageParamsException(
   request: ResolvedImageRequest,
   error: ImageUpstreamError,
-): BadRequestException {
+): I18nHttpException {
   const metadata = readImageModelMetadata(request.modelConfig.metadata);
-  return new BadRequestException({
-    errorCode: 'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
-    message: `The current model does not support the selected parameters. Try a different size or quality. (${request.modelConfig.model})`,
-    details: {
-      model: request.modelConfig.model,
-      protocolKey: metadata.protocolKey,
-      httpStatus: error.httpStatus,
-      upstreamError: error.message,
+  return new I18nHttpException(
+    HttpStatus.BAD_REQUEST,
+    'creation.image_gen.params_not_supported',
+    { model: request.modelConfig.model },
+    {
+      data: {
+        errorCode: 'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
+        details: {
+          model: request.modelConfig.model,
+          protocolKey: metadata.protocolKey,
+          httpStatus: error.httpStatus,
+          upstreamError: error.message,
+        },
+      },
     },
-  });
+  );
 }
 
 /**

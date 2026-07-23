@@ -1,5 +1,6 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import { load as parseYaml } from 'js-yaml';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 
 export interface ParsedSkillMarkdown {
   frontmatter: Record<string, unknown>;
@@ -25,7 +26,7 @@ function stringList(value: unknown): string[] | undefined {
 
 export function parseSkillMarkdown(rawMarkdown: string): ParsedSkillMarkdown {
   const source = rawMarkdown.trim();
-  if (!source) throw new BadRequestException('SKILL.md content cannot be empty');
+  if (!source) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.skill.content_empty');
 
   const match = source.match(FRONTMATTER_RE);
   let frontmatter: Record<string, unknown> = {};
@@ -35,15 +36,17 @@ export function parseSkillMarkdown(rawMarkdown: string): ParsedSkillMarkdown {
     try {
       frontmatter = asRecord(parseYaml(match[1]) ?? {});
     } catch (error) {
-      throw new BadRequestException(
-        `SKILL.md frontmatter parsing failed: ${(error as Error).message}`,
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.skill.frontmatter_parse_failed',
+        { reason: (error as Error).message },
       );
     }
     instructions = source.slice(match[0].length).trim();
   }
 
   if (!instructions) {
-    throw new BadRequestException('SKILL.md must contain body instructions');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'platform.skill.body_required');
   }
 
   return {

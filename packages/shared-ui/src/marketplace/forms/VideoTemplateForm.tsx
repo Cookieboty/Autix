@@ -156,7 +156,7 @@ export function VideoTemplateForm({ onSaved }: Props) {
         description={t('imagePromptDescription')}
       >
         <TextAreaField
-          label="Prompt"
+          label={t('promptLabel')}
           required
           value={prompt}
           onChange={setPrompt}

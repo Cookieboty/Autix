@@ -150,7 +150,8 @@
       "add": "Add",
       "loading": "Loading...",
       "empty": "No Skills activated for this session",
-      "remove": "Remove"
+      "remove": "Remove",
+      "skillsAndMcp": "Skills / MCP"
     },
     "resourceLauncher": {
       "addResource": "+ Add Resource",
@@ -214,7 +215,8 @@
       "executeAction": "Execute action: {action}"
     },
     "unknownError": "Unknown error",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "openActions": "Open actions"
   },
   "template": {
     "discover": "Discover",
@@ -337,7 +339,9 @@
     "importFailed": "Failed: {count}",
     "importSkipped": "Skipped: {count}",
     "templatesFound": "{count} templates found",
-    "viewSource": "View Source"
+    "viewSource": "View Source",
+    "headerHot": "Hot",
+    "prompt": "Prompt"
   },
   "imageUploader": {
     "defaultLabel": "Click or drag to upload image",
@@ -1367,7 +1371,8 @@
       "useInChat": "Use in chat",
       "useInChatAria": "Use template {title} in chat",
       "useInWorkbench": "Workbench",
-      "useInWorkbenchAria": "Apply {title} to the professional workbench"
+      "useInWorkbenchAria": "Apply {title} to the professional workbench",
+      "toolCount": "{count} tools"
     },
     "sidebar": {
       "home": "Recommended",
@@ -1512,7 +1517,9 @@
         "platform": "Platform",
         "externalId": "External ID",
         "originalLink": "Original link"
-      }
+      },
+      "byAuthor": "by {author}",
+      "promptTitle": "Prompt"
     }
   },
   "videoShare": {

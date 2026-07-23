@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import {
   GalleryKind,
   GalleryStatus,
@@ -29,7 +30,7 @@ export class GalleryTemplateConversionService {
   async convertToTemplate(adminId: string, galleryId: string) {
     const gallery = await this.repo.findById(galleryId);
     if (!gallery) {
-      throw new NotFoundException('Post not found');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.post.not_found');
     }
 
     // 幂等无条件优先于状态门禁：已转换过的作品直接返回既有模板，无论其当前状态/kind。
@@ -44,10 +45,10 @@ export class GalleryTemplateConversionService {
     }
 
     if (gallery.status !== GalleryStatus.PUBLISHED || gallery.kind !== GalleryKind.IMAGE) {
-      throw new BadRequestException('Only published image posts can be converted into a template');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.gallery.template.only_published_image');
     }
     if (!gallery.prompt) {
-      throw new BadRequestException('Post has no prompt and cannot be converted into a template');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.gallery.template.no_prompt');
     }
 
     const now = new Date();

@@ -297,6 +297,7 @@ function OnboardingPanel() {
 }
 
 function QualityModelCard({ model }: { model: QualityModel }) {
+  const t = useTranslations('publicGrowth.home');
   const Icon = model.Icon;
   // 图片模型走共享的 `?model=<模型名>` 约定（与导航下拉一致，可被 page 精确预选）；video 暂沿用旧 href
   /**
@@ -330,7 +331,7 @@ function QualityModelCard({ model }: { model: QualityModel }) {
         <Icon className={`size-6 ${model.iconClass ?? ''}`} />
         {model.badge === 'new' ? (
           <span className="rounded-md bg-growth-accent px-2 py-0.5 text-[11px] font-black uppercase italic text-background">
-            New
+            {t('badgeNew')}
           </span>
         ) : model.mediaType ? (
           <span className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">

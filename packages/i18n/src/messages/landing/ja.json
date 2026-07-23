@@ -130,7 +130,8 @@
       "onboardCtaClaim": "受け取る",
       "onboardCtaClaimed": "受取済み",
       "prev": "前へ",
-      "next": "次へ"
+      "next": "次へ",
+      "badgeNew": "新着"
     },
     "promoBar": {
       "discountBadge": "{percent}% オフ",
@@ -404,7 +405,9 @@
         "pause": "一時停止",
         "mediaTypeFull": "このモデルは{type}を最大 {max} 件まで選択できます",
         "ratioFromImage": "画像に追従",
-        "ratioFromImageHint": "このモデルは先頭フレーム画像の比率を使うため、ここでの比率設定は反映されません。"
+        "ratioFromImageHint": "このモデルは先頭フレーム画像の比率を使うため、ここでの比率設定は反映されません。",
+        "selectedCount": "{count} 件選択中",
+        "premium": "プレミアム"
       },
       "privateFirst": "プライベート優先",
       "createPrivately": "ここで作成",
@@ -1278,6 +1281,23 @@
     "videoDirectorEyebrow": "AI ディレクター",
     "videoTemplatesEyebrow": "動画テンプレート",
     "videoQuickEyebrow": "クイックスタート",
-    "videoQuickSelectedTemplate": "選択中のテンプレート"
+    "videoQuickSelectedTemplate": "選択中のテンプレート",
+    "workflowCreationFlow": "制作フロー",
+    "workflowTimelineLabel": "ワークスペースのタイムライン",
+    "workflowStepsBadge": "{count} ステップ",
+    "workflowPreviewLabel": "プレビュー",
+    "workflowPreviewHeading": "動画 + プロダクト",
+    "workflowContextTitle": "チャットが文脈を保持",
+    "ctaStartBuilding": "制作を始める",
+    "pricingMembershipLabel": "メンバーシップ",
+    "mktLivePreviewBadge": "ライブ",
+    "featuresProductOs": "プロダクトOS",
+    "featuresLiveWorkspace": "ライブワークスペース",
+    "featuresDirectorTitle": "AI ディレクター",
+    "heroVideoLabel": "ビデオスタジオ",
+    "showcaseConsoleEyebrow": "スタジオコンソール",
+    "showcaseLiveBadge": "ライブ",
+    "testimonialsFeedbackTag": "フィードバック",
+    "videoHeroEyebrow": "ビデオプロダクトスタジオ"
   }
 }

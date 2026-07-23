@@ -320,7 +320,24 @@
     "videoDirectorEyebrow": "Réalisateur IA",
     "videoTemplatesEyebrow": "Modèles vidéo",
     "videoQuickEyebrow": "Démarrage rapide",
-    "videoQuickSelectedTemplate": "Modèle sélectionné"
+    "videoQuickSelectedTemplate": "Modèle sélectionné",
+    "workflowCreationFlow": "Flux de création",
+    "workflowTimelineLabel": "Chronologie de l'espace de travail",
+    "workflowStepsBadge": "{count} étapes",
+    "workflowPreviewLabel": "Aperçu",
+    "workflowPreviewHeading": "Vidéo + Produit",
+    "workflowContextTitle": "Le chat conserve le contexte",
+    "ctaStartBuilding": "Commencer à créer",
+    "pricingMembershipLabel": "Abonnement",
+    "mktLivePreviewBadge": "En direct",
+    "featuresProductOs": "OS produit",
+    "featuresLiveWorkspace": "Espace de travail en direct",
+    "featuresDirectorTitle": "Réalisateur IA",
+    "heroVideoLabel": "Studio vidéo",
+    "showcaseConsoleEyebrow": "Console du studio",
+    "showcaseLiveBadge": "En direct",
+    "testimonialsFeedbackTag": "Avis",
+    "videoHeroEyebrow": "Studio de production vidéo"
   },
   "publicGrowth": {
     "nav": {
@@ -453,7 +470,8 @@
       "onboardCtaClaim": "Obtenir",
       "onboardCtaClaimed": "Obtenu",
       "prev": "Précédent",
-      "next": "Suivant"
+      "next": "Suivant",
+      "badgeNew": "Nouveau"
     },
     "promoBar": {
       "discountBadge": "-{percent} %",
@@ -727,7 +745,9 @@
         "pause": "Suspendre",
         "mediaTypeFull": "Ce modèle accepte au maximum {max} fichier(s) {type}",
         "ratioFromImage": "Format selon l'image",
-        "ratioFromImageHint": "Ce modèle reprend le format de votre première image ; ce réglage n'a donc aucun effet."
+        "ratioFromImageHint": "Ce modèle reprend le format de votre première image ; ce réglage n'a donc aucun effet.",
+        "selectedCount": "{count} sélectionné(s)",
+        "premium": "Avancé"
       },
       "privateFirst": "Privé d'abord",
       "createPrivately": "Créer ici",

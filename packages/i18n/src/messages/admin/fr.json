@@ -678,7 +678,11 @@
     "videoGenerateAudio": "Générer l’audio natif",
     "videoMaterialSlotsTitle": "Emplacements de médias",
     "videoMaterialSlotsDescription": "Choisissez les types de médias exposés par ce modèle. Ils peuvent être requis.",
-    "videoRequiredMaterial": "Média requis"
+    "videoRequiredMaterial": "Média requis",
+    "workflowStepKey": "Clé d'étape",
+    "workflowStepKeyPlaceholder": "ex. prd, visual_design",
+    "workflowCriticPromptLabel": "Invite du critique",
+    "promptLabel": "Invite"
   },
   "adminCampaigns": {
     "title": "Centre des récompenses",
@@ -765,7 +769,11 @@
     "viewJson": "Voir JSON",
     "loadingMore": "Chargement…",
     "loadMore": "Charger plus",
-    "allLoaded": "Tout est chargé"
+    "allLoaded": "Tout est chargé",
+    "columnId": "Identifiant",
+    "columnAction": "Opération",
+    "columnActor": "Acteur",
+    "columnPayload": "Charge utile"
   },
   "adminSystemModels": {
     "title": "Configuration des modèles système",

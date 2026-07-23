@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { readImageMaxCount } from '@autix/domain/model';
 import {
   IMAGE_PIXELS_HARD_CEILING,
@@ -32,13 +33,13 @@ export function resolveImageCountCeiling(metadata: unknown): number {
 export function assertImageHardLimits(req: { size?: string | null; count: number }): void {
   const pixels = parseImageSizePixels(req.size);
   if (pixels > IMAGE_RISK_HARD_LIMITS.maxPixels) {
-    throw new BadRequestException(
-      `Image resolution exceeds the hard limit (${IMAGE_RISK_HARD_LIMITS.maxPixels} pixels)`,
-    );
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.resolution_hard_limit', {
+      pixels: IMAGE_RISK_HARD_LIMITS.maxPixels,
+    });
   }
   if (req.count > IMAGE_RISK_HARD_LIMITS.maxCount) {
-    throw new BadRequestException(
-      `The number of images per request cannot exceed ${IMAGE_RISK_HARD_LIMITS.maxCount}`,
-    );
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.count_hard_limit', {
+      max: IMAGE_RISK_HARD_LIMITS.maxCount,
+    });
   }
 }

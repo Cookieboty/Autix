@@ -12,6 +12,7 @@ import {
   useState,
 } from 'react';
 import { CornerDownLeftIcon, Loader2Icon, SquareIcon, XIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { cn } from '../ui/utils';
@@ -156,6 +157,7 @@ export const PromptInputSubmit = ({
   children,
   ...props
 }: PromptInputSubmitProps) => {
+  const t = useTranslations('aiUi');
   let Icon = <CornerDownLeftIcon className="size-4" />;
   if (status === 'submitted') {
     Icon = <Loader2Icon className="size-4 animate-spin" />;
@@ -167,7 +169,7 @@ export const PromptInputSubmit = ({
 
   return (
     <Button
-      aria-label="Submit"
+      aria-label={t('submit')}
       type="submit"
       variant={variant}
       size={size}

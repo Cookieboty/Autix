@@ -150,7 +150,8 @@
       "add": "Добавить",
       "loading": "Загрузка...",
       "empty": "Для этой сессии не активированы Skills",
-      "remove": "Удалить"
+      "remove": "Удалить",
+      "skillsAndMcp": "Навыки / MCP"
     },
     "resourceLauncher": {
       "addResource": "+ Добавить ресурс",
@@ -214,7 +215,8 @@
       "executeAction": "Выполнить действие: {action}"
     },
     "unknownError": "Неизвестная ошибка",
-    "dismiss": "Закрыть"
+    "dismiss": "Закрыть",
+    "openActions": "Открыть действия"
   },
   "template": {
     "discover": "Обзор",
@@ -324,7 +326,9 @@
     "importFailed": "Не удалось: {count}",
     "importSkipped": "Пропущено: {count}",
     "templatesFound": "Найдено шаблонов: {count}",
-    "viewSource": "Открыть источник"
+    "viewSource": "Открыть источник",
+    "headerHot": "Популярное",
+    "prompt": "Промпт"
   },
   "imageUploader": {
     "defaultLabel": "Нажмите или перетащите для загрузки изображения",
@@ -1354,7 +1358,8 @@
       "useInChat": "Использовать в чате",
       "useInChatAria": "Использовать шаблон {title} в чате",
       "useInWorkbench": "Студия",
-      "useInWorkbenchAria": "Применить {title} в профессиональной студии"
+      "useInWorkbenchAria": "Применить {title} в профессиональной студии",
+      "toolCount": "инструментов: {count}"
     },
     "sidebar": {
       "home": "Рекомендации",
@@ -1499,7 +1504,9 @@
         "platform": "Платформа",
         "externalId": "Внешний ID",
         "originalLink": "Исходная ссылка"
-      }
+      },
+      "byAuthor": "автор {author}",
+      "promptTitle": "Промпт"
     }
   },
   "videoShare": {

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { AppLogger } from '../../../platform/common/app-logger';
 import { hasChatCapability } from '@autix/domain';
 import { ModelType } from '../../../platform/prisma/generated';
@@ -124,9 +125,9 @@ export class ImageChatService {
       this.logger.error(
         `image chat assistant invoke failed: chatModel=${config.id}(${config.model}) caps=[${(config.capabilities ?? []).join(',')}] reason=${err instanceof Error ? err.message : String(err)}`,
       );
-      throw new BadRequestException(
-        `The chat model ${config.model} returned no valid result. Please confirm the selected text model supports standard chat (/chat/completions).`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_chat.model_no_result', {
+        model: config.model,
+      });
     }
 
     const content = messageContentToText(asRecord(result.message)?.content);
@@ -180,9 +181,7 @@ export class ImageChatService {
       return this.modelConfigService.getConfigForOrchestrator(anyChatModel.id, input.userId);
     }
 
-    throw new BadRequestException(
-      'Image mode needs a text chat model to understand the request. Please select or configure a text model in the toolbar first.',
-    );
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_chat.needs_text_model');
   }
 
   private async *executeImageAction(

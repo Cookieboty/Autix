@@ -1,7 +1,8 @@
 import {
   Injectable,
-  BadRequestException,
+  HttpStatus,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { OrderRepository } from '../repositories/order.repository';
 import { PaymentEventRepository } from '../repositories/payment-event.repository';
 import { OrderPointReclaimService } from './order-point-reclaim.service';
@@ -33,7 +34,7 @@ export class OrderRefundService {
         return buildAlreadyRefundedResult(order);
       }
       if (order.status !== OrderStatus.PAID) {
-        throw new BadRequestException('Only paid orders can be refunded');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.refund.only_paid');
       }
 
       // FIX-7/9: 退款金额不得超过已支付金额。

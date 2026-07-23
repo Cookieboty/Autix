@@ -320,7 +320,24 @@
     "videoDirectorEyebrow": "AI director",
     "videoTemplatesEyebrow": "Video templates",
     "videoQuickEyebrow": "Quick start",
-    "videoQuickSelectedTemplate": "Selected Template"
+    "videoQuickSelectedTemplate": "Selected Template",
+    "workflowCreationFlow": "Creation Flow",
+    "workflowTimelineLabel": "Workspace timeline",
+    "workflowStepsBadge": "{count} steps",
+    "workflowPreviewLabel": "Preview",
+    "workflowPreviewHeading": "Video + Product",
+    "workflowContextTitle": "Chat keeps context",
+    "ctaStartBuilding": "Start Building",
+    "pricingMembershipLabel": "Membership",
+    "mktLivePreviewBadge": "Live",
+    "featuresProductOs": "Product OS",
+    "featuresLiveWorkspace": "Live workspace",
+    "featuresDirectorTitle": "AI Director",
+    "heroVideoLabel": "VIDEO STUDIO",
+    "showcaseConsoleEyebrow": "Studio Console",
+    "showcaseLiveBadge": "Live",
+    "testimonialsFeedbackTag": "Feedback",
+    "videoHeroEyebrow": "VIDEO PRODUCT STUDIO"
   },
   "publicGrowth": {
     "nav": {
@@ -453,7 +470,8 @@
       "onboardCtaClaim": "Claim",
       "onboardCtaClaimed": "Claimed",
       "prev": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "badgeNew": "New"
     },
     "promoBar": {
       "discountBadge": "{percent}% OFF",
@@ -727,7 +745,9 @@
         "pause": "Pause",
         "mediaTypeFull": "Up to {max} {type} file(s) for this model",
         "ratioFromImage": "Ratio from image",
-        "ratioFromImageHint": "This model takes the aspect ratio from your first frame, so the ratio setting has no effect."
+        "ratioFromImageHint": "This model takes the aspect ratio from your first frame, so the ratio setting has no effect.",
+        "selectedCount": "{count} selected",
+        "premium": "Premium"
       },
       "privateFirst": "Private first",
       "createPrivately": "Create here",

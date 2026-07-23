@@ -858,11 +858,11 @@ describe('ImageGenerationFlowService', () => {
     expect(captured).toBeDefined();
     expect(captured?.status).toBe(400);
     const response = captured?.response as
-      | { errorCode?: string; message?: string; details?: Record<string, unknown> }
+      | { i18nKey?: string; data?: { errorCode?: string; details?: Record<string, unknown> } }
       | undefined;
-    expect(response?.errorCode).toBe('ERR_IMAGE_PARAMS_NOT_SUPPORTED');
-    expect(response?.message).toContain('The current model does not support the selected parameters');
-    expect(response?.details).toMatchObject({ httpStatus: 400, protocolKey: 'openai-images@v1' });
+    expect(response?.i18nKey).toBe('creation.image_gen.params_not_supported');
+    expect(response?.data?.errorCode).toBe('ERR_IMAGE_PARAMS_NOT_SUPPORTED');
+    expect(response?.data?.details).toMatchObject({ httpStatus: 400, protocolKey: 'openai-images@v1' });
     // 上游只被打了一次 —— 这条断言是那条被删掉的重试路径的墓碑。
     expect(fetchMock).toHaveBeenCalledTimes(1);
 

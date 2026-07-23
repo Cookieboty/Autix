@@ -130,7 +130,8 @@
       "onboardCtaClaim": "Получить",
       "onboardCtaClaimed": "Получено",
       "prev": "Назад",
-      "next": "Вперёд"
+      "next": "Вперёд",
+      "badgeNew": "Новое"
     },
     "promoBar": {
       "discountBadge": "-{percent}%",
@@ -404,7 +405,9 @@
         "pause": "Пауза",
         "mediaTypeFull": "Эта модель принимает не более {max} файлов типа «{type}»",
         "ratioFromImage": "Формат по изображению",
-        "ratioFromImageHint": "Эта модель берёт соотношение сторон из первого кадра, поэтому настройка здесь не действует."
+        "ratioFromImageHint": "Эта модель берёт соотношение сторон из первого кадра, поэтому настройка здесь не действует.",
+        "selectedCount": "Выбрано: {count}",
+        "premium": "Премиум"
       },
       "privateFirst": "Сначала приватно",
       "createPrivately": "Создать здесь",
@@ -1278,6 +1281,23 @@
     "videoDirectorEyebrow": "AI-режиссёр",
     "videoTemplatesEyebrow": "Видеошаблоны",
     "videoQuickEyebrow": "Быстрый старт",
-    "videoQuickSelectedTemplate": "Выбранный шаблон"
+    "videoQuickSelectedTemplate": "Выбранный шаблон",
+    "workflowCreationFlow": "Процесс создания",
+    "workflowTimelineLabel": "Хронология рабочего пространства",
+    "workflowStepsBadge": "Шагов: {count}",
+    "workflowPreviewLabel": "Предпросмотр",
+    "workflowPreviewHeading": "Видео + продукт",
+    "workflowContextTitle": "Чат сохраняет контекст",
+    "ctaStartBuilding": "Начать создавать",
+    "pricingMembershipLabel": "Подписка",
+    "mktLivePreviewBadge": "Прямой эфир",
+    "featuresProductOs": "Продуктовая ОС",
+    "featuresLiveWorkspace": "Рабочее пространство в реальном времени",
+    "featuresDirectorTitle": "AI-режиссёр",
+    "heroVideoLabel": "Видеостудия",
+    "showcaseConsoleEyebrow": "Консоль студии",
+    "showcaseLiveBadge": "В эфире",
+    "testimonialsFeedbackTag": "Отзывы",
+    "videoHeroEyebrow": "Видеопродакшн-студия"
   }
 }

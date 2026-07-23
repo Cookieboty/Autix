@@ -91,7 +91,9 @@
     "campaignRewards": "キャンペーン報酬センター",
     "campaignRewardsDesc": "報酬キャンペーン、予算、付与記録を設定",
     "auditLogsAction": "監査ログ",
-    "auditLogsActionDesc": "管理者操作 / ポイント調整履歴を確認"
+    "auditLogsActionDesc": "管理者操作 / ポイント調整履歴を確認",
+    "adminOverview": "管理概要",
+    "localTime": "現地時間"
   },
   "profile": {
     "title": "プロフィール",
@@ -260,6 +262,7 @@
       "IMAGE_TEMPLATE": "画像テンプレート",
       "VIDEO_TEMPLATE": "動画テンプレート",
       "GALLERY_POST": "ギャラリー投稿"
-    }
+    },
+    "folderActions": "フォルダー操作"
   }
 }

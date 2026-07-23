@@ -91,7 +91,9 @@
     "campaignRewards": "Centre des récompenses",
     "campaignRewardsDesc": "Configurer les campagnes, budgets et historiques d'attribution",
     "auditLogsAction": "Journaux d'audit",
-    "auditLogsActionDesc": "Consulter les opérations admin / historique des ajustements de points"
+    "auditLogsActionDesc": "Consulter les opérations admin / historique des ajustements de points",
+    "adminOverview": "Vue d'ensemble admin",
+    "localTime": "Heure locale"
   },
   "profile": {
     "title": "Profil",
@@ -260,6 +262,7 @@
       "IMAGE_TEMPLATE": "Modèle d'image",
       "VIDEO_TEMPLATE": "Modèle vidéo",
       "GALLERY_POST": "Publication de la galerie"
-    }
+    },
+    "folderActions": "Actions du dossier"
   }
 }

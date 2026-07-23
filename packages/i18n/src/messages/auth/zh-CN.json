@@ -250,7 +250,10 @@
     "backToLoginOptions": "返回其他登录方式",
     "loginEmailTitle": "登录 Amux Studio",
     "or": "或",
-    "modalTerms": "继续即表示我已阅读<privacy>隐私政策</privacy>并同意<terms>使用条款</terms>，同时确认本人已年满 18 周岁"
+    "modalTerms": "继续即表示我已阅读<privacy>隐私政策</privacy>并同意<terms>使用条款</terms>，同时确认本人已年满 18 周岁",
+    "modalA11yTitle": "登录 Amux Studio",
+    "modalA11yDescription": "登录或创建账户以继续。",
+    "creativeHighlights": "创意亮点"
   },
   "login": {
     "console": "管理控制台",

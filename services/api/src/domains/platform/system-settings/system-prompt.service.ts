@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, type OnModuleInit } from '@nestjs/common';
+import { HttpStatus, Injectable, type OnModuleInit } from '@nestjs/common';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { SYSTEM_PROMPT_DEFAULTS } from './system-prompt.defaults';
 import {
   SystemPromptRepository,
@@ -86,7 +87,11 @@ export class SystemPromptService implements OnModuleInit {
       version: data.version,
     });
     if (exists) {
-      throw new BadRequestException(`Prompt ${data.key}@${data.version} already exists`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.already_exists',
+        { key: data.key, version: data.version },
+      );
     }
 
     const row = await this.promptsRepository.createDraft(data);
@@ -105,8 +110,16 @@ export class SystemPromptService implements OnModuleInit {
   ): Promise<SystemPromptItem> {
     await this.promptsRepository.ensureTable();
     const current = await this.findRowById(id);
-    if (!current) throw new BadRequestException('Prompt not found');
-    if (current.status !== 'draft') throw new BadRequestException('Only draft versions can be edited');
+    if (!current)
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.not_found',
+      );
+    if (current.status !== 'draft')
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.only_draft_editable',
+      );
 
     const data = this.normalizeInput({
       key: current.key,
@@ -124,7 +137,11 @@ export class SystemPromptService implements OnModuleInit {
         excludeId: id,
       });
       if (exists) {
-        throw new BadRequestException(`Prompt ${current.key}@${data.version} already exists`);
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'platform.system_prompt.already_exists',
+          { key: current.key, version: data.version },
+        );
       }
     }
 
@@ -135,7 +152,11 @@ export class SystemPromptService implements OnModuleInit {
   async publish(id: string): Promise<SystemPromptItem> {
     await this.promptsRepository.ensureTable();
     const row = await this.findRowById(id);
-    if (!row) throw new BadRequestException('Prompt not found');
+    if (!row)
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.not_found',
+      );
 
     const published = await this.promptsRepository.publish(row);
     return this.rowToItem(published);
@@ -161,7 +182,12 @@ export class SystemPromptService implements OnModuleInit {
 
   private defaultPrompt(key: string): SystemPromptItem {
     const definition = SYSTEM_PROMPT_DEFAULTS.find((item) => item.key === key);
-    if (!definition) throw new BadRequestException(`Unknown system prompt: ${key}`);
+    if (!definition)
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.unknown',
+        { key },
+      );
     return {
       id: `default:${definition.key}`,
       key: definition.key,
@@ -212,10 +238,26 @@ export class SystemPromptService implements OnModuleInit {
     const name = input.name.trim();
     const version = input.version.trim();
     const content = input.content.trim();
-    if (!key) throw new BadRequestException('Prompt key cannot be empty');
-    if (!name) throw new BadRequestException('Prompt name cannot be empty');
-    if (!version) throw new BadRequestException('Prompt version cannot be empty');
-    if (!content) throw new BadRequestException('Prompt content cannot be empty');
+    if (!key)
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.key_empty',
+      );
+    if (!name)
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.name_empty',
+      );
+    if (!version)
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.version_empty',
+      );
+    if (!content)
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_prompt.content_empty',
+      );
     return {
       key,
       name,

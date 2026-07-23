@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { AppLogger } from '../../../platform/common/app-logger';
 import {
   GenerationBillingStatus,
@@ -349,9 +350,8 @@ export class ImageGenerationFlowService {
     imageUrls: string[],
   ): HumanMessage {
     if (imageUrls.length > 0 && !supportsImagePromptVision(config)) {
-      throw new BadRequestException({
-        errorCode: 'ERR_CHAT_MODEL_VISION_REQUIRED',
-        message: 'The selected prompt-tuning model does not support image understanding. Choose a vision-capable model or remove reference images.',
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.model_no_vision', undefined, {
+        data: { errorCode: 'ERR_CHAT_MODEL_VISION_REQUIRED' },
       });
     }
 

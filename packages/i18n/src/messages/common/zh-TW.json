@@ -50,7 +50,12 @@
     "actions": "操作",
     "none": "無",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "like": "點讚",
+    "favorite": "收藏",
+    "share": "分享",
+    "jsonEmpty": "JSON 為空",
+    "invalidJson": "JSON 格式無效"
   },
   "aiUi": {
     "selected": "已選擇",
@@ -72,7 +77,10 @@
     "noData": "暫無資料",
     "loading": "載入中",
     "actionMessage": "[操作: {action}]",
-    "serverError": "伺服器返回錯誤"
+    "serverError": "伺服器返回錯誤",
+    "thinking": "思考中…",
+    "thoughtForSeconds": "思考了 {seconds} 秒",
+    "thoughtForAFewSeconds": "思考了幾秒"
   },
   "sidebar": {
     "newSession": "新建會話",
@@ -124,7 +132,10 @@
     "docs": "使用文檔",
     "myTemplates": "我的模板",
     "upgrade": "升級會員",
-    "gallery": "廣場"
+    "gallery": "廣場",
+    "mobileTitle": "側邊欄",
+    "mobileDescription": "顯示行動版側邊欄。",
+    "toggle": "切換側邊欄"
   },
   "notification": {
     "title": "通知",

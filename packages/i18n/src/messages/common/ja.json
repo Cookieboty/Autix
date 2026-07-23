@@ -50,7 +50,12 @@
     "actions": "操作",
     "none": "なし",
     "yes": "はい",
-    "no": "いいえ"
+    "no": "いいえ",
+    "like": "いいね",
+    "favorite": "お気に入り",
+    "share": "共有",
+    "jsonEmpty": "JSON が空です",
+    "invalidJson": "無効な JSON"
   },
   "aiUi": {
     "selected": "選択済み",
@@ -72,7 +77,10 @@
     "noData": "データなし",
     "loading": "読み込み中",
     "actionMessage": "[アクション: {action}]",
-    "serverError": "サーバーがエラーを返しました"
+    "serverError": "サーバーがエラーを返しました",
+    "thinking": "思考中…",
+    "thoughtForSeconds": "{seconds} 秒間思考しました",
+    "thoughtForAFewSeconds": "数秒間思考しました"
   },
   "sidebar": {
     "newSession": "新しいセッション",
@@ -124,7 +132,10 @@
     "docs": "ドキュメント",
     "myTemplates": "マイテンプレート",
     "upgrade": "会員をアップグレード",
-    "gallery": "ギャラリー"
+    "gallery": "ギャラリー",
+    "mobileTitle": "サイドバー",
+    "mobileDescription": "モバイルのサイドバーを表示します。",
+    "toggle": "サイドバーを切り替え"
   },
   "notification": {
     "title": "通知",

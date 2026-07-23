@@ -130,7 +130,8 @@
       "onboardCtaClaim": "領取",
       "onboardCtaClaimed": "已領取",
       "prev": "上一個",
-      "next": "下一個"
+      "next": "下一個",
+      "badgeNew": "新"
     },
     "promoBar": {
       "discountBadge": "立減 {percent}%",
@@ -404,7 +405,9 @@
         "pause": "暫停",
         "mediaTypeFull": "該模型最多可選 {max} 個{type}",
         "ratioFromImage": "比例隨圖",
-        "ratioFromImageHint": "該模型以首幀圖片的畫幅為準，此處的比例設定不會生效。"
+        "ratioFromImageHint": "該模型以首幀圖片的畫幅為準，此處的比例設定不會生效。",
+        "selectedCount": "已選 {count} 個",
+        "premium": "進階"
       },
       "privateFirst": "預設私有",
       "createPrivately": "目前頁創作",
@@ -1278,6 +1281,23 @@
     "videoDirectorEyebrow": "AI 導演",
     "videoTemplatesEyebrow": "影片範本",
     "videoQuickEyebrow": "快速開始",
-    "videoQuickSelectedTemplate": "已選範本"
+    "videoQuickSelectedTemplate": "已選範本",
+    "workflowCreationFlow": "創作流程",
+    "workflowTimelineLabel": "工作區時間軸",
+    "workflowStepsBadge": "{count} 步",
+    "workflowPreviewLabel": "預覽",
+    "workflowPreviewHeading": "影片 + 產品",
+    "workflowContextTitle": "對話保留上下文",
+    "ctaStartBuilding": "開始創作",
+    "pricingMembershipLabel": "會員",
+    "mktLivePreviewBadge": "即時",
+    "featuresProductOs": "產品作業系統",
+    "featuresLiveWorkspace": "即時工作臺",
+    "featuresDirectorTitle": "AI 導演",
+    "heroVideoLabel": "影片工作室",
+    "showcaseConsoleEyebrow": "工作室控制臺",
+    "showcaseLiveBadge": "即時",
+    "testimonialsFeedbackTag": "使用者回饋",
+    "videoHeroEyebrow": "影片產品工作室"
   }
 }

@@ -250,7 +250,10 @@
       "ACCOUNT_DELETE_CONFIRMATION_MISMATCH": "使用者名稱確認不符",
       "PROVIDER_REAUTH_UNSUPPORTED": "您目前的登入方式無法在此重新驗證",
       "CONTACT_SUPPORT": "請聯絡客服"
-    }
+    },
+    "modalA11yTitle": "登入 Amux Studio",
+    "modalA11yDescription": "登入或建立帳戶以繼續。",
+    "creativeHighlights": "創意亮點"
   },
   "login": {
     "console": "管理控制台",

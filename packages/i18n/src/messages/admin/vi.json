@@ -678,7 +678,11 @@
     "videoGenerateAudio": "Tạo âm thanh gốc",
     "videoMaterialSlotsTitle": "Khe tư liệu",
     "videoMaterialSlotsDescription": "Chọn loại tài nguyên đầu vào mà mẫu này cung cấp. Các khe có thể được đánh dấu bắt buộc.",
-    "videoRequiredMaterial": "Tư liệu bắt buộc"
+    "videoRequiredMaterial": "Tư liệu bắt buộc",
+    "workflowStepKey": "Khóa bước",
+    "workflowStepKeyPlaceholder": "vd. prd, visual_design",
+    "workflowCriticPromptLabel": "Câu lệnh đánh giá",
+    "promptLabel": "Câu lệnh"
   },
   "adminCampaigns": {
     "title": "Trung tâm thưởng chiến dịch",
@@ -765,7 +769,11 @@
     "viewJson": "Xem JSON",
     "loadingMore": "Đang tải…",
     "loadMore": "Tải thêm",
-    "allLoaded": "Đã tải tất cả"
+    "allLoaded": "Đã tải tất cả",
+    "columnId": "Mã",
+    "columnAction": "Hành động",
+    "columnActor": "Người thực hiện",
+    "columnPayload": "Tải trọng"
   },
   "adminSystemModels": {
     "title": "Cấu hình mô hình hệ thống",

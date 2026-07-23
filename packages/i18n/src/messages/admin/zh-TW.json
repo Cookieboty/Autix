@@ -678,7 +678,11 @@
     "videoGenerateAudio": "生成原生音訊",
     "videoMaterialSlotsTitle": "素材槽",
     "videoMaterialSlotsDescription": "選擇模板需要暴露的輸入素材類型，可標記為必填。",
-    "videoRequiredMaterial": "必填素材"
+    "videoRequiredMaterial": "必填素材",
+    "workflowStepKey": "步驟鍵",
+    "workflowStepKeyPlaceholder": "例如 prd, visual_design",
+    "workflowCriticPromptLabel": "評審提示詞",
+    "promptLabel": "提示詞"
   },
   "adminCampaigns": {
     "title": "活動獎勵中心",
@@ -765,7 +769,11 @@
     "viewJson": "檢視 JSON",
     "loadingMore": "載入中…",
     "loadMore": "載入更多",
-    "allLoaded": "已載入全部"
+    "allLoaded": "已載入全部",
+    "columnId": "編號",
+    "columnAction": "操作",
+    "columnActor": "操作者",
+    "columnPayload": "負載"
   },
   "adminSystemModels": {
     "title": "系統模型配置",

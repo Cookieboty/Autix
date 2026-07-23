@@ -1,9 +1,10 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import type { GalleryKind, GallerySource, GalleryStatus } from '@autix/domain';
 import {
   GalleryStatus as PGStatus,
   Prisma,
 } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 export type GalleryActor = 'author' | 'admin' | 'system';
 
@@ -40,11 +41,17 @@ export function assertTransition(
 ): void {
   const allowed = TRANSITIONS[`${from}->${to}`];
   if (!allowed) {
-    throw new BadRequestException(`illegal state transition: ${from} -> ${to}`);
+    throw new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'creation.gallery.helpers.illegal_transition',
+      { from, to },
+    );
   }
   if (!allowed.includes(actor)) {
-    throw new BadRequestException(
-      `role ${actor} is not authorized to perform ${from} -> ${to} (required: ${allowed.join('/')})`,
+    throw new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'creation.gallery.helpers.transition_forbidden',
+      { actor, from, to, roles: allowed.join('/') },
     );
   }
 }
@@ -96,31 +103,45 @@ export function assertSource(
   switch (p.sourceType) {
     case 'USER_UPLOAD':
       if (hasTemplate || hasGeneration) {
-        throw new BadRequestException('USER_UPLOAD must not carry template/generation references');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.user_upload_no_refs',
+        );
       }
       if (!p.mediaUrls || p.mediaUrls.length === 0) {
-        throw new BadRequestException('USER_UPLOAD requires mediaUrls');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.user_upload_requires_media',
+        );
       }
       return;
 
     case 'FROM_GENERATION':
       if (hasTemplate) {
-        throw new BadRequestException('FROM_GENERATION must not carry template references');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.from_generation_no_template',
+        );
       }
       if (!matchesKind(p.imageGenerationId, p.videoGenerationId)) {
-        throw new BadRequestException(
-          'FROM_GENERATION requires a single generationId matching kind',
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.from_generation_single_id',
         );
       }
       return;
 
     case 'FROM_TEMPLATE':
       if (hasGeneration) {
-        throw new BadRequestException('FROM_TEMPLATE must not carry generation references');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.from_template_no_generation',
+        );
       }
       if (!matchesKind(p.imageTemplateId, p.videoTemplateId)) {
-        throw new BadRequestException(
-          'FROM_TEMPLATE requires a single templateId matching kind',
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.from_template_single_id',
         );
       }
       return;
@@ -129,24 +150,40 @@ export function assertSource(
     // （由 mediaMigrated=false + 迁移 worker 兜底搬进站内）。
     case 'ADMIN_CURATED':
       if (hasTemplate || hasGeneration) {
-        throw new BadRequestException('ADMIN_CURATED must not carry template/generation references');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.admin_curated_no_refs',
+        );
       }
       if (!p.mediaUrls || p.mediaUrls.length === 0) {
-        throw new BadRequestException('ADMIN_CURATED requires mediaUrls');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.admin_curated_requires_media',
+        );
       }
       // Fix 1a：非 URL 的媒体条目若在此放行，会被迁移 worker 的 isUrl 判定原样跳过
       // （不 push error），进而 errors.length===0 → mediaMigrated=true → 自动发布一条
       // 从未被搬运校验过的"媒体"。必须在导入这一步就拒绝，让管理员在 errorLog 里看见。
       if (p.mediaUrls.some((url) => !isHttpUrl(url))) {
-        throw new BadRequestException('ADMIN_CURATED mediaUrls must all be valid http(s) URLs');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.admin_curated_media_http',
+        );
       }
       if (p.coverImage != null && p.coverImage.trim() !== '' && !isHttpUrl(p.coverImage)) {
-        throw new BadRequestException('ADMIN_CURATED coverImage must be a valid http(s) URL if provided');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.admin_curated_cover_http',
+        );
       }
       return;
 
     default:
-      throw new BadRequestException(`unknown source type: ${p.sourceType as string}`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.gallery.helpers.unknown_source_type',
+        { sourceType: p.sourceType as string },
+      );
   }
 }
 
