@@ -295,7 +295,7 @@ export class MaterialsService {
 
     const r2Base = await this.r2Service.getPublicBaseUrl();
     const mediaUrls = thumbnailUrl ? [url, thumbnailUrl] : [url];
-    assertInStationMediaUrls(mediaUrls, [r2Base], '素材 URL 必须来自站内存储');
+    assertInStationMediaUrls(mediaUrls, [r2Base], 'Asset URL must be stored on our platform');
 
     return this.materialsRepository.create({
       userId,
@@ -325,7 +325,7 @@ export class MaterialsService {
       const thumbnailUrl = input.thumbnailUrl?.trim() || null;
       if (thumbnailUrl) {
         const r2Base = await this.r2Service.getPublicBaseUrl();
-        assertInStationMediaUrls([thumbnailUrl], [r2Base], '素材缩略图必须来自站内存储');
+        assertInStationMediaUrls([thumbnailUrl], [r2Base], 'Asset thumbnail must be stored on our platform');
       }
       data.thumbnailUrl = thumbnailUrl;
     }

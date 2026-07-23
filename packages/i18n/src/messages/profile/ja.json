@@ -35,8 +35,8 @@
     "membershipRequired": "会員登録が必要です",
     "membershipRequiredDesc": "ライブラリは会員限定の機能です。会員にアップグレードしてドキュメントをアップロードし、ナレッジベースを構築しましょう。",
     "upgradeMembership": "会員にアップグレード",
-    "statusDeleted": "已删除",
-    "includeDeleted": "包含已删除用户"
+    "statusDeleted": "削除済み",
+    "includeDeleted": "削除済みユーザーを含める"
   },
   "settings": {
     "title": "設定",
@@ -156,7 +156,7 @@
         "type": "タイプ",
         "category": "カテゴリ",
         "pointsSpent": "消費ポイント",
-        "usage": "使用量",
+        "usage": "用途",
         "status": "ステータス",
         "time": "時間"
       },
@@ -215,8 +215,8 @@
     "emptyDescription": "素材をアップロードするか、画像/動画履歴から素材ライブラリに追加してください。",
     "selectAsset": "{title} を選択",
     "deleteAsset": "素材を削除",
-    "invertSelection": "反选",
-    "clearSelection": "取消选择",
+    "invertSelection": "選択を反転",
+    "clearSelection": "選択をクリア",
     "folders": "フォルダー",
     "allFolders": "すべて",
     "uncategorized": "未分類",

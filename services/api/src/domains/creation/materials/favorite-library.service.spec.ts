@@ -1,4 +1,3 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../platform/prisma/generated';
 import { FavoriteLibraryService } from './favorite-library.service';
 
@@ -423,9 +422,10 @@ describe('FavoriteLibraryService.favorite/unfavorite — 单事务耦合', () =>
   it('收藏不存在的资源 → NotFoundException', async () => {
     const { prisma } = makeFakePrisma({});
     const fav = new FavoriteLibraryService(prisma as never);
-    await expect(fav.favorite(userId, 'IMAGE_TEMPLATE' as never, 'missing')).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(fav.favorite(userId, 'IMAGE_TEMPLATE' as never, 'missing')).rejects.toMatchObject({
+      status: 404,
+      i18nKey: 'creation.materials.resource_not_found',
+    });
   });
 
   it('重复取消收藏（本就未收藏）是幂等 no-op，不抛错、不倒扣计数', async () => {
@@ -501,10 +501,10 @@ describe('FavoriteLibraryService.assertUsable', () => {
 
     await expect(
       fav.assertUsable({ id: 'm1', librarySource: 'FAVORITE', sourceResourceType: 'GALLERY_POST' as never, sourceId: 'g-hidden' }),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toMatchObject({ status: 403, i18nKey: 'creation.materials.source_unavailable' });
     await expect(
       fav.assertUsable({ id: 'm2', librarySource: 'FAVORITE', sourceResourceType: 'GALLERY_POST' as never, sourceId: 'g-does-not-exist' }),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toMatchObject({ status: 403, i18nKey: 'creation.materials.source_unavailable' });
     await expect(
       fav.assertUsable({ id: 'm3', librarySource: 'FAVORITE', sourceResourceType: 'GALLERY_POST' as never, sourceId: 'g-unpublished' }),
     ).resolves.toBeUndefined();
@@ -548,7 +548,7 @@ describe('FavoriteLibraryService.saveHistoryMaterial — Plan C Task 11', () => 
     const fav = new FavoriteLibraryService(prisma as never);
     await expect(
       fav.saveHistoryMaterial(userId, 'GALLERY_POST' as never, 'does-not-exist'),
-    ).rejects.toThrow(NotFoundException);
+    ).rejects.toMatchObject({ status: 404, i18nKey: 'creation.materials.resource_not_found' });
   });
 
   it('删除→再保存：复活软删行（deletedAt 归 null），不返回幻影的仍处删除态的旧行', async () => {
@@ -670,6 +670,9 @@ describe('FavoriteLibraryService.deleteMaterials / deleteFolder / purgeUser', ()
   it('deleteMaterial 对不存在/非本人素材 → NotFoundException', async () => {
     const { prisma } = makeFakePrisma({});
     const fav = new FavoriteLibraryService(prisma as never);
-    await expect(fav.deleteMaterial(userId, 'missing')).rejects.toThrow(NotFoundException);
+    await expect(fav.deleteMaterial(userId, 'missing')).rejects.toMatchObject({
+      status: 404,
+      i18nKey: 'creation.materials.not_found',
+    });
   });
 });

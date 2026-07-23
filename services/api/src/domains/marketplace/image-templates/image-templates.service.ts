@@ -1,5 +1,6 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { AppLogger } from '../../platform/common/app-logger';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import {
   TemplateStatus,
   ResourceType,
@@ -13,7 +14,7 @@ import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.servic
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
-import { assertInStationMediaUrls } from '../../creation/gallery/gallery.helpers';
+import { isInStationMediaUrl } from '../../creation/gallery/gallery.helpers';
 import { BaseResourceService, type ListResourceQuery } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
@@ -164,7 +165,14 @@ export class ImageTemplatesService extends BaseResourceService {
     );
     if (urls.length === 0) return;
     const r2Base = await this.r2.getPublicBaseUrl();
-    assertInStationMediaUrls(urls, [r2Base], '封面图/示例图必须来自站内存储');
+    for (const url of urls) {
+      if (!isInStationMediaUrl(url, [r2Base])) {
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'template.image.media_not_in_station',
+        );
+      }
+    }
   }
 
   // 图片模板 runtime 恒定 CLOUD（生成走云端模型 API）
@@ -184,7 +192,7 @@ export class ImageTemplatesService extends BaseResourceService {
       pointsCost: dto.pointsCost ?? 0,
       runtimeRequirement: RuntimeReq.CLOUD,
       runtimeDetectedBy: DetectionSrc.AUTO,
-      runtimeReason: '图片模板恒定云端运行',
+      runtimeReason: 'IMAGE_TEMPLATE runs on cloud by default',
       authorId,
       status: TemplateStatus.PENDING,
       createdById: authorId,
@@ -194,7 +202,12 @@ export class ImageTemplatesService extends BaseResourceService {
 
   async update(id: string, userId: string, dto: UpdateImageTemplateDto) {
     const tpl = (await this.findById(id)) as { authorId: string };
-    if (tpl.authorId !== userId) throw new ForbiddenException('无权修改此模板');
+    if (tpl.authorId !== userId) {
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'template.image.update_forbidden',
+      );
+    }
     await this.assertTemplateMediaInStation(dto);
 
     return this.resources.updateImageTemplate(id, {
@@ -275,7 +288,7 @@ export class ImageTemplatesService extends BaseResourceService {
           );
         } catch (refundErr) {
           this.logger.warn(
-            `图片模板生成冻结退回失败 hold=${holdId}: ${String(
+            `image template generation hold refund failed hold=${holdId}: ${String(
               refundErr instanceof Error ? refundErr.message : refundErr,
             )}`,
           );
@@ -287,8 +300,18 @@ export class ImageTemplatesService extends BaseResourceService {
 
   async findGeneration(id: string, userId: string) {
     const gen = await this.generations.findImageGeneration(id);
-    if (!gen) throw new ForbiddenException('生成记录不存在');
-    if (gen.userId !== userId) throw new ForbiddenException('无权访问');
+    if (!gen) {
+      throw new I18nHttpException(
+        HttpStatus.NOT_FOUND,
+        'template.image.generation_not_found',
+      );
+    }
+    if (gen.userId !== userId) {
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'template.image.generation_forbidden',
+      );
+    }
 
     const turns = await this.generations.findTurns(ResourceType.IMAGE_TEMPLATE, id);
 

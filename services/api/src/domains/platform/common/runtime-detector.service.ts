@@ -36,14 +36,14 @@ const LOCAL_KEYWORDS = [
   'child_process',
   'fs.readFile',
   'fs.writeFile',
-  '本地文件',
-  '本地命令',
-  '客户端环境',
+  'Local file',
+  'Local command',
+  'Client environment',
   'cli tool',
   'codex cli',
   'gemini cli',
   'desktop only',
-  '仅桌面端',
+  'Desktop only',
 ];
 
 const LOCAL_URL_RE =
@@ -64,14 +64,14 @@ export class RuntimeDetectorService {
     if (mcp.transport === 'stdio') {
       return {
         level: RuntimeReq.DESKTOP_ONLY,
-        reason: 'stdio transport 必须本地启动进程',
+        reason: 'stdio transport must start a local process',
       };
     }
 
     if (mcp.url && LOCAL_URL_RE.test(mcp.url)) {
       return {
         level: RuntimeReq.DESKTOP_ONLY,
-        reason: 'URL 指向本地/内网地址',
+        reason: 'URL points to a local/intranet address',
       };
     }
 
@@ -80,14 +80,14 @@ export class RuntimeDetectorService {
       if (ENV_LOCAL_VAR_RE.test(envStr)) {
         return {
           level: RuntimeReq.DESKTOP_ONLY,
-          reason: 'env 配置依赖本地路径变量',
+          reason: 'env config depends on local path variables',
         };
       }
     }
 
     return {
       level: RuntimeReq.CLOUD,
-      reason: '远程 SSE/HTTP transport 且无本地依赖',
+      reason: 'Remote SSE/HTTP transport with no local dependency',
     };
   }
 
@@ -103,7 +103,7 @@ export class RuntimeDetectorService {
     if ((hooks && hooks.length > 0) || (scripts && scripts.length > 0)) {
       return {
         level: RuntimeReq.DESKTOP_ONLY,
-        reason: '包含 hooks/scripts 可执行代码',
+        reason: 'Contains hooks/scripts executable code',
       };
     }
 
@@ -114,7 +114,7 @@ export class RuntimeDetectorService {
       if (desktopMcp) {
         return {
           level: RuntimeReq.DESKTOP_ONLY,
-          reason: `依赖仅桌面端的 MCP: ${desktopMcp.title}`,
+          reason: `Depends on desktop-only MCP: ${desktopMcp.title}`,
         };
       }
     }
@@ -123,7 +123,7 @@ export class RuntimeDetectorService {
     if (LOCAL_PATH_RE.test(skill.instructions ?? '')) {
       return {
         level: RuntimeReq.DESKTOP_ONLY,
-        reason: 'instructions 引用本地文件路径',
+        reason: 'instructions reference a local file path',
       };
     }
 
@@ -135,11 +135,11 @@ export class RuntimeDetectorService {
     if (hits.length > 0) {
       return {
         level: 'SUSPECTED_DESKTOP',
-        reason: `命中关键词: ${hits.join(', ')}`,
+        reason: `Matched keyword: ${hits.join(', ')}`,
       };
     }
 
-    return { level: RuntimeReq.CLOUD, reason: '未发现客户端依赖' };
+    return { level: RuntimeReq.CLOUD, reason: 'No client-side dependency found' };
   }
 
   /**
@@ -158,7 +158,7 @@ export class RuntimeDetectorService {
       if (desktopMcp) {
         return {
           level: RuntimeReq.DESKTOP_ONLY,
-          reason: `依赖仅桌面端的 MCP: ${desktopMcp.title}`,
+          reason: `Depends on desktop-only MCP: ${desktopMcp.title}`,
         };
       }
     }
@@ -168,11 +168,11 @@ export class RuntimeDetectorService {
       if (desktopSkill) {
         return {
           level: RuntimeReq.DESKTOP_ONLY,
-          reason: `依赖仅桌面端的 Skill: ${desktopSkill.title}`,
+          reason: `Depends on desktop-only Skill: ${desktopSkill.title}`,
         };
       }
     }
 
-    return { level: RuntimeReq.CLOUD, reason: '未发现客户端依赖' };
+    return { level: RuntimeReq.CLOUD, reason: 'No client-side dependency found' };
   }
 }

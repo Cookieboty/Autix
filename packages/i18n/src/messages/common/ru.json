@@ -122,8 +122,8 @@
     "myOrders": "Мои заказы",
     "inviteFriends": "Пригласить друзей",
     "docs": "Документация",
-    "myTemplates": "我的模板",
-    "upgrade": "升级会员",
+    "myTemplates": "Мои шаблоны",
+    "upgrade": "Повысить уровень членства",
     "gallery": "Галерея"
   },
   "notification": {
@@ -280,7 +280,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio — Придумай. Создай. Запусти.",
       "description": "Создавайте PRD, код, дизайн и прототипы с ИИ в одном месте."
     },
     "video": {

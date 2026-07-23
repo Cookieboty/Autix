@@ -9,8 +9,8 @@
     "loading": "Chargement...",
     "processing": "Traitement...",
     "noData": "Aucune donnée",
-    "totalCount": "Total {total}",
-    "pageIndicator": "Page {page} / {totalPages}",
+    "totalCount": "{total} au total",
+    "pageIndicator": "Page {page} sur {totalPages}",
     "prevPage": "Page précédente",
     "nextPage": "Page suivante",
     "back": "Retour",
@@ -123,7 +123,7 @@
     "myOrders": "Mes commandes",
     "inviteFriends": "Inviter des amis",
     "docs": "Documentation",
-    "upgrade": "升级会员",
+    "upgrade": "Améliorer l'abonnement",
     "gallery": "Galerie"
   },
   "notification": {
@@ -189,7 +189,7 @@
     "statusLocked": "Verrouillé",
     "statusDisabled": "Désactivé",
     "statusPending": "En attente",
-    "belongSection": "Affiliation",
+    "belongSection": "Rattachement",
     "belongDescription": "Attribuer le système et le rôle initiaux pour le nouvel utilisateur.",
     "belongSystem": "Système",
     "role": "Rôle",
@@ -237,7 +237,7 @@
     "createDescription": "Créer une nouvelle entrée de navigation système.",
     "editAside": "Les modifications affecteront immédiatement la navigation actuelle du système.",
     "createAside": "Continuer à configurer les permissions après la création.",
-    "belongSection": "Affiliation",
+    "belongSection": "Rattachement",
     "belongDescription": "Confirmer le système parent du menu et s'il est imbriqué sous un autre menu.",
     "parentSystem": "Système parent",
     "subMenu": "Sous-menu",
@@ -280,7 +280,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio - Imaginez-le. Créez-le. Lancez-le.",
       "description": "Générez PRD, code, design et prototypes avec l’IA dans un seul espace."
     },
     "video": {

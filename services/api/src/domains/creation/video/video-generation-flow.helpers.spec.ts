@@ -46,14 +46,14 @@ describe('video generation flow helpers', () => {
         generationMode: 'storyboard',
         storyboardPrompt: '整片风格',
       }),
-    ).toBe('整片提示词：整片风格\n\n当前分镜提示词：当前镜头');
+    ).toBe('Full video prompt: 整片风格\n\nCurrent shot prompt: 当前镜头');
 
     expect(
       resolveClipPrompt('当前镜头', {
         generationMode: 'single',
         storyboardPrompt: 'ignored',
       }),
-    ).toBe('当前分镜提示词：当前镜头');
+    ).toBe('Current shot prompt: 当前镜头');
   });
 
   it('normalizes generation parameters for entitlement and billing checks', () => {
@@ -134,7 +134,7 @@ describe('video generation flow helpers', () => {
         ],
       }),
     ).toBe(
-      '整片提示词：统一电影感，雨夜霓虹\n\n完整分镜脚本：\n分镜 1「开场」：城市远景\n分镜 2「特写」：红衣少女抬头\n分镜 3「收束」：摩托驶离街区',
+      'Full video prompt: 统一电影感，雨夜霓虹\n\nFull storyboard script:\nShot 1 "开场": 城市远景\nShot 2 "特写": 红衣少女抬头\nShot 3 "收束": 摩托驶离街区',
     );
   });
 
@@ -156,7 +156,7 @@ describe('video generation flow helpers', () => {
         params: { generationMode: 'storyboard', storyboardPrompt: '雨夜霓虹' },
         clips: [{ order: 1, title: '开场', prompt: '城市远景' }],
       }),
-    ).toBe('整片提示词：雨夜霓虹\n\n完整分镜脚本：\n分镜 1「开场」：城市远景');
+    ).toBe('Full video prompt: 雨夜霓虹\n\nFull storyboard script:\nShot 1 "开场": 城市远景');
   });
 
   it('resolves generate_audio params with existing precedence', () => {

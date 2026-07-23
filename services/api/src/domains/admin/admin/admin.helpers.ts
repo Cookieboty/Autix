@@ -1,8 +1,9 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import {
   PointGrantType,
   Prisma,
 } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import type {
   FulfillOrderDto,
   GrantPointsDto,
@@ -238,10 +239,15 @@ export function buildGrantPointsDecision(
   pointsPackage?: { name: string; points: number } | null,
 ) {
   if (body.packageId) {
-    if (!pointsPackage) throw new BadRequestException('积分包不存在');
+    if (!pointsPackage) {
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'grant.points_package_not_found',
+      );
+    }
     return {
       pointsToGrant: pointsPackage.points,
-      remark: body.remark || `管理员授予积分包: ${pointsPackage.name}`,
+      remark: body.remark || `Admin granted points package: ${pointsPackage.name}`,
       grantType: PointGrantType.PURCHASED,
     };
   }
@@ -249,12 +255,15 @@ export function buildGrantPointsDecision(
   if (body.points && body.points > 0) {
     return {
       pointsToGrant: body.points,
-      remark: body.remark || '管理员手动授予积分',
+      remark: body.remark || 'Admin manual points grant',
       grantType: PointGrantType.COMPENSATION,
     };
   }
 
-  throw new BadRequestException('请提供 points 或 packageId');
+  throw new I18nHttpException(
+    HttpStatus.BAD_REQUEST,
+    'grant.missing_points_or_package',
+  );
 }
 
 export function buildAdminAuditRecord(
@@ -283,7 +292,7 @@ function assertRequired(input: Record<string, unknown>, fields: string[]) {
       input[field] === null ||
       input[field] === ''
     ) {
-      throw new BadRequestException(`缺少必填字段: ${field}`);
+      throw new BadRequestException(`Missing required field: ${field}`);
     }
   }
 }
@@ -294,11 +303,11 @@ function has(input: Record<string, unknown>, field: string) {
 
 function requiredString(value: unknown, field: string) {
   if (typeof value !== 'string') {
-    throw new BadRequestException(`${field} 必须为字符串`);
+    throw new BadRequestException(`${field} must be a string`);
   }
   const trimmed = value.trim();
   if (!trimmed) {
-    throw new BadRequestException(`${field} 不能为空`);
+    throw new BadRequestException(`${field} must not be empty`);
   }
   return trimmed;
 }
@@ -306,7 +315,7 @@ function requiredString(value: unknown, field: string) {
 function nullableString(value: unknown, field: string) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value !== 'string') {
-    throw new BadRequestException(`${field} 必须为字符串`);
+    throw new BadRequestException(`${field} must be a string`);
   }
   const trimmed = value.trim();
   return trimmed || null;
@@ -315,7 +324,7 @@ function nullableString(value: unknown, field: string) {
 function nonNegativeInt(value: unknown, field: string) {
   const n = Number(value);
   if (!Number.isInteger(n) || n < 0) {
-    throw new BadRequestException(`${field} 必须为非负整数`);
+    throw new BadRequestException(`${field} must be a non-negative integer`);
   }
   return n;
 }
@@ -323,28 +332,28 @@ function nonNegativeInt(value: unknown, field: string) {
 function positiveInt(value: unknown, field: string) {
   const n = Number(value);
   if (!Number.isInteger(n) || n < 1) {
-    throw new BadRequestException(`${field} 必须为正整数`);
+    throw new BadRequestException(`${field} must be a positive integer`);
   }
   return n;
 }
 
 function nonNegativeDecimal(value: unknown, field: string) {
   if (value === null || value === undefined || value === '') {
-    throw new BadRequestException(`${field} 不能为空`);
+    throw new BadRequestException(`${field} must not be empty`);
   }
   if (typeof value !== 'string' && typeof value !== 'number') {
-    throw new BadRequestException(`${field} 必须为金额`);
+    throw new BadRequestException(`${field} must be a monetary amount`);
   }
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) {
-    throw new BadRequestException(`${field} 必须为非负金额`);
+    throw new BadRequestException(`${field} must be a non-negative amount`);
   }
   return typeof value === 'string' ? value.trim() : value;
 }
 
 function boolean(value: unknown, field: string) {
   if (typeof value !== 'boolean') {
-    throw new BadRequestException(`${field} 必须为布尔值`);
+    throw new BadRequestException(`${field} must be a boolean`);
   }
   return value;
 }

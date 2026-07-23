@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { AppLogger } from '../../platform/common/app-logger';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { randomUUID } from 'crypto';
@@ -70,7 +70,7 @@ export class VideoDirectGenerationService {
 
   async generate(input: DirectVideoGenerateInput) {
     const prompt = input.prompt?.trim();
-    if (!prompt) throw new BadRequestException('请输入提示词');
+    if (!prompt) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.prompt_required');
     const generationId = randomUUID();
 
     // 服务端强制 standard，忽略客户端 params.model / params.generationMode（FIX-3，
@@ -152,7 +152,7 @@ export class VideoDirectGenerationService {
     // 未来放宽 prompt 必填时的安全网，不读 requestBody.content
     // （flat-media 协议没有 content 数组，读它会对空素材恒判空）。
     if (prompt.trim().length === 0 && input.materials.length === 0) {
-      throw new BadRequestException('缺少素材或 prompt');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.clip_missing_material_or_prompt');
     }
 
     const estimateInput = buildSeedanceCostEstimateInput({

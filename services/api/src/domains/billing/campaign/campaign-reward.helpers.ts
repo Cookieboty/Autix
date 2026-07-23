@@ -41,8 +41,8 @@ export type FixedCampaignDefinition = {
 export const FIXED_CAMPAIGN_DEFINITIONS: readonly FixedCampaignDefinition[] = [
   {
     code: 'INVITATION_REWARD',
-    name: '邀请奖励',
-    description: '邀请好友注册并完成激活后发放奖励。',
+    name: 'Invite reward',
+    description: 'Reward granted after a friend registers and completes activation.',
     type: CampaignType.INVITATION,
     status: CampaignStatus.ACTIVE,
     rewardPoints: 100,
@@ -56,8 +56,8 @@ export const FIXED_CAMPAIGN_DEFINITIONS: readonly FixedCampaignDefinition[] = [
   },
   {
     code: 'REGISTRATION_BONUS',
-    name: '注册奖励',
-    description: '新用户完成注册后发放的欢迎奖励，默认关闭。',
+    name: 'Registration reward',
+    description: 'Welcome reward granted after a new user completes registration. Disabled by default.',
     type: CampaignType.REGISTRATION,
     status: CampaignStatus.PAUSED,
     rewardPoints: 0,
@@ -71,8 +71,8 @@ export const FIXED_CAMPAIGN_DEFINITIONS: readonly FixedCampaignDefinition[] = [
   },
   {
     code: 'HOME_QUEST_NANO_BANANA_PRO',
-    name: '首页任务：Nano Banana Pro',
-    description: '完成 Nano Banana Pro 图片生成后领取奖励。',
+    name: 'Home task: Nano Banana Pro',
+    description: 'Claim the reward after completing Nano Banana Pro image generation.',
     type: CampaignType.QUEST,
     status: CampaignStatus.ACTIVE,
     rewardPoints: 50,
@@ -93,8 +93,8 @@ export const FIXED_CAMPAIGN_DEFINITIONS: readonly FixedCampaignDefinition[] = [
   },
   {
     code: 'HOME_QUEST_SEEDANCE',
-    name: '首页任务：Seedance',
-    description: '完成 Seedance 视频生成后领取奖励。',
+    name: 'Home task: Seedance',
+    description: 'Claim the reward after completing Seedance video generation.',
     type: CampaignType.QUEST,
     status: CampaignStatus.ACTIVE,
     rewardPoints: 80,
@@ -115,8 +115,8 @@ export const FIXED_CAMPAIGN_DEFINITIONS: readonly FixedCampaignDefinition[] = [
   },
   {
     code: 'HOME_QUEST_MARKETING',
-    name: '首页任务：Marketing Studio',
-    description: '营销创作工作流恢复后可启用此任务。',
+    name: 'Home task: Marketing Studio',
+    description: 'This task can be enabled after the marketing creation workflow is restored.',
     type: CampaignType.QUEST,
     status: CampaignStatus.PAUSED,
     rewardPoints: 20,
@@ -560,7 +560,7 @@ export function buildCampaignPointGrantInput(
       pointGrantSourceId: sourceId,
       ...(input.metadata ?? {}),
     }),
-    remark: `活动奖励：${campaign.name}`,
+    remark: `Campaign reward: ${campaign.name}`,
   };
 }
 

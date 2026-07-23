@@ -235,7 +235,7 @@ export class ResourceMetricsRepository {
     const column = COUNTER_COLUMNS[field];
     if (!column) {
       // 理论上不可达（field 类型已被 CounterField 收窄），但显式白名单校验防御性拦截。
-      throw new Error(`未知计数器字段: ${field}`);
+      throw new Error(`Unknown counter field: ${field}`);
     }
     await tx.$executeRaw`
       UPDATE "resource_metrics"

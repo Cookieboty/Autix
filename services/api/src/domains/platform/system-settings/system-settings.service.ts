@@ -65,7 +65,7 @@ export class SystemSettingsService implements OnModuleInit {
       .map(([key]) => key)
       .filter((key) => !EDITABLE_SYSTEM_SETTING_KEYS.has(key));
     if (invalidKeys.length > 0) {
-      throw new BadRequestException(`不可配置的系统配置项: ${invalidKeys.join(', ')}`);
+      throw new BadRequestException(`Non-configurable system setting: `);
     }
 
     const writes: Array<{ key: string; value: string }> = [];
@@ -90,7 +90,7 @@ export class SystemSettingsService implements OnModuleInit {
   ): Promise<ResolvedSystemSetting> {
     const definition = findSystemSettingDefinition(key);
     if (!definition) {
-      throw new BadRequestException(`未知系统配置项: ${key}`);
+      throw new BadRequestException(`Unknown system setting: `);
     }
     const rows = await this.readRows();
     return this.resolveSetting(definition, rows, options);
@@ -120,16 +120,16 @@ export class SystemSettingsService implements OnModuleInit {
         if (['1', 'true', 'yes', 'on', 'enabled'].includes(normalized)) return 'true';
         if (['0', 'false', 'no', 'off', 'disabled'].includes(normalized)) return 'false';
       }
-      throw new BadRequestException(`${definition.label} 必须是布尔值`);
+      throw new BadRequestException(` must be a boolean`);
     }
 
     if (typeof rawValue !== 'string') {
-      throw new BadRequestException(`${definition.label} 必须是字符串`);
+      throw new BadRequestException(` must be a string`);
     }
 
     const value = rawValue.trim();
     if (!value && !definition.allowEmpty) {
-      throw new BadRequestException(`${definition.label} 不能为空`);
+      throw new BadRequestException(` cannot be empty`);
     }
     return value;
   }
@@ -146,7 +146,7 @@ export class SystemSettingsService implements OnModuleInit {
     try {
       await this.settingsRepository.upsertValue(key, value);
     } catch (error: any) {
-      throw new BadRequestException(error?.message ?? '系统配置保存失败');
+      throw new BadRequestException(error?.message ?? 'Failed to save system setting');
     }
   }
 }

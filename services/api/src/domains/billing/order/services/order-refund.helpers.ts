@@ -73,7 +73,7 @@ export function assertRefundAmountWithinPaidAmount(
       ? paid
       : Number(input.amount);
   if (Number.isFinite(requested) && requested > paid + 0.000001) {
-    throw new BadRequestException('退款金额不能超过已支付金额');
+    throw new BadRequestException('Refund amount cannot exceed the paid amount');
   }
 }
 

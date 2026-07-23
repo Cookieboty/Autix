@@ -37,7 +37,7 @@ export type LoginResult = {
 export type IssuedSession = { loginResult: LoginResult; sessionId: string };
 
 type SwitchSystemResult = {
-  message: string;
+  messageKey: string;
   currentSystemId: string;
 };
 
@@ -136,7 +136,7 @@ export class AuthService {
   async register(
     dto: RegisterDto,
     context: { signupIp?: string; signupDeviceId?: string } = {},
-  ): Promise<{ message: string; requiresActivation: boolean }> {
+  ): Promise<{ messageKey: string; requiresActivation: boolean }> {
     const existingUsername = await this.identityRepository.findUserByUsername(dto.username);
     if (existingUsername) {
       throw new I18nHttpException(HttpStatus.CONFLICT, 'auth.register.username_taken');
@@ -178,10 +178,10 @@ export class AuthService {
         { expiresIn: '1h' },
       );
       this.mailService
-        .sendActivationEmail(user.email, user.username, token)
+        .sendActivationEmail(user.email, user.username, token, user.language ?? undefined)
         .catch(() => { });
 
-      return { message: '注册成功，请前往邮箱点击激活链接以完成账户激活', requiresActivation: true };
+      return { messageKey: 'auth.register.success_activation_pending', requiresActivation: true };
     }
 
     const user = await this.identityRepository.createRegistration({
@@ -197,18 +197,18 @@ export class AuthService {
 
     await this.recordInvitationIfPresent(dto.inviteCode, user.id);
 
-    return { message: '注册成功，等待管理员审批', requiresActivation: false };
+    return { messageKey: 'auth.register.success_pending_approval', requiresActivation: false };
   }
 
-  async resendActivation(email: string): Promise<{ message: string }> {
+  async resendActivation(email: string): Promise<{ messageKey: string }> {
     const user = await this.identityRepository.findUserByEmail(email);
     if (!user || user.status !== 'PENDING') {
-      return { message: '如果该邮箱对应待激活账户，激活邮件已重新发送' };
+      return { messageKey: 'auth.activation.resent_if_eligible' };
     }
 
     const reg = await this.identityRepository.findPendingActivationRegistration(user.id);
     if (!reg || !reg.system.autoApprove) {
-      return { message: '如果该邮箱对应待激活账户，激活邮件已重新发送' };
+      return { messageKey: 'auth.activation.resent_if_eligible' };
     }
 
     const token = this.jwtService.sign(
@@ -221,13 +221,13 @@ export class AuthService {
       { expiresIn: '1h' },
     );
     this.mailService
-      .sendActivationEmail(user.email, user.username, token)
+      .sendActivationEmail(user.email, user.username, token, user.language ?? undefined)
       .catch(() => { });
 
-    return { message: '如果该邮箱对应待激活账户，激活邮件已重新发送' };
+    return { messageKey: 'auth.activation.resent_if_eligible' };
   }
 
-  async activateAccount(dto: ActivateAccountDto): Promise<{ message: string }> {
+  async activateAccount(dto: ActivateAccountDto): Promise<{ messageKey: string }> {
     let payload: { sub: string; purpose: string; systemId: string; inviteCode?: string };
     try {
       payload = this.jwtService.verify(dto.token);
@@ -283,7 +283,7 @@ export class AuthService {
     await this.settleInvitationReward(user.id);
     await this.grantRegistrationBonus(user.id, 'email_activation');
 
-    return { message: '激活成功，现在可以登录使用' };
+    return { messageKey: 'auth.activation.success' };
   }
 
   async refresh(dto: RefreshDto): Promise<TokenPair> {
@@ -333,23 +333,23 @@ export class AuthService {
 
     await this.sessionRepository.updateCurrentSystem(user.sessionId, dto.systemId);
 
-    return { message: '切换系统成功', currentSystemId: dto.systemId };
+    return { messageKey: 'auth.system.switched', currentSystemId: dto.systemId };
   }
 
-  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
-    const message = '如果邮箱存在，重置邮件已发送';
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ messageKey: string }> {
+    const messageKey = 'auth.password_reset.sent_if_exists';
     const user = await this.identityRepository.findPasswordResetUserByEmail(dto.email);
-    if (!user || !user.password) return { message };
+    if (!user || !user.password) return { messageKey };
 
     const token = this.jwtService.sign(
       { sub: user.id, purpose: 'password-reset', ph: user.password.slice(-8) },
       { expiresIn: '5m' },
     );
-    this.mailService.sendPasswordResetEmail(dto.email, token).catch(() => { });
-    return { message };
+    this.mailService.sendPasswordResetEmail(dto.email, token, user.language ?? undefined).catch(() => { });
+    return { messageKey };
   }
 
-  async resetPasswordByToken(dto: ResetPasswordByTokenDto): Promise<{ message: string }> {
+  async resetPasswordByToken(dto: ResetPasswordByTokenDto): Promise<{ messageKey: string }> {
     let payload: { sub: string; purpose: string; ph: string };
     try {
       payload = this.jwtService.verify(dto.token);
@@ -376,7 +376,7 @@ export class AuthService {
       expectedPasswordSuffix: payload.ph,
     });
 
-    return { message: '密码重置成功' };
+    return { messageKey: 'auth.password_reset.success' };
   }
 
   /**

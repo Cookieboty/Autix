@@ -24,12 +24,12 @@ export class GalleryTemplateConversionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly repo: GalleryRepository,
-  ) {}
+  ) { }
 
   async convertToTemplate(adminId: string, galleryId: string) {
     const gallery = await this.repo.findById(galleryId);
     if (!gallery) {
-      throw new NotFoundException('作品不存在');
+      throw new NotFoundException('Post not found');
     }
 
     // 幂等无条件优先于状态门禁：已转换过的作品直接返回既有模板，无论其当前状态/kind。
@@ -44,15 +44,15 @@ export class GalleryTemplateConversionService {
     }
 
     if (gallery.status !== GalleryStatus.PUBLISHED || gallery.kind !== GalleryKind.IMAGE) {
-      throw new BadRequestException('仅已发布的图片作品可转换为模板');
+      throw new BadRequestException('Only published image posts can be converted into a template');
     }
     if (!gallery.prompt) {
-      throw new BadRequestException('作品缺少提示词，无法转换为模板');
+      throw new BadRequestException('Post has no prompt and cannot be converted into a template');
     }
 
     const now = new Date();
     const data: Prisma.image_templatesUncheckedCreateInput = {
-      title: gallery.title ?? `来自作品 ${galleryId.slice(0, 8)}`,
+      title: gallery.title ?? `From artwork ${galleryId.slice(0, 8)}`,
       category: gallery.category,
       prompt: gallery.prompt,
       variables: {},

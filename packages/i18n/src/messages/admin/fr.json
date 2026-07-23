@@ -41,7 +41,7 @@
     "backendPermission": "Permission backend",
     "editAside": "Les modifications affecteront les attributions de rôles et l'affichage de l'arbre des permissions.",
     "createAside": "Peut être attribuée aux rôles après la création.",
-    "belongSection": "Affiliation",
+    "belongSection": "Rattachement",
     "belongDescription": "Les permissions doivent être rattachées à un menu spécifique pour maintenir les limites de navigation et de capacité.",
     "parentMenu": "Menu parent",
     "parentMenuEditHelp": "Impossible de changer le menu parent en mode édition.",
@@ -385,7 +385,7 @@
     "statusDisabled": "Désactivé",
     "statusLocked": "Verrouillé",
     "statusPending": "En attente",
-    "paginationInfo": "Total {total}, Page {page}/{totalPages}",
+    "paginationInfo": "Total {total}, page {page}/{totalPages}",
     "prevPage": "Précédent",
     "nextPage": "Suivant",
     "deleteTitle": "Supprimer l'utilisateur",
@@ -409,7 +409,7 @@
     "drawerStatusLocked": "Verrouillé",
     "drawerStatusDisabled": "Désactivé",
     "drawerStatusPending": "En attente",
-    "drawerBelongSection": "Affiliation",
+    "drawerBelongSection": "Rattachement",
     "drawerBelongDescription": "Attribuer le système et le rôle initiaux pour le nouvel utilisateur.",
     "drawerBelongSystem": "Système",
     "drawerRole": "Rôle",
@@ -498,12 +498,12 @@
     "sectionFrontmatter": "Frontmatter (JSON)",
     "sectionMcpServer": "Configuration du serveur",
     "sectionMcpEnv": "Schéma de variables d'environnement",
-    "sectionAgentSystemPrompt": "System Prompt",
+    "sectionAgentSystemPrompt": "Prompt système",
     "sectionAgentTools": "Liaisons d'outils (Tool Bindings)",
     "fieldTitle": "Titre",
     "fieldDescription": "Description",
     "fieldCategory": "Catégorie",
-    "fieldTags": "Tags",
+    "fieldTags": "Étiquettes",
     "fieldTagsHint": "séparés par des virgules",
     "fieldTagsPlaceholder": "ex. revue de code, ingénierie, dev",
     "fieldCover": "Image de couverture",
@@ -518,7 +518,7 @@
     "fieldRuntimeDesktop": "Desktop uniquement",
     "fieldRuntimeEither": "Les deux",
     "fieldRuntimeDetectionPrefix": "Règles de détection : ",
-    "varKeyPlaceholder": "key",
+    "varKeyPlaceholder": "clé",
     "varLabelPlaceholder": "Étiquette",
     "varDefaultPlaceholder": "Valeur par défaut",
     "varTypeText": "Texte",
@@ -528,7 +528,7 @@
     "imageTitlePlaceholder": "ex. Portrait cinématographique",
     "imageDescriptionPlaceholder": "Une phrase qui résume l'usage et l'atout de ce template",
     "imagePromptDescription": "Utilisez les placeholders '{nomVariable}' — ils sont remplacés quand l'utilisateur remplit le formulaire.",
-    "imagePromptPlaceholder": "A cinematic portrait of '{gender}', '{age_range}' years old...",
+    "imagePromptPlaceholder": "Un portrait cinématographique de '{gender}', '{age_range}' ans...",
     "imageVariablesDescription": "Définissez l'étiquette, le type et la valeur par défaut de chaque '{variable}' du prompt.",
     "imageExampleLabel": "Exemples générés",
     "imageRecommendedModel": "Modèle recommandé",
@@ -536,7 +536,7 @@
     "imagePointsHint": "Points par génération (0 = points de base de la plateforme uniquement)",
     "imageRuntimeFixed": "Les templates d'image s'exécutent toujours dans le cloud.",
     "videoTitlePlaceholder": "ex. Court marketing de 15s",
-    "videoPromptPlaceholder": "Create a '{duration}'-second marketing short video for...",
+    "videoPromptPlaceholder": "Créez une courte vidéo marketing de '{duration}' secondes pour...",
     "videoExampleLabel": "Médias d'exemple (image ou frame vidéo)",
     "videoRecommendedModel": "Modèle recommandé",
     "videoModelPlaceholder": "ex. sora-2, kling-1.5",
@@ -580,7 +580,7 @@
     "mcpUrlHintSse": "Endpoint SSE",
     "mcpUrlPlaceholder": "https://mcp.example.com/server",
     "mcpEnvDescription": "Déclarez les clés et paramètres que l'utilisateur doit configurer à l'installation. required=true rend le champ obligatoire.",
-    "mcpEnvKey": "KEY",
+    "mcpEnvKey": "CLÉ",
     "mcpEnvDescriptionPlaceholder": "Description affichée à l'installateur",
     "mcpEnvRequired": "requis",
     "mcpEnvAdd": "Ajouter un champ env",
@@ -593,11 +593,11 @@
     "agentTitlePlaceholder": "ex. PRD Assistant Agent",
     "agentDescriptionPlaceholder": "Une phrase qui résume le workflow et l'objectif de cet Agent",
     "agentSystemPromptDescription": "Persona et workflow de l'Agent. Préférez la structure : rôle → contrat d'entrée → étapes → format de sortie.",
-    "agentSystemPromptLabel": "System Prompt",
+    "agentSystemPromptLabel": "Prompt système",
     "agentSystemPromptPlaceholder": "Tu es l'Agent ___, ton objectif est ___.\n\nWorkflow :\n1. ___\n2. ___\n3. ___",
     "agentToolsDescription": "MCP et Skill disponibles au démarrage de l'Agent. Si une liaison est DESKTOP_ONLY, l'Agent est marqué DESKTOP_ONLY automatiquement.",
-    "agentMcpIds": "MCP IDs",
-    "agentSkillIds": "Skill IDs",
+    "agentMcpIds": "ID MCP",
+    "agentSkillIds": "ID Skill",
     "agentIdsHint": "séparés par virgules ou retours à la ligne",
     "agentMcpIdsPlaceholder": "cmojxxx, cmojyyy",
     "agentSkillIdsPlaceholder": "cmojaaa, cmojbbb",
@@ -811,12 +811,12 @@
       "video": "Vidéo",
       "embedding": "Embedding"
     },
-    "fieldMembershipAccess": "Membership access",
-    "fieldMembershipAccessDescription": "Leave all levels unchecked to allow every user. Select levels to restrict this system model.",
-    "membershipAccessEmpty": "No membership levels available.",
-    "membershipLevelMeta": "Level {level}",
-    "membershipAccessAll": "Available to all users",
-    "membershipAccessLimited": "Limited to: {levels}",
+    "fieldMembershipAccess": "Accès par abonnement",
+    "fieldMembershipAccessDescription": "Laissez tous les niveaux décochés pour autoriser chaque utilisateur. Sélectionnez des niveaux pour restreindre ce modèle système.",
+    "membershipAccessEmpty": "Aucun niveau d'abonnement disponible.",
+    "membershipLevelMeta": "Niveau {level}",
+    "membershipAccessAll": "Accessible à tous les utilisateurs",
+    "membershipAccessLimited": "Limité à : {levels}",
     "schemaSectionHeading": "Schéma de tarification",
     "schemaSectionDescription": "Définissez le schéma des paramètres (champs affichés aux administrateurs) et le schéma de tarification (comment l'utilisation devient un prix) pour ce modèle. Enregistré avec le modèle lors du clic sur Enregistrer.",
     "invalidSchemaJson": "Le schéma des paramètres et le schéma de tarification doivent tous deux être un JSON valide.",
@@ -912,7 +912,7 @@
         "quality": "Effacer la qualité",
         "resolution": "Effacer la résolution",
         "modelTier": "Effacer le niveau de modèle",
-        "membershipLevel": "清空会员等级"
+        "membershipLevel": "Effacer le niveau d'abonnement"
       },
       "modelTier": "Niveau de modèle",
       "rulePriority": "Priorité de règle",
@@ -923,12 +923,12 @@
       "currentCost": "Coût actuel",
       "status": "Statut",
       "actions": "Actions",
-      "durationSeconds": "时长",
-      "membershipLevel": "会员等级",
-      "requireVideoInput": "仅视频输入",
-      "requireAudioInput": "仅音频输入",
-      "requirePriority": "仅优先队列",
-      "unknownConditions": "未识别条件"
+      "durationSeconds": "Durée",
+      "membershipLevel": "Niveau d'abonnement",
+      "requireVideoInput": "Entrée vidéo uniquement",
+      "requireAudioInput": "Entrée audio uniquement",
+      "requirePriority": "File prioritaire uniquement",
+      "unknownConditions": "Conditions non reconnues"
     },
     "modal": {
       "createTitle": "Ajouter une règle tarifaire métier",
@@ -940,10 +940,10 @@
       "addSubRule": "Ajouter une sous-règle",
       "enableRule": "Activer la règle",
       "saveFailed": "Échec de l’enregistrement",
-      "basicSection": "基础信息",
-      "modelScopeSection": "适用模型范围",
-      "conditionSection": "规则条件",
-      "costSection": "扣费组件"
+      "basicSection": "Informations de base",
+      "modelScopeSection": "Portée du modèle",
+      "conditionSection": "Conditions de la règle",
+      "costSection": "Composantes de tarification"
     },
     "cost": {
       "inputPerK": "Entrée {value}/K",
@@ -993,24 +993,24 @@
         "hint": "Multiplié quand une tâche vidéo inclut une entrée audio ou génère de l’audio. Peut rester vide."
       },
       "toolCallCost": {
-        "label": "工具调用 / 次",
-        "hint": "每次工具调用的附加积分。"
+        "label": "Appel d'outil / unité",
+        "hint": "Points supplémentaires pour chaque appel d'outil."
       },
       "mcpCallCost": {
-        "label": "MCP 调用 / 次",
-        "hint": "每次 MCP 工具调用的附加积分。"
+        "label": "Appel MCP / unité",
+        "hint": "Points supplémentaires pour chaque appel d'outil MCP."
       },
       "skillCallCost": {
-        "label": "Skill 调用 / 次",
-        "hint": "每次 Skill 参与的附加积分。"
+        "label": "Appel de Skill / unité",
+        "hint": "Points supplémentaires lorsqu'un Skill est utilisé."
       },
       "batchUnitCost": {
-        "label": "批量单位积分",
-        "hint": "批量生成时按批次数量叠加。"
+        "label": "Points par unité de lot",
+        "hint": "Ajoutés selon le nombre d'éléments pour la génération par lot."
       },
       "priorityMultiplier": {
-        "label": "优先队列倍率",
-        "hint": "使用优先队列时叠乘，可留空。"
+        "label": "Multiplicateur de file prioritaire",
+        "hint": "Appliqué lors de l'exécution prioritaire. Peut être laissé vide."
       }
     },
     "preview": {
@@ -1029,16 +1029,16 @@
       "estimateResult": "Résultat estimé",
       "estimatedCostPrefix": "Coût estimé : ",
       "matchedRule": "Règle trouvée : {name} ({id})",
-      "contextTokens": "上下文 Token",
-      "toolCalls": "工具调用次数",
-      "mcpCalls": "MCP 调用次数",
-      "skillCalls": "Skill 调用次数",
-      "batchCount": "批量数量",
-      "referenceImages": "参考图数量",
-      "hasVideoInput": "包含视频输入",
-      "hasAudioInput": "包含音频输入",
-      "priority": "优先队列",
-      "membershipLevel": "会员等级"
+      "contextTokens": "Token de contexte",
+      "toolCalls": "Appels d'outils",
+      "mcpCalls": "Appels MCP",
+      "skillCalls": "Appels de Skill",
+      "batchCount": "Nombre d'éléments du lot",
+      "referenceImages": "Images de référence",
+      "hasVideoInput": "Contient une entrée vidéo",
+      "hasAudioInput": "Contient une entrée audio",
+      "priority": "File prioritaire",
+      "membershipLevel": "Niveau d'abonnement"
     },
     "tasks": {
       "chat_message_fast": {
@@ -1195,7 +1195,7 @@
       "variables": "Variables",
       "content": "Contenu du Prompt",
       "saveDraft": "Enregistrer le brouillon",
-      "key": "Key"
+      "key": "Clé"
     },
     "gallery": {
       "title": "Modération de la Galerie",
@@ -1260,24 +1260,24 @@
         "publishedAt": "Publié le"
       },
       "batch": {
-        "selected": "{count} selected",
-        "clear": "Clear selection",
-        "approve": "Bulk approve",
-        "reject": "Bulk reject",
-        "hide": "Bulk hide",
-        "unpublish": "Bulk unpublish",
-        "remove": "Bulk remove",
-        "processing": "Processing…",
-        "selectAll": "Select all on page",
-        "selectRow": "Select this row",
-        "rejectDialogTitle": "Bulk reject {count} items",
-        "rejectDialogHint": "This reason will apply to all {count} selected items.",
-        "hideConfirm": "Hide the selected {count} items?",
-        "removeConfirm": "Remove the selected {count} items? This cannot be undone.",
-        "resultAllOk": "Successfully processed {count} items",
-        "resultPartial": "{succeeded} succeeded, {failed} failed",
-        "failuresTitle": "{count} items could not be processed",
-        "failuresDismiss": "Got it"
+        "selected": "{count} sélectionné(s)",
+        "clear": "Effacer la sélection",
+        "approve": "Approuver en lot",
+        "reject": "Rejeter en lot",
+        "hide": "Masquer en lot",
+        "unpublish": "Dépublier en lot",
+        "remove": "Supprimer en lot",
+        "processing": "Traitement en cours…",
+        "selectAll": "Tout sélectionner sur la page",
+        "selectRow": "Sélectionner cette ligne",
+        "rejectDialogTitle": "Rejeter {count} éléments en lot",
+        "rejectDialogHint": "Ce motif s'appliquera à l'ensemble des {count} éléments sélectionnés.",
+        "hideConfirm": "Masquer les {count} éléments sélectionnés ?",
+        "removeConfirm": "Supprimer les {count} éléments sélectionnés ? Cette action est irréversible.",
+        "resultAllOk": "{count} éléments traités avec succès",
+        "resultPartial": "{succeeded} réussis, {failed} échoués",
+        "failuresTitle": "{count} éléments n'ont pas pu être traités",
+        "failuresDismiss": "Compris"
       }
     },
     "boost": {
@@ -1396,7 +1396,7 @@
         "ctaText": "Texte du CTA",
         "ctaPlaceholder": "Essayer maintenant",
         "ctaHref": "Lien du CTA",
-        "overrideDescription": "Description (override)",
+        "overrideDescription": "Description (remplacement)",
         "enableSlot": "Activer cet emplacement mis en avant",
         "hint": "Astuce : les champs override ci-dessus n’affectent que le contenu affiché de cet emplacement, sans modifier la ressource source référencée elle-même."
       }

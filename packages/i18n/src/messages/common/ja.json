@@ -71,7 +71,7 @@
     "actions": "操作",
     "noData": "データなし",
     "loading": "読み込み中",
-    "actionMessage": "[操作: {action}]",
+    "actionMessage": "[アクション: {action}]",
     "serverError": "サーバーがエラーを返しました"
   },
   "sidebar": {
@@ -122,8 +122,8 @@
     "myOrders": "注文履歴",
     "inviteFriends": "友達を招待",
     "docs": "ドキュメント",
-    "myTemplates": "我的模板",
-    "upgrade": "升级会员",
+    "myTemplates": "マイテンプレート",
+    "upgrade": "会員をアップグレード",
     "gallery": "ギャラリー"
   },
   "notification": {
@@ -280,7 +280,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio - 発想する。作る。届ける。",
       "description": "PRD、コード、デザイン、プロトタイプを AI でまとめて生成します。"
     },
     "video": {

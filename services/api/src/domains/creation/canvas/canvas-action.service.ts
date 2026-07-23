@@ -59,7 +59,7 @@ export class CanvasActionService {
   async estimate(userId: string, boardId: string, dto: EstimateActionDto): Promise<CanvasActionEstimate> {
     await this.boardService.getBoard(userId, boardId); // ownership guard
     if (dto.actionType === 'agent-chat') {
-      return { kind: 'metered', note: '按用量计费' };
+      return { kind: 'metered', note: 'Billed by usage' };
     }
     if (dto.actionType === 'export') {
       return { kind: 'exact', cost: 0 };
@@ -81,7 +81,7 @@ export class CanvasActionService {
       this.logger.error(
         `canvas estimate misconfigured for taskType=${IMAGE_GENERATION_TASK_TYPE}: ${message}`,
       );
-      return { kind: 'metered', note: '定价配置异常，暂按实际用量计费' };
+      return { kind: 'metered', note: 'Pricing config error; temporarily billed by actual usage' };
     }
   }
 
@@ -93,7 +93,7 @@ export class CanvasActionService {
   async imageGenerate(userId: string, boardId: string, dto: ImageGenerateActionDto) {
     const { entitlement } = await this.boardService.getBoard(userId, boardId);
     if (!entitlement.canGenerate) {
-      throw new ForbiddenException(entitlement.reason ?? '该功能需要开通会员');
+      throw new ForbiddenException(entitlement.reason ?? 'This feature requires an active membership');
     }
 
     // Idempotency: replay the recorded action instead of regenerating/charging.
@@ -194,7 +194,7 @@ export class CanvasActionService {
   ): Promise<{ actionId: string; images: CanvasChatGeneratedImage[] }> {
     const { entitlement } = await this.boardService.getBoard(userId, boardId);
     if (!entitlement.canGenerate) {
-      throw new ForbiddenException(entitlement.reason ?? '该功能需要开通会员');
+      throw new ForbiddenException(entitlement.reason ?? 'This feature requires an active membership');
     }
 
     const existing = await this.repository.findActionByIdempotencyKey(boardId, dto.idempotencyKey);

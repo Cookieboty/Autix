@@ -1,4 +1,3 @@
-import { NotFoundException } from '@nestjs/common';
 import { ResourceType, TemplateStatus } from '../prisma/generated';
 import { BaseResourceService } from './base-resource.service';
 import { ResourceInteractionRepository } from './resource-interaction.repository';
@@ -89,7 +88,7 @@ describe('BaseResourceService.findById', () => {
   it('throws NotFoundException when resource does not exist', async () => {
     const { service, delegate } = setup();
     delegate.findUnique.mockResolvedValue(null);
-    await expect(service.findById('missing')).rejects.toThrow(NotFoundException);
+    await expect(service.findById('missing')).rejects.toMatchObject({ status: 404 });
   });
 });
 
@@ -213,7 +212,7 @@ describe('BaseResourceService.like', () => {
   it('throws NotFoundException if resource missing', async () => {
     const { service, delegate } = setup();
     delegate.findUnique.mockResolvedValue(null);
-    await expect(service.like('user-1', 'missing')).rejects.toThrow(NotFoundException);
+    await expect(service.like('user-1', 'missing')).rejects.toMatchObject({ status: 404 });
   });
 });
 
@@ -264,7 +263,7 @@ describe('BaseResourceService.favorite', () => {
   it('throws NotFoundException if resource missing', async () => {
     const { service, delegate } = setup();
     delegate.findUnique.mockResolvedValue(null);
-    await expect(service.favorite('user-1', 'missing')).rejects.toThrow(NotFoundException);
+    await expect(service.favorite('user-1', 'missing')).rejects.toMatchObject({ status: 404 });
   });
 });
 

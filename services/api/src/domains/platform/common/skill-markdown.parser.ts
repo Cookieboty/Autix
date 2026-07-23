@@ -25,7 +25,7 @@ function stringList(value: unknown): string[] | undefined {
 
 export function parseSkillMarkdown(rawMarkdown: string): ParsedSkillMarkdown {
   const source = rawMarkdown.trim();
-  if (!source) throw new BadRequestException('SKILL.md 内容不能为空');
+  if (!source) throw new BadRequestException('SKILL.md content cannot be empty');
 
   const match = source.match(FRONTMATTER_RE);
   let frontmatter: Record<string, unknown> = {};
@@ -36,14 +36,14 @@ export function parseSkillMarkdown(rawMarkdown: string): ParsedSkillMarkdown {
       frontmatter = asRecord(parseYaml(match[1]) ?? {});
     } catch (error) {
       throw new BadRequestException(
-        `SKILL.md frontmatter 解析失败: ${(error as Error).message}`,
+        `SKILL.md frontmatter parsing failed: ${(error as Error).message}`,
       );
     }
     instructions = source.slice(match[0].length).trim();
   }
 
   if (!instructions) {
-    throw new BadRequestException('SKILL.md 必须包含正文 instructions');
+    throw new BadRequestException('SKILL.md must contain body instructions');
   }
 
   return {

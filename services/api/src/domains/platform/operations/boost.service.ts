@@ -66,7 +66,7 @@ export class BoostService {
   async updateBoost(actorId: string, id: string, input: UpdateBoostInput) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('加热记录不存在');
+      throw new NotFoundException('Boost record not found');
     }
 
     const updated = await this.repo.update(id, {
@@ -85,7 +85,7 @@ export class BoostService {
   async revokeBoost(actorId: string, id: string) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('加热记录不存在');
+      throw new NotFoundException('Boost record not found');
     }
 
     const revoked = await this.repo.revoke(id);
@@ -127,7 +127,7 @@ export class BoostService {
 
   private assertResourceType(raw: string): ResourceType {
     if (!isMetricResourceType(raw as ResourceType)) {
-      throw new BadRequestException(`不支持的资源类型: ${raw}`);
+      throw new BadRequestException(`Unsupported resource type: ${raw}`);
     }
     return raw as ResourceType;
   }

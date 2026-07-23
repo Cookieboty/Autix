@@ -22,7 +22,7 @@ import type { AuthUser } from '@autix/domain';
 function parseResourceType(typeStr: string): ResourceType {
   const type = (ResourceType as Record<string, ResourceType>)[typeStr];
   if (!type) {
-    throw new BadRequestException(`不支持的资源类型: ${typeStr}`);
+    throw new BadRequestException(`Unsupported resource type: ${typeStr}`);
   }
   return type;
 }
@@ -53,7 +53,7 @@ const DEDICATED_ROUTE_RESOURCE_TYPES = new Set<ResourceType>([
 function assertNotDedicatedResource(type: ResourceType): void {
   if (DEDICATED_ROUTE_RESOURCE_TYPES.has(type)) {
     throw new BadRequestException(
-      `${type} 互动请走其专属端点（/gallery|/marketplace/image-templates|/marketplace/video-templates 的 :id/like|favorite）`,
+      `${type} interactions must use their dedicated endpoints (:id/like|favorite under /gallery|/marketplace/image-templates|/marketplace/video-templates)`,
     );
   }
 }
@@ -65,7 +65,7 @@ function assertNotDedicatedResource(type: ResourceType): void {
  */
 function assertNotGalleryShare(type: ResourceType): void {
   if (type === ResourceType.GALLERY_POST) {
-    throw new BadRequestException('gallery 互动请走 /gallery 专属端点');
+    throw new BadRequestException('Use the dedicated /gallery endpoints for gallery interactions');
   }
 }
 

@@ -15,10 +15,25 @@ import type {
   CanvasEntitlement,
 } from '@autix/domain';
 import {
+  isInsufficientPointsCode,
   matchInsufficientPointsMessage,
   parseInsufficientPointsMessage,
   reportInsufficientPoints,
 } from './insufficient-points-reporter';
+
+/** 优先取后端结构化 data.required/available，缺失时兜底解析英文文案。 */
+function readInsufficientPointsAmounts(
+  msg: string | null | undefined,
+  data: unknown,
+): { required: number | null; available: number | null } {
+  const d = data as { required?: unknown; available?: unknown } | null | undefined;
+  const fromData = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const parsed = parseInsufficientPointsMessage(msg);
+  return {
+    required: fromData(d?.required) ?? parsed.required,
+    available: fromData(d?.available) ?? parsed.available,
+  };
+}
 
 export type { FetchEventSourceInit };
 
@@ -439,8 +454,8 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
           (err as AxiosError & { hint?: ApiResponseHint }).hint = payload.hint;
           // 保留后端结构化错误上下文，供需要额外提示信息的业务使用。
           (err as AxiosError & { data?: unknown }).data = payload.data;
-          if (matchInsufficientPointsMessage(payload.msg)) {
-            const { required, available } = parseInsufficientPointsMessage(payload.msg);
+          if (isInsufficientPointsCode(payload.code) || matchInsufficientPointsMessage(payload.msg)) {
+            const { required, available } = readInsufficientPointsAmounts(payload.msg, payload.data);
             const decorated = err as AxiosError & {
               isInsufficientPoints?: boolean;
               insufficientPointsRequired?: number | null;
@@ -493,8 +508,10 @@ export function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () =>
 
       const finalMsg =
         (error as AxiosError & { msg?: string }).msg ?? error.message ?? '';
-      if (matchInsufficientPointsMessage(finalMsg)) {
-        const { required, available } = parseInsufficientPointsMessage(finalMsg);
+      const errCode = (error as AxiosError & { code?: string }).code;
+      const errData = (error as AxiosError & { data?: unknown }).data;
+      if (isInsufficientPointsCode(errCode) || matchInsufficientPointsMessage(finalMsg)) {
+        const { required, available } = readInsufficientPointsAmounts(finalMsg, errData);
         const decorated = error as AxiosError & {
           isInsufficientPoints?: boolean;
           insufficientPointsRequired?: number | null;

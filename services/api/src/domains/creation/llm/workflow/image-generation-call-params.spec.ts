@@ -339,7 +339,7 @@ describe('buildUnsupportedImageParamsException', () => {
     expect(exception.getStatus()).toBe(400);
     expect(exception.getResponse()).toMatchObject({
       errorCode: 'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
-      message: expect.stringContaining('当前模型不支持所选参数'),
+      message: expect.stringContaining('The current model does not support the selected parameters'),
       details: {
         model: 'gemini-3-pro-image',
         protocolKey: 'openai-images@v1',

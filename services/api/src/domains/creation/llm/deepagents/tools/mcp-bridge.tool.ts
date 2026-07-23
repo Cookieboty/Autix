@@ -20,14 +20,14 @@ export function createMcpBridgeTools(mcpRefs: McpRef[]) {
   return cloudRunnable.map((mcp) =>
     tool(
       async (input) => {
-        return `[MCP ${mcp.serverName}] 工具调用占位 — 参数: ${JSON.stringify(input.args)}。实际 MCP bridge 待实现。`;
+        return `[MCP ${mcp.serverName}] tool call placeholder — parameters: ${JSON.stringify(input.args)}. Actual MCP bridge not yet implemented.`;
       },
       {
         name: `mcp_${mcp.serverName}`,
-        description: `调用 MCP 服务: ${mcp.serverName} (${mcp.transport})`,
+        description: `Call MCP service: ${mcp.serverName} (${mcp.transport})`,
         schema: z.object({
-          method: z.string().describe('MCP 方法名'),
-          args: z.record(z.unknown()).describe('调用参数'),
+          method: z.string().describe('MCP method name'),
+          args: z.record(z.unknown()).describe('Call parameters'),
         }),
       },
     ),

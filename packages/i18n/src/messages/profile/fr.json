@@ -35,8 +35,8 @@
     "membershipRequired": "Abonnement requis",
     "membershipRequiredDesc": "La bibliothèque est une fonctionnalité réservée aux membres. Passez à un abonnement pour télécharger des documents et construire votre base de connaissances.",
     "upgradeMembership": "Passer à l'abonnement",
-    "statusDeleted": "已删除",
-    "includeDeleted": "包含已删除用户"
+    "statusDeleted": "Supprimé",
+    "includeDeleted": "Inclure les utilisateurs supprimés"
   },
   "settings": {
     "title": "Paramètres",
@@ -215,8 +215,8 @@
     "emptyDescription": "Importez des médias ou ajoutez-les depuis l’historique image/vidéo.",
     "selectAsset": "Sélectionner {title}",
     "deleteAsset": "Supprimer le média",
-    "invertSelection": "反选",
-    "clearSelection": "取消选择",
+    "invertSelection": "Inverser",
+    "clearSelection": "Effacer la sélection",
     "folders": "Dossiers",
     "allFolders": "Tout",
     "uncategorized": "Sans catégorie",

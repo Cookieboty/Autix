@@ -35,7 +35,7 @@ function inferTransport(server: JsonRecord): McpTransport {
   const url = asString(server.url);
   if (url?.includes('/sse')) return McpTransport.sse;
   if (url) return McpTransport.http;
-  throw new BadRequestException('MCP config 缺少 command 或 url');
+  throw new BadRequestException('MCP config is missing command or url');
 }
 
 function sanitizeValue(key: string, value: unknown) {
@@ -89,26 +89,26 @@ function pickServer(rawConfig: unknown, preferredName?: string): {
   server: JsonRecord;
 } {
   if (!isRecord(rawConfig)) {
-    throw new BadRequestException('MCP config 必须是 JSON 对象');
+    throw new BadRequestException('MCP config must be a JSON object');
   }
 
   if (isRecord(rawConfig.mcpServers)) {
     const servers = rawConfig.mcpServers;
     const names = Object.keys(servers);
     if (names.length === 0) {
-      throw new BadRequestException('mcpServers 不能为空');
+      throw new BadRequestException('mcpServers cannot be empty');
     }
     const serverName = preferredName && servers[preferredName] ? preferredName : names[0];
     const server = servers[serverName];
     if (!isRecord(server)) {
-      throw new BadRequestException(`MCP server ${serverName} 必须是对象`);
+      throw new BadRequestException(`MCP server ${serverName} must be an object`);
     }
     return { serverName, server };
   }
 
   const serverName = preferredName ?? asString(rawConfig.name) ?? asString(rawConfig.serverName);
   if (!serverName) {
-    throw new BadRequestException('单 server MCP config 需要 name/serverName');
+    throw new BadRequestException('Single-server MCP config requires name/serverName');
   }
   return { serverName, server: rawConfig };
 }

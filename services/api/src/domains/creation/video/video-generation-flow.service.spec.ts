@@ -496,7 +496,7 @@ describe('VideoGenerationFlowService billing', () => {
     });
 
     const resolvedPrompt =
-      '整片提示词：高端科技广告，冷色光线，节奏干净\n\n当前分镜提示词：产品从左侧滑入，镜头缓慢推进';
+      'Full video prompt: 高端科技广告，冷色光线，节奏干净\n\nCurrent shot prompt: 产品从左侧滑入，镜头缓慢推进';
     expect(submitVideoTaskMock).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: resolvedPrompt }),
     );
@@ -564,9 +564,9 @@ describe('VideoGenerationFlowService billing', () => {
     >;
     const callRequest = submitCalls.at(-1)?.[0];
     expect(callRequest?.params.duration).toBe(5);
-    expect(callRequest?.prompt).toContain('完整分镜脚本');
-    expect(callRequest?.prompt).toContain('分镜 1「开场」：赛博朋克城市远景');
-    expect(callRequest?.prompt).toContain('分镜 2「特写」：红衣少女半身近景');
+    expect(callRequest?.prompt).toContain('Full storyboard script:');
+    expect(callRequest?.prompt).toContain('Shot 1 "开场": 赛博朋克城市远景');
+    expect(callRequest?.prompt).toContain('Shot 2 "特写": 红衣少女半身近景');
     // Exact shape: the second (storyboard) estimateCost call site also uses the
     // task/params contract, with the modelConfigId resolved for the storyboard.
     expect(pointsService.estimateCost).toHaveBeenCalledWith({
@@ -778,7 +778,7 @@ describe('VideoGenerationFlowService billing', () => {
       expect.objectContaining({ role: 'first_frame', url: 'https://img.test/b.png' }),
       expect.objectContaining({ role: 'last_frame', url: 'https://img.test/c.png' }),
     ]);
-    expect(callRequest?.prompt).toContain('完整分镜脚本');
+    expect(callRequest?.prompt).toContain('Full storyboard script:');
   });
 
   it('uses the total duration of all storyboard clips for entitlement, risk, billing, and provider request', async () => {
@@ -881,9 +881,9 @@ describe('VideoGenerationFlowService billing', () => {
     expect(callRequest).toBeDefined();
     if (!callRequest) throw new Error('expected submitVideoTask call');
     expect(callRequest.params.duration).toBe(7);
-    expect(callRequest.prompt).toContain('分镜 1「开场」：雨夜城市远景');
-    expect(callRequest.prompt).toContain('分镜 2「推进」：镜头推向少女');
-    expect(callRequest.prompt).toContain('分镜 3「收束」：摩托驶离路口');
+    expect(callRequest.prompt).toContain('Shot 1 "开场": 雨夜城市远景');
+    expect(callRequest.prompt).toContain('Shot 2 "推进": 镜头推向少女');
+    expect(callRequest.prompt).toContain('Shot 3 "收束": 摩托驶离路口');
   });
 
   it('clamps unsupported Seedance fast resolutions before entitlement, billing, and provider request', async () => {
@@ -987,7 +987,7 @@ describe('VideoGenerationFlowService billing', () => {
     expect(callRequest.materials).toEqual([]);
     for (let index = 1; index <= 5; index += 1) {
       expect(callRequest.prompt).toContain(
-        `分镜 ${index}「镜头${index}」：第 ${index} 个分镜内容`,
+        `Shot ${index} "镜头${index}": 第 ${index} 个分镜内容`,
       );
     }
     expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
@@ -1055,7 +1055,7 @@ describe('VideoGenerationFlowService billing', () => {
     expect(pointsService.refundHoldWithinTx).toHaveBeenCalledWith(
       prisma,
       'hold-1',
-      'createTask 同步失败',
+      'createTask sync failed',
     );
     expect(
       projectStatusConvergence.recalculateProjectStatus,
@@ -1167,7 +1167,7 @@ describe('VideoGenerationFlowService billing', () => {
     expect(pointsService.refundHoldWithinTx).toHaveBeenCalledWith(
       expect.any(Object),
       'hold-1',
-      '视频生成失败: provider rejected',
+      'Video generation failed: provider rejected',
     );
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
     expect(
@@ -1216,7 +1216,7 @@ describe('VideoGenerationFlowService billing', () => {
 
     expect(pointsService.refundHold).toHaveBeenCalledWith(
       'hold-1',
-      '终态对账: failed',
+      'Terminal reconciliation: failed',
     );
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
   });

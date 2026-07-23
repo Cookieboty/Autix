@@ -116,7 +116,7 @@ export class OrchestratorService {
     yield {
       type: 'log',
       level: 'info',
-      message: `意图分类结果: ${intent}`,
+      message: `Intent classification result: ${intent}`,
       data: { intent, hasActiveRun: !!activeRun },
     };
 
@@ -189,7 +189,7 @@ export class OrchestratorService {
     );
 
     if (executionPlan.length === 0) {
-      yield { type: 'log', level: 'error', message: '执行计划为空' };
+      yield { type: 'log', level: 'error', message: 'Execution plan is empty' };
       return;
     }
 
@@ -199,7 +199,7 @@ export class OrchestratorService {
 
     const stepDef = workflow.steps.find((s) => s.stepKey === firstStepKey);
     if (!stepDef) {
-      yield { type: 'step_failed', stepKey: firstStepKey, error: 'Step 定义不存在' };
+      yield { type: 'step_failed', stepKey: firstStepKey, error: 'Step definition not found' };
       return;
     }
 
@@ -266,7 +266,7 @@ export class OrchestratorService {
     const nextStepKey = executionPlan[currentIdx + 1];
     const stepDef = workflow.steps.find((s) => s.stepKey === nextStepKey);
     if (!stepDef) {
-      yield { type: 'step_failed', stepKey: nextStepKey, error: 'Step 定义不存在' };
+      yield { type: 'step_failed', stepKey: nextStepKey, error: 'Step definition not found' };
       return;
     }
 
@@ -315,7 +315,7 @@ export class OrchestratorService {
 
   private async resolveDefaultModelId(userId: string): Promise<string> {
     const m = await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, userId);
-    if (!m) throw new Error('未配置默认模型');
+    if (!m) throw new Error('No default model configured');
     return m.id;
   }
 
@@ -343,7 +343,7 @@ export class OrchestratorService {
 
     return this.repository.createVideoProjectForConversation({
       userId,
-      title: conversation?.title ?? '新视频项目',
+      title: conversation?.title ?? 'New video project',
       conversationId,
     });
   }

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import type { Prisma } from '../../platform/prisma/generated';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { resolveApiKey, resolveBaseUrl } from '../model-config/model-gateway-credentials';
@@ -19,7 +20,7 @@ export class VideoGenerationModelResolverService {
     // 不再回退到「默认视频模型」——视频模型统一由数据库配置 + 前端显式选择。
     const modelConfigId = this.getModelConfigId(clip.params);
     if (!modelConfigId) {
-      throw new BadRequestException('该分镜未指定视频模型，请先选择模型');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.clip_model_not_selected');
     }
 
     const modelConfig =
@@ -27,7 +28,7 @@ export class VideoGenerationModelResolverService {
     const apiKey = resolveApiKey(modelConfig);
     const baseUrl = resolveBaseUrl(modelConfig);
     if (!apiKey) {
-      throw new BadRequestException('视频模型缺少 API Key 配置');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.model_missing_api_key');
     }
 
     return {
@@ -90,14 +91,14 @@ export class VideoGenerationModelResolverService {
   async resolveApiContextForClipParamsOrThrow(params: Prisma.JsonValue | null) {
     const modelConfigId = this.getModelConfigId(params);
     if (!modelConfigId) {
-      throw new BadRequestException('Clip 未配置模型，无法刷新');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.clip_model_missing');
     }
 
     const modelConfig =
       await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
     const apiKey = resolveApiKey(modelConfig);
     if (!apiKey) {
-      throw new BadRequestException('视频模型缺少 API Key 配置');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.model_missing_api_key');
     }
 
     return {

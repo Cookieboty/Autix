@@ -220,7 +220,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
     await expect(
       service.estimateCost({ taskType: 'image_generation', params: {} }),
-    ).rejects.toThrow(/停用/);
+    ).rejects.toThrow(/disabled/);
   });
 
   it('throws 400 when no binding exists for the resolved model', async () => {

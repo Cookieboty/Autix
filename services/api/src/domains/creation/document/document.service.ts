@@ -1,14 +1,10 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { ALLOWED_MIME_TYPES } from './document.constants';
 import { DocumentRepository } from './document.repository';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 // 仅保留基础名并去掉路径分隔符，用作对外展示名；绝不用于拼接落盘路径。
 function sanitizeDisplayName(raw: string): string {
@@ -36,10 +32,10 @@ export class DocumentService {
 
   async upload(userId: string, file: Express.Multer.File, filename: string) {
     if (!file) {
-      throw new BadRequestException('未上传文件');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'document.no_file');
     }
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      throw new BadRequestException(`不支持的文件类型：${file.mimetype}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'document.unsupported_type', { type: file.mimetype });
     }
 
     const dir = path.resolve('uploads', userId);
@@ -52,7 +48,7 @@ export class DocumentService {
 
     // 纵深防御：解析后的落盘路径必须严格位于用户目录内。
     if (path.resolve(filePath) !== filePath || !filePath.startsWith(dir + path.sep)) {
-      throw new BadRequestException('非法的文件路径');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'document.invalid_file_path');
     }
     fs.writeFileSync(filePath, file.buffer);
 
@@ -72,15 +68,15 @@ export class DocumentService {
 
   async findById(documentId: string, userId: string) {
     const doc = await this.documentRepository.findByIdWithChunks(documentId);
-    if (!doc) throw new NotFoundException('文档不存在');
-    if (doc.userId !== userId) throw new ForbiddenException('无权访问该文档');
+    if (!doc) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'document.not_found');
+    if (doc.userId !== userId) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'document.forbidden');
     return doc;
   }
 
   async delete(documentId: string, userId: string) {
     const doc = await this.documentRepository.findById(documentId);
-    if (!doc) throw new NotFoundException('文档不存在');
-    if (doc.userId !== userId) throw new ForbiddenException('无权访问该文档');
+    if (!doc) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'document.not_found');
+    if (doc.userId !== userId) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'document.forbidden');
 
     if (doc.filePath) {
       try {

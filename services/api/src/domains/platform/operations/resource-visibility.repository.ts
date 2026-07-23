@@ -32,9 +32,9 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { status: true },
         });
-        if (!row) throw new NotFoundException('图片模板不存在');
+        if (!row) throw new NotFoundException('Image template not found');
         if (row.status !== 'APPROVED') {
-          throw new BadRequestException('图片模板未通过审核，不可作为运营位/加热目标');
+          throw new BadRequestException('Image template is not approved and cannot be a featured/boost target');
         }
         return;
       }
@@ -43,9 +43,9 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { status: true },
         });
-        if (!row) throw new NotFoundException('视频模板不存在');
+        if (!row) throw new NotFoundException('Video template not found');
         if (row.status !== 'APPROVED') {
-          throw new BadRequestException('视频模板未通过审核，不可作为运营位/加热目标');
+          throw new BadRequestException('Video template is not approved and cannot be a featured/boost target');
         }
         return;
       }
@@ -54,9 +54,9 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { status: true },
         });
-        if (!row) throw new NotFoundException('广场作品不存在');
+        if (!row) throw new NotFoundException('Gallery post not found');
         if (row.status !== 'PUBLISHED') {
-          throw new BadRequestException('广场作品未发布，不可作为运营位/加热目标');
+          throw new BadRequestException('Gallery post is not published and cannot be a featured/boost target');
         }
         return;
       }
@@ -65,7 +65,7 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { id: true },
         });
-        if (!row) throw new NotFoundException('技能不存在');
+        if (!row) throw new NotFoundException('Skill not found');
         return;
       }
       case ResourceType.MCP: {
@@ -73,7 +73,7 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { id: true },
         });
-        if (!row) throw new NotFoundException('MCP 服务不存在');
+        if (!row) throw new NotFoundException('MCP service not found');
         return;
       }
       case ResourceType.AGENT: {
@@ -81,11 +81,11 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { id: true },
         });
-        if (!row) throw new NotFoundException('智能体不存在');
+        if (!row) throw new NotFoundException('Agent not found');
         return;
       }
       default:
-        throw new BadRequestException(`不支持的资源类型: ${resourceType}`);
+        throw new BadRequestException(`Unsupported resource type: ${resourceType}`);
     }
   }
 }

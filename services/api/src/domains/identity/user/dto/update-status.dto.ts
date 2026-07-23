@@ -21,8 +21,6 @@ export const AdminAssignableUserStatuses = [
 export type AdminAssignableUserStatus = (typeof AdminAssignableUserStatuses)[number];
 
 export class UpdateStatusDto {
-  @IsIn([...AdminAssignableUserStatuses], {
-    message: `status 只允许取值 ${AdminAssignableUserStatuses.join(' | ')}`,
-  })
+  @IsIn([...AdminAssignableUserStatuses])
   status: AdminAssignableUserStatus;
 }

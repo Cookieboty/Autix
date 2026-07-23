@@ -38,13 +38,13 @@ export function assertFeaturedSlot(
   if (slot.kind === 'RESOURCE') {
     if (!slot.resourceType || !slot.resourceId) {
       throw new BadRequestException(
-        'kind=RESOURCE 必须提供 resourceType + resourceId',
+        'kind=RESOURCE must provide resourceType + resourceId',
       );
     }
     return;
   }
   // CUSTOM
   if (slot.resourceType || slot.resourceId) {
-    throw new BadRequestException('kind=CUSTOM 不允许携带 resourceType/resourceId');
+    throw new BadRequestException('kind=CUSTOM must not carry resourceType/resourceId');
   }
 }

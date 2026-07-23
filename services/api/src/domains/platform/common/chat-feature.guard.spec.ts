@@ -1,4 +1,3 @@
-import { ForbiddenException } from '@nestjs/common';
 import { ChatFeatureGuard } from './chat-feature.guard';
 
 describe('ChatFeatureGuard', () => {
@@ -15,6 +14,6 @@ describe('ChatFeatureGuard', () => {
       getBoolean: vi.fn().mockResolvedValue(false),
     } as never);
 
-    await expect(guard.canActivate({} as never)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(guard.canActivate({} as never)).rejects.toMatchObject({ status: 403 });
   });
 });

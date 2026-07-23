@@ -139,14 +139,14 @@ describe('GalleryService.getDetail — 聚合 + 双写', () => {
 
   it('作品不存在 → 404', async () => {
     const { service } = makeDetailService({ post: null });
-    await expect(service.getDetail('missing', undefined)).rejects.toThrow(NotFoundException);
+    await expect(service.getDetail('missing', undefined)).rejects.toMatchObject({ status: 404 });
   });
 
   it('匿名访问非 PUBLISHED → 404（不泄漏未公开作品）', async () => {
     const { service, createViewCalls } = makeDetailService({
       post: { ...publishedPost(), status: 'PENDING' },
     });
-    await expect(service.getDetail('p-pub', undefined)).rejects.toThrow(NotFoundException);
+    await expect(service.getDetail('p-pub', undefined)).rejects.toMatchObject({ status: 404 });
     expect(createViewCalls).toHaveLength(0);
   });
 
@@ -176,7 +176,7 @@ describe('GalleryService.getDetail — 聚合 + 双写', () => {
     });
     await expect(
       service.getDetail('p-pub', { id: 'other-user', roles: [] } as never),
-    ).rejects.toThrow(NotFoundException);
+    ).rejects.toMatchObject({ status: 404 });
     expect(createViewCalls).toHaveLength(0);
   });
 });
@@ -197,7 +197,7 @@ describe('GalleryService.getDetail — 隐私泄漏守卫（返回体绝无原�
     });
     const res = await service.getDetail('p-pub', { id: 'viewer-9' } as never);
     // presenter 已脱敏
-    expect(res.author).toEqual({ userId: 'author-1', nickname: '已注销用户', avatar: null });
+    expect(res.author).toEqual({ userId: 'author-1', nickname: 'Deactivated user', avatar: null });
     // post 不得再夹带原始 author 关系行
     expect((res.post as Record<string, unknown>).author).toBeUndefined();
     const serialized = JSON.stringify(res);

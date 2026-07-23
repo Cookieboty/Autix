@@ -157,7 +157,7 @@ export class ResourceMetricsService {
     type: ResourceType | undefined,
   ): asserts type is ResourceType {
     if (!type || !isMetricResourceType(type)) {
-      throw new BadRequestException(`不支持的资源类型: ${type ?? '(空)'}`);
+      throw new BadRequestException(`Unsupported resource type: ${type ?? '(empty)'}`);
     }
   }
 }

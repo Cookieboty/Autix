@@ -107,7 +107,7 @@ export class GalleryService {
     // Plan C Task 10：favorite/unfavorite 改走 FavoriteLibraryService（单事务收藏耦合）。
     // 同上，可选只是为了不动既有不测 favorite/unfavorite 的构造点；生产环境恒注入。
     private readonly favoriteLibrary?: FavoriteLibraryService,
-  ) {}
+  ) { }
 
   /** 管理端广场列表：页码分页 + 筛选（kind/category/sourceType/标题搜索/仅非我域名/搬运失败），返回 total。 */
   async listAdminPage(rawQuery: Record<string, unknown>) {
@@ -159,7 +159,7 @@ export class GalleryService {
     if (dto.imageGenerationId) {
       const gen = await this.repo.findImageGenerationOwner(dto.imageGenerationId);
       if (gen == null || gen.userId !== authorId) {
-        throw new ForbiddenException('生成记录不存在或不属于当前用户');
+        throw new I18nHttpException(HttpStatus.FORBIDDEN, 'gallery.generation.not_found_or_forbidden');
       }
       return { ...gen, mediaUrls: gen.generatedImages ?? [] };
     }
@@ -167,7 +167,7 @@ export class GalleryService {
     if (dto.videoGenerationId) {
       const gen = await this.repo.findVideoGenerationOwner(dto.videoGenerationId);
       if (gen == null || gen.userId !== authorId) {
-        throw new ForbiddenException('生成记录不存在或不属于当前用户');
+        throw new I18nHttpException(HttpStatus.FORBIDDEN, 'gallery.generation.not_found_or_forbidden');
       }
       return { ...gen, mediaUrls: gen.generatedVideos ?? [], coverImage: gen.coverImage };
     }
@@ -329,7 +329,7 @@ export class GalleryService {
     const candidates = coverImage ? [...mediaUrls, coverImage] : [...mediaUrls];
     if (candidates.length === 0) return;
     const r2Base = await this.r2.getPublicBaseUrl();
-    assertInStationMediaUrls(candidates, [r2Base], '仅允许使用站内存储的媒体链接');
+    assertInStationMediaUrls(candidates, [r2Base], 'only media links stored on our platform are allowed');
   }
 
   /**
@@ -347,7 +347,7 @@ export class GalleryService {
     if (sourceType === 'FROM_GENERATION') {
       const derived = deriveGenerationMediaUrls({ generatedImages: generation?.mediaUrls });
       if (!derived) {
-        throw new BadRequestException('生成结果为空，无法投稿');
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'gallery.generation.empty_result');
       }
       // deriveGenerationMediaUrls 的 coverImage 恒取 mediaUrls[0]——图片成立，视频不成立
       // （那是 mp4）。视频记录带了自己的封面就用它；没有（末帧转存失败）则宁可留空，
@@ -410,9 +410,9 @@ export class GalleryService {
 
   private async getOwned(id: string, authorId: string) {
     const post = await this.repo.findById(id);
-    if (!post) throw new NotFoundException('作品不存在');
+    if (!post) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.post.not_found');
     if (post.authorId !== authorId) {
-      throw new ForbiddenException('仅作者本人可操作');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'gallery.post.only_author');
     }
     return post;
   }
@@ -425,7 +425,7 @@ export class GalleryService {
   async updateDraft(authorId: string, id: string, dto: UpdateGalleryPostDto) {
     const post = await this.getOwned(id, authorId);
     if (post.status !== GalleryStatus.DRAFT) {
-      throw new BadRequestException('仅草稿状态可编辑草稿');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'gallery.post.only_draft_editable');
     }
     const data: Prisma.gallery_postsUncheckedUpdateInput = { ...dto };
     if (dto.mediaUrls !== undefined || dto.coverImage !== undefined) {
@@ -544,7 +544,7 @@ export class GalleryService {
       if (mediaProvided || sourceRefChanged) {
         const derived = deriveGenerationMediaUrls({ generatedImages: generation?.mediaUrls });
         if (!derived) {
-          throw new BadRequestException('生成结果为空，无法更新媒体');
+          throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'gallery.generation.empty_result');
         }
         data.mediaUrls = derived.mediaUrls;
         data.coverImage = derived.coverImage;
@@ -743,11 +743,11 @@ export class GalleryService {
    */
   async getDetail(id: string, viewer: AuthUser | undefined) {
     const post = await this.repo.findByIdWithAuthor(id);
-    if (!post) throw new NotFoundException('作品不存在');
+    if (!post) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.post.not_found');
     if (post.status !== GalleryStatus.PUBLISHED) {
       const isOwner = !!viewer && post.authorId === viewer.id;
       if (!isOwner && !isAdminUser(viewer)) {
-        throw new NotFoundException('作品不存在');
+        throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.post.not_found');
       }
     }
 
@@ -805,7 +805,7 @@ export class GalleryService {
 
   async report(reporterId: string, postId: string, dto: CreateGalleryReportDto) {
     const post = await this.repo.findById(postId);
-    if (!post) throw new NotFoundException('作品不存在');
+    if (!post) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.post.not_found');
     return this.repo.createReport({
       postId,
       reporterId,
@@ -820,9 +820,9 @@ export class GalleryService {
    */
   private async assertLikeableOrFavoritable(id: string) {
     const post = await this.repo.findById(id);
-    if (!post) throw new NotFoundException('作品不存在');
+    if (!post) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.post.not_found');
     if (post.status !== GalleryStatus.PUBLISHED) {
-      throw new BadRequestException('仅已发布作品可点赞/收藏/下载');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'gallery.post.only_published_engageable');
     }
     return post;
   }
@@ -858,7 +858,7 @@ export class GalleryService {
     const post = await this.assertLikeableOrFavoritable(id);
     const downloadUrl = post.mediaUrls[0] ?? post.coverImage;
     if (!downloadUrl) {
-      throw new NotFoundException('作品暂无可下载资源');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.post.no_downloadable');
     }
     await this.metrics.recordDownload(ResourceType.GALLERY_POST, id, userId);
     return { downloadUrl };
@@ -902,14 +902,14 @@ export class GalleryService {
     ] as const;
     const normalized = allowed.find((s) => s === status);
     if (!normalized) {
-      throw new BadRequestException('status 仅支持 PENDING/PUBLISHED/HIDDEN/REJECTED');
+      throw new BadRequestException('status must be one of PENDING/PUBLISHED/HIDDEN/REJECTED');
     }
     return this.repo.findByStatusPage(normalized, cursor, take);
   }
 
   private async requirePost(id: string) {
     const post = await this.repo.findById(id);
-    if (!post) throw new NotFoundException('作品不存在');
+    if (!post) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.post.not_found');
     return post;
   }
 
@@ -1025,10 +1025,16 @@ export class GalleryService {
         }
         succeeded.push(id);
       } catch (error) {
-        // 单条失败只记录原因，不中断其余条目。
+        // 单条失败只记录原因，不中断其余条目。I18nHttpException 的 .message 是不透明的
+        // "Http Exception"，改取稳定的 i18nKey 作为原因（比不可读的占位串更有诊断价值）。
         failed.push({
           id,
-          reason: error instanceof Error ? error.message : '未知错误',
+          reason:
+            error instanceof I18nHttpException
+              ? error.i18nKey
+              : error instanceof Error
+                ? error.message
+                : 'unknown error',
         });
       }
     });
@@ -1038,7 +1044,7 @@ export class GalleryService {
 
   async resolveReport(adminId: string, id: string, dto: ResolveGalleryReportDto) {
     const report = await this.repo.findReportById(id);
-    if (!report) throw new NotFoundException('举报不存在');
+    if (!report) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'gallery.report.not_found');
     const updated = await this.repo.updateReport(id, {
       status: dto.status,
       resolvedById: adminId,

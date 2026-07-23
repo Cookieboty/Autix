@@ -35,8 +35,8 @@
     "membershipRequired": "Yêu cầu thành viên",
     "membershipRequiredDesc": "Thư viện là tính năng dành riêng cho thành viên. Nâng cấp thành viên để tải lên tài liệu và xây dựng kho kiến thức.",
     "upgradeMembership": "Nâng cấp thành viên",
-    "statusDeleted": "已删除",
-    "includeDeleted": "包含已删除用户"
+    "statusDeleted": "Đã xóa",
+    "includeDeleted": "Bao gồm người dùng đã xóa"
   },
   "settings": {
     "title": "Cài đặt",
@@ -215,8 +215,8 @@
     "emptyDescription": "Tải tư liệu lên hoặc thêm từ lịch sử hình ảnh/video.",
     "selectAsset": "Chọn {title}",
     "deleteAsset": "Xóa tư liệu",
-    "invertSelection": "反选",
-    "clearSelection": "取消选择",
+    "invertSelection": "Đảo lựa chọn",
+    "clearSelection": "Bỏ chọn",
     "folders": "Thư mục",
     "allFolders": "Tất cả",
     "uncategorized": "Chưa phân loại",

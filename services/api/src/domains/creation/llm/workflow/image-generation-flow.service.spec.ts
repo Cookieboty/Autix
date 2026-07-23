@@ -444,7 +444,7 @@ describe('ImageGenerationFlowService', () => {
       expect.objectContaining({
         taskType: 'prompt_optimize_generation',
         amount: 20,
-        remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
+        remark: 'Image workbench prompt AI optimization · openai-official/gpt-4o-mini',
       }),
     );
     // Task 13: settlement re-prices from the frozen hold snapshot, not by
@@ -545,7 +545,7 @@ describe('ImageGenerationFlowService', () => {
       'user-1',
       expect.objectContaining({ taskType: 'prompt_optimize_generation' }),
     );
-    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'Prompt 优化失败');
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'Prompt optimization failed');
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
   });
 
@@ -861,7 +861,7 @@ describe('ImageGenerationFlowService', () => {
       | { errorCode?: string; message?: string; details?: Record<string, unknown> }
       | undefined;
     expect(response?.errorCode).toBe('ERR_IMAGE_PARAMS_NOT_SUPPORTED');
-    expect(response?.message).toContain('当前模型不支持所选参数');
+    expect(response?.message).toContain('The current model does not support the selected parameters');
     expect(response?.details).toMatchObject({ httpStatus: 400, protocolKey: 'openai-images@v1' });
     // 上游只被打了一次 —— 这条断言是那条被删掉的重试路径的墓碑。
     expect(fetchMock).toHaveBeenCalledTimes(1);

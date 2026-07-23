@@ -478,7 +478,7 @@ describe('PricingConfigAdminService.createTaskModelBinding', () => {
     // 改造前：保存成功，直到运行时图片 flow 调 resolveImagePreset('ark-video@v3') 才 500。
     await expect(
       service.createTaskModelBinding({ taskType: 'image_generation', modelConfigId: 'm1' }),
-    ).rejects.toThrow(/媒体不匹配/);
+    ).rejects.toThrow(/Media mismatch/);
   });
 
   it('accepts binding a video-protocol model to a video task', async () => {
@@ -536,7 +536,7 @@ describe('PricingConfigAdminService.createTaskModelBinding', () => {
 
     await expect(
       service.createTaskModelBinding({ taskType: 'my_custom_video_task', modelConfigId: 'm1' }),
-    ).rejects.toThrow(/媒体不匹配/);
+    ).rejects.toThrow(/Media mismatch/);
   });
 });
 

@@ -12,7 +12,7 @@ export const PROMPT_OPTIMIZE_MAX_INPUT_TOKENS = 32_000;
 export function assertPromptOptimizeInputWithinLimit(inputTokens: number): void {
   if (inputTokens > PROMPT_OPTIMIZE_MAX_INPUT_TOKENS) {
     throw new BadRequestException(
-      `Prompt 优化输入过长（约 ${inputTokens} tokens），上限 ${PROMPT_OPTIMIZE_MAX_INPUT_TOKENS}`,
+      `Prompt optimization input too long (about ${inputTokens} tokens), limit ${PROMPT_OPTIMIZE_MAX_INPUT_TOKENS}`,
     );
   }
 }
@@ -69,7 +69,7 @@ export function buildPromptOptimizeHoldRemark(
   provider: string | null | undefined,
   model: string,
 ): string {
-  return `图片工作台 Prompt AI 优化 · ${formatBillingModel(provider, model)}`;
+  return `Image workbench prompt AI optimization · ${formatBillingModel(provider, model)}`;
 }
 
 export function buildPromptOptimizeHoldCreateInput(input: {

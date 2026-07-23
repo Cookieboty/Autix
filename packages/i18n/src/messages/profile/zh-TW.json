@@ -35,8 +35,8 @@
     "membershipRequired": "需要開通會員",
     "membershipRequiredDesc": "資料庫為會員專屬功能，開通會員即可上傳文件、建立知識庫。",
     "upgradeMembership": "開通會員",
-    "statusDeleted": "已删除",
-    "includeDeleted": "包含已删除用户"
+    "statusDeleted": "已刪除",
+    "includeDeleted": "包含已刪除的使用者"
   },
   "settings": {
     "title": "設定",
@@ -58,7 +58,7 @@
     "systemStatusTitle": "系統狀態",
     "recentActivityEyebrow": "近期動態",
     "recentActivity": "最近活動",
-    "viewAll": "查看全部",
+    "viewAll": "檢視全部",
     "noActivity": "暫無活動記錄",
     "userCreated": "建立了使用者檔案並進入待管理列表。",
     "justNow": "剛剛",
@@ -167,7 +167,7 @@
       },
       "stats": {
         "publishedResources": "發布資源",
-        "platformFavorites": "平台收藏",
+        "platformFavorites": "平臺收藏",
         "spentPoints": "已消耗積分",
         "platformResources": "平台總資源",
         "platformAcquisitions": "平台總取得"
@@ -215,8 +215,8 @@
     "emptyDescription": "上傳素材或從圖片/影片歷史加入素材庫。",
     "selectAsset": "選擇 {title}",
     "deleteAsset": "刪除素材",
-    "invertSelection": "反选",
-    "clearSelection": "取消选择",
+    "invertSelection": "反選",
+    "clearSelection": "取消選擇",
     "folders": "資料夾",
     "allFolders": "全部",
     "uncategorized": "未分類",

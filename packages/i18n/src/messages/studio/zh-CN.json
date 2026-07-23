@@ -287,8 +287,8 @@
     "statusApproved": "已通过",
     "statusRejected": "已拒绝",
     "statusArchived": "已归档",
-    "statusDeleted": "Deleted",
-    "includeDeleted": "Include deleted users"
+    "statusDeleted": "已删除",
+    "includeDeleted": "包含已删除用户"
   },
   "templateReview": {
     "title": "模板审核",
@@ -506,7 +506,7 @@
       "newChat": "新会话",
       "share": "分享",
       "collapse": "收起",
-      "agent": "Agent",
+      "agent": "智能体",
       "attach": "附件",
       "library": "素材库",
       "thumbUp": "赞",
@@ -971,7 +971,7 @@
       "totalDuration": "总时长",
       "resolution": "分辨率",
       "pricingRule": "计费规则",
-      "seconds": "{value}s"
+      "seconds": "{value}秒"
     },
     "storyboardDialog": {
       "title": "分镜工具",
@@ -1002,7 +1002,7 @@
       "audioLabel": "音频",
       "audioOn": "有声",
       "audioOff": "无声",
-      "seedLabel": "Seed",
+      "seedLabel": "种子",
       "seedPlaceholder": "留空随机",
       "schemaUnavailable": "计价 Schema 不可用——加载完成前无法生成。"
     },
@@ -1265,7 +1265,7 @@
         "title": "视频模板",
         "workflowTemplates": "工作流模板",
         "parameterPresets": "参数预设",
-        "clipCount": "{count} clips",
+        "clipCount": "{count} 个片段",
         "useTemplate": "使用此模板",
         "emptyWorkflow": "暂无工作流模板",
         "presetsComingSoon": "参数预设模板即将上线"
@@ -1285,7 +1285,7 @@
         "defaultProjectTitle": "未命名项目",
         "newProject": "新建项目",
         "emptyProjects": "暂无项目",
-        "clipCount": "{count} clips",
+        "clipCount": "{count} 个片段",
         "back": "返回",
         "addClip": "添加 Clip",
         "generationRecords": "生成记录",
@@ -1346,9 +1346,9 @@
       "unknownResourceType": "未知资源类型：{slug}"
     },
     "resourceType": {
-      "skill": "Skill",
+      "skill": "技能",
       "mcp": "MCP",
-      "agent": "Agent",
+      "agent": "智能体",
       "imageTemplate": "图片模板",
       "videoTemplate": "视频模板",
       "imageTemplateShort": "图片",
@@ -1372,7 +1372,7 @@
     "sidebar": {
       "home": "推荐首页",
       "resourceTypes": "资源类型",
-      "skills": "Skills",
+      "skills": "技能",
       "mcp": "MCP",
       "imageTemplates": "图片模板",
       "videoTemplates": "视频模板",
@@ -1456,7 +1456,7 @@
       "imageDescription": "浏览海报、商品图、封面与视觉风格模板，像作品墙一样快速挑选。",
       "videoEyebrow": "Video Flows / 视频模板",
       "videoDescription": "从分镜、镜头参数到短视频生成流程，找到适合当前创作的起点。",
-      "skillsEyebrow": "Skills",
+      "skillsEyebrow": "技能",
       "skillsDescription": "能力增强、个性化指令与可复用操作方式。",
       "mcpEyebrow": "MCP",
       "mcpDescription": "工具、数据源和外部连接器。"

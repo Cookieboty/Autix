@@ -86,7 +86,7 @@ export class SystemPromptService implements OnModuleInit {
       version: data.version,
     });
     if (exists) {
-      throw new BadRequestException(`Prompt ${data.key}@${data.version} 已存在`);
+      throw new BadRequestException(`Prompt ${data.key}@${data.version} already exists`);
     }
 
     const row = await this.promptsRepository.createDraft(data);
@@ -105,8 +105,8 @@ export class SystemPromptService implements OnModuleInit {
   ): Promise<SystemPromptItem> {
     await this.promptsRepository.ensureTable();
     const current = await this.findRowById(id);
-    if (!current) throw new BadRequestException('Prompt 不存在');
-    if (current.status !== 'draft') throw new BadRequestException('只有 draft 版本可以编辑');
+    if (!current) throw new BadRequestException('Prompt not found');
+    if (current.status !== 'draft') throw new BadRequestException('Only draft versions can be edited');
 
     const data = this.normalizeInput({
       key: current.key,
@@ -124,7 +124,7 @@ export class SystemPromptService implements OnModuleInit {
         excludeId: id,
       });
       if (exists) {
-        throw new BadRequestException(`Prompt ${current.key}@${data.version} 已存在`);
+        throw new BadRequestException(`Prompt ${current.key}@${data.version} already exists`);
       }
     }
 
@@ -135,7 +135,7 @@ export class SystemPromptService implements OnModuleInit {
   async publish(id: string): Promise<SystemPromptItem> {
     await this.promptsRepository.ensureTable();
     const row = await this.findRowById(id);
-    if (!row) throw new BadRequestException('Prompt 不存在');
+    if (!row) throw new BadRequestException('Prompt not found');
 
     const published = await this.promptsRepository.publish(row);
     return this.rowToItem(published);
@@ -161,7 +161,7 @@ export class SystemPromptService implements OnModuleInit {
 
   private defaultPrompt(key: string): SystemPromptItem {
     const definition = SYSTEM_PROMPT_DEFAULTS.find((item) => item.key === key);
-    if (!definition) throw new BadRequestException(`未知系统 Prompt: ${key}`);
+    if (!definition) throw new BadRequestException(`Unknown system prompt: ${key}`);
     return {
       id: `default:${definition.key}`,
       key: definition.key,
@@ -212,10 +212,10 @@ export class SystemPromptService implements OnModuleInit {
     const name = input.name.trim();
     const version = input.version.trim();
     const content = input.content.trim();
-    if (!key) throw new BadRequestException('Prompt key 不能为空');
-    if (!name) throw new BadRequestException('Prompt 名称不能为空');
-    if (!version) throw new BadRequestException('Prompt 版本不能为空');
-    if (!content) throw new BadRequestException('Prompt 内容不能为空');
+    if (!key) throw new BadRequestException('Prompt key cannot be empty');
+    if (!name) throw new BadRequestException('Prompt name cannot be empty');
+    if (!version) throw new BadRequestException('Prompt version cannot be empty');
+    if (!content) throw new BadRequestException('Prompt content cannot be empty');
     return {
       key,
       name,

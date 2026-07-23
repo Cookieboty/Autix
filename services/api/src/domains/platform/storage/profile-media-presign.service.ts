@@ -31,7 +31,7 @@ import {
 export type ProfileMediaKind = 'AVATAR' | 'BANNER';
 
 const MEDIA_KINDS = {
-  AVATAR: { folder: 'avatars', limits: AVATAR_UPLOAD_LIMITS, label: '头像' },
+  AVATAR: { folder: 'avatars', limits: AVATAR_UPLOAD_LIMITS, label: 'Avatar' },
   BANNER: { folder: 'banners', limits: BANNER_UPLOAD_LIMITS, label: 'banner' },
 } as const;
 
@@ -51,11 +51,11 @@ export class ProfileMediaPresignService {
   ): Promise<AvatarPresignResult> {
     const spec = MEDIA_KINDS[kind];
     if (!spec.limits.allowedContentTypes.includes(input.contentType as never)) {
-      throw new BadRequestException(`不支持的${spec.label}上传类型: ${input.contentType}`);
+      throw new BadRequestException(`Unsupported ${spec.label} upload type: ${input.contentType}`);
     }
     // DTO 已按 kind 校验体积，这里兜底一次（深度防御：别的调用方绕过 DTO 时仍成立）
     if (input.sizeBytes > spec.limits.maxSizeBytes) {
-      throw new BadRequestException(`${spec.label}体积超出上限`);
+      throw new BadRequestException(`${spec.label} exceeds the size limit`);
     }
 
     // 走 R2 presign：folder 强制拼进 userId，保证 keyBelongsToOwner 分段校验成立

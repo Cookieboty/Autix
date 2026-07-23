@@ -50,6 +50,6 @@ export class PermissionService {
   async remove(id: string): Promise<MessageResponse> {
     await this.findOne(id);
     await this.permissionRepository.delete(id);
-    return { message: '删除成功' };
+    return { messageKey: 'common.deleted' };
   }
 }

@@ -142,7 +142,7 @@ describe('VideoChatService', () => {
       type: 'llm_token',
       stepKey: 'video_chat',
     });
-    expect(events[0].type === 'llm_token' ? events[0].content : '').toContain('已更新第 1 个片段');
+    expect(events[0].type === 'llm_token' ? events[0].content : '').toContain('Updated clip 1');
   });
 
   it('keeps plain director replies in the same conversation', async () => {
@@ -272,7 +272,7 @@ describe('VideoChatService', () => {
       taskType: 'video_template_optimize',
       amount: 12,
       pricingSnapshot: { ruleId: 'rule-video-template' },
-      remark: '视频模板 AI 优化 · openai/gpt-4o-mini',
+      remark: 'Video template AI optimization · openai/gpt-4o-mini',
     });
     expect(createHoldArgs).not.toHaveProperty('refundPolicySnapshot');
 
@@ -334,7 +334,7 @@ describe('VideoChatService', () => {
     ).rejects.toThrow('积分冻结不存在');
 
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
-    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '视频导演任务失败');
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'Video director task failed');
   });
 
   it('refunds video storyboard optimization hold when assistant invocation fails', async () => {
@@ -359,7 +359,7 @@ describe('VideoChatService', () => {
         taskType: 'video_storyboard_optimize',
       }),
     );
-    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '视频导演任务失败');
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'Video director task failed');
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
     expect(repository.persistVideoDirectorTurn).not.toHaveBeenCalled();
   });

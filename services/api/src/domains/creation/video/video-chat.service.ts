@@ -117,7 +117,7 @@ export class VideoChatService {
       await this.confirmBillingHold(hold, prepared.config, result, text);
       yield { type: 'llm_token', stepKey: 'video_chat', content: text };
     } catch (err) {
-      if (hold) await this.safeRefundBillingHold(hold.holdId, '视频导演任务失败');
+      if (hold) await this.safeRefundBillingHold(hold.holdId, 'Video director task failed');
       throw err;
     }
   }
@@ -131,21 +131,21 @@ export class VideoChatService {
     billingPurpose?: VideoDirectorBillingPurpose;
   }): Promise<{ optimizedPrompt: string }> {
     const prompt = input.prompt?.trim();
-    if (!prompt) throw new Error('请输入提示词');
+    if (!prompt) throw new Error('Please enter a prompt');
 
     const config = input.modelConfigId
       ? await this.modelConfigService.getConfigForOrchestrator(input.modelConfigId, input.userId)
       : await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, input.userId);
-    if (!config) throw new Error('未配置通用模型');
+    if (!config) throw new Error('No general model configured');
 
     const model = createChatModelFromDbConfig(config);
     const systemText =
-      '你是专业的视频生成提示词优化助手。只返回优化后的提示词文本本身，不要输出任何解释、前后缀、标题、引号或 Markdown。';
+      'You are a professional video-generation prompt optimization assistant. Return only the optimized prompt text itself; do not output any explanation, prefix or suffix, title, quotes, or Markdown.';
     const humanText = [
-      '请优化下面这段用于视频生成的提示词。',
-      '要求：保留原始创意与画面主体；补充镜头运动、动作节奏、光线、构图、质感和生成模型更容易理解的细节。',
-      '只输出优化后的完整提示词。',
-      `原始提示词：${prompt}`,
+      'Please optimize the following prompt used for video generation.',
+      'Requirements: preserve the original creative concept and main subject; add details on camera movement, action pacing, lighting, composition, texture, and other details that generation models can understand more easily.',
+      'Output only the complete optimized prompt.',
+      `Original prompt: ${prompt}`,
     ].join('\n');
     const messages: [SystemMessage, HumanMessage] = [
       new SystemMessage(systemText),
@@ -169,7 +169,7 @@ export class VideoChatService {
       await this.confirmBillingHold(hold, config, result, optimizedPrompt);
       return { optimizedPrompt };
     } catch (err) {
-      if (hold) await this.safeRefundBillingHold(hold.holdId, '视频提示词优化失败');
+      if (hold) await this.safeRefundBillingHold(hold.holdId, 'Video prompt optimization failed');
       throw err;
     }
   }
@@ -198,7 +198,7 @@ export class VideoChatService {
     const config = input.modelConfigId
       ? await this.modelConfigService.getConfigForOrchestrator(input.modelConfigId, input.userId)
       : await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, input.userId);
-    if (!config) throw new Error('未配置通用模型');
+    if (!config) throw new Error('No general model configured');
 
     const history = input.conversationId
       ? await this.repository.findConversationMessages(input.conversationId)
@@ -343,8 +343,8 @@ export class VideoChatService {
   ) {
     const model = [config.provider, config.model].filter(Boolean).join('/') || config.model;
     return purpose === 'video_storyboard_optimize'
-      ? `视频分镜 AI 优化 · ${model}`
-      : `视频模板 AI 优化 · ${model}`;
+      ? `Video storyboard AI optimization · ${model}`
+      : `Video template AI optimization · ${model}`;
   }
 
   private toJson(value: unknown): Prisma.InputJsonValue {
@@ -484,7 +484,7 @@ export class VideoChatService {
         await this.repository.createClip({
           projectId: input.projectId,
           order: clipOrder,
-          title: title ?? `镜头 ${clipOrder}`,
+          title: title ?? `Shot ${clipOrder}`,
           prompt: prompt ?? '',
           params: (params ?? {
             duration: 5,
@@ -501,16 +501,16 @@ export class VideoChatService {
 
     const lines = [
       changed
-        ? `已更新第 ${clipOrder} 个片段。`
-        : `已整理第 ${clipOrder} 个片段的创作建议。`,
+        ? `Updated clip ${clipOrder}.`
+        : `Organized creative suggestions for clip ${clipOrder}.`,
     ];
-    if (prompt) lines.push(`Prompt：${prompt}`);
-    if (params) lines.push(`参数：${JSON.stringify(params)}`);
-    if (action.reasoning) lines.push(`说明：${action.reasoning}`);
+    if (prompt) lines.push(`Prompt: ${prompt}`);
+    if (params) lines.push(`Parameters: ${JSON.stringify(params)}`);
+    if (action.reasoning) lines.push(`Notes: ${action.reasoning}`);
     lines.push(
       actionName === 'ready_to_generate'
-        ? '当前片段可以生成。你也可以先补充首帧、参考图、参考视频或音频素材。'
-        : '你可以继续让我拆分镜头、调整参数，或在片段卡片里点击生成视频。',
+        ? 'The current clip is ready to generate. You can also add a first frame, reference image, reference video, or audio assets first.'
+        : 'You can keep asking me to split shots, adjust parameters, or click Generate video on a clip card.',
     );
     return lines.join('\n');
   }
@@ -524,7 +524,7 @@ export class VideoChatService {
       results.push(await this.applyVideoAction(input, action));
     }
     if (actions.length <= 1) return results.join('\n\n');
-    return [`已生成 ${actions.length} 个分镜脚本。`, ...results].join('\n\n');
+    return [`Generated ${actions.length} storyboard scripts.`, ...results].join('\n\n');
   }
 
   private async nextClipOrder(projectId: string): Promise<number> {

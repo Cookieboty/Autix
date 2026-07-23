@@ -109,7 +109,7 @@ describe('ArtifactService.optimizeArtifactStream billing', () => {
         modelConfigId: 'model-1',
         modelName: 'gpt-4o-mini',
         requirePricing: true,
-        remark: 'Artifact 文档 AI 优化 · openai-official/gpt-4o-mini',
+        remark: 'Artifact document AI optimization · openai-official/gpt-4o-mini',
         pricing: expect.objectContaining({
           taskType: 'prompt_optimize_pro',
           modelProvider: 'openai-official',

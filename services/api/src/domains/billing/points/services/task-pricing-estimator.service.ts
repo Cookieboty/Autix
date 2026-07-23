@@ -90,10 +90,10 @@ export class TaskPricingEstimatorService {
   async estimateCost(input: TaskEstimateInput): Promise<TaskEstimateResult> {
     const task = await this.repo.findTaskDefinition(input.taskType);
     if (!task) {
-      throw new BadRequestException(`任务未配置: ${input.taskType}`);
+      throw new BadRequestException(`Task not configured: ${input.taskType}`);
     }
     if (!task.isActive) {
-      throw new BadRequestException(`任务已停用: ${input.taskType}`);
+      throw new BadRequestException(`Task is disabled: ${input.taskType}`);
     }
 
     const binding = await this.resolveBinding(input.taskType, input.modelConfigId);
@@ -101,30 +101,30 @@ export class TaskPricingEstimatorService {
 
     const model = await this.repo.findModelPricingConfig(modelConfigId);
     if (!model) {
-      throw new BadRequestException(`模型未找到: ${modelConfigId}`);
+      throw new BadRequestException(`Model not found: ${modelConfigId}`);
     }
     // NULL means "not configured". Falling back to {} / { terms: [] } here would make
     // evaluatePricing return total: 0 — silent free generation. Reject instead.
     if (model.pricingSchema === null) {
-      throw new BadRequestException(`模型未配置计价规则(pricingSchema): ${modelConfigId}`);
+      throw new BadRequestException(`Model has no pricing rule (pricingSchema) configured: ${modelConfigId}`);
     }
     if (model.paramsSchema === null) {
-      throw new BadRequestException(`模型未配置参数规则(paramsSchema): ${modelConfigId}`);
+      throw new BadRequestException(`Model has no params rule (paramsSchema) configured: ${modelConfigId}`);
     }
 
     const pricingSchema = this.narrowPricingSchema(
       model.pricingSchema,
-      `模型计价规则结构无效: ${modelConfigId}`,
+      `Model pricing rule structure is invalid: ${modelConfigId}`,
     );
     const paramsSchema = this.narrowParamsSchema(
       model.paramsSchema,
       pricingSchema,
-      `模型参数规则结构无效: ${modelConfigId}`,
+      `Model params rule structure is invalid: ${modelConfigId}`,
     );
     const taskFixedSchema =
       task.fixedCostSchema === null
         ? null
-        : this.narrowPricingSchema(task.fixedCostSchema, `任务固定成本规则结构无效: ${input.taskType}`);
+        : this.narrowPricingSchema(task.fixedCostSchema, `Task fixed-cost rule structure is invalid: ${input.taskType}`);
 
     // Callers legitimately submit partial params — canvas has no
     // quality/resolution picker, a template's params are author-fixed — and
@@ -162,7 +162,7 @@ export class TaskPricingEstimatorService {
       usage: input.usage,
     });
     if (result.violations.length > 0) {
-      throw new BadRequestException({ message: '参数不合法', violations: result.violations });
+      throw new BadRequestException({ message: 'Invalid parameters', violations: result.violations });
     }
     // computeTaskEstimate 已跑 applyParamDefaults → deriveParams，返回派生后的参数，
     // 用它冻快照（结算按同一份参数复价）。
@@ -214,12 +214,12 @@ export class TaskPricingEstimatorService {
       const binding = await this.repo.findBinding(taskType, modelConfigId);
       if (!binding) {
         throw new BadRequestException(
-          `模型未绑定任务: 任务 ${taskType} 与模型 ${modelConfigId} 之间没有配置绑定`,
+          `Model not bound to task: task ${taskType} has no binding configured with model ${modelConfigId}`,
         );
       }
       if (!binding.isActive) {
         throw new BadRequestException(
-          `绑定已停用: 任务 ${taskType} 与模型 ${modelConfigId} 之间的绑定已停用`,
+          `Binding is disabled: task ${taskType} binding with model ${modelConfigId} has been disabled`,
         );
       }
       return binding;
@@ -230,10 +230,10 @@ export class TaskPricingEstimatorService {
     // default exists but was deactivated" surface as different errors here.
     const defaultBinding = await this.repo.findDefaultBinding(taskType);
     if (!defaultBinding) {
-      throw new BadRequestException(`任务 ${taskType} 未配置默认模型绑定`);
+      throw new BadRequestException(`Task ${taskType} has no default model binding configured`);
     }
     if (!defaultBinding.isActive) {
-      throw new BadRequestException(`任务 ${taskType} 的默认模型绑定已停用`);
+      throw new BadRequestException(`Task ${taskType} default model binding is disabled`);
     }
     return defaultBinding;
   }

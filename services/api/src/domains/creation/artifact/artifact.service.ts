@@ -20,7 +20,7 @@ export class ArtifactService {
   private async getDefaultModelConfig() {
     const config = await this.modelConfigService.findDefaultByType(ModelType.general);
     if (!config) {
-      throw new Error('未配置默认模型，请在模型配置中设置一个默认的 general 类型模型');
+      throw new Error('No default model configured. Please set a default general-type model in model configuration');
     }
     return config;
   }
@@ -31,7 +31,7 @@ export class ArtifactService {
       userId,
     );
     if (!config) {
-      throw new Error('未配置当前会员可用的默认 general 类型模型');
+      throw new Error('No default general-type model available for the current membership');
     }
     return config;
   }
@@ -53,11 +53,11 @@ export class ArtifactService {
   }
 
   async generateTitle(summaryContent: string): Promise<string> {
-    const prompt = `请为以下需求分析报告生成一个简洁的标题（10-20字）：
+    const prompt = `Please generate a concise title (10-20 characters) for the following requirements analysis report:
 
 ${summaryContent.substring(0, 500)}
 
-只返回标题文本，不要其他内容。`;
+Return only the title text, nothing else.`;
 
     const model = await this.getDefaultModel();
     const response = await model.invoke(prompt);
@@ -120,21 +120,21 @@ ${summaryContent.substring(0, 500)}
     try {
       const optimizeConfig = await this.getDefaultModelConfigForUser(userId);
       const optimizeAgent = createChatModelFromDbConfig(optimizeConfig);
-      const systemPrompt = `你是一个专业的文档优化助手。
+      const systemPrompt = `You are a professional document optimization assistant.
 
-用户优化需求：${instruction}
+User optimization request: ${instruction}
 
-原始文档内容：
+Original document content:
 \`\`\`markdown
 ${originalContent}
 \`\`\`
 
-请根据用户需求优化文档，要求：
-1. 保持文档的整体结构和格式
-2. 只针对用户提出的问题进行改进
-3. 不要删除重要信息
-4. 保持 Markdown 标题层级和代码块格式
-5. 直接返回优化后的完整文档，不要额外解释`;
+Optimize the document according to the user's request, with these requirements:
+1. Preserve the document's overall structure and formatting
+2. Only improve the issues the user raised
+3. Do not remove important information
+4. Preserve Markdown heading levels and code block formatting
+5. Return the complete optimized document directly, without extra explanation`;
       const inputTokens = estimateTextTokens(systemPrompt);
       const estimatedOutputTokens = Math.max(128, estimateTextTokens(originalContent));
       const hold = await this.billing.hold(userId, 0, {
@@ -148,7 +148,7 @@ ${originalContent}
           inputTokens,
           outputTokens: estimatedOutputTokens,
         },
-        remark: `Artifact 文档 AI 优化 · ${this.formatBillingModel(
+        remark: `Artifact document AI optimization · ${this.formatBillingModel(
           optimizeConfig.provider,
           optimizeConfig.model,
         )}`,
@@ -176,7 +176,7 @@ ${originalContent}
         artifactId,
         content: accumulatedContent,
         currentVersion: newVersion,
-        changelog: `AI优化：${instruction}`,
+        changelog: `AI optimization: ${instruction}`,
         sourcetags: inheritedTags,
       });
 

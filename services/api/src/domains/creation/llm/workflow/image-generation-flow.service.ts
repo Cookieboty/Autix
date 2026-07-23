@@ -288,7 +288,7 @@ export class ImageGenerationFlowService {
     const refinedPrompt = await this.tuneWorkbenchPrompt({
       mode: input.mode,
       template: {
-        title: '专业图片工作台',
+        title: 'Professional Image Workbench',
         prompt: '{{prompt}}',
       },
       prompt: refinementPlan.composedPrompt,
@@ -351,7 +351,7 @@ export class ImageGenerationFlowService {
     if (imageUrls.length > 0 && !supportsImagePromptVision(config)) {
       throw new BadRequestException({
         errorCode: 'ERR_CHAT_MODEL_VISION_REQUIRED',
-        message: '所选 Prompt 微调模型不支持图片理解，请选择支持图片理解的模型或移除参考图。',
+        message: 'The selected prompt-tuning model does not support image understanding. Choose a vision-capable model or remove reference images.',
       });
     }
 
@@ -417,7 +417,7 @@ export class ImageGenerationFlowService {
       await this.confirmPromptOptimizeHold(hold, result, content);
       return content.trim() || input.prompt;
     } catch (err) {
-      await this.safeRefundPromptOptimizeHold(hold.holdId, 'Prompt 优化失败');
+      await this.safeRefundPromptOptimizeHold(hold.holdId, 'Prompt optimization failed');
       throw err;
     }
   }
@@ -535,7 +535,7 @@ export class ImageGenerationFlowService {
     const callRequest = buildImageCallRequest(request, count, paramsSchema);
 
     if (!callRequest.baseUrl || !callRequest.apiKey) {
-      throw new BadRequestException('图片模型缺少 baseUrl 或 apiKey 配置');
+      throw new BadRequestException('The image model is missing baseUrl or apiKey configuration');
     }
 
     this.logger.log(
@@ -886,7 +886,7 @@ export class ImageGenerationFlowService {
           return { ...ref, url };
         } catch (err) {
           throw new BadRequestException(
-            `参考图暂存失败：${String(err instanceof Error ? err.message : err)}`,
+            `Reference image staging failed: ${String(err instanceof Error ? err.message : err)}`,
           );
         }
       }),
@@ -984,7 +984,7 @@ export class ImageGenerationFlowService {
                 confirmation.hold.status === PointHoldStatus.REFUNDED
               ) {
                 throw new BadRequestException(
-                  '图片生成冻结已退款，不能完成资产入库',
+                  'Image generation hold has been refunded; cannot complete asset ingestion',
                 );
               }
             }

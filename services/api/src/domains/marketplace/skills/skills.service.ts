@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import {
   TemplateStatus,
   ResourceType,
@@ -7,6 +7,7 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { RuntimeDetectorService } from '../../platform/common/runtime-detector.service';
 import { parseSkillMarkdown } from '../../platform/common/skill-markdown.parser';
@@ -58,7 +59,10 @@ export class SkillsService extends BaseResourceService {
       : undefined;
     const instructions = parsed?.instructions ?? dto.instructions;
     if (!instructions?.trim()) {
-      throw new BadRequestException('Skill instructions 不能为空');
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'skill.instructions_required',
+      );
     }
     const frontmatter = parsed?.frontmatter ?? dto.frontmatter ?? {};
 
@@ -112,7 +116,12 @@ export class SkillsService extends BaseResourceService {
       rawMarkdown?: string | null;
       runtimeDetectedBy: DetectionSrc;
     };
-    if (skill.authorId !== userId) throw new ForbiddenException('无权修改此 Skill');
+    if (skill.authorId !== userId) {
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'skill.update_forbidden',
+      );
+    }
 
     const parsed = dto.rawMarkdown
       ? parseSkillMarkdown(dto.rawMarkdown)

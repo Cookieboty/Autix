@@ -103,11 +103,11 @@ export interface UpdateDiscountInput {
  */
 @Injectable()
 export class PricingConfigAdminService {
-  constructor(private readonly repo: PricingConfigAdminRepository) {}
+  constructor(private readonly repo: PricingConfigAdminRepository) { }
 
   async getModel(modelConfigId: string) {
     const model = await this.repo.findModelConfig(modelConfigId);
-    if (!model) throw new NotFoundException(`模型配置不存在: ${modelConfigId}`);
+    if (!model) throw new NotFoundException(`Model configuration not found: ${modelConfigId}`);
     return model;
   }
 
@@ -121,7 +121,7 @@ export class PricingConfigAdminService {
       paramsSchema: paramsSchema as unknown as Prisma.InputJsonValue,
       pricingSchema: pricingSchema as unknown as Prisma.InputJsonValue,
     });
-    if (!updated) throw new NotFoundException(`模型配置不存在: ${modelConfigId}`);
+    if (!updated) throw new NotFoundException(`Model configuration not found: ${modelConfigId}`);
     return updated;
   }
 
@@ -132,7 +132,7 @@ export class PricingConfigAdminService {
       modelConfigId,
       candidate as unknown as Prisma.InputJsonValue,
     );
-    if (!updated) throw new NotFoundException(`模型配置不存在: ${modelConfigId}`);
+    if (!updated) throw new NotFoundException(`Model configuration not found: ${modelConfigId}`);
     return updated;
   }
 
@@ -178,7 +178,7 @@ export class PricingConfigAdminService {
       ...validateParamsSchema(paramsCandidate, pricingCandidate),
     ];
     if (violations.length > 0) {
-      throw new BadRequestException({ message: 'schema 校验失败', violations });
+      throw new BadRequestException({ message: 'schema validation failed', violations });
     }
 
     return { paramsSchema: paramsCandidate, pricingSchema: pricingCandidate };
@@ -190,7 +190,7 @@ export class PricingConfigAdminService {
     const badLocales = validateDescription(candidate);
     if (badLocales.length > 0) {
       throw new BadRequestException({
-        message: `description 含不支持的 locale: ${badLocales.join(', ')}`,
+        message: `description contains unsupported locales: ${badLocales.join(', ')}`,
         violations: badLocales,
       });
     }
@@ -215,7 +215,7 @@ export class PricingConfigAdminService {
         fixedCostSchema: fixedCostSchema as unknown as Prisma.InputJsonValue | null,
       });
     } catch (err) {
-      throw this.translatePrismaError(err, { conflict: `任务类型已存在: ${input.taskType}` });
+      throw this.translatePrismaError(err, { conflict: `Task type already exists: ${input.taskType}` });
     }
   }
 
@@ -240,7 +240,7 @@ export class PricingConfigAdminService {
     try {
       return await this.repo.updateTaskDefinition(taskType, data);
     } catch (err) {
-      throw this.translatePrismaError(err, { notFound: `任务不存在: ${taskType}` });
+      throw this.translatePrismaError(err, { notFound: `Task not found: ${taskType}` });
     }
   }
 
@@ -262,7 +262,7 @@ export class PricingConfigAdminService {
     try {
       return await this.repo.deactivateTaskDefinition(taskType);
     } catch (err) {
-      throw this.translatePrismaError(err, { notFound: `任务不存在: ${taskType}` });
+      throw this.translatePrismaError(err, { notFound: `Task not found: ${taskType}` });
     }
   }
 
@@ -272,7 +272,7 @@ export class PricingConfigAdminService {
     const candidate = raw as unknown as PricingSchema;
     const violations = validatePricingSchema(candidate);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: 'fixedCostSchema 校验失败', violations });
+      throw new BadRequestException({ message: 'fixedCostSchema validation failed', violations });
     }
     return candidate;
   }
@@ -306,8 +306,8 @@ export class PricingConfigAdminService {
       });
     } catch (err) {
       throw this.translatePrismaError(err, {
-        conflict: `绑定已存在: 任务 ${input.taskType} 与模型 ${input.modelConfigId}`,
-        badRequest: `任务或模型不存在: 任务 ${input.taskType}, 模型 ${input.modelConfigId}`,
+        conflict: `Binding already exists: task ${input.taskType} with model ${input.modelConfigId}`,
+        badRequest: `Task or model not found: task ${input.taskType}, model ${input.modelConfigId}`,
       });
     }
   }
@@ -326,7 +326,7 @@ export class PricingConfigAdminService {
       return await this.repo.updateTaskModelBinding(taskType, modelConfigId, data);
     } catch (err) {
       throw this.translatePrismaError(err, {
-        notFound: `绑定不存在: 任务 ${taskType}, 模型 ${modelConfigId}`,
+        notFound: `Binding not found: task ${taskType}, model ${modelConfigId}`,
       });
     }
   }
@@ -336,7 +336,7 @@ export class PricingConfigAdminService {
       return await this.repo.deleteTaskModelBinding(taskType, modelConfigId);
     } catch (err) {
       throw this.translatePrismaError(err, {
-        notFound: `绑定不存在: 任务 ${taskType}, 模型 ${modelConfigId}`,
+        notFound: `Binding not found: task ${taskType}, model ${modelConfigId}`,
       });
     }
   }
@@ -344,7 +344,7 @@ export class PricingConfigAdminService {
   /** multiplier is Decimal(6,3): a zero or negative multiplier would price every call at 0 or negative. */
   private assertPositiveFiniteMultiplier(multiplier: number) {
     if (!Number.isFinite(multiplier) || multiplier <= 0) {
-      throw new BadRequestException(`multiplier 必须是正数: ${multiplier}`);
+      throw new BadRequestException(`multiplier must be a positive number: ${multiplier}`);
     }
   }
 
@@ -358,10 +358,12 @@ export class PricingConfigAdminService {
   private async assertModelIsPriceable(modelConfigId: string) {
     const model = await this.repo.findModelConfig(modelConfigId);
     if (!model) {
-      throw new NotFoundException(`模型配置不存在: ${modelConfigId}`);
+      throw new NotFoundException(`Model configuration not found: ${modelConfigId}`);
     }
     if (model.pricingSchema === null) {
-      throw new BadRequestException(`模型未配置计价规则(pricingSchema)，无法绑定: ${modelConfigId}`);
+      throw new BadRequestException(
+        `Model has no pricingSchema configured and cannot be bound: ${modelConfigId}`,
+      );
     }
   }
 
@@ -387,15 +389,17 @@ export class PricingConfigAdminService {
     const model = await this.repo.findModelConfig(modelConfigId);
     const protocolKey = readProtocolKey(model?.metadata);
     if (!protocolKey) {
-      throw new BadRequestException(`任务 ${taskType}（${media}）要求模型声明 metadata.protocolKey`);
+      throw new BadRequestException(
+        `Task ${taskType} (${media}) requires the model to declare metadata.protocolKey`,
+      );
     }
     const entry = tryResolveAnyPreset(protocolKey);
     if (!entry) {
-      throw new BadRequestException(`未知 protocolKey: ${protocolKey}`);
+      throw new BadRequestException(`Unknown protocolKey: ${protocolKey}`);
     }
     if (entry.media !== media) {
       throw new BadRequestException(
-        `媒体不匹配：任务 ${taskType}（${media}）不能绑定 ${entry.media} 协议的模型（${protocolKey}）`,
+        `Media mismatch: task ${taskType} (${media}) cannot bind a model with ${entry.media} protocol (${protocolKey})`,
       );
     }
   }
@@ -425,7 +429,7 @@ export class PricingConfigAdminService {
         effectiveTo: effectiveTo ?? null,
       });
     } catch (err) {
-      throw this.translatePrismaError(err, { conflict: `折扣码已存在: ${input.code}` });
+      throw this.translatePrismaError(err, { conflict: `Discount code already exists: ${input.code}` });
     }
   }
 
@@ -461,8 +465,8 @@ export class PricingConfigAdminService {
       return await this.repo.updateDiscount(id, data);
     } catch (err) {
       throw this.translatePrismaError(err, {
-        conflict: `折扣码已存在`,
-        notFound: `折扣不存在: ${id}`,
+        conflict: `Discount code already exists`,
+        notFound: `Discount not found: ${id}`,
       });
     }
   }
@@ -471,7 +475,7 @@ export class PricingConfigAdminService {
     try {
       return await this.repo.deleteDiscount(id);
     } catch (err) {
-      throw this.translatePrismaError(err, { notFound: `折扣不存在: ${id}` });
+      throw this.translatePrismaError(err, { notFound: `Discount not found: ${id}` });
     }
   }
 
@@ -486,7 +490,7 @@ export class PricingConfigAdminService {
    */
   private assertPositiveFiniteFactor(factor: number) {
     if (!Number.isFinite(factor) || factor <= 0) {
-      throw new BadRequestException(`factor 必须是正数: ${factor}`);
+      throw new BadRequestException(`factor must be a positive number: ${factor}`);
     }
   }
 
@@ -501,20 +505,20 @@ export class PricingConfigAdminService {
    */
   private narrowDiscountScope(raw: unknown): AdminDiscountScope {
     if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-      throw new BadRequestException('scope 必须是对象');
+      throw new BadRequestException('scope must be an object');
     }
     const candidate = raw as Record<string, unknown>;
 
     if (candidate.membershipLevelNumbers !== undefined && !this.isNumberArray(candidate.membershipLevelNumbers)) {
       throw new BadRequestException(
-        'scope.membershipLevelNumbers 必须是 number[]（会员等级序号，而非 cuid 字符串）',
+        'scope.membershipLevelNumbers must be number[] (membership level numbers, not cuid strings)',
       );
     }
     if (candidate.taskTypes !== undefined && !this.isStringArray(candidate.taskTypes)) {
-      throw new BadRequestException('scope.taskTypes 必须是 string[]');
+      throw new BadRequestException('scope.taskTypes must be string[]');
     }
     if (candidate.modelConfigIds !== undefined && !this.isStringArray(candidate.modelConfigIds)) {
-      throw new BadRequestException('scope.modelConfigIds 必须是 string[]');
+      throw new BadRequestException('scope.modelConfigIds must be string[]');
     }
 
     return candidate as AdminDiscountScope;
@@ -543,7 +547,7 @@ export class PricingConfigAdminService {
     const effectiveTo = toRaw === undefined ? undefined : toRaw === null ? null : new Date(toRaw);
 
     if (effectiveFrom instanceof Date && effectiveTo instanceof Date && effectiveFrom >= effectiveTo) {
-      throw new BadRequestException('effectiveFrom 必须早于 effectiveTo');
+      throw new BadRequestException('effectiveFrom must be earlier than effectiveTo');
     }
 
     return { effectiveFrom, effectiveTo };
@@ -565,13 +569,13 @@ export class PricingConfigAdminService {
   ): never {
     const code = err && typeof err === 'object' ? (err as { code?: string }).code : undefined;
     if (code === 'P2002') {
-      throw new ConflictException(labels.conflict ?? '记录已存在');
+      throw new ConflictException(labels.conflict ?? 'Record already exists');
     }
     if (code === 'P2025') {
-      throw new NotFoundException(labels.notFound ?? '记录不存在');
+      throw new NotFoundException(labels.notFound ?? 'Record not found');
     }
     if (code === 'P2003') {
-      throw new BadRequestException(labels.badRequest ?? '引用的记录不存在');
+      throw new BadRequestException(labels.badRequest ?? 'Referenced record does not exist');
     }
     throw err as Error;
   }

@@ -180,7 +180,7 @@ describe('validatePricingSchema', () => {
   it('regression: { terms: null } is a well-formed object with a bad terms field, still yields EMPTY_TERMS', () => {
     const schema = { terms: null } as unknown as PricingSchema;
     expect(validatePricingSchema(schema)).toEqual([
-      { code: 'EMPTY_TERMS', message: 'pricingSchema 至少需要一个 term' },
+      { code: 'EMPTY_TERMS', message: 'pricingSchema requires at least one term' },
     ]);
   });
 });
@@ -301,8 +301,8 @@ describe('validateParamsSchema', () => {
     } as unknown as ParamsSchema;
     const violations = validateParamsSchema(schema);
     expect(violations).toEqual([
-      { code: 'MALFORMED_PROPERTY', message: 'properties[bad] 不是有效的对象', termId: 'bad' },
-      { code: 'MISSING_X_UI', message: '参数 good 缺少 x-ui', termId: 'good' },
+      { code: 'MALFORMED_PROPERTY', message: 'properties[bad] is not a valid object', termId: 'bad' },
+      { code: 'MISSING_X_UI', message: 'Parameter good is missing x-ui', termId: 'good' },
     ]);
   });
 

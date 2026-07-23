@@ -24,9 +24,18 @@ export function reportInsufficientPoints(event: InsufficientPointsEvent): void {
   }
 }
 
+/**
+ * 后端稳定业务码（`@autix/domain` ErrorCode）。这是识别「积分不足」的**首选**信号——
+ * 与语言无关，不依赖翻译后的文案。API 已把两条积分不足错误统一打上此码。
+ */
+export const INSUFFICIENT_POINTS_CODE = 'INSUFFICIENT_POINTS';
+
+export function isInsufficientPointsCode(code: string | null | undefined): boolean {
+  return code === INSUFFICIENT_POINTS_CODE;
+}
+
+// 文案关键词匹配仅作兜底（老端点/无码路径）；只保留英文，中文/多语言路径改由业务码识别。
 const KEYWORDS: readonly string[] = [
-  '积分余额不足',
-  '积分不足',
   'insufficient points',
   'insufficient balance',
 ];
@@ -42,12 +51,8 @@ export function parseInsufficientPointsMessage(msg: string | null | undefined): 
   available: number | null;
 } {
   if (!msg) return { required: null, available: null };
-  const requiredMatch =
-    msg.match(/需要\s*(-?\d+(?:\.\d+)?)/) ||
-    msg.match(/required[^\d-]*(-?\d+(?:\.\d+)?)/i);
-  const availableMatch =
-    msg.match(/当前\s*(-?\d+(?:\.\d+)?)/) ||
-    msg.match(/available[^\d-]*(-?\d+(?:\.\d+)?)/i);
+  const requiredMatch = msg.match(/required[^\d-]*(-?\d+(?:\.\d+)?)/i);
+  const availableMatch = msg.match(/available[^\d-]*(-?\d+(?:\.\d+)?)/i);
   const toNum = (m: RegExpMatchArray | null) => {
     if (!m) return null;
     const v = Number(m[1]);

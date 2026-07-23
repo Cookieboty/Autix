@@ -161,7 +161,7 @@ export class ConversationService {
       if (!existing) {
         await this.repository.createVideoProjectForConversation({
           userId,
-          title: conv.title ?? '新视频项目',
+          title: conv.title ?? 'New video project',
           conversationId,
         });
       }

@@ -121,7 +121,7 @@ export function narrowImageParamsSchema(
   modelConfigId: string,
 ): ParamsSchema {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new BadRequestException(`模型未配置参数规则(paramsSchema): ${modelConfigId}`);
+    throw new BadRequestException(`Model has no params rule (paramsSchema) configured: ${modelConfigId}`);
   }
   return value as unknown as ParamsSchema;
 }
@@ -151,7 +151,7 @@ export function buildImageModelNotConfiguredException(
   // 直接把它拼进 message —— 运营看到的第一行就得知道该去改哪个模型的哪个字段。
   return new BadRequestException({
     errorCode: 'ERR_IMAGE_MODEL_NOT_CONFIGURED',
-    message: `模型配置 ${modelConfigId}（${model}）无法路由到图片生成协议：${reason}。请在后台为该模型正确配置 metadata.protocolKey。`,
+    message: `Model config ${modelConfigId} (${model}) cannot be routed to an image generation protocol: ${reason}. Please configure metadata.protocolKey correctly for this model in the admin console.`,
     details: {
       modelConfigId,
       model,
@@ -197,7 +197,7 @@ export function buildImageCallRequest(
   } catch (error) {
     throw new BadRequestException({
       errorCode: 'ERR_IMAGE_OPERATION_NOT_ALLOWED',
-      message: `模型 ${request.modelConfig.model} 的能力配置不支持本次请求所需操作：${String(error instanceof Error ? error.message : error)}`,
+      message: `Model ${request.modelConfig.model} capability config does not support the operation required by this request: ${String(error instanceof Error ? error.message : error)}`,
     });
   }
 
@@ -239,7 +239,7 @@ export function buildUnsupportedImageParamsException(
   const metadata = readImageModelMetadata(request.modelConfig.metadata);
   return new BadRequestException({
     errorCode: 'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
-    message: `当前模型不支持所选参数，请尝试其他尺寸或质量。（${request.modelConfig.model}）`,
+    message: `The current model does not support the selected parameters. Try a different size or quality. (${request.modelConfig.model})`,
     details: {
       model: request.modelConfig.model,
       protocolKey: metadata.protocolKey,

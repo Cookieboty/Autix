@@ -290,6 +290,39 @@ export function assertUntranslatedRatchet(
 const CJK_CHAR = /[一-鿿]/;
 
 /**
+ * 不使用汉字书写系统的目标语言——这些语言的译文里出现任意中文汉字，几乎必然是
+ * "从中文目录 scaffold 后未翻译"的残留（本仓库真实踩坑：landing 等 chunk 有数百条
+ * 被复制成中文的 fr/ru/vi 词条）。
+ *
+ * 为什么单列这套检查、而不用"与 zh-CN 逐字节相同"判定：
+ * - 未译棘轮只比对 en，中文残留（!= en）对它完全隐形；
+ * - 日语（ja）合法大量使用汉字（Kanji），"与中文相同"会把 保存/操作/管理 等正确日语
+ *   误报成残留，无法干净判定；
+ * - 而 fr/ru/vi 是拉丁/西里尔文字，正文永不含汉字，故"含汉字==错误语言"零误报。
+ *
+ * 因此这里只对拉丁/西里尔语言硬失败；ja / zh-* 不在此列（各自的 Kanji/汉字是合法的）。
+ */
+const HAN_FREE_LANGS = ['fr', 'ru', 'vi'] as const;
+
+export function assertNoHanInLatinScript(
+  byLang: Record<string, Record<string, string>>,
+): string[] {
+  const issues: string[] = [];
+  for (const lang of HAN_FREE_LANGS) {
+    const dict = byLang[lang] ?? {};
+    for (const [key, value] of Object.entries(dict)) {
+      if (CJK_CHAR.test(value)) {
+        issues.push(
+          `[wrong-lang:${lang}] ${key} 含中文汉字——${lang} 不使用汉字，疑似从中文目录复制后未翻译：` +
+            `"${value.slice(0, 40)}${value.length > 40 ? '…' : ''}"`,
+        );
+      }
+    }
+  }
+  return issues;
+}
+
+/**
  * 用 TypeScript 编译器 API 解析一段源码，统计其中"包含至少一个中文字符的字符串字面量"
  * 个数——单引号、双引号、模板字符串各算一次。
  *
@@ -510,6 +543,9 @@ export function collectIssues(
     ? JSON.parse(readFileSync(BASELINE_FILE, 'utf8'))
     : {};
   issues.push(...assertUntranslatedRatchet(countUntranslated(webValues, 'en'), baseline));
+
+  // 错误语言残留：fr/ru/vi 目录里出现中文汉字一律硬失败（未译棘轮对 !=en 的中文残留隐形）。
+  issues.push(...assertNoHanInLatinScript(webValues));
 
   // API 错误文案：这套是新纳入的，没有存量债务，所以未译一律硬失败——不给棘轮。
   const apiByLang = apiByLangOverride ?? loadApiLocales();

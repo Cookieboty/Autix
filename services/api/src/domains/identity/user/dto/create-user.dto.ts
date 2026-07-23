@@ -11,7 +11,6 @@ import { Transform } from 'class-transformer';
 import { UserStatus } from '@autix/database';
 import {
   PASSWORD_REGEX,
-  PASSWORD_VALIDATION_MESSAGE,
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
 } from '@autix/domain';
@@ -29,7 +28,7 @@ export class CreateUserDto {
   @IsString()
   @MinLength(PASSWORD_MIN_LENGTH)
   @MaxLength(PASSWORD_MAX_LENGTH)
-  @Matches(PASSWORD_REGEX, { message: PASSWORD_VALIDATION_MESSAGE })
+  @Matches(PASSWORD_REGEX)
   password?: string;
 
   @IsOptional()

@@ -33,12 +33,12 @@ export function assertImageHardLimits(req: { size?: string | null; count: number
   const pixels = parseImageSizePixels(req.size);
   if (pixels > IMAGE_RISK_HARD_LIMITS.maxPixels) {
     throw new BadRequestException(
-      `图片分辨率超过硬上限（${IMAGE_RISK_HARD_LIMITS.maxPixels} 像素）`,
+      `Image resolution exceeds the hard limit (${IMAGE_RISK_HARD_LIMITS.maxPixels} pixels)`,
     );
   }
   if (req.count > IMAGE_RISK_HARD_LIMITS.maxCount) {
     throw new BadRequestException(
-      `单次图片数量不得超过 ${IMAGE_RISK_HARD_LIMITS.maxCount}`,
+      `The number of images per request cannot exceed ${IMAGE_RISK_HARD_LIMITS.maxCount}`,
     );
   }
 }

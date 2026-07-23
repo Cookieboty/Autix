@@ -1,7 +1,6 @@
 import {
   Injectable,
   HttpStatus,
-  NotFoundException,
 } from '@nestjs/common';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { BillingCycle, Prisma } from '../../platform/prisma/generated';
@@ -265,9 +264,9 @@ export class MembershipService {
       if (!result.deleted) {
         throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.tier_has_users');
       }
-      return { message: '删除成功' };
+      return { messageKey: 'common.deleted' };
     } catch (err) {
-      this.handleDeleteError(err, '会员等级不存在');
+      this.handleDeleteError(err, 'membership.tier_not_found');
     }
   }
 
@@ -277,9 +276,9 @@ export class MembershipService {
       if (!result.deleted) {
         throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.plan_has_users');
       }
-      return { message: '删除成功' };
+      return { messageKey: 'common.deleted' };
     } catch (err) {
-      this.handleDeleteError(err, '会员计划不存在');
+      this.handleDeleteError(err, 'membership.plan_not_found');
     }
   }
 
@@ -376,11 +375,11 @@ export class MembershipService {
     throw err;
   }
 
-  private handleDeleteError(err: unknown, notFoundMessage: string): never {
+  private handleDeleteError(err: unknown, notFoundKey: string): never {
     if (err instanceof I18nHttpException) throw err;
     const code = (err as { code?: string })?.code;
     if (code === 'P2025') {
-      throw new NotFoundException(notFoundMessage);
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, notFoundKey);
     }
     if (code === 'P2003') {
       throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.record_in_use');

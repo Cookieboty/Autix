@@ -33,7 +33,7 @@ export class OrderRefundService {
         return buildAlreadyRefundedResult(order);
       }
       if (order.status !== OrderStatus.PAID) {
-        throw new BadRequestException('只有已支付订单可以退款');
+        throw new BadRequestException('Only paid orders can be refunded');
       }
 
       // FIX-7/9: 退款金额不得超过已支付金额。

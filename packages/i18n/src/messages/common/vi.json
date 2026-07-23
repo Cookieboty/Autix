@@ -44,8 +44,8 @@
     "refresh": "Làm mới",
     "hidden": "Ẩn",
     "showing": "Đang hiển thị",
-    "frontend": "Frontend",
-    "backend": "Backend",
+    "frontend": "Giao diện người dùng",
+    "backend": "Trang quản trị",
     "register": "Đăng ký",
     "actions": "Thao tác",
     "none": "Không có",
@@ -122,9 +122,9 @@
     "myOrders": "Đơn hàng",
     "inviteFriends": "Mời bạn bè",
     "docs": "Tài liệu",
-    "myTemplates": "我的模板",
-    "upgrade": "升级会员",
-    "gallery": "Gallery"
+    "myTemplates": "Mẫu của tôi",
+    "upgrade": "Nâng cấp thành viên",
+    "gallery": "Thư viện"
   },
   "notification": {
     "title": "Thông báo",
@@ -280,7 +280,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio - Nghĩ ra. Dựng lên. Ra mắt.",
       "description": "Tạo PRD, mã, thiết kế và nguyên mẫu bằng AI trong một nơi."
     },
     "video": {

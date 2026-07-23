@@ -139,7 +139,7 @@ export class FeaturedSlotsService {
   ): Promise<FeaturedSlot> {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('运营位不存在');
+      throw new NotFoundException('Featured slot not found');
     }
 
     const mergedKind = input.kind ?? existing.kind;
@@ -177,7 +177,7 @@ export class FeaturedSlotsService {
   async deleteSlot(actorId: string, id: string): Promise<void> {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('运营位不存在');
+      throw new NotFoundException('Featured slot not found');
     }
     await this.repo.delete(id);
     await this.writeAudit('featured.delete', actorId, id, {
@@ -202,7 +202,7 @@ export class FeaturedSlotsService {
       orderedIds.every((id) => existingIds.has(id));
     if (!isExactPermutation) {
       throw new BadRequestException(
-        'orderedIds 必须与该 placement 下全部槽位一一对应（不能缺失/多余/重复）',
+        'orderedIds must correspond one-to-one with all slots under this placement (no missing/extra/duplicate)',
       );
     }
 
@@ -228,7 +228,7 @@ export class FeaturedSlotsService {
         return this.repo.searchVideoTemplateCandidates(q);
       case 'GALLERY_POST': {
         const rows = await this.repo.searchGalleryPostCandidates(q);
-        return rows.map((r) => ({ id: r.id, title: r.title ?? '(无标题)' }));
+        return rows.map((r) => ({ id: r.id, title: r.title ?? '(untitled)' }));
       }
       default:
         return [];

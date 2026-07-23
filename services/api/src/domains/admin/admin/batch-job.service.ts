@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { AppLogger } from '../../platform/common/app-logger';
 import { randomUUID } from 'crypto';
 import { assertSource, type GallerySourcePayload } from '../../creation/gallery/gallery.helpers';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import {
   GalleryKind,
   GallerySource,
@@ -34,7 +35,18 @@ type UnknownError = {
 };
 
 function errorDetails(error: unknown): UnknownError {
-  if (error && typeof error === 'object') return error as UnknownError;
+  if (error && typeof error === 'object') {
+    const anyErr = error as UnknownError & {
+      i18nKey?: string;
+      i18nArgs?: Record<string, unknown>;
+    };
+    if (typeof anyErr.i18nKey === 'string') {
+      const args = anyErr.i18nArgs;
+      const argsStr = args && Object.keys(args).length > 0 ? ` ${JSON.stringify(args)}` : '';
+      return { message: `${anyErr.i18nKey}${argsStr}` };
+    }
+    return anyErr as UnknownError;
+  }
   return { message: String(error) };
 }
 
@@ -88,7 +100,7 @@ export class BatchJobService {
     private readonly repository: BatchJobRepository,
     private readonly sse: SseService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Persist a batch job then process it asynchronously (fire-and-forget).
@@ -195,7 +207,11 @@ export class BatchJobService {
     // 缺失/非法 kind 此前被 `?? GalleryKind.IMAGE` 静默默认为 IMAGE——一条视频误标
     // 成图片会悄悄发布。同函数内顺手修：计入 failed 而非静默默认（见 final-fixes 审查）。
     if (!GALLERY_KINDS.has(data.kind as string)) {
-      throw new BadRequestException(`导入项缺失或非法的 kind: ${String(data.kind)}`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'batch.gallery_kind_invalid',
+        { kind: String(data.kind) },
+      );
     }
     return this.prisma.gallery_posts.create({
       data: {
@@ -234,7 +250,7 @@ export class BatchJobService {
     for (const [index, item] of items.entries()) {
       try {
         if (resourceType !== ResourceType.GALLERY_POST) {
-          throw new Error(`IMPORT 暂不支持资源类型: ${resourceType}`);
+          throw new Error(`IMPORT does not support resource type: ${resourceType}`);
         }
         const filtered: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(item)) {

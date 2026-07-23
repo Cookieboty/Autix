@@ -61,7 +61,7 @@ export function compileParamsSchema(schema: ParamsSchema): ParamViolation[] {
       {
         // 根级错误，无 JSON Pointer。
         path: '',
-        message: `paramsSchema 无法被 ajv 编译：${error instanceof Error ? error.message : String(error)}`,
+        message: `paramsSchema could not be compiled by ajv: ${error instanceof Error ? error.message : String(error)}`,
       },
     ];
   }

@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import type { AuthUser, PublicProfile } from '@autix/domain';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import { GalleryService } from '../gallery/gallery.service';
@@ -42,7 +43,7 @@ export class PublicProfileService {
     });
     // 已注销用户的 username 会被改写成 deleted_<id>，正常查不到；这里再兜一层 status。
     if (!user || user.status === 'DELETED') {
-      throw new NotFoundException('用户不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.profile.user_not_found');
     }
 
     const stats = await this.gallery.getAuthorStats(user.id);
@@ -61,7 +62,7 @@ export class PublicProfileService {
       select: { id: true, status: true },
     });
     if (!user || user.status === 'DELETED') {
-      throw new NotFoundException('用户不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.profile.user_not_found');
     }
     return this.gallery.listAuthorFeed(user.id, cursor, limit, viewer);
   }

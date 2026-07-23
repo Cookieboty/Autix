@@ -201,7 +201,7 @@ export class MembershipCycleService {
             cycleEnd: input.cycleEnd.toISOString(),
             scheduledMonthlyGrant: true,
           } satisfies Prisma.InputJsonObject,
-          remark: `会员订阅积分月度发放: ${input.levelName}`,
+          remark: `Membership subscription monthly points grant: ${input.levelName}`,
         },
       );
 
@@ -294,7 +294,7 @@ export class MembershipCycleService {
           cycleStart: effectiveAt.toISOString(),
           cycleEnd: minDate(addMonths(effectiveAt, 1), expiresAt).toISOString(),
         } satisfies Prisma.InputJsonObject,
-        remark: `会员降级下周期生效积分: ${plan.level.name}`,
+        remark: `Membership downgrade next-cycle points: ${plan.level.name}`,
       });
 
       return { applied: true, membership: updatedMembership, pointsGranted: plan.points };
@@ -355,7 +355,7 @@ export class MembershipCycleService {
         maxPoints: input.policy.maxPoints,
         carriedFromGrantIds: eligibleGrants.map((grant) => grant.id),
       } satisfies Prisma.InputJsonObject,
-      remark: `会员订阅积分结转: ${input.levelName}`,
+      remark: `Membership subscription points carryover: ${input.levelName}`,
     });
 
     return { created: true, amount: carryoverAmount };

@@ -1,11 +1,9 @@
 import {
-  BadRequestException,
-  ConflictException,
   ForbiddenException,
+  HttpStatus,
   Injectable,
-  NotFoundException,
-  PayloadTooLargeException,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { Prisma } from '../../platform/prisma/generated';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
@@ -63,7 +61,7 @@ export class CanvasBoardService {
   async createBoard(userId: string, dto: CreateBoardDto) {
     const entitlement = await this.computeEntitlement(userId);
     if (!entitlement.canCreateBoard) {
-      throw new ForbiddenException(entitlement.reason ?? '该功能需要开通会员');
+      throw new ForbiddenException(entitlement.reason ?? 'This feature requires an active membership');
     }
     const board = await this.repository.createBoard(userId, dto);
     return { board: await this.hydrateBoard(board), entitlement };
@@ -107,14 +105,14 @@ export class CanvasBoardService {
     const board = await this.assertOwned(userId, id);
     const entitlement = await this.computeEntitlement(userId);
     if (!entitlement.canSave) {
-      throw new ForbiddenException(entitlement.reason ?? '无保存权限');
+      throw new ForbiddenException(entitlement.reason ?? 'No permission to save');
     }
     if (ifMatch === undefined || ifMatch === null || ifMatch === '') {
-      throw new BadRequestException('缺少 If-Match 版本号');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.canvas.missing_if_match');
     }
     const expectedRevision = Number.parseInt(ifMatch, 10);
     if (!Number.isFinite(expectedRevision)) {
-      throw new BadRequestException('非法 If-Match 版本号');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.canvas.invalid_if_match');
     }
 
     let state = normalizeCanvasBoardState(dto.state);
@@ -122,11 +120,17 @@ export class CanvasBoardService {
 
     const size = measureCanvasState(state);
     if (size.overLimit) {
-      throw new PayloadTooLargeException({
-        message: '画布超出上限',
-        limit: { maxNodes: 1000, maxStateBytes: 5 * 1024 * 1024 },
-        current: { nodes: size.nodes, bytes: size.bytes },
-      });
+      throw new I18nHttpException(
+        HttpStatus.PAYLOAD_TOO_LARGE,
+        'creation.canvas.board_too_large',
+        undefined,
+        {
+          data: {
+            limit: { maxNodes: 1000, maxStateBytes: 5 * 1024 * 1024 },
+            current: { nodes: size.nodes, bytes: size.bytes },
+          },
+        },
+      );
     }
 
     const persisted: CanvasBoardState = { ...state, boardRevision: expectedRevision + 1 };
@@ -147,11 +151,12 @@ export class CanvasBoardService {
     if (newRevision === null) {
       const fresh = await this.repository.findBoard(id);
       const serverState = fresh ? await this.hydrateState(await this.loadState(fresh)) : null;
-      throw new ConflictException({
-        message: '画布已在其他窗口更新',
-        serverRevision: fresh?.revision ?? board.revision,
-        serverState,
-      });
+      throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'creation.canvas.board_updated_elsewhere',
+        undefined,
+        { data: { serverRevision: fresh?.revision ?? board.revision, serverState } },
+      );
     }
 
     return { boardRevision: newRevision, state: { ...persisted, boardRevision: newRevision } };
@@ -165,7 +170,7 @@ export class CanvasBoardService {
   async restoreVersion(userId: string, id: string, version: number) {
     const board = await this.assertOwned(userId, id);
     const snapshot = await this.repository.snapshotByVersion(id, version);
-    if (!snapshot) throw new NotFoundException('版本不存在');
+    if (!snapshot) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.canvas.version_not_found');
     const restored = normalizeCanvasBoardState(snapshot.state as unknown as Partial<CanvasBoardState>);
     const assetRefs = extractCanvasAssetRefs(restored);
     const newRevision = await this.repository.saveStateAtomic(
@@ -174,7 +179,7 @@ export class CanvasBoardService {
       { ...restored, boardRevision: board.revision + 1 } as unknown as Prisma.InputJsonValue,
       { createSnapshot: true, thumbnailStorageKey: null, assetRefs, keepSnapshots: KEEP_SNAPSHOTS },
     );
-    if (newRevision === null) throw new ConflictException({ message: '恢复冲突，请重试' });
+    if (newRevision === null) throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.canvas.restore_conflict');
     return { boardRevision: newRevision, state: await this.hydrateState({ ...restored, boardRevision: newRevision }) };
   }
 
@@ -190,7 +195,7 @@ export class CanvasBoardService {
   ): Promise<{ boardRevision: number; state: CanvasBoardState }> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const board = await this.repository.findBoard(boardId);
-      if (!board) throw new NotFoundException('画布不存在');
+      if (!board) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.canvas.board_not_found');
       const current = await this.loadState(board);
       const next = build(current, board.revision + 1);
       const assetRefs = extractCanvasAssetRefs(next);
@@ -202,7 +207,7 @@ export class CanvasBoardService {
       );
       if (rev !== null) return { boardRevision: rev, state: next };
     }
-    throw new ConflictException({ message: '生成结果合并冲突' });
+    throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.canvas.merge_conflict');
   }
 
   async loadStateById(userId: string, id: string): Promise<CanvasBoardState> {
@@ -214,8 +219,8 @@ export class CanvasBoardService {
 
   private async assertOwned(userId: string, id: string): Promise<BoardRow> {
     const board = await this.repository.findBoard(id);
-    if (!board || board.status === 'deleted') throw new NotFoundException('画布不存在');
-    if (board.userId !== userId) throw new ForbiddenException('无权访问该画布');
+    if (!board || board.status === 'deleted') throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.canvas.board_not_found');
+    if (board.userId !== userId) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'creation.canvas.board_forbidden');
     return board;
   }
 

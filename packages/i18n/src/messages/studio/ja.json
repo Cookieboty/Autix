@@ -79,7 +79,7 @@
       "untitled": "無題のテンプレート",
       "useThisTemplate": "このテンプレートを使用",
       "dialogDescription": "テンプレート変数と参照素材を編集します。適用するとセッション入力に反映されます。",
-      "drawerTitleVideo": "选择视频模板"
+      "drawerTitleVideo": "動画テンプレートを選択"
     },
     "error": {
       "chatModelInvalid": "選択したチャットモデルはテキスト生成に対応していません。別のモデルを選ぶか、空欄にしてデフォルトを使用してください。",
@@ -163,11 +163,11 @@
       "size": "画像サイズ",
       "resolution": "解像度",
       "qualityValue": {
-        "auto": "Auto",
-        "low": "Low",
-        "medium": "Medium",
-        "high": "High",
-        "standard": "Standard",
+        "auto": "自動",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "standard": "標準",
         "hd": "HD"
       }
     },
@@ -213,8 +213,8 @@
       "cancelAction": "操作をキャンセル",
       "executeAction": "操作を実行: {action}"
     },
-    "unknownError": "未知错误",
-    "dismiss": "关闭"
+    "unknownError": "不明なエラー",
+    "dismiss": "閉じる"
   },
   "template": {
     "discover": "発見",
@@ -397,7 +397,7 @@
     "database": "データベース",
     "cloud": "クラウド",
     "devtool": "開発ツール",
-    "communication": "通信",
+    "communication": "コミュニケーション",
     "other": "その他"
   },
   "agentCategoryOptions": {
@@ -439,15 +439,15 @@
     "context": {
       "imageCount": "{count} 枚",
       "selectedCount": "{count} 件選択",
-      "quickEdit": "Quick edit",
-      "upscale": "Upscale",
-      "removeBg": "Remove background",
-      "eraser": "Eraser",
-      "editElement": "Edit element",
-      "editText": "Edit text",
-      "multiAngle": "Multi-angle",
-      "moveObject": "Move object",
-      "download": "Download",
+      "quickEdit": "クイック編集",
+      "upscale": "アップスケール",
+      "removeBg": "背景を削除",
+      "eraser": "消しゴム",
+      "editElement": "要素を編集",
+      "editText": "テキストを編集",
+      "multiAngle": "マルチアングル",
+      "moveObject": "オブジェクトを移動",
+      "download": "ダウンロード",
       "quickEditPrompt": "この画像を続けて編集: {label}",
       "upscalePrompt": "構図と質感を保ったままこの画像をアップスケール",
       "removeBgPrompt": "背景を削除して被写体を残す",
@@ -476,31 +476,31 @@
       "videoHint": "矢印で画像をつないでフローを構成"
     },
     "dock": {
-      "select": "Select",
-      "frame": "Frame",
-      "upload": "Upload image",
-      "sticker": "Sticker",
-      "rectangle": "Rectangle",
-      "pen": "Pen",
-      "text": "Text",
-      "genImage": "Generate image",
+      "select": "選択",
+      "frame": "フレーム",
+      "upload": "画像をアップロード",
+      "sticker": "ステッカー",
+      "rectangle": "長方形",
+      "pen": "ペン",
+      "text": "テキスト",
+      "genImage": "画像を生成",
       "arrangeVideo": "自動整列",
-      "genVideo": "Generate video",
-      "genText": "Generate text",
-      "color": "Color"
+      "genVideo": "動画を生成",
+      "genText": "テキストを生成",
+      "color": "カラー"
     },
     "chat": {
-      "newChat": "New chat",
-      "share": "Share",
-      "collapse": "Collapse",
-      "agent": "Agent",
-      "attach": "Attach",
-      "library": "Library",
-      "thumbUp": "Good",
-      "thumbDown": "Bad",
-      "done": "Done",
-      "tileAll": "Lay out history on canvas",
-      "locate": "Locate on canvas",
+      "newChat": "新しいチャット",
+      "share": "共有",
+      "collapse": "折りたたむ",
+      "agent": "エージェント",
+      "attach": "添付",
+      "library": "ライブラリ",
+      "thumbUp": "良い",
+      "thumbDown": "悪い",
+      "done": "完了",
+      "tileAll": "履歴をキャンバスに並べる",
+      "locate": "キャンバス上で位置を表示",
       "empty": "プロンプトを入力するか、参照画像をアップロード/選択してください",
       "expand": "チャットを展開",
       "history": "履歴",
@@ -531,7 +531,7 @@
       "waitingForRender": "レンダー待ち"
     },
     "topbar": {
-      "credits": "Credits"
+      "credits": "クレジット"
     },
     "video": {
       "errors": {
@@ -636,11 +636,11 @@
       "loadingImage": "画像を読み込み中...",
       "colors": {
         "red": "赤",
-        "yellow": "黄",
+        "yellow": "イエロー",
         "cyan": "シアン",
         "green": "緑",
-        "purple": "紫",
-        "white": "白"
+        "purple": "パープル",
+        "white": "ホワイト"
       },
       "prompt": {
         "stripLabelSuffix": "（参照画像）",
@@ -660,7 +660,7 @@
         "full": "画像全体",
         "horizontalOnly": "{vertical}中央",
         "verticalOnly": "{horizontal}中央",
-        "combined": "{vertical}{horizontal}"
+        "combined": "{vertical} {horizontal}"
       },
       "mergeFailedUserAction": "注釈の統合に失敗しました。もう一度お試しください。",
       "emptyPromptSuffix": "ここに詳細を追加できます。"
@@ -892,46 +892,46 @@
         "fileFallback": "ファイル素材"
       },
       "historyDetail": {
-        "back": "Back",
-        "reuse": "Reuse config",
-        "storyboard": "Storyboard",
-        "clipTitle": "Clip {order}",
-        "emptyPrompt": "No storyboard prompt",
+        "back": "戻る",
+        "reuse": "設定を再利用",
+        "storyboard": "絵コンテ",
+        "clipTitle": "クリップ {order}",
+        "emptyPrompt": "絵コンテプロンプトなし",
         "stats": {
-          "clips": "Clips",
-          "duration": "Duration",
-          "materials": "Materials"
+          "clips": "クリップ",
+          "duration": "再生時間",
+          "materials": "素材"
         },
-        "backToWorkspace": "Back to workspace",
-        "videoUnavailable": "No playable video yet",
-        "timeline": "Storyboard timeline",
-        "currentShot": "Current: {title}",
-        "timeRange": "Range",
-        "shotIndex": "Shot index",
-        "screenshot": "Snapshot",
-        "screenshotUnavailable": "Load the video before taking a snapshot",
-        "screenshotFailed": "Snapshot failed. Please make sure the video allows captures and try again.",
-        "screenshotTitle": "Video snapshot {time}",
-        "screenshotSaved": "Snapshot added to the material library",
-        "screenshotSaveFailed": "Failed to add the snapshot. Please try again later.",
-        "screenshotPreviewTitle": "Snapshot preview",
-        "screenshotPreviewDescription": "Confirm to add this frame to the material library for later reuse as an image asset.",
-        "saveScreenshot": "Add to library",
-        "share": "Share",
-        "shareCreateFailed": "Failed to create the share link. Please try again later.",
-        "shareCopied": "Share link copied",
-        "shareCopyFailed": "Copy failed. Please copy the link manually.",
-        "shareDialogTitle": "Share video detail",
-        "shareDialogDescription": "Create a public link so others can view this video and its storyboard.",
-        "shareCreating": "Creating share link...",
-        "shareLinkLabel": "Share link",
-        "shareCopiedButton": "Copied",
-        "copyShareLink": "Copy link",
-        "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
-        "openSharePage": "Open share page",
+        "backToWorkspace": "ワークスペースに戻る",
+        "videoUnavailable": "再生可能な動画がまだありません",
+        "timeline": "絵コンテのタイムライン",
+        "currentShot": "現在: {title}",
+        "timeRange": "範囲",
+        "shotIndex": "ショット番号",
+        "screenshot": "スナップショット",
+        "screenshotUnavailable": "スナップショットを撮る前に動画を読み込んでください",
+        "screenshotFailed": "スナップショットに失敗しました。動画がキャプチャを許可していることを確認して再度お試しください。",
+        "screenshotTitle": "動画スナップショット {time}",
+        "screenshotSaved": "スナップショットを素材ライブラリに追加しました",
+        "screenshotSaveFailed": "スナップショットを追加できませんでした。しばらくしてから再度お試しください。",
+        "screenshotPreviewTitle": "スナップショットプレビュー",
+        "screenshotPreviewDescription": "このフレームを素材ライブラリに追加し、後で画像アセットとして再利用できるように確認します。",
+        "saveScreenshot": "ライブラリに追加",
+        "share": "共有",
+        "shareCreateFailed": "共有リンクの作成に失敗しました。しばらくしてから再度お試しください。",
+        "shareCopied": "共有リンクをコピーしました",
+        "shareCopyFailed": "コピーに失敗しました。リンクを手動でコピーしてください。",
+        "shareDialogTitle": "動画詳細を共有",
+        "shareDialogDescription": "公開リンクを作成して、他の人がこの動画と絵コンテを閲覧できるようにします。",
+        "shareCreating": "共有リンクを作成中...",
+        "shareLinkLabel": "共有リンク",
+        "shareCopiedButton": "コピーしました",
+        "copyShareLink": "リンクをコピー",
+        "shareDialogHint": "リンクを知っている人は誰でもサインインせずにこの動画詳細を閲覧できますが、プロジェクト設定を編集することはできません。",
+        "openSharePage": "共有ページを開く",
         "download": "ダウンロード",
         "downloadVideo": "動画をダウンロード",
-        "cancel": "Cancel"
+        "cancel": "キャンセル"
       }
     },
     "estimateDialog": {
@@ -947,10 +947,10 @@
       "credits": "{value} クレジット",
       "cancel": "キャンセル",
       "confirm": "生成を確認",
-      "totalDuration": "Total duration",
-      "resolution": "Resolution",
-      "pricingRule": "Pricing rule",
-      "seconds": "{value}s"
+      "totalDuration": "合計再生時間",
+      "resolution": "解像度",
+      "pricingRule": "料金ルール",
+      "seconds": "{value}秒"
     },
     "storyboardDialog": {
       "title": "絵コンテツール",
@@ -959,7 +959,7 @@
       "promptPlaceholder": "動画を一文で説明してください。例：サイバーパンクの街でネオンを追うバイクの少女...",
       "clipCount": "カット数",
       "estimatedTotal": "予測合計 {total}s · 各 {perClip}s",
-      "presetSummary": "{perClip}s × {count} = {total}s",
+      "presetSummary": "{perClip}秒 × {count} = {total}秒",
       "modelLabel": "監督モデル",
       "modelPlaceholder": "監督モデルを選択",
       "modelSearchPlaceholder": "モデル / プロバイダーを検索",
@@ -981,7 +981,7 @@
       "audioLabel": "音声",
       "audioOn": "あり",
       "audioOff": "なし",
-      "seedLabel": "Seed",
+      "seedLabel": "シード",
       "seedPlaceholder": "空欄でランダム",
       "schemaUnavailable": "価格スキーマが利用できません。読み込みが完了するまで生成できません。"
     },
@@ -1031,7 +1031,7 @@
       "materials": {
         "firstLastTitle": "始終フレーム素材",
         "firstLastDescription": "始/終フレーム画像をアップロード、背景音声は任意",
-        "referenceTitle": "参考素材",
+        "referenceTitle": "参照素材",
         "referenceDescription": "参考画像／ビデオ／音声を任意で追加",
         "swapFrames": "始終フレームを入れ替え",
         "preparingSlots": "素材スロットを準備中..."
@@ -1191,8 +1191,8 @@
       "moreClips": "さらに {count} クリップ",
       "createdAt": "作成日 {date}",
       "openProject": "開く",
-      "viewDetails": "View details",
-      "reuseProject": "Reuse config",
+      "viewDetails": "詳細を表示",
+      "reuseProject": "設定を再利用",
       "share": "共有",
       "download": "ダウンロード",
       "downloadVideo": "動画をダウンロード"
@@ -1218,7 +1218,7 @@
         "empty": "利用可能な動画モデルがありません。管理者に連絡してください。"
       },
       "variantGrid": {
-        "title": "生成 Variant ({count})",
+        "title": "生成されたバリアント ({count})",
         "generateNew": "+ 新しい Variant を生成",
         "setPrimary": "メインに設定"
       },
@@ -1244,7 +1244,7 @@
         "title": "動画テンプレート",
         "workflowTemplates": "ワークフローテンプレート",
         "parameterPresets": "パラメーター設定",
-        "clipCount": "{count} clips",
+        "clipCount": "{count} クリップ",
         "useTemplate": "このテンプレートを使用",
         "emptyWorkflow": "ワークフローテンプレートはありません",
         "presetsComingSoon": "パラメーター設定テンプレートは近日公開です"
@@ -1264,7 +1264,7 @@
         "defaultProjectTitle": "無題のプロジェクト",
         "newProject": "新規プロジェクト",
         "emptyProjects": "プロジェクトなし",
-        "clipCount": "{count} clips",
+        "clipCount": "{count} クリップ",
         "back": "戻る",
         "addClip": "Clip を追加",
         "generationRecords": "生成履歴",
@@ -1307,12 +1307,12 @@
       }
     },
     "membershipGate": {
-      "title": "当前套餐暂不支持视频生成",
-      "description": "升级会员套餐后即可继续生成视频。",
-      "upgradeAction": "选择套餐",
-      "dismissAction": "稍后处理",
-      "dialogTitle": "选择可用的视频生成套餐",
-      "dialogDescription": "选择包含视频生成能力的套餐后，可继续生成当前视频。"
+      "title": "現在のプランには動画生成が含まれていません",
+      "description": "動画の生成を続けるには、会員プランをアップグレードしてください。",
+      "upgradeAction": "プランを選択",
+      "dismissAction": "後で",
+      "dialogTitle": "動画生成プランを選択",
+      "dialogDescription": "この動画を続けるには、動画生成を含むプランを選択してください。"
     }
   },
   "marketplace": {
@@ -1333,9 +1333,9 @@
       "unknownResourceType": "不明なリソースタイプ: {slug}"
     },
     "resourceType": {
-      "skill": "Skill",
+      "skill": "スキル",
       "mcp": "MCP",
-      "agent": "Agent",
+      "agent": "エージェント",
       "imageTemplate": "画像テンプレート",
       "videoTemplate": "動画テンプレート",
       "imageTemplateShort": "画像",
@@ -1343,23 +1343,23 @@
     },
     "runtime": {
       "cloud": "クラウド利用可",
-      "cloudDesc": "Runs in the cloud and works on web and desktop",
+      "cloudDesc": "クラウドで実行され、ウェブとデスクトップで動作します",
       "desktopOnly": "デスクトップのみ",
-      "desktopOnlyDesc": "Requires a local runtime such as a process, file, or CLI",
+      "desktopOnlyDesc": "プロセス、ファイル、CLI などのローカルランタイムが必要です",
       "either": "汎用",
-      "eitherDesc": "Can run in cloud or desktop environments",
+      "eitherDesc": "クラウドまたはデスクトップ環境で実行できます",
       "desktopShort": "デスクトップ"
     },
     "card": {
-      "useInChat": "Use in chat",
-      "useInChatAria": "Use template {title} in chat",
-      "useInWorkbench": "Workbench",
-      "useInWorkbenchAria": "Apply {title} to the professional workbench"
+      "useInChat": "チャットで使う",
+      "useInChatAria": "テンプレート {title} をチャットで使う",
+      "useInWorkbench": "ワークベンチ",
+      "useInWorkbenchAria": "{title} をプロフェッショナルワークベンチに適用"
     },
     "sidebar": {
       "home": "おすすめ",
       "resourceTypes": "リソース種別",
-      "skills": "Skills",
+      "skills": "スキル",
       "mcp": "MCP",
       "imageTemplates": "画像テンプレート",
       "videoTemplates": "動画テンプレート",
@@ -1388,8 +1388,8 @@
       "eyebrow": "リソースパネル",
       "resourceDetails": "リソース詳細",
       "addToCurrentSession": "現在のセッションに追加",
-      "unpin": "Unpin",
-      "pin": "Pin panel",
+      "unpin": "ピン留めを解除",
+      "pin": "パネルをピン留め",
       "searchPlaceholder": "リソースを検索...",
       "loading": "読み込み中...",
       "backToList": "一覧に戻る",
@@ -1398,12 +1398,12 @@
       "platform": "プラットフォーム",
       "externalId": "外部 ID",
       "viewOriginal": "原文を見る",
-      "mcpLocalStatus": "MCP local status: ",
+      "mcpLocalStatus": "MCP ローカルステータス: ",
       "statusReady": "インストール済み",
       "statusMissingEnv": "環境変数が不足",
       "statusFailed": "確認失敗",
       "statusNotInstalled": "未インストール",
-      "desktopOnlyWebBlocked": "This resource requires a desktop local environment and cannot be activated directly on web.",
+      "desktopOnlyWebBlocked": "このリソースはデスクトップのローカル環境が必要で、ウェブでは直接有効化できません。",
       "processing": "処理中...",
       "acquireAndActivate": "取得して有効化",
       "openFullDetails": "詳細を開く"
@@ -1432,7 +1432,7 @@
       "hotRecommendations": "人気おすすめ"
     },
     "list": {
-      "sortNewest": "最新",
+      "sortNewest": "新着順",
       "sortPopular": "人気",
       "sortLikes": "いいね",
       "totalCount": "全 {count} 件",
@@ -1443,7 +1443,7 @@
       "imageDescription": "ポスター、商品画像、カバー、ビジュアルスタイルテンプレートをギャラリーのように探せます。",
       "videoEyebrow": "Video Flows / 動画テンプレート",
       "videoDescription": "絵コンテ、カメラ設定、ショート動画生成フローの出発点を見つけられます。",
-      "skillsEyebrow": "Skills",
+      "skillsEyebrow": "スキル",
       "skillsDescription": "機能強化、パーソナライズされた指示、再利用できる作業方法。",
       "mcpEyebrow": "MCP",
       "mcpDescription": "ツール、データソース、外部コネクタ。"
@@ -1503,25 +1503,25 @@
     }
   },
   "videoShare": {
-    "loading": "Loading shared video...",
-    "loadFailed": "The share link does not exist, has expired, or the video is not complete yet.",
-    "unavailableTitle": "Shared video unavailable",
-    "goCreate": "Create a video",
-    "eyebrow": "Shared video",
-    "copyLink": "Copy link",
-    "copied": "Link copied",
-    "copyFailed": "Copy failed. Please copy the link manually.",
-    "copiedButton": "Copied",
-    "monitor": "Monitor",
-    "storyboard": "Storyboard data",
-    "duration": "Duration",
-    "model": "Model",
-    "clipTitle": "Clip {order}",
-    "clipFallback": "Storyboard",
-    "emptyPrompt": "No storyboard prompt",
-    "timeline": "Storyboard timeline",
-    "footer": "Shared video detail",
-    "growthCtaDescription": "Create your own private video project, then publish it only when it is ready to share."
+    "loading": "共有動画を読み込み中...",
+    "loadFailed": "共有リンクが存在しない、期限切れ、または動画がまだ完成していません。",
+    "unavailableTitle": "共有動画は利用できません",
+    "goCreate": "動画を作成",
+    "eyebrow": "共有動画",
+    "copyLink": "リンクをコピー",
+    "copied": "リンクをコピーしました",
+    "copyFailed": "コピーに失敗しました。リンクを手動でコピーしてください。",
+    "copiedButton": "コピーしました",
+    "monitor": "モニター",
+    "storyboard": "絵コンテデータ",
+    "duration": "再生時間",
+    "model": "モデル",
+    "clipTitle": "クリップ {order}",
+    "clipFallback": "絵コンテ",
+    "emptyPrompt": "絵コンテプロンプトなし",
+    "timeline": "絵コンテのタイムライン",
+    "footer": "共有動画の詳細",
+    "growthCtaDescription": "自分専用のプライベート動画プロジェクトを作成し、共有できる状態になったときにのみ公開しましょう。"
   },
   "gallery": {
     "title": "ギャラリー",
@@ -1567,17 +1567,17 @@
     }
   },
   "myTemplates": {
-    "title": "我的模板",
-    "createTemplate": "创建模板",
-    "empty": "暂无模板，创建你的第一个模板吧",
-    "createFirst": "创建第一个模板",
-    "statusPending": "待审核",
-    "statusInReview": "审核中",
-    "statusApproved": "已通过",
-    "statusRejected": "已拒绝",
-    "statusArchived": "已归档",
-    "statusDeleted": "Deleted",
-    "includeDeleted": "Include deleted users"
+    "title": "マイテンプレート",
+    "createTemplate": "テンプレートを作成",
+    "empty": "テンプレートはまだありません。最初の一つを作成しましょう！",
+    "createFirst": "最初のテンプレートを作成",
+    "statusPending": "保留中",
+    "statusInReview": "審査中",
+    "statusApproved": "承認済み",
+    "statusRejected": "却下",
+    "statusArchived": "アーカイブ済み",
+    "statusDeleted": "削除済み",
+    "includeDeleted": "削除済みユーザーを含める"
   },
   "schemaForm": {
     "constraint": {
