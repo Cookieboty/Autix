@@ -103,3 +103,6 @@ billing.task_pricing.model_not_bound: "Mô hình chưa được liên kết vớ
 billing.task_pricing.binding_disabled: "Liên kết đã bị vô hiệu hóa: liên kết của tác vụ {{taskType}} với mô hình {{modelConfigId}} đã bị vô hiệu hóa"
 billing.task_pricing.no_default_binding: "Tác vụ {{taskType}} chưa cấu hình liên kết mô hình mặc định"
 billing.task_pricing.default_binding_disabled: "Liên kết mô hình mặc định của tác vụ {{taskType}} đã bị vô hiệu hóa"
+billing.task_pricing.pricing_schema_invalid: "Cấu trúc quy tắc định giá của mô hình không hợp lệ: {{model}}"
+billing.task_pricing.params_schema_invalid: "Cấu trúc quy tắc tham số của mô hình không hợp lệ: {{model}}"
+billing.task_pricing.fixed_cost_schema_invalid: "Cấu trúc quy tắc chi phí cố định của tác vụ không hợp lệ: {{task}}"

@@ -103,3 +103,6 @@ billing.task_pricing.model_not_bound: "Model not bound to task: task {{taskType}
 billing.task_pricing.binding_disabled: "Binding is disabled: task {{taskType}} binding with model {{modelConfigId}} has been disabled"
 billing.task_pricing.no_default_binding: "Task {{taskType}} has no default model binding configured"
 billing.task_pricing.default_binding_disabled: "Task {{taskType}} default model binding is disabled"
+billing.task_pricing.pricing_schema_invalid: "Model pricing rule structure is invalid: {{model}}"
+billing.task_pricing.params_schema_invalid: "Model params rule structure is invalid: {{model}}"
+billing.task_pricing.fixed_cost_schema_invalid: "Task fixed-cost rule structure is invalid: {{task}}"

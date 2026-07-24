@@ -103,3 +103,6 @@ billing.task_pricing.model_not_bound: "Modèle non lié à la tâche : la tâche
 billing.task_pricing.binding_disabled: "La liaison est désactivée : la liaison de la tâche {{taskType}} avec le modèle {{modelConfigId}} a été désactivée"
 billing.task_pricing.no_default_binding: "La tâche {{taskType}} n'a aucune liaison de modèle par défaut configurée"
 billing.task_pricing.default_binding_disabled: "La liaison de modèle par défaut de la tâche {{taskType}} est désactivée"
+billing.task_pricing.pricing_schema_invalid: "La structure de la règle de tarification du modèle est invalide : {{model}}"
+billing.task_pricing.params_schema_invalid: "La structure de la règle des paramètres du modèle est invalide : {{model}}"
+billing.task_pricing.fixed_cost_schema_invalid: "La structure de la règle de coût fixe de la tâche est invalide : {{task}}"

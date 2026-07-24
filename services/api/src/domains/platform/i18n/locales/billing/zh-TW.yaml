@@ -103,3 +103,6 @@ billing.task_pricing.model_not_bound: "模型未綁定到任務：任務 {{taskT
 billing.task_pricing.binding_disabled: "綁定已停用：任務 {{taskType}} 與模型 {{modelConfigId}} 的綁定已被停用"
 billing.task_pricing.no_default_binding: "任務 {{taskType}} 未設定預設模型綁定"
 billing.task_pricing.default_binding_disabled: "任務 {{taskType}} 的預設模型綁定已停用"
+billing.task_pricing.pricing_schema_invalid: "模型計價規則結構無效：{{model}}"
+billing.task_pricing.params_schema_invalid: "模型參數規則結構無效：{{model}}"
+billing.task_pricing.fixed_cost_schema_invalid: "任務固定費用規則結構無效：{{task}}"

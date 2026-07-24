@@ -103,3 +103,6 @@ billing.task_pricing.model_not_bound: "模型未绑定到任务：任务 {{taskT
 billing.task_pricing.binding_disabled: "绑定已禁用：任务 {{taskType}} 与模型 {{modelConfigId}} 的绑定已被禁用"
 billing.task_pricing.no_default_binding: "任务 {{taskType}} 未配置默认模型绑定"
 billing.task_pricing.default_binding_disabled: "任务 {{taskType}} 的默认模型绑定已禁用"
+billing.task_pricing.pricing_schema_invalid: "模型计价规则结构无效：{{model}}"
+billing.task_pricing.params_schema_invalid: "模型参数规则结构无效：{{model}}"
+billing.task_pricing.fixed_cost_schema_invalid: "任务固定费用规则结构无效：{{task}}"

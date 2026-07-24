@@ -1,4 +1,4 @@
-import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import {
   computeTaskEstimate,
@@ -115,17 +115,21 @@ export class TaskPricingEstimatorService {
 
     const pricingSchema = this.narrowPricingSchema(
       model.pricingSchema,
-      `Model pricing rule structure is invalid: ${modelConfigId}`,
+      'billing.task_pricing.pricing_schema_invalid',
+      { model: modelConfigId },
     );
     const paramsSchema = this.narrowParamsSchema(
       model.paramsSchema,
       pricingSchema,
-      `Model params rule structure is invalid: ${modelConfigId}`,
+      'billing.task_pricing.params_schema_invalid',
+      { model: modelConfigId },
     );
     const taskFixedSchema =
       task.fixedCostSchema === null
         ? null
-        : this.narrowPricingSchema(task.fixedCostSchema, `Task fixed-cost rule structure is invalid: ${input.taskType}`);
+        : this.narrowPricingSchema(task.fixedCostSchema, 'billing.task_pricing.fixed_cost_schema_invalid', {
+            task: input.taskType,
+          });
 
     // Callers legitimately submit partial params — canvas has no
     // quality/resolution picker, a template's params are author-fixed — and
@@ -243,11 +247,17 @@ export class TaskPricingEstimatorService {
    * just well-typed input) and throws before the candidate is used for anything.
    * Nothing downstream ever sees the pre-validation value.
    */
-  private narrowPricingSchema(value: Prisma.JsonValue, errorMessage: string): PricingSchema {
+  private narrowPricingSchema(
+    value: Prisma.JsonValue,
+    errorKey: string,
+    errorArgs?: Record<string, unknown>,
+  ): PricingSchema {
     const candidate = value as unknown as PricingSchema;
     const violations = validatePricingSchema(candidate);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: errorMessage, violations });
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, errorKey, errorArgs, {
+        data: { violations },
+      });
     }
     return candidate;
   }
@@ -257,12 +267,15 @@ export class TaskPricingEstimatorService {
   private narrowParamsSchema(
     value: Prisma.JsonValue,
     pricingSchema: PricingSchema,
-    errorMessage: string,
+    errorKey: string,
+    errorArgs?: Record<string, unknown>,
   ): ParamsSchema {
     const candidate = value as unknown as ParamsSchema;
     const violations = validateParamsSchema(candidate, pricingSchema);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: errorMessage, violations });
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, errorKey, errorArgs, {
+        data: { violations },
+      });
     }
     return candidate;
   }
