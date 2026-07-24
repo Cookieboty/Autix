@@ -143,13 +143,13 @@ function fixedFee(amount: number): PricingSchema {
 }
 
 export const TASK_PRESETS: TaskPreset[] = [
-  { taskType: 'chat_message_fast', name: '快速对话', category: 'chat', fixedCostSchema: fixedFee(1), isActive: false, modelPresets: ['text'] },
-  { taskType: 'chat_message_standard', name: '普通对话', category: 'chat', fixedCostSchema: fixedFee(3), isActive: true, modelPresets: ['text'] },
-  { taskType: 'chat_message_reasoning', name: '深度思考对话', category: 'chat', fixedCostSchema: fixedFee(10), isActive: false, modelPresets: ['text'] },
-  { taskType: 'image_generation', name: '图片生成', category: 'image', fixedCostSchema: null, isActive: true, modelPresets: ['image'] },
-  { taskType: 'video_generation', name: '视频生成', category: 'video', fixedCostSchema: null, isActive: true, modelPresets: ['video'] },
-  { taskType: 'prompt_optimize_generation', name: '图片工作台 Prompt 优化', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
-  { taskType: 'video_template_optimize', name: '视频模板 Prompt 优化', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
-  { taskType: 'video_storyboard_optimize', name: '视频分镜优化', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
-  { taskType: 'prompt_optimize_pro', name: 'Artifact 文档 AI 优化', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
+  { taskType: 'chat_message_fast', name: 'Fast chat', category: 'chat', fixedCostSchema: fixedFee(1), isActive: false, modelPresets: ['text'] },
+  { taskType: 'chat_message_standard', name: 'Standard chat', category: 'chat', fixedCostSchema: fixedFee(3), isActive: true, modelPresets: ['text'] },
+  { taskType: 'chat_message_reasoning', name: 'Deep reasoning chat', category: 'chat', fixedCostSchema: fixedFee(10), isActive: false, modelPresets: ['text'] },
+  { taskType: 'image_generation', name: 'Image generation', category: 'image', fixedCostSchema: null, isActive: true, modelPresets: ['image'] },
+  { taskType: 'video_generation', name: 'Video generation', category: 'video', fixedCostSchema: null, isActive: true, modelPresets: ['video'] },
+  { taskType: 'prompt_optimize_generation', name: 'Image workbench prompt optimization', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
+  { taskType: 'video_template_optimize', name: 'Video template prompt optimization', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
+  { taskType: 'video_storyboard_optimize', name: 'Video storyboard optimization', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
+  { taskType: 'prompt_optimize_pro', name: 'Artifact document AI optimization', category: 'prompt', fixedCostSchema: fixedFee(1), isActive: true, modelPresets: ['text'] },
 ];

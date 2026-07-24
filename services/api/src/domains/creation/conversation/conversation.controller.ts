@@ -199,7 +199,7 @@ export class ConversationController {
     }
 
     // continue or retry → trigger SSE stream
-    this.streamWorkflowResponse(res, id, userId, body.action === 'retry' ? '重试当前阶段' : '继续');
+    this.streamWorkflowResponse(res, id, userId, body.action === 'retry' ? 'Retry current stage' : 'Continue');
   }
 
   @Post(':id/agent-run/cancel')

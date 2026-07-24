@@ -35,8 +35,8 @@
     "membershipRequired": "Требуется подписка",
     "membershipRequiredDesc": "Библиотека доступна только для участников. Оформите подписку, чтобы загружать документы и создавать базу знаний.",
     "upgradeMembership": "Оформить подписку",
-    "statusDeleted": "已删除",
-    "includeDeleted": "包含已删除用户"
+    "statusDeleted": "Удалено",
+    "includeDeleted": "Включая удалённых пользователей"
   },
   "settings": {
     "title": "Настройки",
@@ -91,7 +91,9 @@
     "campaignRewards": "Центр наград кампаний",
     "campaignRewardsDesc": "Настройка кампаний, бюджетов и записей выдачи",
     "auditLogsAction": "Журнал аудита",
-    "auditLogsActionDesc": "Просмотр действий администратора / истории корректировок баллов"
+    "auditLogsActionDesc": "Просмотр действий администратора / истории корректировок баллов",
+    "adminOverview": "Обзор администратора",
+    "localTime": "Местное время"
   },
   "profile": {
     "title": "Профиль",
@@ -215,8 +217,8 @@
     "emptyDescription": "Загрузите материалы или добавьте их из истории изображений/видео.",
     "selectAsset": "Выбрать {title}",
     "deleteAsset": "Удалить материал",
-    "invertSelection": "反选",
-    "clearSelection": "取消选择",
+    "invertSelection": "Инвертировать",
+    "clearSelection": "Снять выделение",
     "folders": "Папки",
     "allFolders": "Все",
     "uncategorized": "Без категории",
@@ -260,6 +262,7 @@
       "IMAGE_TEMPLATE": "Шаблон изображения",
       "VIDEO_TEMPLATE": "Шаблон видео",
       "GALLERY_POST": "Публикация галереи"
-    }
+    },
+    "folderActions": "Действия с папкой"
   }
 }

@@ -1,5 +1,4 @@
 import type { Mock } from 'vitest';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { VideoTemplatesService } from './video-templates.service';
 
@@ -187,17 +186,17 @@ describe('VideoTemplatesService — 公开可见守卫 (status=APPROVED && sourc
 
   it('like: 目标非公开可见(PENDING) → NotFoundException', async () => {
     const { service } = createMocks();
-    await expect(service.like('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+    await expect(service.like('u1', 'tpl-pending')).rejects.toMatchObject({ status: 404 });
   });
 
   it('like: 目标为 SYSTEM 来源 → NotFoundException', async () => {
     const { service } = createMocks();
-    await expect(service.like('u1', 'tpl-system')).rejects.toThrow(NotFoundException);
+    await expect(service.like('u1', 'tpl-system')).rejects.toMatchObject({ status: 404 });
   });
 
   it('favorite: 目标非公开可见 → NotFoundException', async () => {
     const { service } = createMocks();
-    await expect(service.favorite('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+    await expect(service.favorite('u1', 'tpl-pending')).rejects.toMatchObject({ status: 404 });
   });
 
   it('favorite: 公开可见 → 委托给 FavoriteLibraryService.favorite', async () => {
@@ -221,7 +220,7 @@ describe('VideoTemplatesService — 公开可见守卫 (status=APPROVED && sourc
 
   it('recordView: 目标非公开可见 → NotFoundException', async () => {
     const { service } = createMocks();
-    await expect(service.recordView('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+    await expect(service.recordView('u1', 'tpl-pending')).rejects.toMatchObject({ status: 404 });
   });
 
 });

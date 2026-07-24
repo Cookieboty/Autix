@@ -114,7 +114,7 @@ describe('VideoGenerationHoldReconciliationService', () => {
 
     expect(pointsService.refundHold).toHaveBeenCalledWith(
       'hold-1',
-      '终态对账: failed',
+      'Terminal reconciliation: failed',
     );
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
   });

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -10,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ResourceType } from '../prisma/generated';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import {
@@ -22,7 +22,11 @@ import type { AuthUser } from '@autix/domain';
 function parseResourceType(typeStr: string): ResourceType {
   const type = (ResourceType as Record<string, ResourceType>)[typeStr];
   if (!type) {
-    throw new BadRequestException(`不支持的资源类型: ${typeStr}`);
+    throw new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'platform.metrics.unsupported_resource_type',
+      { type: typeStr },
+    );
   }
   return type;
 }
@@ -52,8 +56,10 @@ const DEDICATED_ROUTE_RESOURCE_TYPES = new Set<ResourceType>([
 
 function assertNotDedicatedResource(type: ResourceType): void {
   if (DEDICATED_ROUTE_RESOURCE_TYPES.has(type)) {
-    throw new BadRequestException(
-      `${type} 互动请走其专属端点（/gallery|/marketplace/image-templates|/marketplace/video-templates 的 :id/like|favorite）`,
+    throw new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'platform.metrics.dedicated_endpoints_required',
+      { type },
     );
   }
 }
@@ -65,7 +71,10 @@ function assertNotDedicatedResource(type: ResourceType): void {
  */
 function assertNotGalleryShare(type: ResourceType): void {
   if (type === ResourceType.GALLERY_POST) {
-    throw new BadRequestException('gallery 互动请走 /gallery 专属端点');
+    throw new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'platform.metrics.gallery_dedicated_endpoints',
+    );
   }
 }
 

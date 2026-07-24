@@ -2,6 +2,7 @@
 
 import { useControllableState } from '@radix-ui/react-use-controllable-state';
 import { BrainIcon, ChevronDownIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   createContext,
   memo,
@@ -109,23 +110,28 @@ export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger> & 
   getThinkingMessage?: (isStreaming: boolean, duration?: number) => ReactNode;
 };
 
-const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
+const defaultThinkingMessage = (
+  t: ReturnType<typeof useTranslations>,
+  isStreaming: boolean,
+  duration?: number,
+) => {
   if (isStreaming || duration === 0) {
-    return <Shimmer>Thinking...</Shimmer>;
+    return <Shimmer>{t('thinking')}</Shimmer>;
   }
   if (duration === undefined) {
-    return <span>Thought for a few seconds</span>;
+    return <span>{t('thoughtForAFewSeconds')}</span>;
   }
-  return <span>Thought for {duration} seconds</span>;
+  return <span>{t('thoughtForSeconds', { seconds: duration })}</span>;
 };
 
 export const ReasoningTrigger = memo(
   ({
     className,
     children,
-    getThinkingMessage = defaultGetThinkingMessage,
+    getThinkingMessage,
     ...props
   }: ReasoningTriggerProps) => {
+    const t = useTranslations('aiUi');
     const { isStreaming, isOpen, duration } = useReasoning();
     return (
       <CollapsibleTrigger
@@ -138,7 +144,9 @@ export const ReasoningTrigger = memo(
         {children ?? (
           <>
             <BrainIcon className="size-4" />
-            {getThinkingMessage(isStreaming, duration)}
+            {getThinkingMessage
+              ? getThinkingMessage(isStreaming, duration)
+              : defaultThinkingMessage(t, isStreaming, duration)}
             <ChevronDownIcon
               className={cn('size-4 transition-transform', isOpen ? 'rotate-180' : 'rotate-0')}
             />

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   TemplateStatus,
   ResourceType,
@@ -8,6 +8,7 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { RuntimeDetectorService } from '../../platform/common/runtime-detector.service';
 import { ResourceMetricsService } from '../../platform/resource-metrics/resource-metrics.service';
@@ -90,8 +91,12 @@ export class AgentsService extends BaseResourceService {
       systemPrompt: string;
       runtimeDetectedBy: DetectionSrc;
     };
-    if (agent.authorId !== userId)
-      throw new ForbiddenException('无权修改此 Agent');
+    if (agent.authorId !== userId) {
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'agent.update_forbidden',
+      );
+    }
 
     const data: Prisma.agentsUncheckedUpdateInput = {
       ...dto,

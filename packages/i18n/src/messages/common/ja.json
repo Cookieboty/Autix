@@ -50,7 +50,12 @@
     "actions": "操作",
     "none": "なし",
     "yes": "はい",
-    "no": "いいえ"
+    "no": "いいえ",
+    "like": "いいね",
+    "favorite": "お気に入り",
+    "share": "共有",
+    "jsonEmpty": "JSON が空です",
+    "invalidJson": "無効な JSON"
   },
   "aiUi": {
     "selected": "選択済み",
@@ -71,8 +76,11 @@
     "actions": "操作",
     "noData": "データなし",
     "loading": "読み込み中",
-    "actionMessage": "[操作: {action}]",
-    "serverError": "サーバーがエラーを返しました"
+    "actionMessage": "[アクション: {action}]",
+    "serverError": "サーバーがエラーを返しました",
+    "thinking": "思考中…",
+    "thoughtForSeconds": "{seconds} 秒間思考しました",
+    "thoughtForAFewSeconds": "数秒間思考しました"
   },
   "sidebar": {
     "newSession": "新しいセッション",
@@ -122,9 +130,12 @@
     "myOrders": "注文履歴",
     "inviteFriends": "友達を招待",
     "docs": "ドキュメント",
-    "myTemplates": "我的模板",
-    "upgrade": "升级会员",
-    "gallery": "ギャラリー"
+    "myTemplates": "マイテンプレート",
+    "upgrade": "会員をアップグレード",
+    "gallery": "ギャラリー",
+    "mobileTitle": "サイドバー",
+    "mobileDescription": "モバイルのサイドバーを表示します。",
+    "toggle": "サイドバーを切り替え"
   },
   "notification": {
     "title": "通知",
@@ -280,7 +291,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio - 発想する。作る。届ける。",
       "description": "PRD、コード、デザイン、プロトタイプを AI でまとめて生成します。"
     },
     "video": {

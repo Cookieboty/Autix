@@ -1,17 +1,21 @@
-export function relativeTime(iso: string): string {
+/**
+ * 相对时间。全程按传入 locale 本地化（词与日期同源），不再出现"英文相对词 + zh-CN 日期"
+ * 的混合语言：`Intl.RelativeTimeFormat` 负责相对文案，>7 天回退到该 locale 的日期格式。
+ * 调用方传各自的请求语言（默认 'en'）。
+ */
+export function relativeTime(iso: string, locale = 'en'): string {
   const timestamp = new Date(iso).getTime();
-  if (isNaN(timestamp)) return '无效日期';
-  const diff = Date.now() - timestamp;
-  if (diff < 0) return '刚刚';
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return '刚刚';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} 分钟前`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} 天前`;
-  return new Date(iso).toLocaleDateString('zh-CN');
+  if (Number.isNaN(timestamp)) return '';
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  const sec = Math.round((Date.now() - timestamp) / 1000); // >0 表示过去
+  if (Math.abs(sec) < 60) return rtf.format(-sec, 'second');
+  const min = Math.round(sec / 60);
+  if (Math.abs(min) < 60) return rtf.format(-min, 'minute');
+  const hours = Math.round(min / 60);
+  if (Math.abs(hours) < 24) return rtf.format(-hours, 'hour');
+  const days = Math.round(hours / 24);
+  if (Math.abs(days) < 7) return rtf.format(-days, 'day');
+  return new Date(iso).toLocaleDateString(locale);
 }
 
 export function normalizeCurrency(currency?: string | null): string {

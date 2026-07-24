@@ -90,10 +90,10 @@ export class RegistrationService {
       registration.userId,
     );
     if (approvedUser?.email) {
-      this.mailService.sendApprovalEmail(approvedUser.email, approvedUser.username).catch(() => { });
+      this.mailService.sendApprovalEmail(approvedUser.email, approvedUser.username, approvedUser.language ?? undefined).catch(() => { });
     }
 
-    return { message: '审批通过' };
+    return { messageKey: 'registration.approved' };
   }
 
   async reject(
@@ -116,7 +116,7 @@ export class RegistrationService {
       processedById: user.id,
     });
 
-    return { message: '已拒绝' };
+    return { messageKey: 'registration.rejected' };
   }
 
   async getPendingCount(user: AuthUser): Promise<number> {

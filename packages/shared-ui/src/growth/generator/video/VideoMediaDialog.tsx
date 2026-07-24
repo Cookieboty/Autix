@@ -300,7 +300,7 @@ export function PublicVideoMediaDialog({
                   <span
                     role="button"
                     tabIndex={-1}
-                    aria-label="preview"
+                    aria-label={t('assetPreview')}
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
@@ -377,7 +377,7 @@ export function PublicVideoMediaDialog({
                       <span
                         role="button"
                         tabIndex={-1}
-                        aria-label="preview"
+                        aria-label={t('assetPreview')}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();

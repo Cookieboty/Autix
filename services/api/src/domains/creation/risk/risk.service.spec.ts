@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { RiskService, RISK_HARD_LIMITS } from './risk.service';
 import type { VideoEntitlement } from '../../billing/membership/membership.service';
 
@@ -24,9 +24,17 @@ function makeRepository(activeCount: number) {
 describe('RiskService.assertHardLimits', () => {
   it('P3-2: rejects duration above 60s hard cap', () => {
     const svc = new RiskService(makeRepository(0));
-    expect(() =>
-      svc.assertHardLimits({ resolution: '720p', durationSeconds: 61 }),
-    ).toThrow(BadRequestException);
+    let error: unknown;
+    try {
+      svc.assertHardLimits({ resolution: '720p', durationSeconds: 61 });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(I18nHttpException);
+    expect(error).toMatchObject({
+      status: 400,
+      i18nKey: 'creation.video.duration_hard_limit',
+    });
   });
 
   it('P3-2: accepts duration at hard cap boundary', () => {
@@ -46,7 +54,10 @@ describe('RiskService.assertConcurrency', () => {
     const svc = new RiskService(repository);
     await expect(
       svc.assertConcurrency('user-1', makeEntitlement({ concurrency: 2 })),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      status: 400,
+      i18nKey: 'creation.video.concurrency_limit',
+    });
     expect(repository.countActiveVideoGenerations).toHaveBeenCalledWith(
       'user-1',
       expect.any(Array),
@@ -61,7 +72,10 @@ describe('RiskService.assertConcurrency', () => {
         'user-1',
         makeEntitlement({ concurrency: 9999 }),
       ),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      status: 400,
+      i18nKey: 'creation.video.concurrency_limit',
+    });
   });
 
   it('P3-2: passes when active < limit', async () => {

@@ -80,6 +80,13 @@ function getRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+// 与运行时 positiveNumber 口径一致：仅认非负 number 并向下取整
+function carryoverPositiveInt(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : fallback;
+}
+
 function readNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string' && value.trim()) {
@@ -206,6 +213,12 @@ function buildComparison(level: MembershipLevel, points: number): PlanComparison
   const invoice = mapInvoice(features?.invoice);
   const historyDays = readNumber(features?.historyRetentionDays);
   const carryover = getRecord(features?.pointsCarryover);
+  const carryoverCyclesNum = carryoverPositiveInt(carryover?.maxCycles, 1);
+  const carryoverMaxPointsNum = carryoverPositiveInt(carryover?.maxPoints, 0);
+  const carryoverValid =
+    carryover?.enabled === true &&
+    carryoverCyclesNum >= 1 &&
+    carryoverMaxPointsNum > 0;
   const seedance = readSeedance(level.features);
 
   return {
@@ -218,8 +231,8 @@ function buildComparison(level: MembershipLevel, points: number): PlanComparison
     queuePriority,
     batchGeneration,
     historyDays,
-    carryoverCycles: carryover?.enabled ? (readNumber(carryover.maxCycles) ?? 1) : null,
-    carryoverMaxPoints: carryover?.enabled ? (readNumber(carryover.maxPoints) ?? points) : null,
+    carryoverCycles: carryoverValid ? Math.min(carryoverCyclesNum, 12) : null,
+    carryoverMaxPoints: carryoverValid ? carryoverMaxPointsNum : null,
     teamSpace: Boolean(features?.teamSpace),
     invoiceStatus: invoice,
   };

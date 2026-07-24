@@ -374,7 +374,7 @@ export function ChatInput({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label="Open actions"
+                aria-label={t('openActions')}
                 aria-expanded={actionMenuOpen}
                 onClick={() => setActionMenuOpen((open) => !open)}
               >

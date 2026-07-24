@@ -11,9 +11,9 @@
     "megaMenuViewAll": "查看全部模板",
     "login": "登录",
     "register": "注册",
-    "heroLabel": "AI PRODUCT STUDIO",
-    "heroTitle1": "Think it. Build it.",
-    "heroTitle2": "Ship it.",
+    "heroLabel": "AI 产品工作室",
+    "heroTitle1": "构想它，构建它。",
+    "heroTitle2": "交付它。",
     "heroDesc": "PRD · 代码 · 设计 · 原型，AI 一站生成。把想法变成可交付的产品，从此告别重复劳动。",
     "heroCta": "免费注册，立即体验",
     "heroCtaSecondary": "查看套餐",
@@ -108,7 +108,7 @@
     "footerHelp": "帮助",
     "footerAbout": "关于",
     "footerFollow": "关注我们",
-    "footerCopyright": "© 2024 Amux Studio. All rights reserved.",
+    "footerCopyright": "© 2024 Amux Studio. 保留所有权利。",
     "footerTerms": "用户协议",
     "footerPrivacy": "隐私政策",
     "heroVideoDescSuffix": "现在也可以把模板、素材和 AI 导演放进同一条视频创作链路。",
@@ -117,18 +117,18 @@
     "tagTemplateMarket": "模板市场",
     "previewWorkspace": "产品 + 视频工作台",
     "previewMaterialsReady": "参考图、音频、视频素材已接入",
-    "previewVideoFormat": "9:16 · 15s",
+    "previewVideoFormat": "9:16 · 15秒",
     "statAiGeneration": "AI 生成",
     "statTemplates": "模板沉淀",
     "statVideoDelivery": "视频交付",
-    "mktLabel": "RESOURCE MARKETPLACE",
+    "mktLabel": "资源市场",
     "mktTitle": "AI 资源市场，即取即用",
     "mktDesc": "图片/视频模板一站获取，会员积分消耗，一键激活到会话。",
-    "mktSkillsTitle": "Skills",
+    "mktSkillsTitle": "技能",
     "mktSkillsDesc": "能力增强、个性化指令包",
     "mktMcpTitle": "MCP",
     "mktMcpDesc": "工具与数据源连接器",
-    "mktAgentsTitle": "Agents",
+    "mktAgentsTitle": "智能体",
     "mktAgentsDesc": "具备完整工具链的智能体",
     "mktImageTitle": "图片模板",
     "mktImageDesc": "一键产出风格化图像",
@@ -261,16 +261,16 @@
     "videoTemplatesTitle": "从业务模板开始，不从空白 Prompt 开始",
     "videoTemplatesViewAll": "查看全部模板",
     "videoTemplateOpeningTitle": "品牌开场",
-    "videoTemplateOpeningMeta": "6s · 16:9",
+    "videoTemplateOpeningMeta": "6秒 · 16:9",
     "videoTemplateOpeningDesc": "Logo、口号、产品氛围一次生成",
     "videoTemplateProductTitle": "产品展示",
-    "videoTemplateProductMeta": "12s · 9:16",
+    "videoTemplateProductMeta": "12秒 · 9:16",
     "videoTemplateProductDesc": "商品图转短视频，适合电商投放",
     "videoTemplateHolidayTitle": "节日祝福",
-    "videoTemplateHolidayMeta": "15s · 9:16",
+    "videoTemplateHolidayMeta": "15秒 · 9:16",
     "videoTemplateHolidayDesc": "节日主题、祝福语、品牌收尾",
     "videoTemplateTalkingTitle": "知识口播",
-    "videoTemplateTalkingMeta": "30s · 1:1",
+    "videoTemplateTalkingMeta": "30秒 · 1:1",
     "videoTemplateTalkingDesc": "脚本拆段、镜头节奏、字幕提示",
     "videoQuickTitle": "从模板进入，用 Chat、Agents 和 Workflow 把视频做完",
     "videoQuickDesc": "面向团队的视频创作入口。模板负责确定业务结构，Chat 负责快速沟通创意，Agents 负责拆解和校验，Workflow 负责把整套流程保存成可复用资产。",
@@ -320,7 +320,24 @@
     "videoDirectorEyebrow": "AI 导演",
     "videoTemplatesEyebrow": "视频模板",
     "videoQuickEyebrow": "快速开始",
-    "videoQuickSelectedTemplate": "已选模板"
+    "videoQuickSelectedTemplate": "已选模板",
+    "workflowCreationFlow": "创作流程",
+    "workflowTimelineLabel": "工作区时间线",
+    "workflowStepsBadge": "{count} 步",
+    "workflowPreviewLabel": "预览",
+    "workflowPreviewHeading": "视频 + 产品",
+    "workflowContextTitle": "对话保留上下文",
+    "ctaStartBuilding": "开始创作",
+    "pricingMembershipLabel": "会员",
+    "mktLivePreviewBadge": "实时",
+    "featuresProductOs": "产品操作系统",
+    "featuresLiveWorkspace": "实时工作台",
+    "featuresDirectorTitle": "AI 导演",
+    "heroVideoLabel": "视频工作室",
+    "showcaseConsoleEyebrow": "工作室控制台",
+    "showcaseLiveBadge": "实时",
+    "testimonialsFeedbackTag": "用户反馈",
+    "videoHeroEyebrow": "视频产品工作室"
   },
   "publicGrowth": {
     "nav": {
@@ -453,7 +470,8 @@
       "onboardCtaClaim": "领取",
       "onboardCtaClaimed": "已领取",
       "prev": "上一个",
-      "next": "下一个"
+      "next": "下一个",
+      "badgeNew": "新"
     },
     "promoBar": {
       "discountBadge": "立减 {percent}%",
@@ -571,7 +589,7 @@
           "explore": "探索",
           "image": "图片",
           "video": "视频",
-          "new": "New",
+          "new": "新建",
           "marketing": "营销工作室",
           "cinema": "电影工作室",
           "originals": "原创",
@@ -727,7 +745,9 @@
         "pause": "暂停",
         "mediaTypeFull": "该模型最多可选 {max} 个{type}",
         "ratioFromImage": "比例随图",
-        "ratioFromImageHint": "该模型以首帧图片的画幅为准，此处的比例设置不会生效。"
+        "ratioFromImageHint": "该模型以首帧图片的画幅为准，此处的比例设置不会生效。",
+        "selectedCount": "已选 {count} 个",
+        "premium": "高级"
       },
       "privateFirst": "默认私有",
       "createPrivately": "当前页创作",
@@ -761,7 +781,7 @@
       "choosePlan": "选择套餐",
       "plans": {
         "starter": {
-          "name": "Starter",
+          "name": "入门版",
           "badge": "探索",
           "features": {
             "browsing": "公开浏览",
@@ -770,7 +790,7 @@
           }
         },
         "creator": {
-          "name": "Creator",
+          "name": "创作者版",
           "badge": "最灵活",
           "features": {
             "credits": "图片和视频积分",
@@ -779,7 +799,7 @@
           }
         },
         "studio": {
-          "name": "Studio",
+          "name": "工作室版",
           "badge": "团队",
           "features": {
             "batches": "活动批量生成",

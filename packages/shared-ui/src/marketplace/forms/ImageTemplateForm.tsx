@@ -111,7 +111,7 @@ export function ImageTemplateForm({ onSaved }: Props) {
         description={t('imagePromptDescription')}
       >
         <TextAreaField
-          label="Prompt"
+          label={t('promptLabel')}
           required
           value={prompt}
           onChange={setPrompt}

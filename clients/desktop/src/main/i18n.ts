@@ -14,24 +14,36 @@ import {
 let currentLocale: SupportedLanguage = DEFAULT_LANGUAGE;
 let messages: Record<string, unknown> = {};
 
-function readPrefsLanguage(): SupportedLanguage {
+function readPrefsLanguage(): SupportedLanguage | undefined {
   try {
     const file = join(app.getPath('userData'), 'prefs.json');
-    if (!existsSync(file)) return DEFAULT_LANGUAGE;
+    if (!existsSync(file)) return undefined;
     const raw = JSON.parse(readFileSync(file, 'utf8')) as { language?: unknown };
     if (typeof raw.language !== 'string' || raw.language.length === 0) {
-      return DEFAULT_LANGUAGE;
+      return undefined;
     }
     if (isSupportedLang(raw.language)) return raw.language;
-    return normalizeLang(raw.language) ?? DEFAULT_LANGUAGE;
+    return normalizeLang(raw.language) ?? undefined;
   } catch (err) {
     log.warn('[i18n] failed to read prefs.json language, falling back', err);
-    return DEFAULT_LANGUAGE;
+    return undefined;
+  }
+}
+
+/** 无用户偏好时用 OS/Electron 的 UI 语言（app.getLocale()）兜底。 */
+function readEnvironmentLanguage(): SupportedLanguage | undefined {
+  try {
+    const raw = app.getLocale();
+    if (!raw) return undefined;
+    return normalizeLang(raw) ?? undefined;
+  } catch (err) {
+    log.warn('[i18n] failed to read app.getLocale()', err);
+    return undefined;
   }
 }
 
 export async function initMainI18n(): Promise<void> {
-  currentLocale = readPrefsLanguage();
+  currentLocale = readPrefsLanguage() ?? readEnvironmentLanguage() ?? DEFAULT_LANGUAGE;
   try {
     messages = await loadMessages(currentLocale, ['common']);
   } catch (err) {

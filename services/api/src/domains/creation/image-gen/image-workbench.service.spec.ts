@@ -99,8 +99,11 @@ describe('ImageWorkbenchService.deleteHistoryItem —— 活帖守卫', () => {
     }
 
     expect((caught as { status: number }).status).toBe(409);
-    expect((caught as { response: { galleryPost: { status: string } } }).response.galleryPost.status)
-      .toBe('PUBLISHED');
+    expect((caught as { i18nKey: string }).i18nKey).toBe('creation.image_gen.already_posted');
+    expect(
+      (caught as { response: { data: { galleryPost: { status: string } } } }).response.data
+        .galleryPost.status,
+    ).toBe('PUBLISHED');
   });
 
   it('没有活帖时正常删除', async () => {

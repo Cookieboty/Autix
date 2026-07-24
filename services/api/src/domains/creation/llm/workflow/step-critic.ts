@@ -19,7 +19,7 @@ export async function evaluateWithCritic(
 ): Promise<CriticResult> {
   const result = await model.invoke([
     new SystemMessage(criticPrompt),
-    new HumanMessage(`请评估以下产出的质量，输出 JSON 格式：{"score": 0.0-1.0, "feedback": "改进建议"}。\n\n---\n${artifactContent}\n---`),
+    new HumanMessage(`Evaluate the quality of the output below and respond in JSON format: {"score": 0.0-1.0, "feedback": "improvement suggestions"}.\n\n---\n${artifactContent}\n---`),
   ]);
 
   const text = typeof result.content === 'string' ? result.content : '';

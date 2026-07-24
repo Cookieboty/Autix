@@ -1,19 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isInsufficientPointsCode,
   matchInsufficientPointsMessage,
   parseInsufficientPointsMessage,
   registerInsufficientPointsReporter,
   reportInsufficientPoints,
 } from './insufficient-points-reporter';
 
-describe('matchInsufficientPointsMessage', () => {
-  it('命中中文关键词', () => {
-    expect(matchInsufficientPointsMessage('积分余额不足：需要 100，当前 20')).toBe(true);
-    expect(matchInsufficientPointsMessage('抱歉，积分不足')).toBe(true);
+describe('isInsufficientPointsCode（跨语言首选：按稳定业务码识别）', () => {
+  it('命中 INSUFFICIENT_POINTS 业务码', () => {
+    expect(isInsufficientPointsCode('INSUFFICIENT_POINTS')).toBe(true);
   });
+  it('其它码不命中', () => {
+    expect(isInsufficientPointsCode('BAD_REQUEST')).toBe(false);
+    expect(isInsufficientPointsCode(null)).toBe(false);
+    expect(isInsufficientPointsCode(undefined)).toBe(false);
+  });
+});
+
+describe('matchInsufficientPointsMessage（仅英文兜底；中文/多语言走业务码）', () => {
   it('命中英文关键词（大小写不敏感）', () => {
     expect(matchInsufficientPointsMessage('Insufficient Points to run')).toBe(true);
     expect(matchInsufficientPointsMessage('insufficient balance for this action')).toBe(true);
+  });
+  it('不再按翻译后的中文文案匹配（改由业务码识别）', () => {
+    expect(matchInsufficientPointsMessage('积分余额不足：需要 100，当前 20')).toBe(false);
   });
   it('无匹配时返回 false', () => {
     expect(matchInsufficientPointsMessage('rate limit exceeded')).toBe(false);
@@ -23,22 +34,22 @@ describe('matchInsufficientPointsMessage', () => {
   });
 });
 
-describe('parseInsufficientPointsMessage', () => {
-  it('解析中文 required/available', () => {
-    expect(parseInsufficientPointsMessage('积分余额不足：需要 120，当前 45')).toEqual({
-      required: 120,
-      available: 45,
-    });
-  });
+describe('parseInsufficientPointsMessage（英文兜底解析；结构化 data 为首选，见 client-core）', () => {
   it('解析英文 required/available', () => {
     expect(
       parseInsufficientPointsMessage('Insufficient points: required 300, available 12'),
     ).toEqual({ required: 300, available: 12 });
   });
   it('允许含空格与小数', () => {
-    expect(parseInsufficientPointsMessage('需要  10.5 当前  2.0')).toEqual({
+    expect(parseInsufficientPointsMessage('required  10.5 available  2.0')).toEqual({
       required: 10.5,
       available: 2,
+    });
+  });
+  it('中文文案不再解析（金额改由 data.required/available 提供）', () => {
+    expect(parseInsufficientPointsMessage('积分余额不足：需要 120，当前 45')).toEqual({
+      required: null,
+      available: null,
     });
   });
   it('无匹配返回 null', () => {

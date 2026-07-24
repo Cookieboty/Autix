@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import type { LucideIcon } from 'lucide-react';
 import { AudioLines, Gem, Sparkles, Video } from 'lucide-react';
 import { ThemeLogo } from '../brand';
@@ -289,6 +290,7 @@ export function AuthPromoCarousel({
   className?: string;
   slides?: AuthPromoSlide[];
 }) {
+  const t = useTranslations('auth');
   const defaultSlides = useDefaultAuthPromoSlides();
   const promoSlides = slides?.length ? slides : defaultSlides;
   const total = promoSlides.length;
@@ -334,7 +336,7 @@ export function AuthPromoCarousel({
         'relative hidden min-h-[500px] overflow-hidden rounded-2xl bg-black text-white lg:block',
         className,
       )}
-      aria-label="Creative highlights"
+      aria-label={t('creativeHighlights')}
     >
       {/* 图文整块淡入淡出 */}
       {promoSlides.map((slide, index) => {

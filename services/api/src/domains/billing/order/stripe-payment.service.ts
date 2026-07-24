@@ -223,7 +223,7 @@ export class StripePaymentService {
     if (!response.ok) {
       const message =
         stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
-        '创建 Stripe 退款失败';
+        'Failed to create Stripe refund';
       throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.refund_failed', { message });
     }
 
@@ -272,7 +272,7 @@ export class StripePaymentService {
     if (!response.ok) {
       const message =
         stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
-        '取消 Stripe 订阅失败';
+        'Failed to cancel Stripe subscription';
       throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.subscription_cancel_failed', { message });
     }
     return payload as StripeSubscription;
@@ -306,7 +306,7 @@ export class StripePaymentService {
     if (!response.ok) {
       const message =
         stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
-        '创建 Stripe 账单门户会话失败';
+        'Failed to create Stripe billing portal session';
       throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.billing_portal_failed', { message });
     }
     const url = stringValue((payload as { url?: unknown } | null)?.url);
@@ -391,10 +391,10 @@ export class StripePaymentService {
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
-      const message =
-        stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
-        '创建 Stripe Checkout 会话失败';
-      throw new BadRequestException(message);
+      const message = stringValue(
+        (payload as { error?: { message?: unknown } } | null)?.error?.message,
+      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_create_failed', { message });
     }
     return payload as StripeCheckoutSession;
   }
@@ -402,7 +402,7 @@ export class StripePaymentService {
   private async retrieveCheckoutSession(sessionId: string): Promise<StripeCheckoutSession> {
     const id = stringValue(sessionId);
     if (!id || !id.startsWith('cs_')) {
-      throw new BadRequestException('Stripe Checkout Session ID 无效');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_session_id_invalid');
     }
 
     const response = await fetch(
@@ -416,10 +416,10 @@ export class StripePaymentService {
     );
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
-      const message =
-        stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
-        '查询 Stripe Checkout 会话失败';
-      throw new BadRequestException(message);
+      const message = stringValue(
+        (payload as { error?: { message?: unknown } } | null)?.error?.message,
+      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_retrieve_failed', { message });
     }
     return payload as StripeCheckoutSession;
   }
@@ -504,7 +504,7 @@ export class StripePaymentService {
   private async getSecretKey() {
     const value = await this.getConfiguredString('payments.stripeSecretKey', 'STRIPE_SECRET_KEY');
     if (!value) {
-      throw new BadRequestException('STRIPE_SECRET_KEY 未配置');
+      throw new BadRequestException('STRIPE_SECRET_KEY is not configured');
     }
     await this.assertTestModeKey(value);
     return value;
@@ -516,7 +516,7 @@ export class StripePaymentService {
       'STRIPE_WEBHOOK_SECRET',
     );
     if (!value) {
-      throw new UnauthorizedException('STRIPE_WEBHOOK_SECRET 未配置');
+      throw new UnauthorizedException('STRIPE_WEBHOOK_SECRET is not configured');
     }
     return value;
   }
@@ -579,7 +579,7 @@ export class StripePaymentService {
   private async assertTestModeKey(secretKey: string) {
     if (!(await this.isTestModeEnabled())) return;
     if (secretKey.startsWith('sk_test_') || secretKey.startsWith('rk_test_')) return;
-    throw new BadRequestException('Stripe Test 模式开启时必须配置 sk_test_ 或 rk_test_ 测试密钥');
+    throw new BadRequestException('When Stripe test mode is enabled, a sk_test_ or rk_test_ test key must be configured');
   }
 
   private async isTestModeEnabled() {

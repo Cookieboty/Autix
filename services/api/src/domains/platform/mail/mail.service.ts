@@ -3,6 +3,8 @@ import { AppLogger } from '../common/app-logger';
 import * as nodemailer from 'nodemailer';
 import type { SendMailOptions, Transporter } from 'nodemailer';
 import type { StepUpPurpose } from '@autix/domain';
+import { DEFAULT_LANGUAGE } from '@autix/i18n';
+import { I18nService } from '../i18n/i18n.service';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
 
 type MailRuntimeConfig = {
@@ -13,90 +15,107 @@ type MailRuntimeConfig = {
   emailVerifyBaseUrl: string;
 };
 
-const STEP_UP_PURPOSE_LABELS: Record<StepUpPurpose, string> = {
-  'change-password': '修改密码',
-  'set-password': '设置密码',
-  'change-email': '修改邮箱',
-  'delete-account': '删除账号',
-  'unlink-provider': '解绑登录方式',
-};
+const BTN =
+  'display:inline-block;padding:10px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;';
+const MUTED = 'color: #666; font-size: 13px;';
 
 @Injectable()
 export class MailService {
   private readonly logger = new AppLogger(MailService.name);
 
-  constructor(private readonly systemSettingsService: SystemSettingsService) {}
+  constructor(
+    private readonly systemSettingsService: SystemSettingsService,
+    private readonly i18n: I18nService,
+  ) {}
 
-  async sendApprovalEmail(to: string, username: string): Promise<void> {
+  /** 收件人语言由调用方按用户偏好传入；缺省回退 DEFAULT_LANGUAGE。邮件文案统一走 i18n 词条。 */
+  private t(lang: string, key: string, args?: Record<string, unknown>): string {
+    return this.i18n.t(lang, key, args);
+  }
+
+  /** 统一的邮件外层容器，各邮件只拼内部段落，保证结构 DRY。 */
+  private wrap(inner: string): string {
+    return `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">${inner}
+        </div>
+      `;
+  }
+
+  async sendApprovalEmail(
+    to: string,
+    username: string,
+    lang: string = DEFAULT_LANGUAGE,
+  ): Promise<void> {
     await this.sendMail({
       to,
-      subject: '您的账户已通过审核',
-      html: `
-          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-            <h2>审核通过</h2>
-            <p>您好，${username}：</p>
-            <p>您的账户已通过审核，现在可以登录使用了。</p>
-            <p style="color: #666; font-size: 13px;">此邮件由系统自动发送，请勿回复。</p>
-          </div>
-        `,
+      subject: this.t(lang, 'mail.approval.subject'),
+      html: this.wrap(`
+          <h2>${this.t(lang, 'mail.approval.heading')}</h2>
+          <p>${this.t(lang, 'mail.greeting', { username })}</p>
+          <p>${this.t(lang, 'mail.approval.body')}</p>
+          <p style="${MUTED}">${this.t(lang, 'mail.footer_auto')}</p>`),
     });
   }
 
-  async sendActivationEmail(to: string, username: string, token: string): Promise<void> {
+  async sendActivationEmail(
+    to: string,
+    username: string,
+    token: string,
+    lang: string = DEFAULT_LANGUAGE,
+  ): Promise<void> {
     const config = await this.getRuntimeConfig();
     if (!config.transporter) return;
     const link = `${config.activationBaseUrl}?token=${encodeURIComponent(token)}`;
     await this.sendMail({
       to,
-      subject: '激活您的账户',
-      html: `
-          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-            <h2>激活账户</h2>
-            <p>您好，${username}：</p>
-            <p>感谢您的注册，请点击下方按钮完成邮箱验证并激活账户：</p>
-            <p><a href="${link}" style="display:inline-block;padding:10px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;">立即激活</a></p>
-            <p style="color: #666; font-size: 13px;">此链接 1 小时内有效，且仅可使用一次。</p>
-            <p style="color: #666; font-size: 13px;">如非本人操作，请忽略此邮件。</p>
-          </div>
-        `,
+      subject: this.t(lang, 'mail.activation.subject'),
+      html: this.wrap(`
+          <h2>${this.t(lang, 'mail.activation.heading')}</h2>
+          <p>${this.t(lang, 'mail.greeting', { username })}</p>
+          <p>${this.t(lang, 'mail.activation.body')}</p>
+          <p><a href="${link}" style="${BTN}">${this.t(lang, 'mail.activation.button')}</a></p>
+          <p style="${MUTED}">${this.t(lang, 'mail.link_valid_1h')}</p>
+          <p style="${MUTED}">${this.t(lang, 'mail.footer_ignore')}</p>`),
     }, config);
   }
 
-  async sendEmailVerification(to: string, token: string): Promise<void> {
+  async sendEmailVerification(
+    to: string,
+    token: string,
+    lang: string = DEFAULT_LANGUAGE,
+  ): Promise<void> {
     const config = await this.getRuntimeConfig();
     if (!config.transporter) return;
     const link = `${config.emailVerifyBaseUrl}?token=${encodeURIComponent(token)}`;
     await this.sendMail({
       to,
-      subject: '验证您的邮箱',
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <h2>邮箱验证</h2>
-          <p>您正在绑定新邮箱，请点击下方链接完成验证：</p>
-          <p><a href="${link}" style="display:inline-block;padding:10px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;">验证邮箱</a></p>
-          <p style="color: #666; font-size: 13px;">此链接 1 小时内有效，且仅可使用一次。</p>
-          <p style="color: #666; font-size: 13px;">如非本人操作，请忽略此邮件。</p>
-        </div>
-      `,
+      subject: this.t(lang, 'mail.email_verify.subject'),
+      html: this.wrap(`
+          <h2>${this.t(lang, 'mail.email_verify.heading')}</h2>
+          <p>${this.t(lang, 'mail.email_verify.body')}</p>
+          <p><a href="${link}" style="${BTN}">${this.t(lang, 'mail.email_verify.button')}</a></p>
+          <p style="${MUTED}">${this.t(lang, 'mail.link_valid_1h')}</p>
+          <p style="${MUTED}">${this.t(lang, 'mail.footer_ignore')}</p>`),
     }, config);
   }
 
-  async sendPasswordResetEmail(to: string, token: string): Promise<void> {
+  async sendPasswordResetEmail(
+    to: string,
+    token: string,
+    lang: string = DEFAULT_LANGUAGE,
+  ): Promise<void> {
     const config = await this.getRuntimeConfig();
     if (!config.transporter) return;
     const link = `${config.resetBaseUrl}?token=${encodeURIComponent(token)}`;
     await this.sendMail({
       to,
-      subject: '密码重置',
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <h2>密码重置</h2>
-          <p>您正在申请重置密码，请点击下方链接完成操作：</p>
-          <p><a href="${link}" style="display:inline-block;padding:10px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;">重置密码</a></p>
-          <p style="color: #666; font-size: 13px;">此链接 5 分钟内有效，且仅可使用一次。</p>
-          <p style="color: #666; font-size: 13px;">如非本人操作，请忽略此邮件。</p>
-        </div>
-      `,
+      subject: this.t(lang, 'mail.password_reset.subject'),
+      html: this.wrap(`
+          <h2>${this.t(lang, 'mail.password_reset.heading')}</h2>
+          <p>${this.t(lang, 'mail.password_reset.body')}</p>
+          <p><a href="${link}" style="${BTN}">${this.t(lang, 'mail.password_reset.button')}</a></p>
+          <p style="${MUTED}">${this.t(lang, 'mail.link_valid_5m')}</p>
+          <p style="${MUTED}">${this.t(lang, 'mail.footer_ignore')}</p>`),
     }, config);
   }
 
@@ -105,6 +124,7 @@ export class MailService {
     code: string,
     purpose: StepUpPurpose,
     expiresInMinutes = 5,
+    lang: string = DEFAULT_LANGUAGE,
   ): Promise<void> {
     if (!/^\d{6}$/.test(code)) {
       throw new Error('Step-up OTP must be exactly 6 digits');
@@ -115,25 +135,22 @@ export class MailService {
       throw new Error('SMTP transport is not configured');
     }
 
-    const purposeLabel = STEP_UP_PURPOSE_LABELS[purpose];
+    const purpose_label = this.t(lang, `mail.step_up.purpose.${purpose.replace(/-/g, '_')}`);
     await this.sendMail({
       to,
-      subject: '验证账号操作',
+      subject: this.t(lang, 'mail.step_up.subject'),
       text: [
-        `您正在进行${purposeLabel}操作。`,
-        `验证码：${code}`,
-        `验证码将在 ${expiresInMinutes} 分钟后失效，且仅可使用一次。`,
-        '如非本人操作，请忽略此邮件。',
+        this.t(lang, 'mail.step_up.text_intro', { purpose: purpose_label }),
+        this.t(lang, 'mail.step_up.code_label', { code }),
+        this.t(lang, 'mail.step_up.expiry', { minutes: expiresInMinutes }),
+        this.t(lang, 'mail.footer_ignore'),
       ].join('\n'),
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <h2>验证账号操作</h2>
-          <p>您正在进行${purposeLabel}操作，请输入以下验证码完成身份复核：</p>
+      html: this.wrap(`
+          <h2>${this.t(lang, 'mail.step_up.heading')}</h2>
+          <p>${this.t(lang, 'mail.step_up.body', { purpose: purpose_label })}</p>
           <p style="font-size: 32px; font-weight: 700; letter-spacing: 6px;">${code}</p>
-          <p style="color: #666; font-size: 13px;">验证码将在 ${expiresInMinutes} 分钟后失效，且仅可使用一次。</p>
-          <p style="color: #666; font-size: 13px;">如非本人操作，请忽略此邮件。</p>
-        </div>
-      `,
+          <p style="${MUTED}">${this.t(lang, 'mail.step_up.expiry', { minutes: expiresInMinutes })}</p>
+          <p style="${MUTED}">${this.t(lang, 'mail.footer_ignore')}</p>`),
     }, config, true);
   }
 

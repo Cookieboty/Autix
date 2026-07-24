@@ -32,7 +32,7 @@ export function TestimonialsSection() {
             >
               <p className="mb-4 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/56">
                 <span className="h-px w-8 bg-white/42" />
-                Feedback
+                {t('testimonialsFeedbackTag')}
               </p>
               <h2 className="text-4xl font-bold tracking-tight md:text-5xl">{t('testimonialsTitle')}</h2>
               <p className="mt-4 max-w-md text-sm leading-7 text-white/58">{t('testimonialsDesc')}</p>
@@ -81,7 +81,7 @@ export function TestimonialsSection() {
             >
               <p className="mb-4 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/56">
                 <span className="h-px w-8 bg-white/42" />
-                FAQ
+                {t('faqTitle')}
               </p>
               <h2 className="text-4xl font-bold tracking-tight md:text-5xl">{t('faqTitle')}</h2>
               <p className="mt-4 max-w-md text-sm leading-7 text-white/58">{t('faqDesc')}</p>

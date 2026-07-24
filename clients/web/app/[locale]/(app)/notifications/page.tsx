@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { FileText, Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { SidebarTrigger } from '@autix/shared-ui/ui';
 import { useLibraryEnabled } from '@autix/shared-ui/hooks';
 import { useTaskStore, TaskEvent } from '@autix/shared-store';
@@ -25,6 +25,7 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 
 export default function NotificationsPage() {
   const t = useTranslations('notification');
+  const locale = useLocale();
   const router = useRouter();
   const libraryEnabled = useLibraryEnabled(false);
   const events = useTaskStore((s) => s.events);
@@ -124,7 +125,7 @@ export default function NotificationsPage() {
                       {loading === event.id && <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--muted)' }} />}
                     </div>
                     <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
-                      {relativeTime(event.createdAt)}
+                      {relativeTime(event.createdAt, locale)}
                       {event.readAt && <span className="ml-2">· {t('read')}</span>}
                     </p>
                   </div>

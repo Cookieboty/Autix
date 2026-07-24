@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import type {
   FeaturedSlot,
   MetricResourceType,
   ResolvedFeaturedSlot,
 } from '@autix/domain';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { FeaturedSlotKind, Prisma, ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -139,7 +140,7 @@ export class FeaturedSlotsService {
   ): Promise<FeaturedSlot> {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('运营位不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'platform.featured.slot_not_found');
     }
 
     const mergedKind = input.kind ?? existing.kind;
@@ -177,7 +178,7 @@ export class FeaturedSlotsService {
   async deleteSlot(actorId: string, id: string): Promise<void> {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException('运营位不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'platform.featured.slot_not_found');
     }
     await this.repo.delete(id);
     await this.writeAudit('featured.delete', actorId, id, {
@@ -201,8 +202,9 @@ export class FeaturedSlotsService {
       uniqueProvidedIds.size === existingIds.size &&
       orderedIds.every((id) => existingIds.has(id));
     if (!isExactPermutation) {
-      throw new BadRequestException(
-        'orderedIds 必须与该 placement 下全部槽位一一对应（不能缺失/多余/重复）',
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.featured.ordered_ids_must_match_slots',
       );
     }
 
@@ -228,7 +230,7 @@ export class FeaturedSlotsService {
         return this.repo.searchVideoTemplateCandidates(q);
       case 'GALLERY_POST': {
         const rows = await this.repo.searchGalleryPostCandidates(q);
-        return rows.map((r) => ({ id: r.id, title: r.title ?? '(无标题)' }));
+        return rows.map((r) => ({ id: r.id, title: r.title ?? '(untitled)' }));
       }
       default:
         return [];

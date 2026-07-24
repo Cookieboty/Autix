@@ -1,11 +1,25 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { ResourceType, AgentKind } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ConversationRepository } from './conversation.repository';
+
+function badConversation(key: string, args?: Record<string, unknown>) {
+  return new I18nHttpException(HttpStatus.BAD_REQUEST, key, args, {
+    code: 'BAD_REQUEST',
+  });
+}
+
+function notFoundConversation(key: string) {
+  return new I18nHttpException(HttpStatus.NOT_FOUND, key, undefined, {
+    code: 'NOT_FOUND',
+  });
+}
+
+function forbiddenConversation(key: string) {
+  return new I18nHttpException(HttpStatus.FORBIDDEN, key, undefined, {
+    code: 'FORBIDDEN',
+  });
+}
 
 export interface CreateConversationInput {
   title?: string;
@@ -27,11 +41,13 @@ export class ConversationService {
 
     if (agentId) {
       const agent = await this.repository.findAgentForConversation(agentId);
-      if (!agent) throw new BadRequestException('Agent 不存在');
+      if (!agent)
+        throw badConversation('creation.conversation.agent_not_found');
       if (agent.kind !== kind) {
-        throw new BadRequestException(
-          `Agent kind=${agent.kind} 与 conversation kind=${kind} 不匹配`,
-        );
+        throw badConversation('creation.conversation.agent_kind_mismatch', {
+          agentKind: agent.kind,
+          conversationKind: kind,
+        });
       }
     }
 
@@ -93,8 +109,9 @@ export class ConversationService {
 
   async findById(conversationId: string, userId: string) {
     const conv = await this.repository.findConversationById(conversationId);
-    if (!conv) throw new NotFoundException('会话不存在');
-    if (conv.userId !== userId) throw new ForbiddenException('无权访问该会话');
+    if (!conv) throw notFoundConversation('conversation.not_found');
+    if (conv.userId !== userId)
+      throw forbiddenConversation('conversation.forbidden');
     return conv;
   }
 
@@ -103,8 +120,9 @@ export class ConversationService {
    */
   async getDetail(conversationId: string, userId: string) {
     const conv = await this.repository.findConversationDetail(conversationId);
-    if (!conv) throw new NotFoundException('会话不存在');
-    if (conv.userId !== userId) throw new ForbiddenException('无权访问该会话');
+    if (!conv) throw notFoundConversation('conversation.not_found');
+    if (conv.userId !== userId)
+      throw forbiddenConversation('conversation.forbidden');
 
     return {
       id: conv.id,
@@ -143,7 +161,7 @@ export class ConversationService {
       if (!existing) {
         await this.repository.createVideoProjectForConversation({
           userId,
-          title: conv.title ?? '新视频项目',
+          title: conv.title ?? 'New video project',
           conversationId,
         });
       }
@@ -155,7 +173,8 @@ export class ConversationService {
   async updateTitle(conversationId: string, userId: string, title: string) {
     await this.findById(conversationId, userId);
     const normalized = title.trim().slice(0, 120);
-    if (!normalized) throw new BadRequestException('会话标题不能为空');
+    if (!normalized)
+      throw badConversation('creation.conversation.title_required');
     await this.repository.updateConversationTitle(conversationId, normalized);
     return this.getDetail(conversationId, userId);
   }

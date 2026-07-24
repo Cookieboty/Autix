@@ -26,7 +26,7 @@ export interface ImageStudioSettingsShape {
   negativePrompt: string;
 }
 
-export type CoerceChangedKey = '尺寸' | '质量' | '高级参数' | '反向提示词';
+export type CoerceChangedKey = 'size' | 'quality' | 'advancedParams' | 'negativePrompt';
 
 export interface CoerceClientResult<S extends ImageStudioSettingsShape> {
   settings: S;
@@ -51,7 +51,7 @@ export function coerceClientSettings<S extends ImageStudioSettingsShape>(
   let size = s.size;
   if (!cap.sizes.some((o) => o.value === size)) {
     size = mapEquivalentSize(size, cap);
-    changed.push('尺寸');
+    changed.push('size');
   }
 
   let quality = s.quality;
@@ -62,7 +62,7 @@ export function coerceClientSettings<S extends ImageStudioSettingsShape>(
     }
   } else if (!cap.qualities.includes(quality)) {
     quality = cap.defaults.quality;
-    changed.push('质量');
+    changed.push('quality');
   }
 
   let count = s.count;
@@ -86,7 +86,7 @@ export function coerceClientSettings<S extends ImageStudioSettingsShape>(
   let negativePrompt = s.negativePrompt;
   if (cap.supportsNegativePrompt === 'none' && negativePrompt.trim()) {
     negativePrompt = '';
-    changed.push('反向提示词');
+    changed.push('negativePrompt');
   }
 
   return {

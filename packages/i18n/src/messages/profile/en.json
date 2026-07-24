@@ -91,7 +91,9 @@
     "campaignRewards": "Campaign Rewards Center",
     "campaignRewardsDesc": "Configure reward campaigns, budgets, and issuance records",
     "auditLogsAction": "Audit Logs",
-    "auditLogsActionDesc": "View admin operations / points adjustment history"
+    "auditLogsActionDesc": "View admin operations / points adjustment history",
+    "adminOverview": "Admin overview",
+    "localTime": "Local time"
   },
   "profile": {
     "title": "Profile",
@@ -260,6 +262,7 @@
       "IMAGE_TEMPLATE": "Image template",
       "VIDEO_TEMPLATE": "Video template",
       "GALLERY_POST": "Gallery post"
-    }
+    },
+    "folderActions": "Folder actions"
   }
 }

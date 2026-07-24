@@ -1,5 +1,6 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import type { AgentRunDepthMode, AgentRunStatus, Prisma } from '../../../platform/prisma/generated';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { LlmRepository } from '../llm.repository';
 import { computeExecutionPlan as buildExecutionPlan } from './execution-plan';
 
@@ -21,7 +22,7 @@ export class AgentWorkflowService {
   }) {
     const existing = await this.getActiveRun(opts.conversationId);
     if (existing) {
-      throw new ConflictException('该会话已有进行中的工作流');
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.llm.workflow_in_progress');
     }
 
     return this.repository.createAgentRun(opts);

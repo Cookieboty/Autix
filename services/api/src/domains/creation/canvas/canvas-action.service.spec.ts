@@ -54,7 +54,7 @@ describe('CanvasActionService.estimate', () => {
 
     const result = await service.estimate('user-1', 'board-1', baseDto({ actionType: 'agent-chat' }));
 
-    expect(result).toEqual({ kind: 'metered', note: '按用量计费' });
+    expect(result).toEqual({ kind: 'metered', note: 'Billed by usage' });
     expect(estimateCost).not.toHaveBeenCalled();
   });
 
@@ -88,8 +88,8 @@ describe('CanvasActionService.estimate', () => {
     const result = await service.estimate('user-1', 'board-1', baseDto());
 
     expect(result.kind).toBe('metered');
-    // Must read distinctly from the genuinely-metered agent-chat branch ('按用量计费').
-    expect((result as { note: string }).note).not.toBe('按用量计费');
+    // Must read distinctly from the genuinely-metered agent-chat branch ('Billed by usage').
+    expect((result as { note: string }).note).not.toBe('Billed by usage');
     expect(warnSpy).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledTimes(1);
     const [loggedMessage] = errorSpy.mock.calls[0] as [string];

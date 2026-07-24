@@ -1,12 +1,12 @@
 import {
-  BadRequestException,
-  Body,
   Controller,
+  HttpStatus,
   Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { ResourceType } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { AcquisitionsService } from './acquisitions.service';
@@ -21,7 +21,7 @@ const TYPE_MAP: Record<string, ResourceType> = {
 @UseGuards(JwtAuthGuard)
 @Controller('marketplace')
 export class AcquisitionsController {
-  constructor(private readonly service: AcquisitionsService) {}
+  constructor(private readonly service: AcquisitionsService) { }
 
   @Post(':type/:id/acquire')
   acquire(
@@ -32,8 +32,10 @@ export class AcquisitionsController {
     const userId = getCurrentUserId(user);
     const type = TYPE_MAP[typeStr];
     if (!type) {
-      throw new BadRequestException(
-        `资源类型 ${typeStr} 不支持获取(仅 skills/mcp/agents)`,
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'acquisition.type_unsupported',
+        { type: typeStr },
       );
     }
     return this.service.acquire(userId, type, resourceId);

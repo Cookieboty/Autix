@@ -1,8 +1,9 @@
 import {
-  BadRequestException,
   ForbiddenException,
+  HttpStatus,
   Injectable,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { AppLogger } from '../../platform/common/app-logger';
 import {
   type CanvasActionEstimate,
@@ -59,7 +60,7 @@ export class CanvasActionService {
   async estimate(userId: string, boardId: string, dto: EstimateActionDto): Promise<CanvasActionEstimate> {
     await this.boardService.getBoard(userId, boardId); // ownership guard
     if (dto.actionType === 'agent-chat') {
-      return { kind: 'metered', note: '按用量计费' };
+      return { kind: 'metered', note: 'Billed by usage' };
     }
     if (dto.actionType === 'export') {
       return { kind: 'exact', cost: 0 };
@@ -81,7 +82,7 @@ export class CanvasActionService {
       this.logger.error(
         `canvas estimate misconfigured for taskType=${IMAGE_GENERATION_TASK_TYPE}: ${message}`,
       );
-      return { kind: 'metered', note: '定价配置异常，暂按实际用量计费' };
+      return { kind: 'metered', note: 'Pricing config error; temporarily billed by actual usage' };
     }
   }
 
@@ -93,7 +94,7 @@ export class CanvasActionService {
   async imageGenerate(userId: string, boardId: string, dto: ImageGenerateActionDto) {
     const { entitlement } = await this.boardService.getBoard(userId, boardId);
     if (!entitlement.canGenerate) {
-      throw new ForbiddenException(entitlement.reason ?? '该功能需要开通会员');
+      throw new ForbiddenException(entitlement.reason ?? 'This feature requires an active membership');
     }
 
     // Idempotency: replay the recorded action instead of regenerating/charging.
@@ -103,7 +104,11 @@ export class CanvasActionService {
     const state = await this.boardService.loadStateById(userId, boardId);
     const ctx = buildCanvasSelectionContext(state, dto.selectedNodeIds);
     const promptNode = ctx.prompts[0];
-    if (!promptNode) throw new BadRequestException('needs_prompt');
+    if (!promptNode) {
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.canvas.needs_prompt', undefined, {
+        data: { errorCode: 'needs_prompt' },
+      });
+    }
 
     const referenceImages = await this.buildReferenceImages(state, dto.selectedNodeIds);
 
@@ -194,7 +199,7 @@ export class CanvasActionService {
   ): Promise<{ actionId: string; images: CanvasChatGeneratedImage[] }> {
     const { entitlement } = await this.boardService.getBoard(userId, boardId);
     if (!entitlement.canGenerate) {
-      throw new ForbiddenException(entitlement.reason ?? '该功能需要开通会员');
+      throw new ForbiddenException(entitlement.reason ?? 'This feature requires an active membership');
     }
 
     const existing = await this.repository.findActionByIdempotencyKey(boardId, dto.idempotencyKey);
@@ -204,7 +209,11 @@ export class CanvasActionService {
     }
 
     const prompt = dto.prompt.trim();
-    if (!prompt) throw new BadRequestException('needs_prompt');
+    if (!prompt) {
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.canvas.needs_prompt', undefined, {
+        data: { errorCode: 'needs_prompt' },
+      });
+    }
 
     const referenceImages: SourceImageRef[] = (dto.referenceImageUrls ?? [])
       .filter((url) => Boolean(url))

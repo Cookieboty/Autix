@@ -86,19 +86,19 @@ describe('coerceClientSettings', () => {
 
   it('remaps illegal size and records the change', () => {
     const result = coerceClientSettings(baseSettings({ size: '1792x1024', quality: 'medium' }), gptImage);
-    expect(result.changed).toContain('尺寸');
+    expect(result.changed).toContain('size');
     expect(result.settings.size).toBe('2048x1152');
   });
 
   it('falls back to default quality when the value is not on the whitelist', () => {
     const result = coerceClientSettings(baseSettings({ size: 'auto', quality: 'standard' }), gptImage);
-    expect(result.changed).toContain('质量');
+    expect(result.changed).toContain('quality');
     expect(result.settings.quality).toBe(gptImage.defaults.quality);
   });
 
   it('silently strips quality for capabilities that have no quality dimension', () => {
     const result = coerceClientSettings(baseSettings({ size: '1024x1024', quality: 'hd' }), geminiFlash);
-    expect(result.changed).not.toContain('质量');
+    expect(result.changed).not.toContain('quality');
     expect(result.settings.quality).toBe('');
   });
 
@@ -131,7 +131,7 @@ describe('coerceClientSettings', () => {
       }),
       gptImage,
     );
-    expect(result.changed).not.toContain('高级参数' as never);
+    expect(result.changed).not.toContain('advancedParams');
     expect(result.settings.guidanceScale).toBe(DEFAULT_ADVANCED_FALLBACKS.guidanceScale);
     expect(result.settings.steps).toBe(DEFAULT_ADVANCED_FALLBACKS.steps);
     expect(result.settings.seed).toBe(DEFAULT_ADVANCED_FALLBACKS.seed);
@@ -153,7 +153,7 @@ describe('coerceClientSettings', () => {
       baseSettings({ negativePrompt: 'no people' }),
       fakeCap,
     );
-    expect(result.changed).toContain('反向提示词');
+    expect(result.changed).toContain('negativePrompt');
     expect(result.settings.negativePrompt).toBe('');
   });
 

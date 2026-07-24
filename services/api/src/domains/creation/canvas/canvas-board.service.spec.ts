@@ -1,10 +1,5 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  PayloadTooLargeException,
-} from '@nestjs/common';
 import { createEmptyCanvasBoardState, type CanvasBoardState } from '@autix/domain';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { CanvasBoardService } from './canvas-board.service';
 
 function activeMembership() {
@@ -68,7 +63,10 @@ describe('CanvasBoardService', () => {
   it('rejects access to a board owned by another user', async () => {
     const { service, repo } = build();
     repo.findBoard.mockResolvedValue(board({ userId: 'someone-else' }));
-    await expect(service.getBoard('u1', 'b1')).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.getBoard('u1', 'b1')).rejects.toMatchObject({
+      status: 403,
+      i18nKey: 'creation.canvas.board_forbidden',
+    });
   });
 
   it('degrades entitlement to no-generate when membership expired', async () => {
@@ -91,7 +89,10 @@ describe('CanvasBoardService', () => {
     repo.findBoard.mockResolvedValue(board());
     await expect(
       service.saveState('u1', 'b1', saveDto(createEmptyCanvasBoardState(1)), undefined),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      status: 400,
+      i18nKey: 'creation.canvas.missing_if_match',
+    });
   });
 
   it('returns 409 with server state on a revision conflict', async () => {
@@ -100,7 +101,10 @@ describe('CanvasBoardService', () => {
     repo.saveStateAtomic.mockResolvedValue(null); // guard failed
     await expect(
       service.saveState('u1', 'b1', saveDto(createEmptyCanvasBoardState(5)), '5'),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      status: 409,
+      i18nKey: 'creation.canvas.board_updated_elsewhere',
+    });
   });
 
   it('rejects a state that exceeds the node limit', async () => {
@@ -120,9 +124,10 @@ describe('CanvasBoardService', () => {
         text: '',
       })),
     };
-    await expect(service.saveState('u1', 'b1', saveDto(huge), '1')).rejects.toBeInstanceOf(
-      PayloadTooLargeException,
-    );
+    await expect(service.saveState('u1', 'b1', saveDto(huge), '1')).rejects.toMatchObject({
+      status: 413,
+      i18nKey: 'creation.canvas.board_too_large',
+    });
   });
 
   it('bumps revision and returns new state on a successful save', async () => {

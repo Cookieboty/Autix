@@ -13,7 +13,7 @@ export function buildCanvasEntitlement(input: EntitlementInput): CanvasEntitleme
   if (!input.active) {
     return {
       ...CANVAS_FREE_TIER_ENTITLEMENT,
-      reason: input.reason ?? '该功能需要开通会员',
+      reason: input.reason ?? 'This feature requires an active membership',
       levelName: input.levelName ?? null,
       expiresAt,
     };

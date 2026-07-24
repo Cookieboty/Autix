@@ -50,7 +50,7 @@ export class RoleService {
     const role = await this.findOne(id);
     if (role._count.users > 0) throw new I18nHttpException(HttpStatus.CONFLICT, 'role.has_users');
     await this.roleRepository.delete(id);
-    return { message: '删除成功' };
+    return { messageKey: 'common.deleted' };
   }
 
   async getPermissions(id: string) {
@@ -61,7 +61,7 @@ export class RoleService {
   async assignPermissions(id: string, dto: AssignPermissionsDto): Promise<MessageResponse> {
     await this.findOne(id);
     await this.roleRepository.replacePermissions(id, dto.permissionIds);
-    return { message: '权限分配成功' };
+    return { messageKey: 'role.permissions_assigned' };
   }
 
   async assignMenusAndPermissions(
@@ -74,7 +74,7 @@ export class RoleService {
     // 使用事务同时更新菜单和权限关联
     await this.roleRepository.replaceMenusAndPermissions(id, menuIds, permissionIds);
 
-    return { message: '菜单和权限分配成功' };
+    return { messageKey: 'role.menus_permissions_assigned' };
   }
 
   private async findRoleWithMenus(id: string) {
@@ -91,6 +91,6 @@ export class RoleService {
   async assignMenus(id: string, menuIds: string[]): Promise<MessageResponse> {
     await this.findOne(id);
     await this.roleRepository.replaceMenus(id, menuIds);
-    return { message: '菜单分配成功' };
+    return { messageKey: 'role.menus_assigned' };
   }
 }

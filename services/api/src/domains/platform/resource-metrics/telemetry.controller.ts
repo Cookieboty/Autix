@@ -1,5 +1,6 @@
-import { BadRequestException, Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { Public } from '../../identity/auth/decorators/public.decorator';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import {
   ResourceViewPipelineService,
   type ResourceViewEventInput,
@@ -19,7 +20,7 @@ export class TelemetryController {
   @HttpCode(HttpStatus.OK)
   async recordResourceViews(@Body() body: unknown) {
     if (!Array.isArray(body)) {
-      throw new BadRequestException('body 必须是浏览事件数组');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'telemetry.invalid_body');
     }
     return this.pipeline.ingest(body as ResourceViewEventInput[]);
   }

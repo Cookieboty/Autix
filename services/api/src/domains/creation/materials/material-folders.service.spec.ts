@@ -1,8 +1,3 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
 import { MaterialFoldersService } from './material-folders.service';
 
 function buildService(overrides: { repo?: any; favoriteLibrary?: any } = {}) {
@@ -44,7 +39,10 @@ describe('MaterialFoldersService', () => {
   it('create 同名(大小写不敏感)抛 ConflictException', async () => {
     const { service, repo } = buildService();
     repo.findActiveByName.mockResolvedValue({ id: 'f1', name: 'logo' });
-    await expect(service.create('u1', { name: 'Logo' })).rejects.toThrow(ConflictException);
+    await expect(service.create('u1', { name: 'Logo' })).rejects.toMatchObject({
+      status: 409,
+      i18nKey: 'creation.materials.folder_name_exists',
+    });
   });
 
   it('create 规范化名(trim)并写入；未给图标时落 null', async () => {
@@ -78,7 +76,7 @@ describe('MaterialFoldersService', () => {
     const { service } = buildService();
     await expect(
       service.create('u1', { name: '产品图', icon: 'x'.repeat(17) }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'creation.materials.invalid_icon' });
   });
 
   it('create 空白图标视作无图标', async () => {
@@ -103,7 +101,10 @@ describe('MaterialFoldersService', () => {
     // pre-check passes (race), DB unique index rejects on insert
     repo.findActiveByName.mockResolvedValue(null);
     repo.create.mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
-    await expect(service.create('u1', { name: 'Logo' })).rejects.toThrow(ConflictException);
+    await expect(service.create('u1', { name: 'Logo' })).rejects.toMatchObject({
+      status: 409,
+      i18nKey: 'creation.materials.folder_name_exists',
+    });
   });
 
   it('update 并发撞 DB 唯一约束(P2002)转成 ConflictException', async () => {
@@ -111,13 +112,19 @@ describe('MaterialFoldersService', () => {
     repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
     repo.findActiveByName.mockResolvedValue(null);
     repo.update.mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
-    await expect(service.update('u1', 'f1', { name: 'Logo' })).rejects.toThrow(ConflictException);
+    await expect(service.update('u1', 'f1', { name: 'Logo' })).rejects.toMatchObject({
+      status: 409,
+      i18nKey: 'creation.materials.folder_name_exists',
+    });
   });
 
   it('update 文件夹不存在抛 NotFound(仅归属)', async () => {
     const { service, repo } = buildService();
     repo.findOwned.mockResolvedValue(null);
-    await expect(service.update('u1', 'fX', { name: 'B' })).rejects.toThrow(NotFoundException);
+    await expect(service.update('u1', 'fX', { name: 'B' })).rejects.toMatchObject({
+      status: 404,
+      i18nKey: 'creation.materials.folder_not_found',
+    });
   });
 
   it('update 成功改名:名称空闲则调用 repo.update', async () => {
@@ -140,7 +147,10 @@ describe('MaterialFoldersService', () => {
     const { service, repo } = buildService();
     repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
     repo.findActiveByName.mockResolvedValue({ id: 'f2', name: 'taken' });
-    await expect(service.update('u1', 'f1', { name: 'Taken' })).rejects.toThrow(ConflictException);
+    await expect(service.update('u1', 'f1', { name: 'Taken' })).rejects.toMatchObject({
+      status: 409,
+      i18nKey: 'creation.materials.folder_name_exists',
+    });
   });
 
   it('remove 走 FavoriteLibraryService.deleteFolder(仅归属，FAVORITE 联动取消收藏)', async () => {

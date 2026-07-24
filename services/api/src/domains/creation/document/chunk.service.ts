@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { EmbeddingService } from './embedding.service';
 import { SseService } from '../../platform/sse/sse.service';
 import { extractText } from './parsers/parser.factory';
 import { DocumentRepository } from './document.repository';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 @Injectable()
 export class ChunkService {
@@ -21,15 +22,15 @@ export class ChunkService {
 
   async processDocument(documentId: string, userId: string): Promise<void> {
     const doc = await this.documentRepository.findById(documentId);
-    if (!doc) throw new NotFoundException('文档不存在');
-    if (!doc.filePath) throw new NotFoundException('文档文件路径不存在');
+    if (!doc) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'document.not_found');
+    if (!doc.filePath) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'document.file_path_missing');
 
     await this.sseService.emit(userId, {
       id: uuid(),
       taskType: 'document_vectorize',
       taskId: documentId,
       status: 'processing',
-      message: '开始向量化',
+      message: 'Start vectorization',
       createdAt: new Date().toISOString(),
     });
 
@@ -59,7 +60,7 @@ export class ChunkService {
         taskType: 'document_vectorize',
         taskId: documentId,
         status: 'done',
-        message: `向量化完成，共 ${chunks.length} 个 chunk`,
+        message: `Vectorization complete, total ${chunks.length} chunks`,
         metadata: { chunkCount: chunks.length },
         createdAt: new Date().toISOString(),
       });
@@ -71,7 +72,7 @@ export class ChunkService {
         taskType: 'document_vectorize',
         taskId: documentId,
         status: 'error',
-        message: err instanceof Error ? err.message : '向量化失败',
+        message: err instanceof Error ? err.message : 'Vectorization failed',
         createdAt: new Date().toISOString(),
       });
       await this.documentRepository.updateStatus(documentId, 'error');

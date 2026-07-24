@@ -1,9 +1,6 @@
 import {
   Injectable,
-  ForbiddenException,
-  BadRequestException,
-  NotFoundException,
-  InternalServerErrorException,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   AgentKind,
@@ -14,6 +11,7 @@ import {
   VideoClipStatus,
   type Prisma,
 } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ModelConfigService } from '../model-config/model-config.service';
 import {
   buildSingleClipParams,
@@ -84,6 +82,21 @@ export interface VideoProjectShareDetail {
   clips: VideoProjectShareClip[];
 }
 
+function badVideoProject(key: string, args?: Record<string, unknown>) {
+  return new I18nHttpException(HttpStatus.BAD_REQUEST, key, args, { code: 'BAD_REQUEST' });
+}
+function notFoundVideoProject(key: string) {
+  return new I18nHttpException(HttpStatus.NOT_FOUND, key, undefined, { code: 'NOT_FOUND' });
+}
+function forbiddenVideoProject(key: string) {
+  return new I18nHttpException(HttpStatus.FORBIDDEN, key, undefined, { code: 'FORBIDDEN' });
+}
+function internalVideoProject(key: string) {
+  return new I18nHttpException(HttpStatus.INTERNAL_SERVER_ERROR, key, undefined, {
+    code: 'INTERNAL_ERROR',
+  });
+}
+
 @Injectable()
 export class VideoProjectService {
   constructor(
@@ -112,7 +125,7 @@ export class VideoProjectService {
       }
     }
 
-    throw new InternalServerErrorException('分享短链生成失败');
+    throw internalVideoProject('creation.video_project.share_code_gen_failed');
   }
 
   private readClipDurationSec(params: unknown) {
@@ -162,7 +175,7 @@ export class VideoProjectService {
 
   async ensureProjectConversation(projectId: string, userId: string): Promise<string> {
     const project = await this.repository.findProjectConversationInfo(projectId);
-    if (!project || project.userId !== userId) throw new ForbiddenException('无权访问');
+    if (!project || project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden_access');
     if (project.conversationId) return project.conversationId;
 
     const conversation = await this.repository.createVideoConversation({
@@ -192,16 +205,17 @@ export class VideoProjectService {
       const conv = await this.repository.findConversationForProjectCreation(
         dto.conversationId,
       );
-      if (!conv) throw new NotFoundException('会话不存在');
-      if (conv.userId !== userId) throw new ForbiddenException('无权操作此会话');
+      if (!conv) throw notFoundVideoProject('conversation.not_found');
+      if (conv.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden_conversation');
       if (conv.videoProject)
-        throw new BadRequestException('该会话已绑定视频项目');
+        throw badVideoProject('creation.video_project.conversation_already_bound');
 
       // 兼容老 chat 会话「升级」为 video：仅在当前 kind=chat 且未挂载项目时允许切换
       if (conv.kind !== AgentKind.video) {
         if (conv.kind !== AgentKind.chat) {
-          throw new BadRequestException(
-            `会话 kind=${conv.kind}，无法用于创建视频项目`,
+          throw badVideoProject(
+            'creation.video_project.conversation_kind_unsupported',
+            { kind: conv.kind },
           );
         }
         await this.repository.updateConversationKind(conv.id, AgentKind.video);
@@ -228,8 +242,8 @@ export class VideoProjectService {
 
   async getProject(id: string, userId: string) {
     const project = await this.repository.findProjectDetail(id);
-    if (!project) throw new ForbiddenException('项目不存在');
-    if (project.userId !== userId) throw new ForbiddenException('无权访问');
+    if (!project) throw forbiddenVideoProject('creation.video_project.project_not_found');
+    if (project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden_access');
     return {
       ...project,
       clips: project.clips.map(normalizeClipRecordParams),
@@ -238,10 +252,10 @@ export class VideoProjectService {
 
   async createProjectShare(projectId: string, userId: string) {
     const project = await this.repository.findProjectShareDetail(projectId);
-    if (!project) throw new ForbiddenException('项目不存在');
-    if (project.userId !== userId) throw new ForbiddenException('无权访问');
+    if (!project) throw forbiddenVideoProject('creation.video_project.project_not_found');
+    if (project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden_access');
     if (!this.toShareDetail(project)) {
-      throw new BadRequestException('暂无可分享的视频');
+      throw badVideoProject('creation.video_project.share_no_video');
     }
 
     return {
@@ -250,18 +264,18 @@ export class VideoProjectService {
   }
 
   async getSharedProject(code: string) {
-    if (!isVideoShareCode(code)) throw new NotFoundException('分享链接不存在或已失效');
+    if (!isVideoShareCode(code)) throw notFoundVideoProject('creation.video_project.share_not_found');
 
     const share = await this.repository.findProjectShareByCode(code);
-    if (!share) throw new NotFoundException('分享链接不存在或已失效');
+    if (!share) throw notFoundVideoProject('creation.video_project.share_not_found');
 
     const project = await this.repository.findProjectShareDetail(share.projectId);
     if (!project || project.userId !== share.userId) {
-      throw new NotFoundException('分享链接不存在或已失效');
+      throw notFoundVideoProject('creation.video_project.share_not_found');
     }
 
     const detail = this.toShareDetail(project);
-    if (!detail) throw new NotFoundException('分享视频不存在或尚未完成');
+    if (!detail) throw notFoundVideoProject('creation.video_project.share_video_incomplete');
     return detail;
   }
 
@@ -271,23 +285,23 @@ export class VideoProjectService {
 
   async updateProject(id: string, userId: string, data: { title?: string; coverImage?: string }) {
     const project = await this.repository.findProject(id);
-    if (!project) throw new ForbiddenException('项目不存在');
-    if (project.userId !== userId) throw new ForbiddenException('无权修改');
+    if (!project) throw forbiddenVideoProject('creation.video_project.project_not_found');
+    if (project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden_modify');
 
     return this.repository.updateProject(id, data);
   }
 
   async deleteProject(id: string, userId: string) {
     const project = await this.repository.findProject(id);
-    if (!project) throw new ForbiddenException('项目不存在');
-    if (project.userId !== userId) throw new ForbiddenException('无权删除');
+    if (!project) throw forbiddenVideoProject('creation.video_project.project_not_found');
+    if (project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden_delete');
 
     await this.repository.deleteProject(id);
   }
 
   async addClip(projectId: string, userId: string, dto: AddClipDto) {
     const project = await this.repository.findProject(projectId);
-    if (!project || project.userId !== userId) throw new ForbiddenException('无权操作');
+    if (!project || project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden');
 
     const order = await this.repository.findNextClipOrder(projectId);
 
@@ -304,11 +318,11 @@ export class VideoProjectService {
 
   async updateClip(projectId: string, clipId: string, userId: string, dto: UpdateClipDto) {
     const project = await this.repository.findProject(projectId);
-    if (!project || project.userId !== userId) throw new ForbiddenException('无权操作');
+    if (!project || project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden');
 
     const clip = await this.repository.findClip(clipId);
     if (!clip || clip.projectId !== projectId)
-      throw new BadRequestException('Clip 不属于此项目');
+      throw badVideoProject('creation.video_project.clip_not_in_project');
 
     return this.repository.updateClip(clipId, {
       title: dto.title,
@@ -322,11 +336,11 @@ export class VideoProjectService {
 
   async deleteClip(projectId: string, clipId: string, userId: string) {
     const project = await this.repository.findProject(projectId);
-    if (!project || project.userId !== userId) throw new ForbiddenException('无权操作');
+    if (!project || project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden');
 
     const clip = await this.repository.findClip(clipId);
     if (!clip || clip.projectId !== projectId)
-      throw new BadRequestException('Clip 不属于此项目');
+      throw badVideoProject('creation.video_project.clip_not_in_project');
 
     await this.repository.deleteClip(clipId);
     await this.repository.renumberProjectClips(projectId);
@@ -334,14 +348,14 @@ export class VideoProjectService {
 
   async reorderClips(projectId: string, userId: string, clipIds: string[]) {
     const project = await this.repository.findProject(projectId);
-    if (!project || project.userId !== userId) throw new ForbiddenException('无权操作');
+    if (!project || project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden');
     const clips = await this.repository.findProjectClipIds(projectId);
     const validIds = new Set(clips.map((clip) => clip.id));
     if (
       clipIds.length !== validIds.size ||
       clipIds.some((clipId) => !validIds.has(clipId))
     ) {
-      throw new BadRequestException('Clip 顺序与项目不匹配');
+      throw badVideoProject('creation.video_project.clip_reorder_mismatch');
     }
 
     await this.repository.reorderClips(clipIds);
@@ -350,9 +364,9 @@ export class VideoProjectService {
   async addMaterial(projectId: string, clipId: string, userId: string, dto: AddMaterialDto) {
     const clip = await this.repository.findClipWithProject(clipId);
     if (!clip || clip.project.userId !== userId)
-      throw new ForbiddenException('无权操作');
+      throw forbiddenVideoProject('creation.video_project.forbidden');
     if (clip.projectId !== projectId)
-      throw new BadRequestException('Clip 不属于此项目');
+      throw badVideoProject('creation.video_project.clip_not_in_project');
 
     return this.repository.createClipMaterial({
       clipId,
@@ -368,9 +382,9 @@ export class VideoProjectService {
   async removeMaterial(projectId: string, materialId: string, userId: string) {
     const material = await this.repository.findMaterialWithProject(materialId);
     if (!material || material.clip.project.userId !== userId)
-      throw new ForbiddenException('无权操作');
+      throw forbiddenVideoProject('creation.video_project.forbidden');
     if (material.clip.projectId !== projectId)
-      throw new BadRequestException('素材不属于此项目');
+      throw badVideoProject('creation.video_project.material_not_in_project');
 
     await this.repository.deleteClipMaterial(materialId);
   }
@@ -381,15 +395,15 @@ export class VideoProjectService {
     variables?: Record<string, string>,
   ) {
     const template = await this.repository.findWorkflowTemplate(templateId);
-    if (!template) throw new NotFoundException('模板不存在');
+    if (!template) throw notFoundVideoProject('creation.video_project.template_not_found');
     if (template.status !== TemplateStatus.APPROVED) {
-      throw new ForbiddenException('模板尚未通过审核，无法套用');
+      throw forbiddenVideoProject('creation.video_project.template_not_approved');
     }
 
     const clipDefs = Array.isArray(template.clips)
       ? (template.clips as unknown as WorkflowTemplateClipDefinitionInput[])
       : [];
-    if (clipDefs.length === 0) throw new BadRequestException('模板没有可套用的分镜');
+    if (clipDefs.length === 0) throw badVideoProject('creation.video_project.template_no_clips');
 
     const defaultVideoModel = await this.modelConfigService.findDefaultByTypeForUser(
       ModelType.video,
@@ -427,9 +441,9 @@ export class VideoProjectService {
     variables?: Record<string, string>,
   ) {
     const template = await this.repository.findVideoTemplate(templateId);
-    if (!template) throw new NotFoundException('模板不存在');
+    if (!template) throw notFoundVideoProject('creation.video_project.template_not_found');
     if (template.status !== TemplateStatus.APPROVED) {
-      throw new ForbiddenException('模板尚未通过审核，无法套用');
+      throw forbiddenVideoProject('creation.video_project.template_not_approved');
     }
 
     const resolvedVariables = resolveTemplateVariables(template.variables, variables);
@@ -471,7 +485,7 @@ export class VideoProjectService {
 
   async getProjectGenerations(projectId: string, userId: string) {
     const project = await this.repository.findProject(projectId);
-    if (!project || project.userId !== userId) throw new ForbiddenException('无权访问');
+    if (!project || project.userId !== userId) throw forbiddenVideoProject('creation.video_project.forbidden_access');
 
     return this.repository.findProjectGenerations(projectId);
   }

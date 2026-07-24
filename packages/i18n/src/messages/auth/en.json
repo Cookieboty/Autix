@@ -250,7 +250,10 @@
     "backToLoginOptions": "Back to login options",
     "loginEmailTitle": "Log in to Amux Studio",
     "or": "OR",
-    "modalTerms": "By continuing, I acknowledge the <privacy>Privacy Policy</privacy> and agree to the <terms>Terms of Use</terms>. I also confirm that I am at least 18 years old"
+    "modalTerms": "By continuing, I acknowledge the <privacy>Privacy Policy</privacy> and agree to the <terms>Terms of Use</terms>. I also confirm that I am at least 18 years old",
+    "modalA11yTitle": "Sign in to Amux Studio",
+    "modalA11yDescription": "Sign in or create an account to continue.",
+    "creativeHighlights": "Creative highlights"
   },
   "login": {
     "console": "Admin Console",

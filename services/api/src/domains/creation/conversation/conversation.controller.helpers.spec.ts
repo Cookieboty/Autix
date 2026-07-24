@@ -180,7 +180,7 @@ describe('conversation controller helpers', () => {
     )).toBe(false);
     expect(buildDuplicateProcessingStreamError()).toEqual({
       type: 'error',
-      message: '请求正在处理中',
+      message: 'Request is being processed',
     });
   });
 

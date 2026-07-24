@@ -50,7 +50,12 @@
     "actions": "操作",
     "none": "无",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "like": "点赞",
+    "favorite": "收藏",
+    "share": "分享",
+    "jsonEmpty": "JSON 为空",
+    "invalidJson": "JSON 格式无效"
   },
   "aiUi": {
     "selected": "已选择",
@@ -72,7 +77,10 @@
     "noData": "暂无数据",
     "loading": "加载中",
     "actionMessage": "[操作: {action}]",
-    "serverError": "服务器返回错误"
+    "serverError": "服务器返回错误",
+    "thinking": "思考中…",
+    "thoughtForSeconds": "思考了 {seconds} 秒",
+    "thoughtForAFewSeconds": "思考了几秒"
   },
   "sidebar": {
     "newSession": "新建会话",
@@ -124,7 +132,10 @@
     "collapseMenu": "收起菜单",
     "clipCount": "{count} 片段",
     "loginResourceHint": "发布和使用资源",
-    "gallery": "广场"
+    "gallery": "广场",
+    "mobileTitle": "侧边栏",
+    "mobileDescription": "显示移动端侧边栏。",
+    "toggle": "切换侧边栏"
   },
   "notification": {
     "title": "通知",
@@ -280,7 +291,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio - 构想它，构建它，交付它。",
       "description": "PRD、代码、设计、原型，AI 一站生成。"
     },
     "video": {

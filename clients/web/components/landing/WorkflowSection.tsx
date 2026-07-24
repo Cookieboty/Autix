@@ -26,7 +26,7 @@ export function WorkflowSection() {
           >
             <p className="mb-4 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/58">
               <span className="h-px w-8 bg-white/42" />
-              Creation Flow
+              {t('workflowCreationFlow')}
             </p>
             <h2 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-6xl">
               {t('workflowTitle')}
@@ -56,9 +56,9 @@ export function WorkflowSection() {
             <div className="flex items-center justify-between border-b border-white/12 px-5 py-3">
               <div className="flex items-center gap-2">
                 <Workflow className="size-4 text-white/68" />
-                <span className="text-sm font-medium text-white/72">Workspace timeline</span>
+                <span className="text-sm font-medium text-white/72">{t('workflowTimelineLabel')}</span>
               </div>
-              <span className="rounded-full bg-white/12 px-3 py-1 text-xs text-white/70">4 steps</span>
+              <span className="rounded-full bg-white/12 px-3 py-1 text-xs text-white/70">{t('workflowStepsBadge', { count: STEP_KEYS.length })}</span>
             </div>
 
             <div className="grid gap-0 lg:grid-cols-[0.86fr_1.14fr]">
@@ -69,8 +69,8 @@ export function WorkflowSection() {
                   </video>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
-                    <p className="text-xs uppercase tracking-[0.22em] text-white/50">Preview</p>
-                    <p className="mt-2 text-2xl font-bold">Video + Product</p>
+                    <p className="text-xs uppercase tracking-[0.22em] text-white/50">{t('workflowPreviewLabel')}</p>
+                    <p className="mt-2 text-2xl font-bold">{t('workflowPreviewHeading')}</p>
                     <p className="mt-2 text-sm leading-6 text-white/64">{t('workflowPreviewDesc')}</p>
                   </div>
                 </div>
@@ -106,7 +106,7 @@ export function WorkflowSection() {
                       <MessageSquareText className="size-4" />
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-white">Chat keeps context</p>
+                      <p className="text-sm font-semibold text-white">{t('workflowContextTitle')}</p>
                       <p className="mt-2 text-xs leading-5 text-white/56">{t('workflowContextDesc')}</p>
                     </div>
                   </div>

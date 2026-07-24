@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   TemplateStatus,
   ResourceType,
@@ -8,6 +8,7 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { RuntimeDetectorService } from '../../platform/common/runtime-detector.service';
 import { normalizeMcpConfig } from '../../platform/common/mcp-config.parser';
@@ -129,8 +130,12 @@ export class McpService extends BaseResourceService {
       rawConfig: unknown;
       runtimeDetectedBy: DetectionSrc;
     };
-    if (mcp.authorId !== userId)
-      throw new ForbiddenException('无权修改此 MCP 服务器');
+    if (mcp.authorId !== userId) {
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'mcp.update_forbidden',
+      );
+    }
 
     const normalized = dto.rawConfig
       ? normalizeMcpConfig(dto.rawConfig, dto.serverName ?? mcp.serverName)

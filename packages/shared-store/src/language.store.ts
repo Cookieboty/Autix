@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DEFAULT_LANGUAGE, type SupportedLanguage } from '@autix/i18n';
+import { DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
 import { getAuth, getNavigation } from '@autix/platform';
 import { updateMyLanguage } from '@autix/sdk';
 import { resolveLanguage } from './language-resolution';
@@ -32,15 +32,35 @@ function readCookie(name: string): string | undefined {
     ?.slice(name.length + 1);
 }
 
+/** 探测运行环境语言（web/desktop renderer 均在浏览器上下文）。SSR/Node 无 navigator 时返回 undefined。 */
+function detectEnvironmentLanguage(): SupportedLanguage | undefined {
+  if (typeof navigator === 'undefined') return undefined;
+  const candidates: string[] = [];
+  if (Array.isArray(navigator.languages)) candidates.push(...navigator.languages);
+  if (typeof navigator.language === 'string') candidates.push(navigator.language);
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const mapped = normalizeLang(raw);
+    if (mapped) return mapped;
+  }
+  return undefined;
+}
+
 export const useLanguageStore = create<LanguageState>((set) => ({
   language: DEFAULT_LANGUAGE,
   hydrated: false,
 
   hydrate: async (urlLocale?: string) => {
-    // URL / cookie / localStorage 三个来源可能互相矛盾，交给 resolveLanguage 统一收敛
-    // 并给出回写目标，否则会出现「页面英文、选择器中文」这类错位。
+    // 四个来源交给 resolveLanguage 统一收敛，避免「页面英文、选择器中文」这类错位。
+    // environment 仅在 cookie 与 stored 均缺失时生效，让首访用户默认跟随浏览器/OS 语言。
     const stored = (await getAuth().getLanguage()) ?? undefined;
-    const resolution = resolveLanguage({ urlLocale, cookie: readCookie('NEXT_LOCALE'), stored });
+    const environment = detectEnvironmentLanguage();
+    const resolution = resolveLanguage({
+      urlLocale,
+      cookie: readCookie('NEXT_LOCALE'),
+      stored,
+      environment,
+    });
 
     if (resolution.writeCookie) setCookie('NEXT_LOCALE', resolution.writeCookie);
     if (resolution.writeStored) await getAuth().setLanguage(resolution.writeStored);
@@ -60,7 +80,7 @@ export const useLanguageStore = create<LanguageState>((set) => ({
 
     const token = await getAuth().getAccessToken();
     if (token) {
-      updateMyLanguage(lang).catch(() => {});
+      updateMyLanguage(lang).catch(() => { });
     }
 
     getNavigation().switchLocale(lang);

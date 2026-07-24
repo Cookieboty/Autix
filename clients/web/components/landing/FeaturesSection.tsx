@@ -46,7 +46,7 @@ export function FeaturesSection() {
           >
             <p className="mb-4 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/62">
               <span className="h-px w-8 bg-white/45" />
-              Product OS
+              {t('featuresProductOs')}
             </p>
             <h2 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-6xl">
               {t('featuresTitle')}
@@ -69,7 +69,7 @@ export function FeaturesSection() {
                 <span className="size-3 rounded-full bg-[#febc2e]" />
                 <span className="size-3 rounded-full bg-[#28c840]" />
               </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-950">Live workspace</span>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-950">{t('featuresLiveWorkspace')}</span>
             </div>
             <div className="grid gap-3 md:grid-cols-[1.05fr_0.95fr]">
               <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
@@ -78,7 +78,7 @@ export function FeaturesSection() {
                 </video>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4">
-                  <p className="text-xl font-bold">AI Director</p>
+                  <p className="text-xl font-bold">{t('featuresDirectorTitle')}</p>
                   <p className="mt-1 text-sm text-white/68">{t('featuresDirectorCaption')}</p>
                 </div>
               </div>

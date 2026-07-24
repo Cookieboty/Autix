@@ -42,7 +42,7 @@ describe('presentAuthor', () => {
       username: 'deleted_u3',
       avatar: 'stale-avatar.png',
     });
-    expect(out).toEqual({ userId: 'u3', nickname: '已注销用户', avatar: null });
+    expect(out).toEqual({ userId: 'u3', nickname: 'Deactivated user', avatar: null });
     // 隐私铁律：序列化输出里绝不能出现原始 username / deleted_ 前缀 / 旧头像
     const serialized = JSON.stringify(out);
     expect(serialized).not.toContain('deleted_');

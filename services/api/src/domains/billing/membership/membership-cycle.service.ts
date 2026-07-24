@@ -22,7 +22,6 @@ type MonthlySubscriptionCycleInput = {
   membershipId: string;
   planId: string | null;
   features: Prisma.JsonValue | null;
-  level: number;
   levelName: string;
   amount: number;
   cycleIndex: number;
@@ -122,7 +121,6 @@ export class MembershipCycleService {
           membershipId: membership.id,
           planId: membership.planId,
           features: membership.level.features,
-          level: membership.level.level,
           levelName: membership.level.name,
           amount,
           cycleIndex,
@@ -180,7 +178,7 @@ export class MembershipCycleService {
 
       const carryover = await this.createCarryoverGrantWithinTx(tx, {
         ...input,
-        policy: getCarryoverPolicy(input.features, input.level),
+        policy: getCarryoverPolicy(input.features),
       });
 
       const result = await this.pointsService.grantPointsWithinTx(
@@ -201,7 +199,7 @@ export class MembershipCycleService {
             cycleEnd: input.cycleEnd.toISOString(),
             scheduledMonthlyGrant: true,
           } satisfies Prisma.InputJsonObject,
-          remark: `会员订阅积分月度发放: ${input.levelName}`,
+          remark: `Membership subscription monthly points grant: ${input.levelName}`,
         },
       );
 
@@ -294,7 +292,7 @@ export class MembershipCycleService {
           cycleStart: effectiveAt.toISOString(),
           cycleEnd: minDate(addMonths(effectiveAt, 1), expiresAt).toISOString(),
         } satisfies Prisma.InputJsonObject,
-        remark: `会员降级下周期生效积分: ${plan.level.name}`,
+        remark: `Membership downgrade next-cycle points: ${plan.level.name}`,
       });
 
       return { applied: true, membership: updatedMembership, pointsGranted: plan.points };
@@ -330,10 +328,10 @@ export class MembershipCycleService {
       previousCycleStart,
       cycleStart: input.cycleStart,
     });
-    const { eligibleGrants, carryoverAmount } = selectCarryoverGrants(previousGrants, {
+    const { eligibleGrants, carryoverAmount, nextCarriedCycles } = selectCarryoverGrants(previousGrants, {
       membershipId: input.membershipId,
       maxPoints: input.policy.maxPoints,
-      currentCycleAmount: input.amount,
+      maxCycles: input.policy.maxCycles,
     });
     if (carryoverAmount <= 0) return { created: false, amount: 0 };
 
@@ -351,11 +349,12 @@ export class MembershipCycleService {
         cycleStart: input.cycleStart.toISOString(),
         cycleEnd: input.cycleEnd.toISOString(),
         carryover: true,
+        carriedCycles: nextCarriedCycles,
         maxCycles: input.policy.maxCycles,
         maxPoints: input.policy.maxPoints,
         carriedFromGrantIds: eligibleGrants.map((grant) => grant.id),
       } satisfies Prisma.InputJsonObject,
-      remark: `会员订阅积分结转: ${input.levelName}`,
+      remark: `Membership subscription points carryover: ${input.levelName}`,
     });
 
     return { created: true, amount: carryoverAmount };

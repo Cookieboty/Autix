@@ -235,7 +235,7 @@ describe('order fulfillment helpers', () => {
           packageCode: 'standard_topup',
           validityDays: 180,
         },
-        remark: '积分包购买: 标准包',
+        remark: 'Points pack purchase: 标准包',
       }),
     );
   });

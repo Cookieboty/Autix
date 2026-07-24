@@ -40,7 +40,7 @@ export function toLegacyVideoOutcome(outcome: VideoTaskOutcome): NormalizedSeeda
         externalStatus: outcome.externalStatus,
         generationStatus: isExpired ? VideoGenStatus.expired : VideoGenStatus.failed,
         error: outcome.error,
-        refundReason: isExpired ? '视频生成超时' : `视频生成失败: ${outcome.error}`,
+        refundReason: isExpired ? 'Video generation timed out' : `Video generation failed: ${outcome.error}`,
       };
     }
   }

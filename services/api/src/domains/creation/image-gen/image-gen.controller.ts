@@ -8,7 +8,6 @@ import {
   Param,
   Post,
   UseGuards,
-  BadRequestException,
   Query,
 } from '@nestjs/common';
 import { AppLogger } from '../../platform/common/app-logger';
@@ -25,6 +24,7 @@ import { PointsService } from '../../billing/points/points.service';
 import { IMAGE_GENERATION_TASK_TYPE } from '../llm/workflow/image-generation-flow.holds';
 import { GenerationTaskRepository } from '../../platform/generation-tasks/generation-task.repository';
 import { GenerationKind } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 @UseGuards(JwtAuthGuard)
 @Controller('image-gen')
@@ -125,9 +125,9 @@ export class ImageGenController {
     },
   ) {
     const userId = getCurrentUserId(user);
-    if (!body.model) throw new BadRequestException('请选择图片模型');
+    if (!body.model) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.model_required');
     const prompt = body.prompt?.trim();
-    if (!prompt) throw new BadRequestException('请输入提示词');
+    if (!prompt) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.prompt_required');
 
     return this.imageGenerationFlowService.refineWorkbenchPrompt(userId, {
       mode: body.mode ?? (body.sourceImages?.length ? 'edit' : 'generate'),
@@ -148,8 +148,8 @@ export class ImageGenController {
       overlayDataUrl?: string;
     },
   ) {
-    if (!body.imageUrl) throw new BadRequestException('缺少原图');
-    if (!body.overlayDataUrl) throw new BadRequestException('缺少标注');
+    if (!body.imageUrl) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.missing_source_image');
+    if (!body.overlayDataUrl) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.missing_annotation');
 
     return {
       image: await mergeAnnotationDataUrls(body.imageUrl, body.overlayDataUrl),
@@ -187,9 +187,9 @@ export class ImageGenController {
     },
   ) {
     const userId = getCurrentUserId(user);
-    if (!body.model) throw new BadRequestException('请选择图片模型');
+    if (!body.model) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.model_required');
     const prompt = (body.editInstruction ?? body.prompt)?.trim();
-    if (!prompt) throw new BadRequestException('请输入提示词');
+    if (!prompt) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.prompt_required');
 
     // 张数：1-4；非法值向下钳到 1，不做上限业务判定 —— 上限交给会员并发闸门决定，
     // 前端已经按会员等级预览过限制，这里再兜底一次防脏请求。
@@ -272,7 +272,7 @@ export class ImageGenController {
       const firstError = failures[0]?.reason;
       throw firstError instanceof Error
         ? firstError
-        : new BadRequestException('图片生成失败');
+        : new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.generation_failed');
     }
 
     // 部分失败：记录日志，仅返回成功的图；前端骨架卡按 count 数量占位，成功数 < count 时

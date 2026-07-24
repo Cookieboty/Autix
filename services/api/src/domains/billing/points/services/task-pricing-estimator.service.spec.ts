@@ -1,5 +1,6 @@
 import type { Mocked } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { MODEL_PRESETS, quoteTaskFromSnapshot } from '@autix/domain/pricing';
 import { stripNonPricingParams, TaskPricingEstimatorService } from './task-pricing-estimator.service';
 import type { TaskPricingRepository } from '../repositories/task-pricing.repository';
@@ -205,7 +206,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
     await expect(
       service.estimateCost({ taskType: 'unknown_task', params: {} }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'task.not_configured' });
   });
 
   it('throws 400 when the task definition is inactive, with a message distinguishable from "missing"', async () => {
@@ -220,7 +221,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
     await expect(
       service.estimateCost({ taskType: 'image_generation', params: {} }),
-    ).rejects.toThrow(/停用/);
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'task.disabled' });
   });
 
   it('throws 400 when no binding exists for the resolved model', async () => {
@@ -319,7 +320,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
     await expect(
       service.estimateCost({ taskType: 'image_generation', modelConfigId: 'model-1', params: {} }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'task.model_no_pricing_rule' });
   });
 
   it('throws 400 when paramsSchema is NULL', async () => {
@@ -336,7 +337,7 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
 
     await expect(
       service.estimateCost({ taskType: 'image_generation', modelConfigId: 'model-1', params: {} }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'task.model_no_params_rule' });
   });
 
   it('throws 400 with ajv violations when params are invalid, surfacing the JSON Pointer path', async () => {
@@ -350,10 +351,14 @@ describe('TaskPricingEstimatorService.estimateCost', () => {
         params: { quality: 'ultra' },
       }),
     ).rejects.toMatchObject({
+      status: 400,
+      i18nKey: 'task.invalid_params',
       response: {
-        violations: expect.arrayContaining([
-          expect.objectContaining({ path: '/quality' }),
-        ]),
+        data: {
+          violations: expect.arrayContaining([
+            expect.objectContaining({ path: '/quality' }),
+          ]),
+        },
       },
     });
   });

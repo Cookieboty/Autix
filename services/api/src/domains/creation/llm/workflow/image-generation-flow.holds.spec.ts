@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import {
   assertPromptOptimizeInputWithinLimit,
   buildImageGenerationEstimateInput,
@@ -34,9 +34,15 @@ describe('assertPromptOptimizeInputWithinLimit (FIX-18)', () => {
   });
 
   it('rejects input above the cap', () => {
-    expect(() =>
-      assertPromptOptimizeInputWithinLimit(PROMPT_OPTIMIZE_MAX_INPUT_TOKENS + 1),
-    ).toThrow(BadRequestException);
+    let captured: unknown;
+    try {
+      assertPromptOptimizeInputWithinLimit(PROMPT_OPTIMIZE_MAX_INPUT_TOKENS + 1);
+    } catch (err) {
+      captured = err;
+    }
+    expect(captured).toBeInstanceOf(I18nHttpException);
+    expect((captured as I18nHttpException).getStatus()).toBe(400);
+    expect((captured as I18nHttpException).i18nKey).toBe('creation.image_gen.prompt_optimize_too_long');
   });
 });
 

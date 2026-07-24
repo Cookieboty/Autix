@@ -106,7 +106,7 @@ export class AuthController {
   @Post('logout')
   async logout(@CurrentUser() user: AuthUser) {
     await this.authService.logout(user.sessionId!);
-    return { message: '登出成功' };
+    return { messageKey: 'auth.logout.success' };
   }
 
   @Get('profile')
@@ -141,7 +141,7 @@ export class AuthController {
   @Post('email')
   async requestEmailSupplement(@CurrentUser() user: AuthUser, @Body() dto: RequestEmailSupplementDto) {
     await this.emailChangeService.requestSupplement(user.id, dto.email);
-    return { message: '验证邮件已发送，请查收' };
+    return { messageKey: 'auth.email.verification_sent' };
   }
 
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
@@ -160,7 +160,7 @@ export class AuthController {
   @Post('email/confirm')
   async confirmEmail(@Body() dto: ConfirmEmailChangeDto) {
     await this.emailChangeService.confirm(dto.token);
-    return { message: '邮箱已验证' };
+    return { messageKey: 'auth.email.verified' };
   }
 
   /**
@@ -249,7 +249,7 @@ export class AuthController {
       dto.usernameConfirmation,
     );
     return {
-      message: '账户已删除',
+      messageKey: 'auth.account.deleted',
       deletedAt: deletedAt.toISOString(),
     };
   }

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { AppLogger } from '../../../platform/common/app-logger';
 import { hasChatCapability } from '@autix/domain';
 import { ModelType } from '../../../platform/prisma/generated';
@@ -98,8 +99,8 @@ export class ImageChatService {
       templateTitle: input.template.title,
       templatePrompt: input.template.prompt,
       templateVariables: JSON.stringify(input.template.variables ?? []),
-      modelHint: input.template.modelHint ? `默认图片模型: ${input.template.modelHint}` : '',
-      sourceImages: sourceImages ? `用户已选择这些历史图片作为编辑源:\n${sourceImages}` : '',
+      modelHint: input.template.modelHint ? `Default image model: ${input.template.modelHint}` : '',
+      sourceImages: sourceImages ? `The user selected these history images as edit sources:\n${sourceImages}` : '',
     });
 
     this.logger.log(
@@ -112,8 +113,8 @@ export class ImageChatService {
         new SystemMessage(systemPrompt.content),
         new HumanMessage(
           [
-            `最近历史:\n${history.map((m) => `${m.role}: ${m.content}`).join('\n').slice(-6000)}`,
-            `用户最新消息: ${input.message}`,
+            `Recent history:\n${history.map((m) => `${m.role}: ${m.content}`).join('\n').slice(-6000)}`,
+            `User's latest message: ${input.message}`,
           ].join('\n\n'),
         ),
       ]);
@@ -124,9 +125,9 @@ export class ImageChatService {
       this.logger.error(
         `image chat assistant invoke failed: chatModel=${config.id}(${config.model}) caps=[${(config.capabilities ?? []).join(',')}] reason=${err instanceof Error ? err.message : String(err)}`,
       );
-      throw new BadRequestException(
-        `对话模型 ${config.model} 未返回有效结果，请确认所选文本模型支持标准对话（/chat/completions）。`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_chat.model_no_result', {
+        model: config.model,
+      });
     }
 
     const content = messageContentToText(asRecord(result.message)?.content);
@@ -151,7 +152,7 @@ export class ImageChatService {
       );
       if (hasChatCapability(picked.capabilities ?? [])) return picked;
       this.logger.warn(
-        `image chat: 指定 chatModel=${picked.id}(${picked.model}) 无 chat 能力，尝试其它对话模型`,
+        `image chat: specified chatModel=${picked.id}(${picked.model}) has no chat capability, trying other chat models`,
       );
     }
 
@@ -167,7 +168,7 @@ export class ImageChatService {
       );
       if (hasChatCapability(config.capabilities ?? [])) return config;
       this.logger.warn(
-        `image chat: 默认 general 模型=${config.id}(${config.model}) 无 chat 能力，尝试任一可用对话模型`,
+        `image chat: default general model=${config.id}(${config.model}) has no chat capability, trying any available chat model`,
       );
     }
 
@@ -180,9 +181,7 @@ export class ImageChatService {
       return this.modelConfigService.getConfigForOrchestrator(anyChatModel.id, input.userId);
     }
 
-    throw new BadRequestException(
-      '图片模式需要一个文本对话模型来理解需求，请先在工具栏选择或配置一个文本模型。',
-    );
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_chat.needs_text_model');
   }
 
   private async *executeImageAction(

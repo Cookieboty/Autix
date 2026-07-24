@@ -315,9 +315,10 @@ describe('OrderService.markPaidAndFulfill', () => {
       });
     tx.user_memberships.findUnique.mockResolvedValue(activeMembership(3, 'plan-pro'));
 
-    await expect(service.markPaidAndFulfill('order-1')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(service.markPaidAndFulfill('order-1')).rejects.toMatchObject({
+      status: 400,
+      i18nKey: 'order.already_on_plan',
+    });
 
     expect(tx.user_memberships.update).not.toHaveBeenCalled();
     expect(tx.orders.update).toHaveBeenCalledWith(
@@ -353,9 +354,10 @@ describe('OrderService.markPaidAndFulfill', () => {
       expiresAt: new Date(Date.now() - 1000),
     });
 
-    await expect(service.markPaidAndFulfill('order-1')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(service.markPaidAndFulfill('order-1')).rejects.toMatchObject({
+      status: 403,
+      i18nKey: 'order.points_pack_requires_membership',
+    });
 
     expect(points.grantPointsWithinTx).not.toHaveBeenCalled();
   });
@@ -530,13 +532,16 @@ describe('OrderService.markPaidAndFulfill', () => {
         currency: 'USD',
         payload: { id: 'cs_test_old' },
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      status: 400,
+      i18nKey: 'stripe.checkout_order_mismatch',
+    });
 
     expect(prisma.payment_events.update).toHaveBeenCalledWith({
       where: { id: 'evt-row-1' },
       data: expect.objectContaining({
         status: 'FAILED',
-        errorMessage: 'Stripe Checkout 会话与订单不匹配',
+        errorMessage: '18 Http Exception',
       }),
     });
     expect(tx.orders.update).not.toHaveBeenCalled();
@@ -1042,7 +1047,7 @@ describe('OrderService.createMembershipOrder', () => {
 
     await expect(
       service.createMembershipOrder('user-1', 'plan-starter'),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'order.already_on_plan' });
 
     expect(prisma.orders.create).not.toHaveBeenCalled();
   });
@@ -1062,7 +1067,7 @@ describe('OrderService.createMembershipOrder', () => {
 
     await expect(
       service.createMembershipOrder('user-1', 'plan-one-time'),
-    ).rejects.toThrow('会员套餐仅支持连续订阅');
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'membership.plan_must_be_subscription' });
     expect(prisma.orders.create).not.toHaveBeenCalled();
   });
 
@@ -1081,7 +1086,7 @@ describe('OrderService.createMembershipOrder', () => {
 
     await expect(
       service.createMembershipOrder('user-1', 'plan-quarterly'),
-    ).rejects.toThrow('会员套餐仅支持月付或年付');
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'membership.plan_billing_cycle_invalid' });
     expect(prisma.orders.create).not.toHaveBeenCalled();
   });
 
@@ -1216,7 +1221,7 @@ describe('OrderService.createMembershipOrder', () => {
 
     await expect(
       service.createPointsPackageOrder('user-1', 'pkg-1'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toMatchObject({ status: 403, i18nKey: 'order.points_pack_requires_membership' });
 
     expect(prisma.points_packages.findUnique).not.toHaveBeenCalled();
     expect(prisma.orders.create).not.toHaveBeenCalled();
@@ -1257,6 +1262,6 @@ describe('OrderService.createMembershipOrder', () => {
       service.assertOrderCanCheckout(
         pendingOrder({ productId: 'plan-starter' }) as never,
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'membership.plan_must_be_subscription' });
   });
 });

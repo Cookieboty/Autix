@@ -2,9 +2,10 @@ import {
   Controller,
   Post,
   Body,
-  BadRequestException,
+  HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
@@ -32,7 +33,7 @@ export class StorageController {
     // 含 owner 归属校验 + cleanup 归属校验）。通用 presign 不得写入这些前缀，避免用户把对象
     // 塞进他人命名空间造成污染/绕过归属模型。
     if (body.folder && /^\/?(avatars|banners)(\/|$)/i.test(body.folder.trim())) {
-      throw new BadRequestException('该目录不可用于通用上传');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'storage.dir_not_for_general_upload');
     }
     const result = await this.r2.createPresignedUpload({
       fileName: body.fileName,

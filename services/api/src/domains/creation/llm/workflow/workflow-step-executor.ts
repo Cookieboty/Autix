@@ -154,12 +154,12 @@ export async function* executeStep(
       };
 
       if (attempt < maxAttempts) {
-        feedback = `Schema 校验失败:\n${validation.reasons.join('\n')}`;
+        feedback = `Schema validation failed:\n${validation.reasons.join('\n')}`;
         yield { type: 'step_refining', stepKey: stepDef.stepKey, attempt, cause: 'schema' };
         continue;
       }
 
-      yield { type: 'step_failed', stepKey: stepDef.stepKey, error: `Schema 校验失败且超过最大重试次数: ${validation.reasons.join('; ')}` };
+      yield { type: 'step_failed', stepKey: stepDef.stepKey, error: `Schema validation failed and exceeded max retries: ${validation.reasons.join('; ')}` };
       return;
     }
 
@@ -200,7 +200,7 @@ export async function* executeStep(
         };
 
         if (!criticResult.passed && attempt < maxAttempts) {
-          feedback = `Critic 评分 ${criticResult.score.toFixed(2)} < ${threshold}:\n${criticResult.feedback}`;
+          feedback = `Critic score ${criticResult.score.toFixed(2)} < ${threshold}:\n${criticResult.feedback}`;
           yield { type: 'step_refining', stepKey: stepDef.stepKey, attempt, cause: 'critic' };
           continue;
         }
