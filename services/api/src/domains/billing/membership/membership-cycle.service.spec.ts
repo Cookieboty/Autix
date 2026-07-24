@@ -406,6 +406,44 @@ describe('MembershipCycleService', () => {
     });
   });
 
+  it('runDailyCycle grants the new cycle BEFORE expiring the previous one (no zero-balance gap)', async () => {
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    // 一个已进入第 2 个周期、应发放新月积分的会员
+    repository.findPendingMembershipChanges.mockResolvedValue([]);
+    repository.expireMemberships.mockResolvedValue({
+      cancelled: { count: 0 },
+      expired: { count: 0 },
+    });
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
+      {
+        id: 'membership-1',
+        userId: 'user-1',
+        planId: 'plan-yearly',
+        startedAt: new Date('2026-01-01T00:00:00.000Z'),
+        expiresAt: new Date('2027-01-01T00:00:00.000Z'),
+        level: { level: 2, name: 'Creator', pointsPerMonth: 6500 },
+      },
+    ]);
+    repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
+    repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn({ point_grants: { findFirst: vi.fn().mockResolvedValue(null) } }),
+    );
+
+    const result = await service.runDailyCycle();
+
+    // runDailyCycle 成功时不返回 failed 标记
+    expect(result).toBeUndefined();
+    expect(points.grantPointsWithinTx).toHaveBeenCalledTimes(1);
+    expect(points.expireGrants).toHaveBeenCalledTimes(1);
+
+    // 铁律：先发放（grantPointsWithinTx）再清空（expireGrants）。
+    // 若顺序反了，会出现一个 subscriptionBalance 归零的空窗期——这个断言就是守卫。
+    const grantOrder = points.grantPointsWithinTx.mock.invocationCallOrder[0];
+    const expireOrder = points.expireGrants.mock.invocationCallOrder[0];
+    expect(grantOrder).toBeLessThan(expireOrder);
+  });
+
   it('P2-D2: 年付场景下同一 cycleIndex sourceId 多次调用幂等（同一个月只发一次）', async () => {
     const repository = createRepository();
     const { service, points } = createService(repository);

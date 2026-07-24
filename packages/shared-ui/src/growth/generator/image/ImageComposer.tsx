@@ -141,11 +141,10 @@ function GenerateCountPicker({
                   onChange(opt);
                   setOpen(false);
                 }}
-                className={`rounded-lg px-2 py-1.5 text-xs font-semibold tabular-nums transition-colors ${
-                  value === opt
+                className={`rounded-lg px-2 py-1.5 text-xs font-semibold tabular-nums transition-colors ${value === opt
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-foreground hover:bg-secondary/80'
-                }`}
+                  }`}
               >
                 {opt}
               </button>
@@ -241,7 +240,7 @@ export function ImageComposer({
   useEffect(() => {
     const s = useAuthStore.getState();
     if (s.isAuthenticated && s.hydrated) {
-      authActions.refreshProfile().catch(() => {});
+      authActions.refreshProfile().catch(() => { });
     }
     // 依赖含 isAuthenticated：兼容「hydrated 之后才登录」的边缘，登录态变化时也重拉一次 profile。
   }, [authHydrated, isAuthenticated]);
@@ -527,7 +526,7 @@ export function ImageComposer({
               <textarea
                 ref={promptTextareaRef}
                 rows={1}
-                className="min-h-6 max-h-48 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-base leading-6 text-foreground outline-none placeholder:text-foreground/44"
+                className="block w-full min-h-6 max-h-48 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-base leading-6 text-foreground outline-none placeholder:text-foreground/44"
                 placeholder={communityMode ? t('templatePromptPlaceholder') : t('promptPlaceholder')}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
