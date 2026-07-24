@@ -277,7 +277,11 @@
     "rewardValidityDaysLabel": "Hiệu lực phần thưởng (ngày)",
     "showCommercialLicenseLabel": "Hiển thị ghi chú giấy phép thương mại",
     "holdPoints": "Điểm bị giữ",
-    "recordCount": "Số bản ghi"
+    "recordCount": "Số bản ghi",
+    "benefitPointsCarryover": "Chuyển tiếp điểm",
+    "benefitPointsCarryoverHint": "Khi bật, điểm hàng tháng chưa dùng của hạng này sẽ được chuyển sang các chu kỳ sau",
+    "benefitCarryoverMaxCycles": "Số chu kỳ chuyển tiếp tối đa",
+    "benefitCarryoverMaxPoints": "Giới hạn chuyển tiếp mỗi chu kỳ"
   },
   "insufficientPoints": {
     "title": "Không đủ điểm",

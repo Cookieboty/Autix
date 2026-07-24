@@ -277,7 +277,11 @@
     "showCommercialLicenseLabel": "显示商用授权说明",
     "loading": "加载中...",
     "holdPoints": "冻结积分",
-    "recordCount": "记录数"
+    "recordCount": "记录数",
+    "benefitPointsCarryover": "积分结转",
+    "benefitPointsCarryoverHint": "开启后，该等级会员未用完的月度积分可结转到后续周期",
+    "benefitCarryoverMaxCycles": "最多结转周期数",
+    "benefitCarryoverMaxPoints": "单周期结转上限"
   },
   "insufficientPoints": {
     "title": "积分不足",

@@ -106,3 +106,4 @@ billing.task_pricing.default_binding_disabled: "タスク {{taskType}} のデフ
 billing.task_pricing.pricing_schema_invalid: "モデルの料金ルール構造が無効です: {{model}}"
 billing.task_pricing.params_schema_invalid: "モデルのパラメータルール構造が無効です: {{model}}"
 billing.task_pricing.fixed_cost_schema_invalid: "タスクの固定費用ルール構造が無効です: {{task}}"
+membership.carryover_invalid: "ポイント繰り越し設定が無効です：有効時は周期を1〜12、周期上限を0より大きくしてください"

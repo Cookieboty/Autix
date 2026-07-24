@@ -277,7 +277,11 @@
     "rewardValidityDaysLabel": "Срок действия награды (дни)",
     "showCommercialLicenseLabel": "Показывать примечание о коммерческой лицензии",
     "holdPoints": "Заблокированные баллы",
-    "recordCount": "Количество записей"
+    "recordCount": "Количество записей",
+    "benefitPointsCarryover": "Перенос баллов",
+    "benefitPointsCarryoverHint": "Если включено, неиспользованные ежемесячные баллы этого уровня переносятся на следующие циклы",
+    "benefitCarryoverMaxCycles": "Максимум циклов переноса",
+    "benefitCarryoverMaxPoints": "Лимит переноса за цикл"
   },
   "insufficientPoints": {
     "title": "Недостаточно баллов",

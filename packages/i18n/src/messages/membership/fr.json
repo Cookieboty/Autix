@@ -277,7 +277,11 @@
     "benefitInvoice": "Facture / contrat",
     "benefitInvoicePlaceholder": "sur demande / inclus / contrat",
     "holdPoints": "Points bloqués",
-    "recordCount": "Nombre d'enregistrements"
+    "recordCount": "Nombre d'enregistrements",
+    "benefitPointsCarryover": "Report de points",
+    "benefitPointsCarryoverHint": "Une fois activé, les points mensuels non utilisés de ce niveau sont reportés sur les cycles suivants",
+    "benefitCarryoverMaxCycles": "Cycles de report maximum",
+    "benefitCarryoverMaxPoints": "Plafond de report par cycle"
   },
   "insufficientPoints": {
     "title": "Points insuffisants",

@@ -10,6 +10,7 @@ import {
   type VideoResolution,
 } from '@autix/domain/video';
 import { MembershipRepository } from './membership.repository';
+import { validatePointsCarryover } from './membership-features.helpers';
 import { StripePaymentService } from '../order/stripe-payment.service';
 import {
   assertImageConcurrency,
@@ -297,7 +298,10 @@ export class MembershipService {
     if (this.has(input, 'pointsPerMonth')) {
       data.pointsPerMonth = this.nonNegativeInt(input.pointsPerMonth, 'pointsPerMonth');
     }
-    if (this.has(input, 'features')) data.features = this.toNullableJson(input.features);
+    if (this.has(input, 'features')) {
+      validatePointsCarryover(input.features);
+      data.features = this.toNullableJson(input.features);
+    }
     if (this.has(input, 'isActive')) data.isActive = this.boolean(input.isActive, 'isActive');
     if (this.hasMeaningfulValue(input, 'sort')) data.sort = this.nonNegativeInt(input.sort, 'sort');
 

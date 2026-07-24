@@ -277,7 +277,11 @@
     "showCommercialLicenseLabel": "Show commercial license note",
     "loading": "Loading...",
     "holdPoints": "Held Points",
-    "recordCount": "Record Count"
+    "recordCount": "Record Count",
+    "benefitPointsCarryover": "Points carryover",
+    "benefitPointsCarryoverHint": "When enabled, unused monthly points for this tier roll over to later cycles",
+    "benefitCarryoverMaxCycles": "Max carryover cycles",
+    "benefitCarryoverMaxPoints": "Max points per carryover"
   },
   "insufficientPoints": {
     "title": "Insufficient points",

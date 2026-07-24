@@ -86,7 +86,7 @@ export function MembershipLevelsView() {
   const deletePlanMutation = useDeleteAdminMembershipPlanMutation();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const [levelModal, setLevelModal] = useState<{ mode: 'create' | 'edit'; data: Record<string, unknown> } | null>(null);
+  const [levelModal, setLevelModal] = useState<{ mode: 'create' | 'edit'; data: Record<string, unknown>; originalFeatures: unknown } | null>(null);
   const [planModal, setPlanModal] = useState<{ mode: 'create' | 'edit'; data: Record<string, unknown> } | null>(null);
   const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ label: string; run: () => Promise<unknown> } | null>(null);
@@ -111,7 +111,7 @@ export function MembershipLevelsView() {
         level: Number(data.level),
         monthlyPrice: data.monthlyPrice as string,
         pointsPerMonth: Number(data.pointsPerMonth),
-        features: serializeFeatures(toFeatureConfig(data.features)),
+        features: serializeFeatures(toFeatureConfig(data.features), levelModal.originalFeatures),
         isActive: (data.isActive as boolean) ?? true,
         sort: Number(data.sort ?? data.level ?? 0),
       };
@@ -179,7 +179,7 @@ export function MembershipLevelsView() {
       <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{t('adminLevels')}</h1>
         <span className="flex-1" />
-        <Button size="sm" className="cursor-pointer" onClick={() => setLevelModal({ mode: 'create', data: emptyLevelData() })}>
+        <Button size="sm" className="cursor-pointer" onClick={() => setLevelModal({ mode: 'create', data: emptyLevelData(), originalFeatures: {} })}>
           <Plus className="w-3.5 h-3.5 mr-1" />{t('addLevel')}
         </Button>
       </div>
@@ -235,6 +235,7 @@ export function MembershipLevelsView() {
                         onClick={() => setLevelModal({
                           mode: 'edit',
                           data: { ...lv, sort: lv.sort ?? lv.level, features: toFeatureConfig(lv.features) },
+                          originalFeatures: lv.features,
                         })}
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -481,6 +482,9 @@ function FeatureConfigEditor({
   const updateImage = (partial: Partial<MembershipFeatureConfig['image']>) => {
     onChange({ ...value, image: { ...value.image, ...partial } });
   };
+  const updateCarryover = (partial: Partial<MembershipFeatureConfig['pointsCarryover']>) => {
+    onChange({ ...value, pointsCarryover: { ...value.pointsCarryover, ...partial } });
+  };
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-background/40 p-3">
@@ -588,6 +592,64 @@ function FeatureConfigEditor({
             />
           </div>
         </div>
+      </div>
+
+      <div className="rounded-md border border-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+              {t('benefitPointsCarryover')}
+            </div>
+            <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
+              {t('benefitPointsCarryoverHint')}
+            </div>
+          </div>
+          <Switch
+            checked={value.pointsCarryover.enabled}
+            onCheckedChange={(checked) =>
+              updateCarryover({
+                enabled: checked,
+                // 开启时补成合法值，避免保存即被拒
+                ...(checked
+                  ? {
+                      maxCycles: value.pointsCarryover.maxCycles >= 1 ? value.pointsCarryover.maxCycles : 1,
+                      maxPoints: value.pointsCarryover.maxPoints > 0 ? value.pointsCarryover.maxPoints : 1,
+                    }
+                  : {}),
+              })
+            }
+          />
+        </div>
+
+        {value.pointsCarryover.enabled && (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+                {t('benefitCarryoverMaxCycles')}
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={12}
+                step={1}
+                value={String(value.pointsCarryover.maxCycles)}
+                onChange={(e) => updateCarryover({ maxCycles: Number(e.target.value) || 1 })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+                {t('benefitCarryoverMaxPoints')}
+              </label>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={String(value.pointsCarryover.maxPoints)}
+                onChange={(e) => updateCarryover({ maxPoints: Number(e.target.value) || 0 })}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

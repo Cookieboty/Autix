@@ -277,7 +277,11 @@
     "rewardValidityDaysLabel": "獎勵有效期天數",
     "showCommercialLicenseLabel": "顯示商用授權說明",
     "holdPoints": "凍結點數",
-    "recordCount": "紀錄數"
+    "recordCount": "紀錄數",
+    "benefitPointsCarryover": "積分結轉",
+    "benefitPointsCarryoverHint": "開啟後，該等級會員未用完的每月積分可結轉至後續週期",
+    "benefitCarryoverMaxCycles": "最多結轉週期數",
+    "benefitCarryoverMaxPoints": "單週期結轉上限"
   },
   "insufficientPoints": {
     "title": "點數不足",

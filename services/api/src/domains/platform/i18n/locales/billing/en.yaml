@@ -106,3 +106,4 @@ billing.task_pricing.default_binding_disabled: "Task {{taskType}} default model 
 billing.task_pricing.pricing_schema_invalid: "Model pricing rule structure is invalid: {{model}}"
 billing.task_pricing.params_schema_invalid: "Model params rule structure is invalid: {{model}}"
 billing.task_pricing.fixed_cost_schema_invalid: "Task fixed-cost rule structure is invalid: {{task}}"
+membership.carryover_invalid: "Invalid points carryover config: when enabled, cycles must be 1-12 and max points must be greater than 0"

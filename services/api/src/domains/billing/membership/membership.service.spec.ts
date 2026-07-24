@@ -219,6 +219,37 @@ describe('MembershipService.admin writes', () => {
     });
   });
 
+  it('rejects level create with invalid carryover and skips repository', async () => {
+    const { repository, service } = buildAdminWriteService();
+    await expect(
+      service.createLevel({
+        name: 'X', level: 1, monthlyPrice: '1', pointsPerMonth: 100,
+        features: { pointsCarryover: { enabled: true, maxCycles: 0, maxPoints: 100 } },
+      }),
+    ).rejects.toMatchObject({ i18nKey: 'membership.carryover_invalid' });
+    expect(repository.createLevel).not.toHaveBeenCalled();
+  });
+
+  it('rejects level update with invalid carryover and skips repository', async () => {
+    const { repository, service } = buildAdminWriteService();
+    await expect(
+      service.updateLevel('level-1', {
+        features: { pointsCarryover: { enabled: true, maxCycles: 2, maxPoints: 0 } },
+      }),
+    ).rejects.toMatchObject({ i18nKey: 'membership.carryover_invalid' });
+    expect(repository.updateLevel).not.toHaveBeenCalled();
+  });
+
+  it('passes valid carryover through to repository', async () => {
+    const { repository, service } = buildAdminWriteService();
+    await service.updateLevel('level-1', {
+      features: { pointsCarryover: { enabled: true, maxCycles: 3, maxPoints: 5000 } },
+    });
+    expect(repository.updateLevel).toHaveBeenCalledWith('level-1', {
+      features: { pointsCarryover: { enabled: true, maxCycles: 3, maxPoints: 5000 } },
+    });
+  });
+
   it('returns a friendly conflict when membership level number is duplicated', async () => {
     const { repository, service } = buildAdminWriteService();
     repository.updateLevel.mockRejectedValueOnce({ code: 'P2002' });

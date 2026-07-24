@@ -106,3 +106,4 @@ billing.task_pricing.default_binding_disabled: "任務 {{taskType}} 的預設模
 billing.task_pricing.pricing_schema_invalid: "模型計價規則結構無效：{{model}}"
 billing.task_pricing.params_schema_invalid: "模型參數規則結構無效：{{model}}"
 billing.task_pricing.fixed_cost_schema_invalid: "任務固定費用規則結構無效：{{task}}"
+membership.carryover_invalid: "積分結轉設定無效：啟用時結轉週期需為 1-12，單週期上限需大於 0"

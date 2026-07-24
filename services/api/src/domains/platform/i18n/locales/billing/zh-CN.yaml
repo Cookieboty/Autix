@@ -106,3 +106,4 @@ billing.task_pricing.default_binding_disabled: "任务 {{taskType}} 的默认模
 billing.task_pricing.pricing_schema_invalid: "模型计价规则结构无效：{{model}}"
 billing.task_pricing.params_schema_invalid: "模型参数规则结构无效：{{model}}"
 billing.task_pricing.fixed_cost_schema_invalid: "任务固定费用规则结构无效：{{task}}"
+membership.carryover_invalid: "积分结转配置无效：启用时结转周期需为 1-12，单周期上限需大于 0"

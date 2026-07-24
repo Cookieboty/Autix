@@ -277,7 +277,11 @@
     "rewardValidityDaysLabel": "報酬の有効期間（日）",
     "showCommercialLicenseLabel": "商用ライセンスの注記を表示",
     "holdPoints": "保留ポイント",
-    "recordCount": "レコード数"
+    "recordCount": "レコード数",
+    "benefitPointsCarryover": "ポイント繰り越し",
+    "benefitPointsCarryoverHint": "有効にすると、この等級の未使用の月間ポイントが次の周期に繰り越されます",
+    "benefitCarryoverMaxCycles": "最大繰り越し周期数",
+    "benefitCarryoverMaxPoints": "周期ごとの繰り越し上限"
   },
   "insufficientPoints": {
     "title": "ポイントが不足しています",
