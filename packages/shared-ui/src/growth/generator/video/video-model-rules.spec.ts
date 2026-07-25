@@ -81,9 +81,10 @@ describe('restrictVideoDurations', () => {
 });
 
 describe('videoRatioApplies', () => {
-  it('Seedance 给了首帧后比例由图决定，参数不再生效', () => {
-    expect(videoRatioApplies('doubao-seedance-2.0', { imageCount: 1 })).toBe(false);
+  it('Seedance 两种模式 ratio 都不受参考图影响，任何 imageCount 下都生效', () => {
     expect(videoRatioApplies('doubao-seedance-2.0', { imageCount: 0 })).toBe(true);
+    expect(videoRatioApplies('doubao-seedance-2.0', { imageCount: 1 })).toBe(true);
+    expect(videoRatioApplies('doubao-seedance-2.0-fast', { imageCount: 2 })).toBe(true);
   });
 
   it('Grok Imagine 的 aspect_ratio 仅文生视频有效', () => {

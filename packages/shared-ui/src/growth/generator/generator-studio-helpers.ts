@@ -26,6 +26,12 @@ export type PublicVideoReference = PublicUploadedReference & {
   prompt?: string;
   /** 媒体类型：决定卡片用 img 还是 video 渲染，以及下发时的素材 role */
   mediaType?: 'image' | 'video' | 'audio';
+  /**
+   * 图片素材在本次生成中的角色。缺省视为 reference_image（原有行为），
+   * 用户可在缩略图菜单里改成 first_frame / last_frame。仅对 image 生效——
+   * video/audio 由 provider 侧的路由决定，不读这里。
+   */
+  role?: 'reference_image' | 'first_frame' | 'last_frame';
 };
 
 export function createPublicImageDraftId() {
