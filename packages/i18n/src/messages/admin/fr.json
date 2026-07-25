@@ -1219,6 +1219,9 @@
       "emptyFilteredDescription": "Aucune œuvre avec les filtres actuels, essayez d’ajuster les critères.",
       "emptyPendingDescription": "La file de soumissions de la Galerie est vide, revenez plus tard.",
       "emptyPublishedDescription": "Les œuvres approuvées apparaîtront ici.",
+      "emptyUnpublishedDescription": "Les œuvres retirées de la galerie par leur auteur apparaissent ici.",
+      "emptyRemovedDescription": "Les œuvres supprimées apparaissent ici uniquement à des fins de traçabilité.",
+      "removedBadge": "Supprimée",
       "untitled": "Œuvre sans titre",
       "approve": "Approuver",
       "reject": "Rejeter",
@@ -1236,13 +1239,15 @@
       "boostDialogTitle": "Booster l’œuvre",
       "sources": {
         "USER_UPLOAD": "Téléversement utilisateur",
-        "FROM_GENERATION": "Résultat de génération",
+        "FROM_GENERATION": "Génération IA",
         "FROM_TEMPLATE": "Œuvre de modèle",
         "ADMIN_CURATED": "Sélection éditoriale"
       },
       "tabs": {
         "pending": "À modérer",
-        "published": "Modérées"
+        "published": "Modérées",
+        "unpublished": "Retirées par l’auteur",
+        "removed": "Supprimées"
       },
       "filters": {
         "type": "Type",
@@ -1258,6 +1263,12 @@
       "kind": {
         "image": "Image",
         "video": "Vidéo"
+      },
+      "detail": {
+        "title": "Détails de la soumission",
+        "prompt": "Prompt",
+        "openLarge": "Cliquer pour agrandir en plein écran",
+        "noMedia": "Aucun média"
       },
       "columns": {
         "work": "Œuvre",

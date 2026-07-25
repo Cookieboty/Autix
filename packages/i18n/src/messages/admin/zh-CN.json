@@ -1219,6 +1219,9 @@
       "emptyFilteredDescription": "当前筛选下没有作品，试试调整筛选条件。",
       "emptyPendingDescription": "广场投稿队列已清空，稍后再来看看吧。",
       "emptyPublishedDescription": "通过审核的作品会展示在这里。",
+      "emptyUnpublishedDescription": "作者主动从广场下架的作品会展示在这里。",
+      "emptyRemovedDescription": "已删除的作品会展示在这里，仅供追溯查看。",
+      "removedBadge": "已删除",
       "untitled": "未命名作品",
       "approve": "通过",
       "reject": "驳回",
@@ -1236,13 +1239,15 @@
       "boostDialogTitle": "加热作品",
       "sources": {
         "USER_UPLOAD": "用户上传",
-        "FROM_GENERATION": "生成结果",
+        "FROM_GENERATION": "AI 生成",
         "FROM_TEMPLATE": "模板作品",
         "ADMIN_CURATED": "运营精选"
       },
       "tabs": {
         "pending": "待审核",
-        "published": "已审核"
+        "published": "已审核",
+        "unpublished": "作者已下架",
+        "removed": "已删除"
       },
       "filters": {
         "type": "类型",
@@ -1258,6 +1263,12 @@
       "kind": {
         "image": "图片",
         "video": "视频"
+      },
+      "detail": {
+        "title": "作品详情",
+        "prompt": "Prompt",
+        "openLarge": "点击放大查看",
+        "noMedia": "暂无媒体"
       },
       "columns": {
         "work": "作品",

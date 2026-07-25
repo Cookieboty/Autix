@@ -30,6 +30,7 @@ import {
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../../ui/empty';
 import { AdminPaginationFooter, useClientPagination } from '../layout';
 import { BoostDialog, BOOST_RESOURCE_TYPE_OPTIONS, BOOST_REASON_OPTIONS } from './BoostDialog';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 
 const RESOURCE_TYPE_OPTIONS = BOOST_RESOURCE_TYPE_OPTIONS;
 const REASON_OPTIONS = BOOST_REASON_OPTIONS;
@@ -44,10 +45,12 @@ function formatTime(iso: string, locale: string): string {
 
 export function BoostAdminView() {
   const t = useTranslations('adminOperations');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const [typeFilter, setTypeFilter] = useState<MetricResourceType | ''>('');
   const [queryFilter, setQueryFilter] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<ResourceBoostAdminItem | null>(null);
 
   const {
     data: boosts,
@@ -66,8 +69,7 @@ export function BoostAdminView() {
   const loading = isLoading || isFetching;
 
   const handleRevoke = (boost: ResourceBoostAdminItem) => {
-    if (!window.confirm(t('boost.revokeConfirm', { resource: `${boost.resourceType} ${boost.resourceId}` }))) return;
-    revoke.mutate(boost.id);
+    setRevokeTarget(boost);
   };
 
   return (
@@ -206,6 +208,29 @@ export function BoostAdminView() {
       <AdminPaginationFooter page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
 
       <BoostDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <ConfirmDialog
+        open={!!revokeTarget}
+        onOpenChange={(open) => {
+          if (!open) setRevokeTarget(null);
+        }}
+        title={t('boost.revoke')}
+        description={
+          revokeTarget
+            ? t('boost.revokeConfirm', {
+                resource: `${revokeTarget.resourceType} ${revokeTarget.resourceId}`,
+              })
+            : undefined
+        }
+        confirmText={t('boost.revoke')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={revoke.isPending}
+        onConfirm={() => {
+          if (!revokeTarget) return;
+          revoke.mutate(revokeTarget.id);
+          setRevokeTarget(null);
+        }}
+      />
     </div>
   );
 }

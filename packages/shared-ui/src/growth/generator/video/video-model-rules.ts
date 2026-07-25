@@ -1,6 +1,7 @@
 import {
   acceptsVideoInputMedia,
   readVideoInputMedia,
+  type VideoImageRole,
   type VideoInputMediaCapability,
 } from '@autix/domain/video';
 import type { ParamsSchema } from '@autix/domain/pricing';
@@ -34,6 +35,11 @@ export interface VideoModelMediaLimits {
   maxSecondsOf: Partial<Record<VideoMediaType, number>>;
   /** 图片必须恰好这么多张（Grok 1.5）。undefined = 0..max 均可。 */
   exactImages?: number;
+  /**
+   * 图片支持的语义位。UI 用它决定「Use as …」菜单里出哪几项。
+   * 缺省时按最保守的 ['reference_image']（原有默认行为）。
+   */
+  imageRoles: VideoImageRole[];
   /** 参与选择的素材总数上限：喂给资产面板做整体截断。 */
   totalMax: number;
 }
@@ -42,6 +48,7 @@ const NO_MEDIA: VideoModelMediaLimits = {
   allowedTypes: [],
   maxOf: { image: 0, video: 0, audio: 0 },
   maxSecondsOf: {},
+  imageRoles: [],
   totalMax: 0,
 };
 
@@ -60,6 +67,7 @@ export function resolveVideoMediaLimits(
       allowedTypes: ['image'],
       maxOf: { image: 1, video: 0, audio: 0 },
       maxSecondsOf: {},
+      imageRoles: ['reference_image'],
       totalMax: 1,
     };
   }
@@ -81,11 +89,17 @@ function buildLimits(media: VideoInputMediaCapability): VideoModelMediaLimits {
   if (media.video?.maxSeconds) maxSecondsOf.video = media.video.maxSeconds;
   if (media.audio?.maxSeconds) maxSecondsOf.audio = media.audio.maxSeconds;
 
+  // roles 空数组或缺省视为「只做通用参考图」——与 domain 里 VideoImageSlot.roles 的注释一致。
+  const declaredRoles = media.image?.roles ?? [];
+  const imageRoles: VideoImageRole[] =
+    maxOf.image > 0 && declaredRoles.length > 0 ? declaredRoles : maxOf.image > 0 ? ['reference_image'] : [];
+
   return {
     allowedTypes,
     maxOf,
     maxSecondsOf,
     ...(media.image?.exact ? { exactImages: media.image.exact } : {}),
+    imageRoles,
     totalMax: maxOf.image + maxOf.video + maxOf.audio,
   };
 }
@@ -138,13 +152,9 @@ const VIDEO_MODEL_RULES: Record<string, VideoModelRule> = {
   'grok-imagine': {
     ratioApplies: ({ imageCount }) => imageCount === 0,
   },
-  // Seedance 2.0 / Fast（amux 文档）：ratio "overridden by first frame aspect ratio when present"
-  'doubao-seedance-2.0': {
-    ratioApplies: ({ imageCount }) => imageCount === 0,
-  },
-  'doubao-seedance-2.0-fast': {
-    ratioApplies: ({ imageCount }) => imageCount === 0,
-  },
+  // Seedance 2.0 / Fast：两种模式下 ratio 都不由参考图强制覆盖 —— 首尾帧模式若传 ratio 会
+  // 按 ratio 截取首帧图；全能参考模式不读取参考图比例，ratio 生效即按 ratio 输出。因此不再
+  // 根据参考图数量把 ratio 禁用。
 };
 
 /**

@@ -2205,7 +2205,13 @@ export interface GalleryPostAdminItem {
   sourceType: 'USER_UPLOAD' | 'FROM_GENERATION' | 'FROM_TEMPLATE' | 'ADMIN_CURATED';
 }
 
-export type GalleryAdminStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED';
+export type GalleryAdminStatus =
+  | 'PENDING'
+  | 'PUBLISHED'
+  | 'HIDDEN'
+  | 'REJECTED'
+  | 'UNPUBLISHED'
+  | 'REMOVED';
 export type GalleryAdminKind = 'IMAGE' | 'VIDEO';
 export type GalleryAdminSourceType =
   | 'USER_UPLOAD'
@@ -2450,7 +2456,7 @@ export interface GalleryDetailPost {
   videoTemplateId: string | null;
   imageGenerationId: string | null;
   videoGenerationId: string | null;
-  status: GalleryAdminStatus | 'DRAFT' | 'UNPUBLISHED';
+  status: GalleryAdminStatus | 'DRAFT';
   reviewedById: string | null;
   reviewedAt: string | null;
   rejectReason: string | null;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input } from '@autix/shared-ui/ui';
+import { Button, Input, ConfirmDialog } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -33,6 +33,7 @@ export function SystemMembershipOrdersPage() {
   const [appliedUserId, setAppliedUserId] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [refundTarget, setRefundTarget] = useState<Order | null>(null);
 
   const { data, isLoading } = useAdminMembershipOrdersQuery({
     page,
@@ -91,8 +92,13 @@ export function SystemMembershipOrdersPage() {
   };
 
   const handleRefund = (order: Order) => {
-    const ok = window.confirm(t('refundConfirm'));
-    if (!ok) return;
+    setRefundTarget(order);
+  };
+
+  const confirmRefund = () => {
+    const order = refundTarget;
+    if (!order) return;
+    setRefundTarget(null);
     refundMutation.mutate({
       id: order.id,
       confirm: 'CONFIRM_REFUND',
@@ -229,6 +235,19 @@ export function SystemMembershipOrdersPage() {
           </Button>
         </div>
       )}
+      <ConfirmDialog
+        open={!!refundTarget}
+        onOpenChange={(open) => {
+          if (!open) setRefundTarget(null);
+        }}
+        title={t('refund')}
+        description={t('refundConfirm')}
+        confirmText={t('refund')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={refundMutation.isPending}
+        onConfirm={confirmRefund}
+      />
     </div>
   );
 }

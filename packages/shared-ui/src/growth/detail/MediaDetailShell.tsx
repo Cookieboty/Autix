@@ -33,6 +33,7 @@ export function MediaDetailShell({
   authorSubtitle,
   prompt,
   promptLabel,
+  moderationSlot,
   details,
   footer,
   mediaOverlay,
@@ -58,6 +59,12 @@ export function MediaDetailShell({
    * 或者干脆传空 prompt 让整张卡不渲染。
    */
   promptLabel?: string;
+  /**
+   * 审核状态提示插槽：只在「作者本人看自己历史」这条路径上有内容
+   * （广场/首页的 feed 不会看到这块）。调用方按 galleryPost.status 决定要不要渲染，
+   * 以及要不要带 rejectReason —— 这里只提供位置和外观留白。
+   */
+  moderationSlot?: ReactNode;
   details: MediaDetailRow[];
   /** 面板底部动作区。 */
   footer?: ReactNode;
@@ -196,6 +203,8 @@ export function MediaDetailShell({
             <X className="size-4" />
           </button>
         </header>
+
+        {moderationSlot}
 
         {/* PROMPT。prompt 为空 = 调用方明确表示「这条没有提示词」，整张卡不渲染 */}
         {prompt ? (

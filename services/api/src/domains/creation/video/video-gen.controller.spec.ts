@@ -3,20 +3,52 @@ import { VideoGenController } from './video-gen.controller';
 describe('VideoGenController', () => {
   it('DELETE 非终态返回 409', async () => {
     const repo = { deleteOwnedDirectGeneration: vi.fn().mockResolvedValue('not_terminal') };
-    const ctrl = new VideoGenController({} as any, repo as any, {} as any, {} as any);
+    // 删除会先查活帖再级联 removePost；空 Map = 无活帖
+    const gallery = {
+      findActivePostsByVideoGenerationIds: vi.fn().mockResolvedValue(new Map()),
+      removePost: vi.fn(),
+    };
+    const ctrl = new VideoGenController({} as any, repo as any, {} as any, gallery as any);
     await expect(ctrl.deleteHistory({ id: 'u1' } as any, 'g1')).rejects.toMatchObject({ status: 409 });
   });
 
   it('DELETE 不存在返回 400', async () => {
     const repo = { deleteOwnedDirectGeneration: vi.fn().mockResolvedValue('not_found') };
-    const ctrl = new VideoGenController({} as any, repo as any, {} as any, {} as any);
+    const gallery = {
+      findActivePostsByVideoGenerationIds: vi.fn().mockResolvedValue(new Map()),
+      removePost: vi.fn(),
+    };
+    const ctrl = new VideoGenController({} as any, repo as any, {} as any, gallery as any);
     await expect(ctrl.deleteHistory({ id: 'u1' } as any, 'g1')).rejects.toMatchObject({ status: 400 });
   });
 
   it('DELETE 成功后无返回体', async () => {
     const repo = { deleteOwnedDirectGeneration: vi.fn().mockResolvedValue('deleted') };
-    const ctrl = new VideoGenController({} as any, repo as any, {} as any, {} as any);
+    const gallery = {
+      findActivePostsByVideoGenerationIds: vi.fn().mockResolvedValue(new Map()),
+      removePost: vi.fn(),
+    };
+    const ctrl = new VideoGenController({} as any, repo as any, {} as any, gallery as any);
     await expect(ctrl.deleteHistory({ id: 'u1' } as any, 'g1')).resolves.toBeUndefined();
+    // 无活帖时不应调用 removePost
+    expect(gallery.removePost).not.toHaveBeenCalled();
+  });
+
+  it('DELETE 有活帖时先级联 removePost 再删生成', async () => {
+    const repo = { deleteOwnedDirectGeneration: vi.fn().mockResolvedValue('deleted') };
+    const post = { id: 'p1', status: 'PUBLISHED', rejectReason: null };
+    const gallery = {
+      findActivePostsByVideoGenerationIds: vi.fn().mockResolvedValue(new Map([['g1', post]])),
+      removePost: vi.fn().mockResolvedValue(undefined),
+    };
+    const ctrl = new VideoGenController({} as any, repo as any, {} as any, gallery as any);
+    await ctrl.deleteHistory({ id: 'u1' } as any, 'g1');
+    expect(gallery.removePost).toHaveBeenCalledWith('u1', 'p1');
+    expect(repo.deleteOwnedDirectGeneration).toHaveBeenCalledWith({ id: 'g1', userId: 'u1' });
+    // 先 removePost 后 delete —— 保证「历史里没了、广场还挂着」的孤儿帖不会出现
+    const removeOrder = gallery.removePost.mock.invocationCallOrder[0];
+    const deleteOrder = repo.deleteOwnedDirectGeneration.mock.invocationCallOrder[0];
+    expect(removeOrder).toBeLessThan(deleteOrder);
   });
 
   it('history 返回分页信封', async () => {

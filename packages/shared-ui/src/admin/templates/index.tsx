@@ -19,6 +19,7 @@ import {
   AdminTemplatesToolbar,
 } from './AdminTemplatesViewParts';
 import { AdminPaginationFooter } from '../layout';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 import {
   PAGE_SIZE,
   defaultCapabilities,
@@ -56,6 +57,7 @@ export function AdminTemplatesView({
   const [rejectReason, setRejectReason] = useState('');
   const [acting, setActing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
 
   const statusOptions = useMemo(
     () => [
@@ -156,12 +158,20 @@ export function AdminTemplatesView({
     setSelectedIds(new Set());
   };
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
+    if (selectedIds.size === 0) return;
+    setBatchDeleteOpen(true);
+  };
+
+  const confirmBatchDelete = async () => {
     const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
-    if (!window.confirm(t('confirmBatchDelete', { count: ids.length }))) return;
+    if (ids.length === 0) {
+      setBatchDeleteOpen(false);
+      return;
+    }
     await batchDeleteMutation.mutateAsync({ resourceType, ids });
     setSelectedIds(new Set());
+    setBatchDeleteOpen(false);
   };
 
   const handleToggleHot = async (tpl: AdminTemplateItem, e: MouseEvent) => {
@@ -254,6 +264,17 @@ export function AdminTemplatesView({
           onReview={(id, action) => void handleReview(id, action)}
         />
       )}
+      <ConfirmDialog
+        open={batchDeleteOpen}
+        onOpenChange={setBatchDeleteOpen}
+        title={tCommon('delete')}
+        description={t('confirmBatchDelete', { count: selectedIds.size })}
+        confirmText={tCommon('delete')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={batchDeleteMutation.isPending}
+        onConfirm={() => void confirmBatchDelete()}
+      />
     </div>
   );
 }

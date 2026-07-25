@@ -48,18 +48,18 @@ describe('galleryPostActions', () => {
     expect(actions.canDeleteGeneration).toBe(true);
   });
 
-  it('PENDING：可撤回，不可删除生成记录', () => {
+  it('PENDING：可撤回；作者随时可删自己的生成记录（后端级联下架）', () => {
     const actions = galleryPostActions('PENDING');
     expect(actions.canWithdraw).toBe(true);
-    expect(actions.canDeleteGeneration).toBe(false);
+    expect(actions.canDeleteGeneration).toBe(true);
     expect(actions.canPublish).toBe(false);
   });
 
-  it('PUBLISHED：可下架，不可直接删帖', () => {
+  it('PUBLISHED：可下架，不可直接删帖；作者仍可随时删自己的生成记录', () => {
     const actions = galleryPostActions('PUBLISHED');
     expect(actions.canUnpublish).toBe(true);
     expect(actions.canRemovePost).toBe(false);
-    expect(actions.canDeleteGeneration).toBe(false);
+    expect(actions.canDeleteGeneration).toBe(true);
   });
 
   it('UNPUBLISHED：可重新提交、可删帖', () => {

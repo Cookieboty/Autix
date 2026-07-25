@@ -7,11 +7,14 @@ import {
   Clock3,
   Coins,
   Diamond,
+  Expand,
   Image as ImageIcon,
   Loader2,
   MoreHorizontal,
   Music,
   Plus,
+  SkipBack,
+  SkipForward,
   Sparkles,
   Video,
   Volume2,
@@ -20,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { computeTaskEstimate, type ParamsSchema, type PricingSchema } from '@autix/domain/pricing';
+import type { VideoImageRole } from '@autix/domain/video';
 import { type ModelConfigItem } from '@autix/shared-store';
 import { MagneticButton } from '../../GrowthInteractions';
 import {
@@ -44,6 +48,14 @@ import {
 import { PromptMentionInput, type PromptMentionItem } from './PromptMentionInput';
 import { AudioWaveThumb } from './AudioWaveThumb';
 import { Dialog, DialogContent, DialogTitle } from '../../../ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../ui/dropdown-menu';
 import {
   buildPublicVideoGenerationPayload,
   type PublicVideoGenerationPayload,
@@ -294,7 +306,7 @@ export function VideoSidebar({
     () => restrictVideoDurations(selectedModel?.model, videoParams.durations, paramContext),
     [selectedModel?.model, videoParams.durations, paramContext],
   );
-  /** 画幅比在当前上下文是否真的生效（Seedance/Grok 给了图后由图定比例）。 */
+  /** 画幅比在当前上下文是否真的生效（Grok Imagine 给了图后由图定比例）。 */
   const ratioEffective = videoRatioApplies(selectedModel?.model, paramContext);
   // 约束收窄后当前时长可能不在候选里（例：先选了 4s 再切到 1080p）。留着不动会把一个
   // 上游必拒的值发出去，所以就地夹到最接近的合法值。
@@ -400,6 +412,22 @@ export function VideoSidebar({
     setSelectedVideoRefs((current) => current.filter((ref) => ref.id !== id));
   };
 
+  /**
+   * 更新某张图片的语义位。选 first_frame / last_frame 时，若已有相同角色的其它图片
+   * 就把它降级为 reference_image —— Seedance 的首帧和尾帧各自最多 1 张，同角色不能并存。
+   * reference_image 不用降级：多张参考图是合法的（如 wan-ref 支持 1-9 张）。
+   */
+  const setVideoRefRole = (id: string, role: VideoImageRole) => {
+    setSelectedVideoRefs((current) => {
+      const shouldDedupe = role === 'first_frame' || role === 'last_frame';
+      return current.map((ref) => {
+        if (ref.id === id) return { ...ref, role };
+        if (shouldDedupe && ref.role === role) return { ...ref, role: 'reference_image' as const };
+        return ref;
+      });
+    });
+  };
+
   const handleOptimize = async () => {
     if (optimizing) return;
     const current = prompt.trim();
@@ -419,6 +447,12 @@ export function VideoSidebar({
   const handleGenerate = async () => {
     setGenerateError(null);
     try {
+      // role 缺省时兜底为 reference_image：后端契约明确不允许空 role，UI 未选也要给个合法值。
+      const materials = selectedVideoRefs.map((ref) =>
+        ref.mediaType === 'image' || ref.mediaType === undefined
+          ? { ...ref, role: ref.role ?? ('reference_image' as const) }
+          : ref,
+      );
       await onGenerate(
         buildPublicVideoGenerationPayload({
           prompt,
@@ -429,7 +463,7 @@ export function VideoSidebar({
           resolution,
           ratio,
           generateAudio,
-          materials: selectedVideoRefs,
+          materials,
         }),
       );
     } catch (err) {
@@ -482,48 +516,125 @@ export function VideoSidebar({
             // 固定 56px 小卡，一排 4 个、居中，超出自动换行。
             // 用 grid 而非 flex-wrap：列数写死才能保证"一排 4 个"，flex 会随可用宽度变成 3 或 5 个。
             <span className="relative grid w-full grid-cols-4 justify-items-center gap-2.5 pt-1">
-              {selectedVideoRefs.map((ref) => (
+              {selectedVideoRefs.map((ref) => {
+                const kind = ref.mediaType ?? 'image';
+                const isImage = kind === 'image';
+                const currentRole: VideoImageRole = ref.role ?? 'reference_image';
+                // 该模型允许的图片角色。仅当声明了 first_frame / last_frame 或 reference_image 时才提供对应菜单项。
+                const availableRoles = mediaLimits.imageRoles;
+                const showRoleMenu = isImage && availableRoles.length > 1;
+                const roleBadge =
+                  isImage && currentRole === 'first_frame'
+                    ? t('roleBadgeStart')
+                    : isImage && currentRole === 'last_frame'
+                      ? t('roleBadgeEnd')
+                      : null;
+                return (
                 <span
                   key={ref.id}
                   // 音频没有画面，横向铺开成一条波形，占两格更好认
-                  className={`group/thumb relative h-14 shrink-0 ${ref.mediaType === 'audio' ? 'col-span-2 w-full' : 'w-14'
+                  className={`group/thumb relative h-14 shrink-0 ${kind === 'audio' ? 'col-span-2 w-full' : 'w-14'
                     }`}
                 >
                   {/* 白边框只在悬浮时出现；平时留同宽透明边，避免 hover 瞬间尺寸跳动 */}
                   <span className="block size-full overflow-hidden rounded-[10px] border-2 border-transparent bg-black/35 transition group-hover/thumb:border-white">
-                    {ref.mediaType === 'video' ? (
+                    {kind === 'video' ? (
                       <video src={ref.url} muted playsInline preload="metadata" className="size-full object-cover" />
-                    ) : ref.mediaType === 'audio' ? (
+                    ) : kind === 'audio' ? (
                       <AudioWaveThumb seed={ref.id} bars={34} className="px-2" />
                     ) : (
                       <img src={ref.url} alt={ref.name} className="size-full object-cover" />
                     )}
                   </span>
 
-                  {/* 悬浮：中间「更多操作」。只有图片有——视频/音频在这个尺寸下没什么可看的。
-                      stopPropagation 是必须的：整块上传区是个 button，不拦就会冒上去把资产面板打开。 */}
-                  {(ref.mediaType ?? 'image') === 'image' ? (
+                  {/* first/last frame 角标：让用户一眼看到这张图当前的语义位。
+                      视觉稿是浅色玻璃底 + 深色字，靠 backdrop-blur 与低透明 bg 让画面透出来，
+                      不用重色块把缩略图吃掉；圆角要贴到底部两个角，跟外层 rounded-[10px] 对齐。 */}
+                  {roleBadge ? (
                     <span
-                      role="button"
-                      tabIndex={0}
-                      aria-label={t('assetMore')}
-                      title={t('assetMore')}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setPreviewRef(ref);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          setPreviewRef(ref);
-                        }
-                      }}
-                      className="absolute left-1/2 top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-background/75 text-foreground opacity-0 outline-none backdrop-blur-sm transition group-hover/thumb:opacity-100 focus-visible:opacity-100"
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center rounded-b-[8px] bg-white/85 px-1 py-[3px] text-[10px] font-medium leading-none tracking-normal text-black/85 backdrop-blur-sm"
                     >
-                      <MoreHorizontal className="size-3.5" />
+                      {roleBadge}
                     </span>
+                  ) : null}
+
+                  {/* 悬浮：中间「更多操作」。只有图片有——视频/音频在这个尺寸下没什么可看的。
+                      Trigger 用 asChild 挂到 span，避免嵌到外层 button 里造成嵌套 button。
+                      onClick 里 stopPropagation：整块上传区是个 button，不拦就会冒上去把资产面板打开。 */}
+                  {isImage ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t('assetMore')}
+                          title={t('assetMore')}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.stopPropagation();
+                            }
+                          }}
+                          className="absolute left-1/2 top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-background/75 text-foreground opacity-0 outline-none backdrop-blur-sm transition group-hover/thumb:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                        >
+                          <MoreHorizontal className="size-3.5" />
+                        </span>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="start"
+                        sideOffset={6}
+                        className="min-w-44"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {showRoleMenu ? (
+                          <>
+                            <DropdownMenuLabel>{t('roleUseAsGroup')}</DropdownMenuLabel>
+                            {availableRoles.includes('reference_image') ? (
+                              <DropdownMenuItem
+                                onSelect={() => setVideoRefRole(ref.id, 'reference_image')}
+                              >
+                                <ImageIcon />
+                                <span className="flex-1">{t('roleReference')}</span>
+                                {currentRole === 'reference_image' ? (
+                                  <span className="ml-2 text-growth-accent">✓</span>
+                                ) : null}
+                              </DropdownMenuItem>
+                            ) : null}
+                            {availableRoles.includes('first_frame') ? (
+                              <DropdownMenuItem
+                                onSelect={() => setVideoRefRole(ref.id, 'first_frame')}
+                              >
+                                <SkipBack />
+                                <span className="flex-1">{t('roleStartFrame')}</span>
+                                {currentRole === 'first_frame' ? (
+                                  <span className="ml-2 text-growth-accent">✓</span>
+                                ) : null}
+                              </DropdownMenuItem>
+                            ) : null}
+                            {availableRoles.includes('last_frame') ? (
+                              <DropdownMenuItem
+                                onSelect={() => setVideoRefRole(ref.id, 'last_frame')}
+                              >
+                                <SkipForward />
+                                <span className="flex-1">{t('roleEndFrame')}</span>
+                                {currentRole === 'last_frame' ? (
+                                  <span className="ml-2 text-growth-accent">✓</span>
+                                ) : null}
+                              </DropdownMenuItem>
+                            ) : null}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>{t('roleInteractionsGroup')}</DropdownMenuLabel>
+                          </>
+                        ) : null}
+                        <DropdownMenuItem onSelect={() => setPreviewRef(ref)}>
+                          <Expand />
+                          <span className="flex-1">{t('roleFullScreen')}</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ) : null}
 
                   {/* 悬浮：右上角移除，压在白边框外沿上 */}
@@ -548,7 +659,8 @@ export function VideoSidebar({
                     <X className="size-2.5" strokeWidth={3} />
                   </span>
                 </span>
-              ))}
+                );
+              })}
               {selectedVideoRefs.length < uploadLimit ? (
                 <span className="grid size-14 shrink-0 place-items-center rounded-[10px] border border-dashed border-white/15 bg-white/5 text-foreground/45">
                   <Plus className="size-4" />
