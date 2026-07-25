@@ -24,6 +24,7 @@ import { AssetSelectionBar } from './AssetSelectionBar';
 import { AssetFolderHeading } from './AssetFolderHeading';
 import { AssetEmptyState } from './AssetEmptyState';
 import { publishAssetsToGallery } from './asset-publish';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 
 /**
  * /asset 页面主体：左侧路由式导航 + 右侧密度滑块与日期分组网格。
@@ -44,6 +45,7 @@ export function AssetLibraryView({
   folderId?: string;
 }) {
   const t = useTranslations('publicGrowth.assets');
+  const tCommon = useTranslations('common');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [density, setDensity] = useState<TemplateDensity>('normal');
@@ -54,6 +56,8 @@ export function AssetLibraryView({
   /** 右键菜单里正在提交的那个文件夹（该行显示转圈）。 */
   const [pendingFolderId, setPendingFolderId] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [deleteFolderTarget, setDeleteFolderTarget] = useState<MaterialFolder | null>(null);
+  const [deletingFolder, setDeletingFolder] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS);
@@ -193,19 +197,27 @@ export function AssetLibraryView({
   );
 
   const handleDeleteFolder = useCallback(
-    async (folder: MaterialFolder) => {
-      // eslint-disable-next-line no-alert
-      if (!window.confirm(t('folder.deleteConfirm', { name: folder.name }))) return;
-      try {
-        await deleteFolder(folder.id);
-        // 夹内素材被一并删除（后端行为），且当前视图就是这个夹——回到全部。
-        router.replace('/asset/all');
-      } catch (error) {
-        toast.error(folderErrorMessage(error, t('folder.deleteFailed')));
-      }
+    (folder: MaterialFolder) => {
+      setDeleteFolderTarget(folder);
     },
-    [deleteFolder, router, t],
+    [],
   );
+
+  const confirmDeleteFolder = useCallback(async () => {
+    const folder = deleteFolderTarget;
+    if (!folder) return;
+    setDeletingFolder(true);
+    try {
+      await deleteFolder(folder.id);
+      // 夹内素材被一并删除（后端行为），且当前视图就是这个夹——回到全部。
+      router.replace('/asset/all');
+      setDeleteFolderTarget(null);
+    } catch (error) {
+      toast.error(folderErrorMessage(error, t('folder.deleteFailed')));
+    } finally {
+      setDeletingFolder(false);
+    }
+  }, [deleteFolderTarget, deleteFolder, router, t]);
 
   const handleDownload = useCallback((asset: MaterialAsset) => {
     if (asset.url) window.open(asset.url, '_blank', 'noopener,noreferrer');
@@ -426,6 +438,23 @@ export function AssetLibraryView({
         asset={detail}
         onClose={() => setDetail(null)}
         onDelete={(asset) => void handleDelete([asset.id])}
+      />
+      <ConfirmDialog
+        open={!!deleteFolderTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteFolderTarget(null);
+        }}
+        title={t('folder.delete')}
+        description={
+          deleteFolderTarget
+            ? t('folder.deleteConfirm', { name: deleteFolderTarget.name })
+            : undefined
+        }
+        confirmText={t('folder.delete')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={deletingFolder}
+        onConfirm={confirmDeleteFolder}
       />
     </div>
   );

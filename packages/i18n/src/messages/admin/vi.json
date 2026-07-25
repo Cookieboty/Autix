@@ -1219,6 +1219,9 @@
       "emptyFilteredDescription": "Không có tác phẩm với bộ lọc hiện tại, hãy thử điều chỉnh điều kiện lọc.",
       "emptyPendingDescription": "Hàng chờ gửi bài lên Thư viện đã trống, hãy quay lại sau.",
       "emptyPublishedDescription": "Tác phẩm được duyệt sẽ hiển thị ở đây.",
+      "emptyUnpublishedDescription": "Các tác phẩm được tác giả tự gỡ khỏi thư viện sẽ hiển thị ở đây.",
+      "emptyRemovedDescription": "Các tác phẩm đã xoá sẽ hiển thị ở đây để tra cứu.",
+      "removedBadge": "Đã xoá",
       "untitled": "Tác phẩm chưa đặt tên",
       "approve": "Duyệt",
       "reject": "Từ chối",
@@ -1236,13 +1239,15 @@
       "boostDialogTitle": "Tăng nhiệt tác phẩm",
       "sources": {
         "USER_UPLOAD": "Người dùng tải lên",
-        "FROM_GENERATION": "Kết quả tạo",
+        "FROM_GENERATION": "Do AI tạo",
         "FROM_TEMPLATE": "Tác phẩm từ mẫu",
         "ADMIN_CURATED": "Vận hành tuyển chọn"
       },
       "tabs": {
         "pending": "Chờ duyệt",
-        "published": "Đã duyệt"
+        "published": "Đã duyệt",
+        "unpublished": "Tác giả đã gỡ",
+        "removed": "Đã xoá"
       },
       "filters": {
         "type": "Loại",
@@ -1258,6 +1263,12 @@
       "kind": {
         "image": "Ảnh",
         "video": "Video"
+      },
+      "detail": {
+        "title": "Chi tiết bài gửi",
+        "prompt": "Prompt",
+        "openLarge": "Nhấn để xem toàn màn hình",
+        "noMedia": "Không có media"
       },
       "columns": {
         "work": "Tác phẩm",

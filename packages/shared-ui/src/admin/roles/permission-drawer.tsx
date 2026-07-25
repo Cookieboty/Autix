@@ -14,6 +14,7 @@ import {
   Menu as MenuIcon,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { toast } from 'sonner';
 import {
   useAdminPermissionTreeQuery,
   useAdminRoleMenusQuery,
@@ -212,7 +213,7 @@ export function PermissionDrawer({
       });
       onSuccess();
     } catch (err: any) {
-      alert(err.response?.data?.message || t('permSaveFailed'));
+      toast.error(err.response?.data?.message || t('permSaveFailed'));
     } finally {
       setLoading(false);
     }

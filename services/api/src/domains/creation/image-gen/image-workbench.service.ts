@@ -1,8 +1,7 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { TemplateStatus } from '../../platform/prisma/generated';
 import { ImageWorkbenchRepository } from './image-workbench.repository';
 import { GalleryService } from '../gallery/gallery.service';
-import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 @Injectable()
 export class ImageWorkbenchService {
@@ -74,20 +73,18 @@ export class ImageWorkbenchService {
   /**
    * 删除一条生成记录。
    *
-   * 守卫：该生成若还有活着的广场帖（status <> REMOVED）→ 409，要求用户先处理掉帖子
-   * （PENDING 撤回 / PUBLISHED 先下架再删帖）。gallery_posts.imageGenerationId 没有外键，
-   * DB 不会拦，放行就会留下「本人历史里没了、广场里还挂着」的孤儿帖。
+   * 产品口径：作者随时可删自己的图片。若该生成还挂着活着的广场帖，先级联 removePost
+   * 把帖子归档（走 gallery.helpers 的 assertTransition，author 从任何非 HIDDEN→REMOVED 都合法；
+   * HIDDEN→REMOVED 也允许），再删生成记录 —— 避免留下「历史里没了、广场还挂着」的孤儿帖。
    *
-   * 刻意不做「删生成记录时级联撤帖」：删图这个动作不该隐含一个用户没明确要求的副作用
-   * （把作品从广场撤下）。fail-closed，把决定权交回用户。
+   * removePost 会走 removeAndArchiveTemplate 同事务归档关联模板，
+   * PUBLISHED 作品若已 convertToTemplate，也会一并处理，不会留悬空模板。
    */
   async deleteHistoryItem(userId: string, id: string) {
     const activePosts = await this.galleryService.findActivePostsByGenerationIds(userId, [id]);
     const galleryPost = activePosts.get(id);
     if (galleryPost) {
-      throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.image_gen.already_posted', undefined, {
-        data: { galleryPost: { id: galleryPost.id, status: galleryPost.status } },
-      });
+      await this.galleryService.removePost(userId, galleryPost.id);
     }
 
     const templateId = await this.ensureWorkbenchTemplate(userId);

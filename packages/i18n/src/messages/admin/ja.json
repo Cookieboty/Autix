@@ -1219,6 +1219,9 @@
       "emptyFilteredDescription": "現在の絞り込み条件に該当する作品がありません。条件を調整してみてください。",
       "emptyPendingDescription": "ギャラリーの投稿キューは空です。しばらくしてからご確認ください。",
       "emptyPublishedDescription": "審査を通過した作品がここに表示されます。",
+      "emptyUnpublishedDescription": "作者が自らギャラリーから取り下げた作品がここに表示されます。",
+      "emptyRemovedDescription": "削除済みの作品は監査用にここに表示されます。",
+      "removedBadge": "削除済み",
       "untitled": "無題の作品",
       "approve": "承認",
       "reject": "却下",
@@ -1236,13 +1239,15 @@
       "boostDialogTitle": "作品をブースト",
       "sources": {
         "USER_UPLOAD": "ユーザーアップロード",
-        "FROM_GENERATION": "生成結果",
+        "FROM_GENERATION": "AI 生成",
         "FROM_TEMPLATE": "テンプレート作品",
         "ADMIN_CURATED": "運営精選"
       },
       "tabs": {
         "pending": "審査待ち",
-        "published": "審査済み"
+        "published": "審査済み",
+        "unpublished": "作者が取り下げ",
+        "removed": "削除済み"
       },
       "filters": {
         "type": "タイプ",
@@ -1258,6 +1263,12 @@
       "kind": {
         "image": "画像",
         "video": "動画"
+      },
+      "detail": {
+        "title": "投稿の詳細",
+        "prompt": "Prompt",
+        "openLarge": "クリックで拡大表示",
+        "noMedia": "メディアなし"
       },
       "columns": {
         "work": "作品",

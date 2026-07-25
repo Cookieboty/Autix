@@ -1219,6 +1219,9 @@
       "emptyFilteredDescription": "По текущим фильтрам работ нет. Попробуйте изменить условия фильтрации.",
       "emptyPendingDescription": "Очередь заявок в Галерею пуста. Загляните позже.",
       "emptyPublishedDescription": "Прошедшие модерацию работы будут показаны здесь.",
+      "emptyUnpublishedDescription": "Здесь показаны работы, которые авторы сняли с публикации.",
+      "emptyRemovedDescription": "Удалённые работы отображаются здесь только для аудита.",
+      "removedBadge": "Удалено",
       "untitled": "Работа без названия",
       "approve": "Одобрить",
       "reject": "Отклонить",
@@ -1236,13 +1239,15 @@
       "boostDialogTitle": "Продвинуть работу",
       "sources": {
         "USER_UPLOAD": "Загружено пользователем",
-        "FROM_GENERATION": "Результат генерации",
+        "FROM_GENERATION": "ИИ-генерация",
         "FROM_TEMPLATE": "Работа из шаблона",
         "ADMIN_CURATED": "Выбор редакции"
       },
       "tabs": {
         "pending": "На модерации",
-        "published": "Проверено"
+        "published": "Проверено",
+        "unpublished": "Снято автором",
+        "removed": "Удалено"
       },
       "filters": {
         "type": "Тип",
@@ -1258,6 +1263,12 @@
       "kind": {
         "image": "Изображение",
         "video": "Видео"
+      },
+      "detail": {
+        "title": "Детали заявки",
+        "prompt": "Prompt",
+        "openLarge": "Нажмите, чтобы открыть на весь экран",
+        "noMedia": "Нет медиа"
       },
       "columns": {
         "work": "Работа",

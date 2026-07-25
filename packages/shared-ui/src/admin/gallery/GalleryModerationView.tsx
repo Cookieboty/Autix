@@ -41,12 +41,15 @@ import {
 import {
   Dialog,
   DialogTitle,
+  DialogTrigger,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogBody,
   DialogFooter,
 } from '../../ui/dialog';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../../ui/empty';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { BoostDialog } from '../boosts/BoostDialog';
 import { TemplateImportDialog } from '../TemplateImportDialog';
 
@@ -96,11 +99,16 @@ function formatTime(iso: string | null, locale: string): string {
   }
 }
 
-type GalleryAdminTab = Extract<GalleryAdminStatus, 'PENDING' | 'PUBLISHED'>;
+type GalleryAdminTab = Extract<
+  GalleryAdminStatus,
+  'PENDING' | 'PUBLISHED' | 'UNPUBLISHED' | 'REMOVED'
+>;
 
 const TABS: { value: GalleryAdminTab; labelKey: string }[] = [
   { value: 'PENDING', labelKey: 'gallery.tabs.pending' },
   { value: 'PUBLISHED', labelKey: 'gallery.tabs.published' },
+  { value: 'UNPUBLISHED', labelKey: 'gallery.tabs.unpublished' },
+  { value: 'REMOVED', labelKey: 'gallery.tabs.removed' },
 ];
 
 export function GalleryModerationView() {
@@ -191,6 +199,10 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   const [page, setPage] = useState(1);
   const [rejectTarget, setRejectTarget] = useState<GalleryPostAdminItem | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [hideTarget, setHideTarget] = useState<GalleryPostAdminItem | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<GalleryPostAdminItem | null>(null);
+  const [batchHideOpen, setBatchHideOpen] = useState(false);
+  const [batchRemoveOpen, setBatchRemoveOpen] = useState(false);
   const [boostTarget, setBoostTarget] = useState<GalleryPostAdminItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
   const [batchRejectOpen, setBatchRejectOpen] = useState(false);
@@ -244,6 +256,8 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(page * PAGE_SIZE, total);
   const isPending = status === 'PENDING';
+  const isUnpublished = status === 'UNPUBLISHED';
+  const isRemoved = status === 'REMOVED';
 
   const selectedCount = selectedIds.size;
   const allOnPageSelected = items.length > 0 && items.every((i) => selectedIds.has(i.id));
@@ -268,18 +282,11 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   };
 
   const handleHide = (item: GalleryPostAdminItem) => {
-    if (!window.confirm(t('gallery.hideConfirm', { title: item.title ?? item.id }))) return;
-    hide.mutate(item.id);
+    setHideTarget(item);
   };
 
   const handleRemove = (item: GalleryPostAdminItem) => {
-    if (
-      !window.confirm(
-        t('gallery.removeConfirm', { title: item.title ?? item.id }),
-      )
-    )
-      return;
-    remove.mutate(item.id);
+    setRemoveTarget(item);
   };
 
   const runBatch = (action: 'approve' | 'reject' | 'hide' | 'remove', reason?: string) => {
@@ -310,13 +317,13 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
   };
 
   const handleBatchHide = () => {
-    if (!window.confirm(t('gallery.batch.hideConfirm', { count: selectedCount }))) return;
-    runBatch('hide');
+    if (selectedCount === 0) return;
+    setBatchHideOpen(true);
   };
 
   const handleBatchRemove = () => {
-    if (!window.confirm(t('gallery.batch.removeConfirm', { count: selectedCount }))) return;
-    runBatch('remove');
+    if (selectedCount === 0) return;
+    setBatchRemoveOpen(true);
   };
 
   return (
@@ -415,8 +422,14 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               ? t('gallery.rangeWithTotal', { total, start: rangeStart, end: rangeEnd })
               : t('gallery.totalOnly', { total })}
           </span>
-          <Button variant="ghost" size="sm" className="cursor-pointer" onClick={() => refetch()}>
-            <RefreshCw className="h-3.5 w-3.5" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer"
+            disabled={loading}
+            onClick={() => refetch()}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             {t('common.refresh')}
           </Button>
         </div>
@@ -468,6 +481,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               size="sm"
               disabled={batch.isPending}
               className="cursor-pointer"
+              hidden={isUnpublished || isRemoved}
               onClick={handleBatchHide}
             >
               <EyeOff className="mr-1 h-3.5 w-3.5" />
@@ -478,6 +492,7 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
               size="sm"
               disabled={batch.isPending}
               className="cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+              hidden={isRemoved}
               onClick={handleBatchRemove}
             >
               <Trash2 className="mr-1 h-3.5 w-3.5" />
@@ -529,7 +544,11 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                   ? t('gallery.emptyFilteredDescription')
                   : isPending
                     ? t('gallery.emptyPendingDescription')
-                    : t('gallery.emptyPublishedDescription')}
+                    : isUnpublished
+                      ? t('gallery.emptyUnpublishedDescription')
+                      : isRemoved
+                        ? t('gallery.emptyRemovedDescription')
+                        : t('gallery.emptyPublishedDescription')}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -573,27 +592,168 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        {thumb ? (
-                          <img
-                            src={thumb}
-                            alt={item.title ?? ''}
-                            className="h-12 w-12 shrink-0 rounded-md object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted">
-                            <ImageOff className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-medium text-foreground">
-                            {item.title || t('gallery.untitled')}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {item.kind === 'IMAGE' ? t('gallery.kind.image') : t('gallery.kind.video')}
-                          </div>
-                        </div>
-                      </div>
+                      {/* 首列：把缩略图放大到 ~96px，缩略图 + 标题合并成同一个 Dialog trigger。
+                          点击后打开单一大 Modal（左媒体 + 右信息/动作），不再嵌套 Sheet+Dialog。 */}
+                      {(() => {
+                        const mediaUrl = item.mediaUrls[0] ?? item.coverImage ?? null;
+                        const isVideo = item.kind === 'VIDEO';
+                        const thumbClass = isVideo
+                          ? 'h-24 w-40 shrink-0 rounded-md object-cover'
+                          : 'h-24 w-24 shrink-0 rounded-md object-cover';
+                        const thumbFallbackClass = isVideo
+                          ? 'flex h-24 w-40 shrink-0 items-center justify-center rounded-md bg-muted'
+                          : 'flex h-24 w-24 shrink-0 items-center justify-center rounded-md bg-muted';
+                        return (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <button
+                                type="button"
+                                className="group flex w-full items-center gap-3 text-left focus:outline-none"
+                                title={t('gallery.detail.openLarge')}
+                              >
+                                {thumb ? (
+                                  <img
+                                    src={thumb}
+                                    alt={item.title ?? ''}
+                                    className={`${thumbClass} cursor-zoom-in transition-transform group-hover:scale-[1.02] group-focus-visible:ring-2 group-focus-visible:ring-primary`}
+                                  />
+                                ) : (
+                                  <div className={thumbFallbackClass}>
+                                    <ImageOff className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <div
+                                    className="line-clamp-2 text-sm font-medium text-foreground transition-colors group-hover:text-primary"
+                                    title={item.title ?? undefined}
+                                  >
+                                    {item.title || t('gallery.untitled')}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {isVideo ? t('gallery.kind.video') : t('gallery.kind.image')}
+                                  </div>
+                                </div>
+                              </button>
+                            </DialogTrigger>
+                            <DialogContent
+                              variant="fullscreen"
+                              className="flex flex-col bg-background p-0 md:flex-row"
+                            >
+                              <DialogTitle className="sr-only">
+                                {item.title || t('gallery.detail.title')}
+                              </DialogTitle>
+                              {/* 左：媒体大预览。占主视觉，居中黑底，object-contain 不裁切。 */}
+                              <div className="flex flex-1 items-center justify-center overflow-hidden bg-black">
+                                {mediaUrl ? (
+                                  isVideo ? (
+                                    <video
+                                      src={mediaUrl}
+                                      poster={item.coverImage ?? undefined}
+                                      controls
+                                      autoPlay
+                                      playsInline
+                                      className="max-h-[95vh] max-w-full"
+                                    />
+                                  ) : (
+                                    <img
+                                      src={mediaUrl}
+                                      alt={item.title ?? ''}
+                                      className="max-h-[95vh] max-w-full object-contain"
+                                    />
+                                  )
+                                ) : (
+                                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                    <ImageOff className="h-8 w-8" />
+                                    <span className="text-sm">{t('gallery.detail.noMedia')}</span>
+                                  </div>
+                                )}
+                              </div>
+                              {/* 右：信息 + 动作。宽度固定，内容可滚，底部按钮固定。 */}
+                              <aside className="flex w-full flex-col border-t bg-background md:w-96 md:border-l md:border-t-0">
+                                <header className="border-b px-5 py-4">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    {t('gallery.detail.title')}
+                                  </div>
+                                  <div className="mt-1 text-sm text-muted-foreground">
+                                    {isVideo ? t('gallery.kind.video') : t('gallery.kind.image')}
+                                  </div>
+                                </header>
+                                <div className="flex-1 overflow-y-auto px-5 py-4">
+                                  <dl className="space-y-4 text-sm">
+                                    <div>
+                                      <dt className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        {t('gallery.detail.prompt')}
+                                      </dt>
+                                      <dd className="whitespace-pre-wrap break-words rounded-md bg-muted/40 p-3 leading-relaxed text-foreground">
+                                        {item.title || t('gallery.untitled')}
+                                      </dd>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                      <div>
+                                        <dt className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                          {t('gallery.columns.author')}
+                                        </dt>
+                                        <dd className="text-foreground">
+                                          {item.author?.nickname ?? '—'}
+                                        </dd>
+                                      </div>
+                                      <div>
+                                        <dt className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                          {t('gallery.columns.source')}
+                                        </dt>
+                                        <dd className="text-foreground">
+                                          {t(SOURCE_LABEL_KEY[item.sourceType])}
+                                        </dd>
+                                      </div>
+                                      <div className="col-span-2">
+                                        <dt className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                          {isPending
+                                            ? t('gallery.columns.submittedAt')
+                                            : t('gallery.columns.publishedAt')}
+                                        </dt>
+                                        <dd className="text-foreground">
+                                          {formatTime(
+                                            isPending ? item.createdAt : item.publishedAt,
+                                            locale,
+                                          )}
+                                        </dd>
+                                      </div>
+                                    </div>
+                                  </dl>
+                                </div>
+                                {isPending ? (
+                                  <div className="grid grid-cols-2 gap-2 border-t px-5 py-4">
+                                    <DialogClose asChild>
+                                      <Button
+                                        variant="destructive"
+                                        className="cursor-pointer"
+                                        disabled={rowBusy}
+                                        onClick={() => {
+                                          setRejectTarget(item);
+                                          setRejectReason('');
+                                        }}
+                                      >
+                                        <XCircle className="mr-1 h-4 w-4" />
+                                        {t('gallery.reject')}
+                                      </Button>
+                                    </DialogClose>
+                                    <DialogClose asChild>
+                                      <Button
+                                        className="cursor-pointer"
+                                        disabled={rowBusy}
+                                        onClick={() => approve.mutate(item.id)}
+                                      >
+                                        <CheckCircle className="mr-1 h-4 w-4" />
+                                        {t('gallery.approve')}
+                                      </Button>
+                                    </DialogClose>
+                                  </div>
+                                ) : null}
+                              </aside>
+                            </DialogContent>
+                          </Dialog>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm text-foreground">
                       {item.author?.nickname ?? '—'}
@@ -636,37 +796,47 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
                             </Button>
                           </>
                         ) : (
+                          !isUnpublished && !isRemoved && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={rowBusy}
+                              className="h-8 px-2 cursor-pointer hover:bg-orange-500/10 hover:text-orange-500"
+                              onClick={() => setBoostTarget(item)}
+                            >
+                              <Flame className="h-3.5 w-3.5 mr-1" />
+                              {t('gallery.boost')}
+                            </Button>
+                          )
+                        )}
+                        {!isUnpublished && !isRemoved && (
                           <Button
                             variant="ghost"
                             size="sm"
                             disabled={rowBusy}
-                            className="h-8 px-2 cursor-pointer hover:bg-orange-500/10 hover:text-orange-500"
-                            onClick={() => setBoostTarget(item)}
+                            className="h-8 px-2 cursor-pointer"
+                            onClick={() => handleHide(item)}
                           >
-                            <Flame className="h-3.5 w-3.5 mr-1" />
-                            {t('gallery.boost')}
+                            <EyeOff className="h-3.5 w-3.5 mr-1" />
+                            {isPending ? t('gallery.unpublish') : t('gallery.hide')}
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={rowBusy}
-                          className="h-8 px-2 cursor-pointer"
-                          onClick={() => handleHide(item)}
-                        >
-                          <EyeOff className="h-3.5 w-3.5 mr-1" />
-                          {isPending ? t('gallery.unpublish') : t('gallery.hide')}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={rowBusy}
-                          className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleRemove(item)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-1" />
-                          {t('common.remove')}
-                        </Button>
+                        {isRemoved ? (
+                          <Badge variant="secondary" className="text-muted-foreground">
+                            {t('gallery.removedBadge')}
+                          </Badge>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={rowBusy}
+                            className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleRemove(item)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            {t('common.remove')}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -801,6 +971,76 @@ function GalleryPanel({ status }: { status: GalleryAdminTab }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!hideTarget}
+        onOpenChange={(open) => {
+          if (!open) setHideTarget(null);
+        }}
+        title={t('gallery.hide')}
+        description={t('gallery.hideConfirm', {
+          title: hideTarget?.title ?? hideTarget?.id ?? '',
+        })}
+        confirmText={t('gallery.hide')}
+        cancelText={t('common.cancel')}
+        destructive
+        loading={hide.isPending}
+        onConfirm={() => {
+          if (!hideTarget) return;
+          hide.mutate(hideTarget.id);
+          setHideTarget(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!removeTarget}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTarget(null);
+        }}
+        title={t('common.remove')}
+        description={t('gallery.removeConfirm', {
+          title: removeTarget?.title ?? removeTarget?.id ?? '',
+        })}
+        confirmText={t('common.remove')}
+        cancelText={t('common.cancel')}
+        destructive
+        loading={remove.isPending}
+        onConfirm={() => {
+          if (!removeTarget) return;
+          remove.mutate(removeTarget.id);
+          setRemoveTarget(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={batchHideOpen}
+        onOpenChange={setBatchHideOpen}
+        title={t('gallery.batch.hide')}
+        description={t('gallery.batch.hideConfirm', { count: selectedCount })}
+        confirmText={t('gallery.batch.hide')}
+        cancelText={t('common.cancel')}
+        destructive
+        loading={batch.isPending}
+        onConfirm={() => {
+          setBatchHideOpen(false);
+          runBatch('hide');
+        }}
+      />
+
+      <ConfirmDialog
+        open={batchRemoveOpen}
+        onOpenChange={setBatchRemoveOpen}
+        title={t('gallery.batch.remove')}
+        description={t('gallery.batch.removeConfirm', { count: selectedCount })}
+        confirmText={t('gallery.batch.remove')}
+        cancelText={t('common.cancel')}
+        destructive
+        loading={batch.isPending}
+        onConfirm={() => {
+          setBatchRemoveOpen(false);
+          runBatch('remove');
+        }}
+      />
 
       <BoostDialog
         open={!!boostTarget}

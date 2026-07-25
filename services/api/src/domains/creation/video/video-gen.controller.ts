@@ -77,6 +77,15 @@ export class VideoGenController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteHistory(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const userId = getCurrentUserId(user);
+    // 产品口径：作者随时可删自己的视频。若该生成还挂着活广场帖，先级联 removePost 归档帖子，
+    // 再删生成 —— 避免出现「历史里没了、广场还挂着」的孤儿帖。gallery.removePost 走
+    // assertTransition，author 从任何非 HIDDEN→REMOVED 都合法（HIDDEN→REMOVED 也允许），
+    // 也会同事务归档关联模板。
+    const activePosts = await this.galleryService.findActivePostsByVideoGenerationIds(userId, [id]);
+    const galleryPost = activePosts.get(id);
+    if (galleryPost) {
+      await this.galleryService.removePost(userId, galleryPost.id);
+    }
     const r = await this.repository.deleteOwnedDirectGeneration({ id, userId });
     if (r === 'not_found') throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.record_not_found');
     if (r === 'not_terminal') throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.video.task_in_progress_undeletable');

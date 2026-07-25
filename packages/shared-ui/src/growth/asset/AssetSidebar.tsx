@@ -29,6 +29,7 @@ import { ASSET_MENU_ITEM_CLASS, CursorMenu, useCursorMenu } from './CursorMenu';
 import { FolderGlyph } from './FolderGlyph';
 import { Link, usePathname, useRouter } from '../../navigation';
 import { DropdownMenuItem } from '../../ui/dropdown-menu';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 
 /**
  * /asset 左侧导航。
@@ -254,6 +255,7 @@ export function AssetSidebar({
   onAssetsInvalidated?: () => void;
 }) {
   const t = useTranslations('publicGrowth.assets');
+  const tCommon = useTranslations('common');
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -266,6 +268,8 @@ export function AssetSidebar({
   const deleteFolder = useMaterialFolderStore((s) => s.deleteFolder);
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<MaterialFolder | null>(null);
+  const [deleting, setDeleting] = useState(false);
   /** 正在就地重命名的文件夹 id（同一时刻只允许一个）。 */
   const [renamingId, setRenamingId] = useState<string | null>(null);
 
@@ -309,9 +313,14 @@ export function AssetSidebar({
     }
   };
 
-  const handleDelete = async (folder: MaterialFolder) => {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(t('folder.deleteConfirm', { name: folder.name }))) return;
+  const handleDelete = (folder: MaterialFolder) => {
+    setDeleteTarget(folder);
+  };
+
+  const confirmDelete = async () => {
+    const folder = deleteTarget;
+    if (!folder) return;
+    setDeleting(true);
     try {
       await deleteFolder(folder.id);
       // 唯一需要通知父级的分支：后端删文件夹会连夹内素材一起删，右侧列表与角标都已失真。
@@ -319,16 +328,20 @@ export function AssetSidebar({
       // 删的正是当前正在看的那个夹 → 路由已经指向不存在的资源，必须撤离，
       // 否则用户停在一个空白的死 URL 上（刷新也复现）。
       if (pathname === `/asset/folder/${folder.id}`) router.replace('/asset/all');
+      setDeleteTarget(null);
     } catch (error) {
       toast.error(folderErrorMessage(error, t('folder.deleteFailed')));
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
-    <aside
-      className="flex h-full shrink-0 flex-col gap-4 overflow-y-auto py-4"
-      style={{ width: SIDEBAR_WIDTH }}
-    >
+    <>
+      <aside
+        className="flex h-full shrink-0 flex-col gap-4 overflow-y-auto py-4"
+        style={{ width: SIDEBAR_WIDTH }}
+      >
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-foreground/35" />
         <input
@@ -421,5 +434,19 @@ export function AssetSidebar({
           )}
       </div>
     </aside>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t('folder.delete')}
+        description={deleteTarget ? t('folder.deleteConfirm', { name: deleteTarget.name }) : undefined}
+        confirmText={t('folder.delete')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={deleting}
+        onConfirm={confirmDelete}
+      />
+    </>
   );
 }

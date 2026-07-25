@@ -10,6 +10,7 @@ function makeService(overrides: {
   activePosts?: Map<string, { id: string; status: string; rejectReason?: string | null }>;
   onFindActivePosts?: () => void;
   onDelete?: () => void;
+  onRemovePost?: (postId: string) => void;
 }) {
   const generations = overrides.generations ?? [];
 
@@ -39,6 +40,9 @@ function makeService(overrides: {
     findActivePostsByGenerationIds: async () => {
       overrides.onFindActivePosts?.();
       return overrides.activePosts ?? new Map();
+    },
+    removePost: async (_authorId: string, postId: string) => {
+      overrides.onRemovePost?.(postId);
     },
   };
 
@@ -84,33 +88,16 @@ describe('ImageWorkbenchService.getHistory —— 广场提交态', () => {
   });
 });
 
-describe('ImageWorkbenchService.deleteHistoryItem —— 活帖守卫', () => {
-  it('该生成有活帖时抛 409，并带上帖子状态', async () => {
-    const service = makeService({
-      generations: [{ id: 'gen-1', generatedImages: ['https://cdn/a.png'] }],
-      activePosts: new Map([['gen-1', { id: 'post-1', status: 'PUBLISHED', rejectReason: null }]]),
-    });
-
-    let caught: unknown;
-    try {
-      await service.deleteHistoryItem('user-1', 'gen-1');
-    } catch (err) {
-      caught = err;
-    }
-
-    expect((caught as { status: number }).status).toBe(409);
-    expect((caught as { i18nKey: string }).i18nKey).toBe('creation.image_gen.already_posted');
-    expect(
-      (caught as { response: { data: { galleryPost: { status: string } } } }).response.data
-        .galleryPost.status,
-    ).toBe('PUBLISHED');
-  });
-
-  it('没有活帖时正常删除', async () => {
+describe('ImageWorkbenchService.deleteHistoryItem —— 作者随时可删，若有活帖则级联下架', () => {
+  it('该生成有活帖时先 removePost 再删生成', async () => {
+    let removedPostId: string | undefined;
     let deleted = false;
     const service = makeService({
       generations: [{ id: 'gen-1', generatedImages: ['https://cdn/a.png'] }],
-      activePosts: new Map(),
+      activePosts: new Map([['gen-1', { id: 'post-1', status: 'PUBLISHED', rejectReason: null }]]),
+      onRemovePost: (id) => {
+        removedPostId = id;
+      },
       onDelete: () => {
         deleted = true;
       },
@@ -118,6 +105,27 @@ describe('ImageWorkbenchService.deleteHistoryItem —— 活帖守卫', () => {
 
     await service.deleteHistoryItem('user-1', 'gen-1');
 
+    expect(removedPostId).toBe('post-1');
+    expect(deleted).toBe(true);
+  });
+
+  it('没有活帖时不调用 removePost，直接删生成', async () => {
+    let removeCalled = false;
+    let deleted = false;
+    const service = makeService({
+      generations: [{ id: 'gen-1', generatedImages: ['https://cdn/a.png'] }],
+      activePosts: new Map(),
+      onRemovePost: () => {
+        removeCalled = true;
+      },
+      onDelete: () => {
+        deleted = true;
+      },
+    });
+
+    await service.deleteHistoryItem('user-1', 'gen-1');
+
+    expect(removeCalled).toBe(false);
     expect(deleted).toBe(true);
   });
 });

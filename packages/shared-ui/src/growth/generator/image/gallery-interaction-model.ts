@@ -66,7 +66,10 @@ export interface GalleryPostActions {
    * 再删是本组件的 UX 选择（让「从广场撤下」成为一个明确的、可反悔的独立动作），不是服务端强制。
    */
   canRemovePost: boolean;
-  /** 删除生成记录本身。只要还有活帖，服务端一律 409。 */
+  /**
+   * 删除生成记录本身。产品口径：作者随时可删自己的图/视频，若存在活帖则由后端级联下架
+   * （gallery.removePost 走 assertTransition 校验角色）。因此这里所有非 REMOVED 状态一律为 true。
+   */
   canDeleteGeneration: boolean;
 }
 
@@ -84,15 +87,18 @@ const NO_POST: GalleryPostActions = {
  *
  * HIDDEN 是管理员处罚下架：后端 republish 只接受 UNPUBLISHED，对 HIDDEN 会 400。
  * 因此这里**绝不**给出 canRepublish —— 前端不得诱导用户去撞一个必然失败的按钮。
+ *
+ * canDeleteGeneration：作者随时可删自己的生成记录，即便挂着活帖也 OK（后端会级联下架），
+ * 不再像旧口径那样在有活帖时禁用删除。
  */
 export function galleryPostActions(status?: GalleryPostStatus): GalleryPostActions {
   if (!status || status === 'REMOVED') return NO_POST;
 
   switch (status) {
     case 'PENDING':
-      return { ...NO_POST, canPublish: false, canWithdraw: true, canDeleteGeneration: false };
+      return { ...NO_POST, canPublish: false, canWithdraw: true };
     case 'PUBLISHED':
-      return { ...NO_POST, canPublish: false, canUnpublish: true, canDeleteGeneration: false };
+      return { ...NO_POST, canPublish: false, canUnpublish: true };
     case 'REJECTED':
     case 'UNPUBLISHED':
       return {
@@ -100,18 +106,16 @@ export function galleryPostActions(status?: GalleryPostStatus): GalleryPostActio
         canPublish: false,
         canRepublish: true,
         canRemovePost: true,
-        canDeleteGeneration: false,
       };
     case 'HIDDEN':
       return {
         ...NO_POST,
         canPublish: false,
         canRemovePost: true,
-        canDeleteGeneration: false,
       };
     default:
-      // DRAFT：本页不产出草稿，兜底按「有活帖」处理，不放开删除。
-      return { ...NO_POST, canPublish: false, canDeleteGeneration: false };
+      // DRAFT：本页不产出草稿，兜底按「有活帖」处理其它动作，但不禁用删除。
+      return { ...NO_POST, canPublish: false };
   }
 }
 

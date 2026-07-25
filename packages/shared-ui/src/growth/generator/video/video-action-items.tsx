@@ -120,12 +120,12 @@ export function buildVideoActionMenuItems({
     });
   }
 
-  // 「下架」对用户是一件事，后端是两条出边（PENDING→withdraw，PUBLISHED→unpublish），
-  // 由帖子当前状态决定打哪个接口 —— 与图片侧同一处理。
+  // 「下架」按当前状态分流为两种文案：审核中→撤销审核（withdraw，进 REMOVED 终态）；
+  // 已发布→从广场下架（unpublish，进 UNPUBLISHED 可 republish）。与图片侧同一处理。
   if (actions.canWithdraw || actions.canUnpublish) {
     items.push({
       key: 'unpublish',
-      label: t('unpublishPost'),
+      label: actions.canWithdraw ? t('withdrawSubmission') : t('unpublishPost'),
       icon: <EyeOff className="size-4" />,
       destructive: true,
       disabled: posting,
@@ -168,7 +168,7 @@ export function buildVideoActionMenuItems({
     icon: <Trash2 className="size-4" />,
     destructive: true,
     separatorBefore: true,
-    // 还挂着活帖就删不掉（服务端 409）——禁用而不是让用户白点一次
+    // 作者随时可删自己的生成记录；若存在活帖，后端会级联 removePost 再删（见 video-gen.controller）
     disabled: !deletable,
     onSelect: onDelete,
   });

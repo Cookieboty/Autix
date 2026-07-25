@@ -51,6 +51,7 @@ import {
   DialogFooter,
 } from '../../ui/dialog';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../../ui/empty';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { AdminPaginationFooter, useClientPagination } from '../layout';
 
 const DEFAULT_PLACEMENT = 'home_hero';
@@ -137,9 +138,11 @@ export function FeaturedSlotsAdminView({
   placement = DEFAULT_PLACEMENT,
 }: FeaturedSlotsAdminViewProps) {
   const t = useTranslations('adminOperations');
+  const tCommon = useTranslations('common');
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; id?: string; form: SlotForm } | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = useState<FeaturedSlot | null>(null);
   const [candidateQuery, setCandidateQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -201,9 +204,7 @@ export function FeaturedSlotsAdminView({
   };
 
   const handleDelete = (slot: FeaturedSlot) => {
-    const label = slot.overrideTitle ?? slot.resourceId ?? slot.id;
-    if (!window.confirm(t('featured.deleteConfirm', { label }))) return;
-    remove.mutate(slot.id);
+    setDeleteTarget(slot);
   };
 
   const handleMove = (index: number, direction: -1 | 1) => {
@@ -561,6 +562,29 @@ export function FeaturedSlotsAdminView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t('common.delete')}
+        description={
+          deleteTarget
+            ? t('featured.deleteConfirm', {
+                label: deleteTarget.overrideTitle ?? deleteTarget.resourceId ?? deleteTarget.id,
+              })
+            : undefined
+        }
+        confirmText={t('common.delete')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={remove.isPending}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          remove.mutate(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

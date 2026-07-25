@@ -20,6 +20,7 @@ import { DeleteGenerationsDialog } from './DeleteGenerationsDialog';
 import { ImageActionMenu } from './ImageActionMenu';
 import { buildImageActionMenuItems } from './image-action-items';
 import { resolveGalleryShareUrl } from './gallery-share-link';
+import { ModerationNotice } from './ModerationNotice';
 import { useLocalizePath } from '../../../navigation';
 import { DetailPanelButton, MediaDetailShell, type MediaDetailRow } from '../../detail/MediaDetailShell';
 
@@ -149,6 +150,11 @@ export function PublicImageDetailDialog({
         author={{ name: authorName, avatarUrl: user?.avatar }}
         authorSubtitle={t('author')}
         prompt={prompt}
+        moderationSlot={
+          post?.status ? (
+            <ModerationNotice status={post.status} rejectReason={post.rejectReason} t={t} />
+          ) : null
+        }
         details={details}
         mediaOverlay={
           // 多图生成才有的候选缩略图（单图时不渲染）

@@ -12,6 +12,7 @@ import {
 } from '../../ui';
 import { AdminPaginationFooter } from '../layout';
 import { formatCurrency } from '../../format';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { useTranslations } from 'next-intl';
 import {
   useAdminMembershipOrdersQuery,
@@ -50,6 +51,7 @@ export function MembershipOrdersView() {
   const [filterType, setFilterType] = useState('');
   const [fulfilling, setFulfilling] = useState<string | null>(null);
   const [refunding, setRefunding] = useState<string | null>(null);
+  const [refundTarget, setRefundTarget] = useState<Order | null>(null);
 
   const fulfillOrderMutation = useFulfillAdminMembershipOrderMutation();
   const refundOrderMutation = useRefundAdminMembershipOrderMutation();
@@ -107,10 +109,15 @@ export function MembershipOrdersView() {
     }
   };
 
-  const handleRefund = async (order: Order) => {
-    const ok = window.confirm(t('refundConfirm'));
-    if (!ok) return;
+  const handleRefund = (order: Order) => {
+    setRefundTarget(order);
+  };
+
+  const confirmRefund = async () => {
+    const order = refundTarget;
+    if (!order) return;
     const adminOrder = order as OrderWithAdminFields;
+    setRefundTarget(null);
     setRefunding(order.id);
     try {
       await refundOrderMutation.mutateAsync({
@@ -263,6 +270,19 @@ export function MembershipOrdersView() {
       </div>
 
       <AdminPaginationFooter page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+      <ConfirmDialog
+        open={!!refundTarget}
+        onOpenChange={(open) => {
+          if (!open) setRefundTarget(null);
+        }}
+        title={t('refund')}
+        description={t('refundConfirm')}
+        confirmText={t('refund')}
+        cancelText={tCommon('cancel')}
+        destructive
+        loading={refundOrderMutation.isPending}
+        onConfirm={() => void confirmRefund()}
+      />
     </div>
   );
 }

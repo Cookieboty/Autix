@@ -1219,6 +1219,9 @@
       "emptyFilteredDescription": "No works match the current filters. Try adjusting them.",
       "emptyPendingDescription": "The Gallery submission queue is empty. Check back later.",
       "emptyPublishedDescription": "Approved works appear here.",
+      "emptyUnpublishedDescription": "Works that authors unpublished from the gallery appear here.",
+      "emptyRemovedDescription": "Deleted works appear here for audit trail only.",
+      "removedBadge": "Deleted",
       "untitled": "Untitled work",
       "approve": "Approve",
       "reject": "Reject",
@@ -1236,13 +1239,15 @@
       "boostDialogTitle": "Boost work",
       "sources": {
         "USER_UPLOAD": "User upload",
-        "FROM_GENERATION": "Generation result",
+        "FROM_GENERATION": "AI generation",
         "FROM_TEMPLATE": "Template work",
         "ADMIN_CURATED": "Editorial pick"
       },
       "tabs": {
         "pending": "Pending",
-        "published": "Reviewed"
+        "published": "Reviewed",
+        "unpublished": "Author unpublished",
+        "removed": "Deleted"
       },
       "filters": {
         "type": "Type",
@@ -1258,6 +1263,12 @@
       "kind": {
         "image": "Image",
         "video": "Video"
+      },
+      "detail": {
+        "title": "Submission detail",
+        "prompt": "Prompt",
+        "openLarge": "Click to view fullscreen",
+        "noMedia": "No media"
       },
       "columns": {
         "work": "Work",

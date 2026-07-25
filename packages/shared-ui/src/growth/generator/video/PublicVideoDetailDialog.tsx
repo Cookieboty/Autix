@@ -19,6 +19,7 @@ import { galleryPostActions } from '../image/gallery-interaction-model';
 import { downloadImageFile, formatGenerationTime } from '../image/image-history-media';
 import { resolveGalleryShareUrl } from '../image/gallery-share-link';
 import { DeleteGenerationsDialog } from '../image/DeleteGenerationsDialog';
+import { ModerationNotice } from '../image/ModerationNotice';
 import { useLocalizePath } from '../../../navigation';
 import { buildVideoActionMenuItems } from './video-action-items';
 import { publishVideosToGallery, videoCover } from './video-history-model';
@@ -141,6 +142,11 @@ export function PublicVideoDetailDialog({
         author={{ name: authorName, avatarUrl: user?.avatar }}
         authorSubtitle={t('author')}
         prompt={item.prompt}
+        moderationSlot={
+          post?.status ? (
+            <ModerationNotice status={post.status} rejectReason={post.rejectReason} t={t} />
+          ) : null
+        }
         details={details}
         ariaLabel={t('videoDetail')}
         footer={

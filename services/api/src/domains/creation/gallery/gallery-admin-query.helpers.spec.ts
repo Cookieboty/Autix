@@ -74,6 +74,13 @@ describe('buildAdminGalleryWhere', () => {
     expect(where.status).toBe('PENDING');
   });
 
+  it('管理端「已删除」快捷筛选：显式 status=REMOVED 时精确匹配（默认排除、显式放行）', () => {
+    const q = normalizeAdminGalleryQuery({ status: 'REMOVED' });
+    expect(q.status).toBe('REMOVED');
+    const where = buildAdminGalleryWhere(q, null);
+    expect(where.status).toBe('REMOVED');
+  });
+
   it('kind/category/sourceType/search 拼进 where', () => {
     const where = buildAdminGalleryWhere(
       { ...base, kind: 'IMAGE', category: 'Art', sourceType: 'USER_UPLOAD', search: 'cat' },

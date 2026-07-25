@@ -1219,6 +1219,9 @@
       "emptyFilteredDescription": "目前篩選下沒有作品，試試調整篩選條件。",
       "emptyPendingDescription": "廣場投稿佇列已清空，稍後再來看看吧。",
       "emptyPublishedDescription": "通過審核的作品會展示在這裡。",
+      "emptyUnpublishedDescription": "作者主動從廣場下架的作品會展示在這裡。",
+      "emptyRemovedDescription": "已刪除的作品會展示在這裡，僅供追溯查看。",
+      "removedBadge": "已刪除",
       "untitled": "未命名作品",
       "approve": "通過",
       "reject": "駁回",
@@ -1236,13 +1239,15 @@
       "boostDialogTitle": "加熱作品",
       "sources": {
         "USER_UPLOAD": "使用者上傳",
-        "FROM_GENERATION": "生成結果",
+        "FROM_GENERATION": "AI 生成",
         "FROM_TEMPLATE": "範本作品",
         "ADMIN_CURATED": "營運精選"
       },
       "tabs": {
         "pending": "待審核",
-        "published": "已審核"
+        "published": "已審核",
+        "unpublished": "作者已下架",
+        "removed": "已刪除"
       },
       "filters": {
         "type": "類型",
@@ -1258,6 +1263,12 @@
       "kind": {
         "image": "圖片",
         "video": "影片"
+      },
+      "detail": {
+        "title": "作品詳情",
+        "prompt": "Prompt",
+        "openLarge": "點擊放大查看",
+        "noMedia": "暫無媒體"
       },
       "columns": {
         "work": "作品",

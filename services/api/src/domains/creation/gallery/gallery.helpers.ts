@@ -245,7 +245,15 @@ export function assertInStationMediaUrls(
 // 与 GalleryMediaMigrationService 共用同一常量，避免两处静默错位（worker 改了阈值、筛选却按旧值找）。
 export const GALLERY_MEDIA_MIGRATION_MAX_ATTEMPTS = 3;
 
-const ADMIN_STATUSES: GalleryStatus[] = ['PENDING', 'PUBLISHED', 'HIDDEN', 'REJECTED', 'UNPUBLISHED'];
+const ADMIN_STATUSES: GalleryStatus[] = [
+  'PENDING',
+  'PUBLISHED',
+  'HIDDEN',
+  'REJECTED',
+  'UNPUBLISHED',
+  // 管理端「已删除」快捷筛选：默认（不传 status）会排除 REMOVED，只有显式传 REMOVED 才展示。
+  'REMOVED',
+];
 const ADMIN_KINDS: GalleryKind[] = ['IMAGE', 'VIDEO'];
 const ADMIN_SOURCE_TYPES: GallerySource[] = [
   'USER_UPLOAD',
