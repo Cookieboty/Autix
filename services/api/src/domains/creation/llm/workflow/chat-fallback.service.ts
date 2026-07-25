@@ -87,7 +87,7 @@ export class ChatFallbackService {
 
   private async resolveDefaultModelId(userId: string): Promise<string> {
     const m = await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, userId);
-    if (!m) throw new Error('未配置默认模型');
+    if (!m) throw new Error('No default model configured');
     return m.id;
   }
 

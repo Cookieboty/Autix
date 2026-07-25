@@ -678,7 +678,11 @@
     "videoGenerateAudio": "Generate native audio",
     "videoMaterialSlotsTitle": "Material slots",
     "videoMaterialSlotsDescription": "Choose the input asset types this template exposes. Slots can be marked required.",
-    "videoRequiredMaterial": "Required material"
+    "videoRequiredMaterial": "Required material",
+    "workflowStepKey": "Step key",
+    "workflowStepKeyPlaceholder": "e.g. prd, visual_design",
+    "workflowCriticPromptLabel": "Critic prompt",
+    "promptLabel": "Prompt"
   },
   "adminCampaigns": {
     "title": "Campaign Rewards Center",
@@ -765,7 +769,11 @@
     "viewJson": "View JSON",
     "loadingMore": "Loading…",
     "loadMore": "Load more",
-    "allLoaded": "All loaded"
+    "allLoaded": "All loaded",
+    "columnId": "ID",
+    "columnAction": "Action",
+    "columnActor": "Actor",
+    "columnPayload": "Payload"
   },
   "adminSystemModels": {
     "title": "System Model Config",

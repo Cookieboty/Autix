@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { PrismaService } from '../../../platform/prisma/prisma.service';
 import {
   OrderStatus,
@@ -41,7 +42,7 @@ export class OrderRepository {
 
   async findByIdOrThrow(id: string): Promise<orders> {
     const order = await this.prisma.orders.findUnique({ where: { id } });
-    if (!order) throw new NotFoundException('订单不存在');
+    if (!order) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.not_found');
     return order;
   }
 
@@ -188,7 +189,7 @@ export class OrderRepository {
   async lockWithinTx(tx: Prisma.TransactionClient, orderId: string): Promise<orders> {
     await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${orderId} FOR UPDATE`;
     const order = await tx.orders.findUnique({ where: { id: orderId } });
-    if (!order) throw new NotFoundException('订单不存在');
+    if (!order) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.not_found');
     return order;
   }
 
@@ -206,7 +207,7 @@ export class OrderRepository {
 
   async findByIdWithinTxOrThrow(tx: Prisma.TransactionClient, id: string): Promise<orders> {
     const order = await this.findByIdWithinTx(tx, id);
-    if (!order) throw new NotFoundException('订单不存在');
+    if (!order) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.not_found');
     return order;
   }
 

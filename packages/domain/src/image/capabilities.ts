@@ -170,7 +170,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
     supportsNegativePrompt: 'prompt-injected',
     showAdvancedSliders: false,
     notes:
-      'Gemini 2.5 Flash Image 官方使用 aspectRatio，不单独暴露 image_size；Autix 固定单张生成。',
+      'Gemini 2.5 Flash Image officially uses aspectRatio and does not expose image_size separately; Autix always generates a single image.',
   },
 
   // gemini-3-pro-image (Gemini 3 Pro Image)
@@ -190,7 +190,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
     supportsNegativePrompt: 'prompt-injected',
     showAdvancedSliders: false,
     notes:
-      'Gemini 3 Pro Image 官方支持 aspect_ratio + image_size；Autix 固定单张生成。',
+      'Gemini 3 Pro Image officially supports aspect_ratio + image_size; Autix always generates a single image.',
   },
 
   // gemini-3-flash-image (Gemini 3.1 Flash Image)
@@ -210,7 +210,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
     supportsNegativePrompt: 'prompt-injected',
     showAdvancedSliders: false,
     notes:
-      'Gemini 3.1 Flash Image 官方支持更多长宽比和 512px/1K/2K/4K；Autix 固定单张生成。',
+      'Gemini 3.1 Flash Image officially supports more aspect ratios and 512px/1K/2K/4K; Autix always generates a single image.',
   },
 
   // compatible (OpenAI-Compatible protocol / self-hosted SDXL / Flux / …)
@@ -236,7 +236,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
     supportsNegativePrompt: 'native',
     showAdvancedSliders: true,
     notes:
-      '兼容服务（SDXL/Flux 等）支持引导强度、步数、种子等高级参数；具体取值需以服务商文档为准。',
+      'Compatible services (SDXL/Flux, etc.) support advanced parameters such as guidance scale, steps, and seed; refer to the provider documentation for exact values.',
   },
 };
 

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as ts from 'typescript';
 import { flattenLeaves } from './i18n/merge-locales.core';
+import { countFrontendHardcodedByArea } from './i18n/scan-frontend-hardcoded';
 import { CHUNKS } from '../packages/i18n/src/messages';
 import { ROUTE_POLICY } from '../clients/web/lib/i18n/route-policy';
 import { loadLocaleTree } from '../services/api/src/domains/platform/i18n/locale-loader';
@@ -35,6 +36,12 @@ const BASELINE_FILE = 'scripts/i18n/untranslated-baseline.json';
 
 /** 各域中文字符串字面量数的棘轮基线，详见 `assertCjkStringLiteralRatchet`。 */
 const CJK_BASELINE_FILE = 'scripts/i18n/cjk-string-baseline.json';
+
+/** 各域「携带文案的普通 HttpException」数的棘轮基线，详见 `assertPlainExceptionRatchet`。 */
+const PLAIN_EXCEPTION_BASELINE_FILE = 'scripts/i18n/plain-exception-baseline.json';
+
+/** 前端硬编码 UI 文案数的棘轮基线，详见 `scan-frontend-hardcoded.ts`。 */
+const FRONTEND_HARDCODED_BASELINE_FILE = 'scripts/i18n/frontend-hardcoded-baseline.json';
 
 /** `services/api/src/domains` 下参与棘轮统计的业务域。 */
 const API_DOMAIN_ROOT = 'services/api/src/domains';
@@ -290,6 +297,39 @@ export function assertUntranslatedRatchet(
 const CJK_CHAR = /[一-鿿]/;
 
 /**
+ * 不使用汉字书写系统的目标语言——这些语言的译文里出现任意中文汉字，几乎必然是
+ * "从中文目录 scaffold 后未翻译"的残留（本仓库真实踩坑：landing 等 chunk 有数百条
+ * 被复制成中文的 fr/ru/vi 词条）。
+ *
+ * 为什么单列这套检查、而不用"与 zh-CN 逐字节相同"判定：
+ * - 未译棘轮只比对 en，中文残留（!= en）对它完全隐形；
+ * - 日语（ja）合法大量使用汉字（Kanji），"与中文相同"会把 保存/操作/管理 等正确日语
+ *   误报成残留，无法干净判定；
+ * - 而 fr/ru/vi 是拉丁/西里尔文字，正文永不含汉字，故"含汉字==错误语言"零误报。
+ *
+ * 因此这里只对拉丁/西里尔语言硬失败；ja / zh-* 不在此列（各自的 Kanji/汉字是合法的）。
+ */
+const HAN_FREE_LANGS = ['fr', 'ru', 'vi'] as const;
+
+export function assertNoHanInLatinScript(
+  byLang: Record<string, Record<string, string>>,
+): string[] {
+  const issues: string[] = [];
+  for (const lang of HAN_FREE_LANGS) {
+    const dict = byLang[lang] ?? {};
+    for (const [key, value] of Object.entries(dict)) {
+      if (CJK_CHAR.test(value)) {
+        issues.push(
+          `[wrong-lang:${lang}] ${key} 含中文汉字——${lang} 不使用汉字，疑似从中文目录复制后未翻译：` +
+            `"${value.slice(0, 40)}${value.length > 40 ? '…' : ''}"`,
+        );
+      }
+    }
+  }
+  return issues;
+}
+
+/**
  * 用 TypeScript 编译器 API 解析一段源码，统计其中"包含至少一个中文字符的字符串字面量"
  * 个数——单引号、双引号、模板字符串各算一次。
  *
@@ -397,6 +437,136 @@ export function assertCjkStringLiteralRatchet(
       issues.push(
         `[cjk-string-literal:${domain}] ${actual} 处 < 基线 ${allowed}——迁移有进展，` +
           `请把 ${CJK_BASELINE_FILE} 里的 ${domain} 下调到 ${actual} 以锁住成果。`,
+      );
+    }
+  }
+  return issues;
+}
+
+/**
+ * 「携带用户可见文案的普通 Nest HttpException」——这类异常的 message 会被
+ * AllExceptionsFilter 原样透出给客户端（见 all-exceptions.filter.ts 的 HttpException 分支），
+ * 因此非 en 语言的请求只会收到英文/中文原文，绕过了 i18n。正确做法是改用
+ * `I18nHttpException(status, key, args?)`（它不在下列名单里，故不计数）。
+ *
+ * 判定：`new XException(arg0)`，X ∈ 下列名单，且 arg0 是字符串字面量 / 模板字符串 /
+ * 带 `message` 字段的对象字面量。裸 `throw new Error('…')` 不算——它是 500 log-only，
+ * filter 不外透其 message（另有 CJK 棘轮覆盖其中文残留）。
+ */
+const PLAIN_HTTP_EXCEPTIONS: ReadonlySet<string> = new Set([
+  'BadRequestException',
+  'NotFoundException',
+  'ForbiddenException',
+  'ConflictException',
+  'UnauthorizedException',
+  'PayloadTooLargeException',
+]);
+
+export function countPlainHttpExceptionMessagesInSource(source: string, fileName = 'source.ts'): number {
+  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, /* setParentNodes */ true);
+  let count = 0;
+  const carriesMessage = (arg: ts.Expression): boolean => {
+    if (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg) || ts.isTemplateExpression(arg)) return true;
+    if (ts.isObjectLiteralExpression(arg)) {
+      return arg.properties.some(
+        (p) => ts.isPropertyAssignment(p) && p.name && ts.isIdentifier(p.name) && p.name.text === 'message',
+      );
+    }
+    return false;
+  };
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isNewExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      PLAIN_HTTP_EXCEPTIONS.has(node.expression.text) &&
+      node.arguments &&
+      node.arguments.length > 0 &&
+      carriesMessage(node.arguments[0])
+    ) {
+      count++;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return count;
+}
+
+/** 统计各域「携带文案的普通 HttpException」处数，详见 `countPlainHttpExceptionMessagesInSource`。 */
+export function countPlainHttpExceptionMessages(domains: string[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const domain of domains) {
+    const dir = join(API_DOMAIN_ROOT, domain);
+    counts[domain] = existsSync(dir) ? countPlainExcInDir(dir) : 0;
+  }
+  return counts;
+}
+
+function countPlainExcInDir(dir: string): number {
+  let total = 0;
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) {
+      total += countPlainExcInDir(p);
+      continue;
+    }
+    if (!name.endsWith('.ts') || name.endsWith('.spec.ts')) continue;
+    total += countPlainHttpExceptionMessagesInSource(readFileSync(p, 'utf8'));
+  }
+  return total;
+}
+
+/**
+ * 各域「携带文案的普通 HttpException」棘轮：只许降、不许升。与 CJK 棘轮同构。
+ * 这类异常的 message 会原样透给客户端、绕过 i18n（非 en 语言只能收到原文）；
+ * 应改用 `I18nHttpException + 词条键`。归零的域基线为 0，再写立即失败。
+ */
+export function assertPlainExceptionRatchet(
+  counts: Record<string, number>,
+  baseline: Record<string, number>,
+): string[] {
+  const issues: string[] = [];
+  for (const domain of Object.keys(counts).sort()) {
+    const actual = counts[domain];
+    const allowed = baseline[domain] ?? 0;
+    if (actual > allowed) {
+      issues.push(
+        `[plain-http-exception:${domain}] ${actual} 处携带文案的普通 HttpException > 基线 ${allowed}` +
+          `（新增 ${actual - allowed} 处）。这类异常文案会绕过 i18n 原样发给客户端，` +
+          `请改用 I18nHttpException(status, key, args?) + 词条键。`,
+      );
+    } else if (actual < allowed) {
+      issues.push(
+        `[plain-http-exception:${domain}] ${actual} 处 < 基线 ${allowed}——迁移有进展，` +
+          `请把 ${PLAIN_EXCEPTION_BASELINE_FILE} 里的 ${domain} 下调到 ${actual} 以锁住成果。`,
+      );
+    }
+  }
+  return issues;
+}
+
+/**
+ * 前端硬编码 UI 文案棘轮：只许降、不许升。检查器此前完全不看前端 JSX，
+ * 「直接写在 JSX 里、绕过 next-intl 的用户可见文案」是纯盲区。扫描逻辑见
+ * `scan-frontend-hardcoded.ts`（JSX 文本 + placeholder/aria-label/title/alt/label）。
+ */
+export function assertFrontendHardcodedRatchet(
+  counts: Record<string, number>,
+  baseline: Record<string, number>,
+): string[] {
+  const issues: string[] = [];
+  for (const area of Object.keys(counts).sort()) {
+    const actual = counts[area];
+    const allowed = baseline[area] ?? 0;
+    if (actual > allowed) {
+      issues.push(
+        `[frontend-hardcoded:${area}] ${actual} 处硬编码 UI 文案 > 基线 ${allowed}` +
+          `（新增 ${actual - allowed} 处）。请改用 next-intl（useTranslations/t）+ 词条键，` +
+          `勿把用户可见文案直接写进 JSX。`,
+      );
+    } else if (actual < allowed) {
+      issues.push(
+        `[frontend-hardcoded:${area}] ${actual} 处 < 基线 ${allowed}——迁移有进展，` +
+          `请把 ${FRONTEND_HARDCODED_BASELINE_FILE} 里的 "${area}" 下调到 ${actual} 以锁住成果。`,
       );
     }
   }
@@ -511,6 +681,9 @@ export function collectIssues(
     : {};
   issues.push(...assertUntranslatedRatchet(countUntranslated(webValues, 'en'), baseline));
 
+  // 错误语言残留：fr/ru/vi 目录里出现中文汉字一律硬失败（未译棘轮对 !=en 的中文残留隐形）。
+  issues.push(...assertNoHanInLatinScript(webValues));
+
   // API 错误文案：这套是新纳入的，没有存量债务，所以未译一律硬失败——不给棘轮。
   const apiByLang = apiByLangOverride ?? loadApiLocales();
   issues.push(...assertApiCatalogNonEmpty(apiByLang));
@@ -553,6 +726,25 @@ export function collectIssues(
     : {};
   const cjkCounts = cjkCountsOverride ?? countCjkStringLiterals(Object.keys(cjkBaseline));
   issues.push(...assertCjkStringLiteralRatchet(cjkCounts, cjkBaseline));
+
+  // 各域「携带文案的普通 HttpException」棘轮：这类异常文案绕过 i18n 原样发给客户端。
+  const plainExcBaseline: Record<string, number> = existsSync(PLAIN_EXCEPTION_BASELINE_FILE)
+    ? JSON.parse(readFileSync(PLAIN_EXCEPTION_BASELINE_FILE, 'utf8'))
+    : {};
+  issues.push(
+    ...assertPlainExceptionRatchet(
+      countPlainHttpExceptionMessages(Object.keys(plainExcBaseline)),
+      plainExcBaseline,
+    ),
+  );
+
+  // 前端硬编码 UI 文案棘轮（补齐检查器的前端盲区）。
+  const feBaseline: Record<string, number> = existsSync(FRONTEND_HARDCODED_BASELINE_FILE)
+    ? JSON.parse(readFileSync(FRONTEND_HARDCODED_BASELINE_FILE, 'utf8'))
+    : {};
+  if (Object.keys(feBaseline).length > 0) {
+    issues.push(...assertFrontendHardcodedRatchet(countFrontendHardcodedByArea().counts, feBaseline));
+  }
 
   const pages = collectPages(APP_LOCALE_DIR);
   issues.push(...assertRoutePolicyCoverage(pages, Object.keys(ROUTE_POLICY)));

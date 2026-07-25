@@ -104,6 +104,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // 优先使用异常自带的稳定业务码/hint，缺省才按 HTTP status 映射（spec §3.2 G）。
       code = exception.code ?? this.statusToCode(status);
       hint = exception.hint;
+      // retryAfterMs 是稳定 envelope 字段；限流类翻译错误（如 throttler 出口）会带上，
+      // 供前端做退避展示，语义与普通 HttpException 分支一致。
+      retryAfterMs = exception.retryAfterMs;
+      // data 用于翻译型异常携带结构化上下文（如 DTO 校验的 violations 列表）：
+      // 文案仍由 i18nKey 翻译，参数走 data，避免把动态值拼进 msg 破坏国际化。
+      if (exception.data !== undefined) payloadData = exception.data;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exResponse = exception.getResponse() as string | HttpExceptionResponse;

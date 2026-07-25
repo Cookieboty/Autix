@@ -19,7 +19,7 @@ export class LlmService {
     if (this.model) return this.model;
     const defaultConfig = await this.modelConfigService.findDefaultByType(ModelType.general);
     if (!defaultConfig) {
-      throw new Error('未配置默认模型，请在模型配置中设置一个默认的 general 类型模型');
+      throw new Error('No default model configured. Please set a default general-type model in model configuration');
     }
     this.model = createChatModelFromDbConfig(defaultConfig);
     return this.model;

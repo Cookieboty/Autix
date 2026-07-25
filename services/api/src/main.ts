@@ -1,12 +1,15 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { HttpStatus, RequestMethod, ValidationPipe } from '@nestjs/common';
+import type { ValidationError } from 'class-validator';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './domains/platform/common/response.interceptor';
 import { AllExceptionsFilter } from './domains/platform/common/all-exceptions.filter';
 import { applyEarlyMiddlewares } from './domains/platform/common/http-bootstrap';
 import { resolveLogLevelsFromEnv } from './domains/platform/common/log-levels';
 import { I18nService } from './domains/platform/i18n/i18n.service';
+import { I18nHttpException } from './domains/platform/i18n/i18n-http.exception';
+import { flattenValidationErrors } from './domains/platform/common/validation-violations';
 
 function captureStripeRawBody(req: unknown, _res: unknown, buf: Buffer) {
   const request = req as { originalUrl?: string; rawBody?: Buffer };
@@ -52,7 +55,26 @@ async function bootstrap() {
     corsOrigin: process.env.CORS_ORIGIN,
     verify: captureStripeRawBody,
   });
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      // 全局 DTO 校验错误必须走 i18n 通道：class-validator 默认 message 是英文，
+      // 直接抛 BadRequestException 会绕过 AllExceptionsFilter 的翻译分支。这里把
+      // 错误收敛为 I18nHttpException('common.invalid_params')，把违规详情放到
+      // data.violations（`{ path, codes }[]`），供前端按字段做本地化提示。
+      exceptionFactory: (errors: ValidationError[]) =>
+        new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'common.invalid_params',
+          undefined,
+          {
+            code: 'BAD_REQUEST',
+            data: { violations: flattenValidationErrors(errors) },
+          },
+        ),
+    }),
+  );
 
   const i18n = app.get(I18nService);
   app.useGlobalInterceptors(new ResponseInterceptor(i18n));

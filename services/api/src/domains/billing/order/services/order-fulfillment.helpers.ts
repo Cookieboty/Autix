@@ -136,24 +136,24 @@ export function assertPaymentAmountMatchesOrder(
   const expected = Number(order.amount);
   if (amount === undefined || amount === null || amount === '') {
     if (options.requireAmount && expected > 0) {
-      throw new BadRequestException('支付金额缺失');
+      throw new BadRequestException('Payment amount is missing');
     }
     return;
   }
   const actual = Number(amount);
   if (!Number.isFinite(actual) || actual <= 0) {
     if (expected === 0 && actual === 0) return;
-    throw new BadRequestException('支付金额无效');
+    throw new BadRequestException('Invalid payment amount');
   }
   if (options.allowLessThanExpected && actual > 0 && actual <= expected) {
     const minRatio = options.minRatio ?? MEMBERSHIP_UNDERPAYMENT_MIN_RATIO;
     if (actual >= expected * minRatio) {
       return;
     }
-    throw new BadRequestException('支付金额远低于订单金额，疑似异常');
+    throw new BadRequestException('Payment amount is far below the order amount; suspected anomaly');
   }
   if (Math.abs(actual - expected) > 0.000001) {
-    throw new BadRequestException('支付金额与订单金额不一致');
+    throw new BadRequestException('Payment amount does not match the order amount');
   }
 }
 
@@ -165,13 +165,13 @@ export function assertPaymentCurrencyMatchesOrder(
   const expected = (order.currency ?? DEFAULT_PAYMENT_CURRENCY).toUpperCase();
   if (!currency) {
     if (options.requireCurrency) {
-      throw new BadRequestException('支付币种缺失');
+      throw new BadRequestException('Payment currency is missing');
     }
     return;
   }
   const actual = currency.toUpperCase();
   if (actual !== expected) {
-    throw new BadRequestException('支付币种与订单币种不一致');
+    throw new BadRequestException('Payment currency does not match the order currency');
   }
 }
 
@@ -267,8 +267,8 @@ export function buildMembershipGrantInput(input: MembershipGrantInput) {
       previousPoints: input.previousPoints,
     },
     remark: isFreePlan
-      ? `Free 一次性体验积分: ${input.plan.level.name}`
-      : `会员订阅积分: ${input.plan.level.name}`,
+      ? `Free one-time trial points: ${input.plan.level.name}`
+      : `Membership subscription points: ${input.plan.level.name}`,
   };
 }
 
@@ -287,7 +287,7 @@ export function buildPointsPackageGrantInput(input: PointsPackageGrantInput) {
       packageCode: input.packageCode,
       validityDays: input.validityDays,
     },
-    remark: `积分包购买: ${input.packageName}`,
+    remark: `Points pack purchase: ${input.packageName}`,
   };
 }
 

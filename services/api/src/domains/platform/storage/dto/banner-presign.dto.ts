@@ -7,14 +7,12 @@ import { BANNER_UPLOAD_LIMITS, type BannerPresignInput } from '@autix/domain';
  * 同样被硬阻断（存储型 XSS）。
  */
 export class BannerPresignDto implements BannerPresignInput {
-  @IsString({ message: 'fileName 必须为字符串' })
-  @MaxLength(256, { message: 'fileName 长度不能超过 256' })
+  @IsString()
+  @MaxLength(256)
   fileName!: string;
 
   @IsString()
-  @IsIn(BANNER_UPLOAD_LIMITS.allowedContentTypes as unknown as string[], {
-    message: '仅允许 image/png|jpeg|jpg|webp|gif|avif',
-  })
+  @IsIn(BANNER_UPLOAD_LIMITS.allowedContentTypes as unknown as string[])
   contentType!: string;
 
   @IsInt()

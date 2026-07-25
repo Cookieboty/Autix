@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { OrderRepository } from '../repositories/order.repository';
 import {
   BillingCycle,
@@ -18,19 +14,19 @@ export const ORDER_PENDING_TIMEOUT_MINUTES = 30;
 export const ORDER_PENDING_TIMEOUT_MS = ORDER_PENDING_TIMEOUT_MINUTES * 60 * 1000;
 
 const CYCLE_LABELS: Record<BillingCycle, string> = {
-  MONTHLY: '月付',
-  QUARTERLY: '季付',
-  YEARLY: '年付',
+  MONTHLY: 'Monthly',
+  QUARTERLY: 'Quarterly',
+  YEARLY: 'Annual',
 };
 
 function assertSubscriptionPlan(
   plan: { billingCycle: BillingCycle; autoRenew: boolean },
 ) {
   if (!plan.autoRenew) {
-    throw new BadRequestException('会员套餐仅支持连续订阅');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.plan_must_be_subscription');
   }
   if (plan.billingCycle === BillingCycle.QUARTERLY) {
-    throw new BadRequestException('会员套餐仅支持月付或年付');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'membership.plan_billing_cycle_invalid');
   }
 }
 
@@ -72,7 +68,7 @@ export class OrderCreationService {
   async createMembershipOrder(userId: string, planId: string, currency = DEFAULT_PAYMENT_CURRENCY) {
     const plan = await this.orderRepo.findMembershipPlanWithLevel(planId);
     if (!plan || !plan.isActive || !plan.level.isActive) {
-      throw new NotFoundException('套餐不存在或已下架');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.plan_not_found');
     }
     assertSubscriptionPlan(plan);
 
@@ -90,9 +86,9 @@ export class OrderCreationService {
       activeCurrentMembership &&
       plan.level.level < activeCurrentMembership.level.level
     ) {
-      throw new BadRequestException(
-        `当前已是 ${activeCurrentMembership.level.name}，不能购买等级更低的 ${plan.level.name} 套餐`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'order.already_on_plan', {
+        plan: activeCurrentMembership.level.name,
+      });
     }
 
     const reusableOrder = await this.orderRepo.findReusablePendingOrder({
@@ -138,12 +134,12 @@ export class OrderCreationService {
   ) {
     const membership = await this.orderRepo.findUserMembershipWithLevel(userId);
     if (!this.isActivePaidMembership(membership, new Date())) {
-      throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'order.points_pack_requires_membership');
     }
 
     const pkg = await this.orderRepo.findPointsPackage(packageId);
     if (!pkg || !pkg.isActive) {
-      throw new NotFoundException('积分包不存在或已下架');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.points_pack_not_found');
     }
 
     const reusableOrder = await this.orderRepo.findReusablePendingOrder({
@@ -172,7 +168,7 @@ export class OrderCreationService {
     if (order.orderType === OrderType.MEMBERSHIP) {
       const plan = await this.orderRepo.findMembershipPlanWithLevel(order.productId);
       if (!plan || !plan.isActive || !plan.level.isActive) {
-        throw new NotFoundException('套餐不存在或已下架');
+        throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.plan_not_found');
       }
       assertSubscriptionPlan(plan);
 
@@ -191,10 +187,10 @@ export class OrderCreationService {
         this.orderRepo.findPointsPackage(order.productId),
       ]);
       if (!this.isActivePaidMembership(membership, now)) {
-        throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
+        throw new I18nHttpException(HttpStatus.FORBIDDEN, 'order.points_pack_requires_membership');
       }
       if (!pkg || !pkg.isActive) {
-        throw new NotFoundException('积分包不存在或已下架');
+        throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.points_pack_not_found');
       }
       return;
     }
@@ -205,9 +201,9 @@ export class OrderCreationService {
     activeMembership: { level: { level: number; name: string } } | null,
   ) {
     if (activeMembership && plan.level.level < activeMembership.level.level) {
-      throw new BadRequestException(
-        `当前已是 ${activeMembership.level.name}，不能购买等级更低的 ${plan.level.name} 套餐`,
-      );
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'order.already_on_plan', {
+        plan: activeMembership.level.name,
+      });
     }
   }
 

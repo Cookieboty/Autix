@@ -12,8 +12,8 @@ export function getModelCategory(capabilities: string[]): ModelCategory {
 }
 
 export const CATEGORY_LABELS: Record<ModelCategory, string> = {
-  multimodal: '多模态',
-  image: '图片模型',
+  multimodal: 'Multimodal',
+  image: 'Image model',
 };
 
 export const ALL_CATEGORIES: ModelCategory[] = [

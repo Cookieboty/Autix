@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus, ConflictException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { AppLogger } from '../../../platform/common/app-logger';
 import * as crypto from 'crypto';
 import { OAuthProviderRegistry } from './oauth-provider.registry';
@@ -132,10 +132,12 @@ export class OAuthService {
     // spec §3.2 D' step 2：显式指定但未绑定的 provider 必须硬失败为 409 STEP_UP_UNAVAILABLE，
     // 不得借 REAUTH 创建绑定，也不得静默改走 OTP（用户可另行显式选择邮箱 OTP）。
     if (input.provider && candidates.length === 0) {
-      throw new ConflictException({
-        code: 'STEP_UP_UNAVAILABLE',
-        message: '该账户未绑定所选登录方式，无法用于身份复核',
-      });
+      throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'oauth.step_up_unavailable',
+        undefined,
+        { code: 'STEP_UP_UNAVAILABLE' },
+      );
     }
     const selected = candidates.find((account) => {
       try { return this.registry.getInstance(account.provider).supportsReauth; }

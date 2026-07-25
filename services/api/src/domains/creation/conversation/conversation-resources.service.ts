@@ -1,11 +1,6 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { AgentKind, ResourceType } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ConversationRepository } from './conversation.repository';
 import {
   addResourceDetailsToMap,
@@ -23,7 +18,7 @@ import {
   isTemplateResourceType,
   parseMentionRefs,
   requiresResourceAcquisition,
-  templateConflictMessage,
+  templateConflictKey,
 } from './conversation-resources.helpers';
 
 @Injectable()
@@ -37,8 +32,10 @@ export class ConversationResourcesService {
     resourceId: string,
   ) {
     if (!isActivatableResourceType(type)) {
-      throw new BadRequestException(
-        `资源类型 ${type} 不支持会话激活`,
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.conversation.resource_type_not_activatable',
+        { type },
       );
     }
     await this.requireOwnConversation(conversationId, userId);
@@ -55,7 +52,11 @@ export class ConversationResourcesService {
           resourceType: type,
           resourceId,
         });
-        if (!owns) throw new ForbiddenException('需先获取该资源才能激活到会话');
+        if (!owns)
+          throw new I18nHttpException(
+            HttpStatus.FORBIDDEN,
+            'creation.conversation.resource_not_acquired',
+          );
       }
     }
 
@@ -64,7 +65,11 @@ export class ConversationResourcesService {
       resourceType: type,
       resourceId,
     });
-    if (existing) throw new ConflictException('已激活');
+    if (existing)
+      throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'creation.conversation.already_activated',
+      );
 
     if (isTemplateResourceType(type)) {
       const existingTemplate =
@@ -73,7 +78,10 @@ export class ConversationResourcesService {
           type,
         );
       if (existingTemplate) {
-        throw new ConflictException(templateConflictMessage(type));
+        throw new I18nHttpException(
+          HttpStatus.CONFLICT,
+          templateConflictKey(type),
+        );
       }
     }
 
@@ -98,12 +106,16 @@ export class ConversationResourcesService {
               newAgent,
             })
           ) {
-            throw new BadRequestException(
-              '对话已开始，无法切换到不同模式的 Agent。请新建会话切换。',
+            throw new I18nHttpException(
+              HttpStatus.BAD_REQUEST,
+              'creation.conversation.agent_mode_locked',
             );
           }
         }
-        throw new ConflictException('会话已关联 Agent，请先移除后再关联');
+        throw new I18nHttpException(
+          HttpStatus.CONFLICT,
+          'creation.conversation.agent_already_linked',
+        );
       }
     }
 
@@ -334,8 +346,10 @@ export class ConversationResourcesService {
     userId: string,
   ) {
     const conv = await this.repository.findConversationOwner(conversationId);
-    if (!conv) throw new NotFoundException('会话不存在');
-    if (conv.userId !== userId) throw new ForbiddenException('无权访问该会话');
+    if (!conv)
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'conversation.not_found');
+    if (conv.userId !== userId)
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'conversation.forbidden');
   }
 
   private async enrich(

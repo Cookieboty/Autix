@@ -231,7 +231,7 @@ export function toMinorAmount(value: unknown, currency: string) {
   const multiplier = ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? 1 : 100;
   const minorAmount = Math.round(amount * multiplier);
   if (!Number.isFinite(minorAmount) || minorAmount <= 0) {
-    throw new BadRequestException('Stripe 支付金额无效');
+    throw new BadRequestException('Invalid Stripe payment amount');
   }
   return minorAmount;
 }

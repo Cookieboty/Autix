@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { ModelConfigRepository } from './model-config.repository';
 import { ModelConfigService, toClientModelConfig } from './model-config.service';
@@ -302,9 +302,11 @@ describe('ModelConfigService getConfigForOrchestrator hardening', () => {
       allowedMembershipLevels: [],
     } as never);
 
-    await expect(service.getConfigForOrchestrator('private-model')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(service.getConfigForOrchestrator('private-model')).rejects.toMatchObject({
+      status: 403,
+      i18nKey: 'creation.model.not_available',
+      code: 'FORBIDDEN',
+    });
   });
 
   it('rejects a private record when a userId is provided', async () => {
@@ -317,7 +319,11 @@ describe('ModelConfigService getConfigForOrchestrator hardening', () => {
 
     await expect(
       service.getConfigForOrchestrator('private-model', 'user-1'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toMatchObject({
+      status: 403,
+      i18nKey: 'creation.model.not_available',
+      code: 'FORBIDDEN',
+    });
   });
 
   it('returns a public record', async () => {

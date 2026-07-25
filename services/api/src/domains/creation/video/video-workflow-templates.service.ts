@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { AppLogger } from '../../platform/common/app-logger';
 import {
   AgentKind,
@@ -69,7 +65,7 @@ export class VideoWorkflowTemplatesService {
 
   async findById(id: string) {
     const tpl = await this.repository.findById(id);
-    if (!tpl) throw new ForbiddenException('模板不存在');
+    if (!tpl) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'creation.video_project.template_not_found');
     return tpl;
   }
 
@@ -101,12 +97,12 @@ export class VideoWorkflowTemplatesService {
         await this.repository.findConversationForProjectCreation(
           conversationIdInput,
         );
-      if (!conv) throw new NotFoundException('会话不存在');
-      if (conv.userId !== userId) throw new ForbiddenException('无权操作此会话');
-      if (conv.videoProject) throw new BadRequestException('该会话已绑定视频项目');
+      if (!conv) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'conversation.not_found');
+      if (conv.userId !== userId) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'creation.video_project.forbidden_conversation');
+      if (conv.videoProject) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video_project.conversation_already_bound');
       if (conv.kind !== AgentKind.video) {
         if (conv.kind !== AgentKind.chat) {
-          throw new BadRequestException(`会话 kind=${conv.kind}，无法用于创建视频项目`);
+          throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video_project.conversation_kind_unsupported', { kind: conv.kind });
         }
         await this.repository.updateConversationKind(conv.id, AgentKind.video);
       }
@@ -126,7 +122,7 @@ export class VideoWorkflowTemplatesService {
     );
     if (!defaultVideoModel) {
       this.logger.warn(
-        '未找到默认视频模型（type=video, isDefault=true），克隆出的 clip 将以 modelConfigId=undefined 落库，generate 时会再次 fallback 失败',
+        'No default video model found (type=video, isDefault=true); cloned clips will be persisted with modelConfigId=undefined, and generate will fail on fallback again',
       );
     }
 

@@ -1,14 +1,20 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
 import { AppLogger } from '../../../platform/common/app-logger';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { PointsService } from '../../../billing/points/points.service';
 import { MembershipService } from '../../../billing/membership/membership.service';
 import type { TaskEstimateInput, TaskEstimateResult } from '../../../billing/points/points.service';
 import { PointsSource, type Prisma } from '../../../platform/prisma/generated';
 import { LlmRepository } from '../llm.repository';
 
-export class InsufficientPointsError extends BadRequestException {
+export class InsufficientPointsError extends I18nHttpException {
   constructor(required: number, available: number) {
-    super(`积分余额不足：需要 ${required}，当前 ${available}`);
+    super(HttpStatus.BAD_REQUEST, 'creation.billing.insufficient_points', { required, available }, {
+      // 稳定业务码 + 结构化 data：前端 SDK 据此识别积分不足并读取 required/available，
+      // 不再按翻译后的文案做关键词匹配（跨语言不可靠）。
+      code: 'INSUFFICIENT_POINTS',
+      data: { required, available },
+    });
   }
 }
 
@@ -64,7 +70,7 @@ export class CallBillingService {
     },
   ): Promise<{ holdId: string; balance: number }> {
     if (!meta.pricing?.taskType) {
-      throw new BadRequestException('缺少计费所需的 taskType');
+      throw new BadRequestException('Missing taskType required for billing');
     }
 
     const estimate = await this.estimateCallCost(meta.pricing, { userId });
@@ -73,7 +79,7 @@ export class CallBillingService {
       // caller opts into `suppressErrors`, which hold() never does — it either
       // resolves a real estimate or throws. This guard exists so TypeScript
       // narrows `estimate` below without a cast, not because this branch fires.
-      throw new BadRequestException('缺少计费所需的 taskType');
+      throw new BadRequestException('Missing taskType required for billing');
     }
 
     const taskType = estimate.taskType;
@@ -86,7 +92,7 @@ export class CallBillingService {
         source: PointsSource.AGENT_CALL,
         amount,
         pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-        remark: meta.remark ?? `AI 对话（${meta.modelName ?? 'AI 模型'}）`,
+        remark: meta.remark ?? `AI chat (${meta.modelName ?? 'AI model'})`,
       });
       return { holdId: hold.id, balance };
     } catch (err) {

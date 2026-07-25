@@ -1,6 +1,7 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, ResourceType } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import type { MaterialAssetSourceType, MaterialAssetType } from './materials.service';
 
 type Tx = Prisma.TransactionClient;
@@ -54,7 +55,7 @@ export class FavoriteLibraryService {
   async favorite(userId: string, resourceType: ResourceType, resourceId: string) {
     return this.prisma.$transaction(async (tx) => {
       const snapshot = await this.resolveResourceSnapshot(tx, resourceType, resourceId);
-      if (!snapshot) throw new NotFoundException('资源不存在');
+      if (!snapshot) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.materials.resource_not_found');
 
       const { count } = await tx.resource_favorites.createMany({
         data: [{ userId, resourceType, resourceId }],
@@ -145,7 +146,7 @@ export class FavoriteLibraryService {
         return {
           type: isVideo ? 'video' : 'image',
           sourceType: isVideo ? 'video_generation' : 'image_generation',
-          title: post.title ?? `作品 ${resourceId.slice(0, 8)}`,
+          title: post.title ?? `Artwork ${resourceId.slice(0, 8)}`,
           url: post.mediaUrls[0] ?? post.coverImage ?? null,
           thumbnailUrl: post.coverImage ?? null,
         };
@@ -223,7 +224,7 @@ export class FavoriteLibraryService {
    */
   async saveHistoryMaterial(userId: string, resourceType: ResourceType, resourceId: string) {
     const snapshot = await this.resolveResourceSnapshot(this.prisma, resourceType, resourceId);
-    if (!snapshot) throw new NotFoundException('资源不存在');
+    if (!snapshot) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.materials.resource_not_found');
 
     try {
       return await this.prisma.material_assets.create({
@@ -277,7 +278,7 @@ export class FavoriteLibraryService {
       const material = await tx.material_assets.findFirst({
         where: { id: materialId, userId, deletedAt: null },
       });
-      if (!material) throw new NotFoundException('素材不存在');
+      if (!material) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.materials.not_found');
       await this.deleteMaterialsInTx(tx, userId, [material]);
     });
   }
@@ -458,7 +459,7 @@ export class FavoriteLibraryService {
     const stateMap = await this.deriveSourceState([material]);
     const state = stateMap.get(material.id);
     if (state === 'blocked' || state === 'missing') {
-      throw new ForbiddenException('该素材的来源资源已不可用');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'creation.materials.source_unavailable');
     }
   }
 }

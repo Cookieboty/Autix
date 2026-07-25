@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from '../navigation';
 import { FileText, Check, Bell } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useLibraryEnabled } from '../hooks/useModelConfigEnabled';
 import { useTaskStore, TaskEvent } from '@autix/shared-store';
 import { useUiStore } from '@autix/shared-store';
@@ -32,6 +32,7 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 
 export function NotificationDrawer() {
   const t = useTranslations('notification');
+  const locale = useLocale();
   const router = useRouter();
   const libraryEnabled = useLibraryEnabled(false);
   const events = useTaskStore((s) => s.events);
@@ -153,7 +154,7 @@ export function NotificationDrawer() {
                         )}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {relativeTime(event.createdAt)}
+                        {relativeTime(event.createdAt, locale)}
                         {event.readAt && (
                           <span className="ml-2">· {t('read')}</span>
                         )}

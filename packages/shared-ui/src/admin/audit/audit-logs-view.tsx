@@ -139,19 +139,19 @@ export function AdminAuditLogsView({ onBack }: AdminAuditLogsViewProps) {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>
-                  ID
+                  {t('columnId')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>
                   {t('time')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>
-                  Action
+                  {t('columnAction')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>
-                  Actor
+                  {t('columnActor')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>
-                  Payload
+                  {t('columnPayload')}
                 </th>
               </tr>
             </thead>

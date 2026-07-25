@@ -1,4 +1,6 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import type { ErrorCode } from '@autix/domain';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { AppLogger } from '../../../platform/common/app-logger';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -35,14 +37,14 @@ export type StepUpProofPayload = {
   exp?: number;
 };
 
-export class StepUpHttpException extends HttpException {
-  constructor(code: string, message: string, status?: HttpStatus) {
+export class StepUpHttpException extends I18nHttpException {
+  constructor(code: ErrorCode, i18nKey: string, status?: HttpStatus) {
     const resolvedStatus = status ?? (
       code === 'STEP_UP_UNAVAILABLE' || code === 'OTP_ALREADY_CONSUMED'
         ? HttpStatus.CONFLICT
         : HttpStatus.BAD_REQUEST
     );
-    super({ code, message }, resolvedStatus);
+    super(resolvedStatus, i18nKey, undefined, { code });
   }
 }
 
@@ -88,18 +90,18 @@ export class StepUpService {
     ]);
 
     if (!sessionId) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '当前会话不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.session_unavailable');
     }
     const user = await this.repository.findUser(userId);
     if (!user || (user.status !== 'ACTIVE' && user.status !== 'PENDING')) {
-      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', '账户当前不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', 'auth.step_up.account_unavailable');
     }
     if (!user.password) {
-      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', '账户未设置密码，请改用邮箱 OTP 或重新登录');
+      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', 'auth.step_up.password_not_set');
     }
     const ok = await bcrypt.compare(plainPassword, user.password);
     if (!ok) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '身份复核失败');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.failed');
     }
     return this.signProof(userId, purpose, 'reauth-password', sessionId);
   }
@@ -122,10 +124,10 @@ export class StepUpService {
     const user = await this.repository.findUser(userId);
     // spec §3.2 D'：账户状态异常统一用 STEP_UP_UNAVAILABLE(409)，不暴露软删（USER_DELETED/403 会泄露注销状态）。
     if (!user || (user.status !== 'ACTIVE' && user.status !== 'PENDING')) {
-      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', '账户当前不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', 'auth.step_up.account_unavailable');
     }
     if (user.password) {
-      throw new StepUpHttpException('STEP_UP_REQUIRED', '该账户必须使用当前密码完成身份复核');
+      throw new StepUpHttpException('STEP_UP_REQUIRED', 'auth.step_up.must_use_password');
     }
   }
 
@@ -148,22 +150,22 @@ export class StepUpService {
     ip?: string,
   ): Promise<StartStepUpResult & { kind: 'otp' }> {
     if (!sessionId) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '当前会话不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.session_unavailable');
     }
     const user = await this.repository.findUser(userId);
     // spec §3.2 D'：状态必须为 ACTIVE/PENDING；DELETED/DISABLED/LOCKED 统一 STEP_UP_UNAVAILABLE(409)，不暴露软删。
     if (!user || (user.status !== 'ACTIVE' && user.status !== 'PENDING')) {
-      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', '账户当前不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', 'auth.step_up.account_unavailable');
     }
     if (user.password) {
-      throw new StepUpHttpException('STEP_UP_REQUIRED', '该账户必须使用当前密码完成身份复核');
+      throw new StepUpHttpException('STEP_UP_REQUIRED', 'auth.step_up.must_use_password');
     }
     if (
       !user.email ||
       !user.emailVerified ||
       user.email.endsWith('@no-email.oauth.local')
     ) {
-      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', '账户没有可用于身份复核的已验证邮箱');
+      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', 'auth.step_up.no_verified_email');
     }
 
     // spec §3.2 D''' OTP 限流矩阵（request）：userId 1/60s + 5/1h、session 3/1h、ip 20/1h、emailHash 5/1h。
@@ -190,15 +192,15 @@ export class StepUpService {
       expiresAt,
     });
     if (!record) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '当前会话或账户不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.session_or_account_unavailable');
     }
 
     try {
-      await this.mail.sendStepUpOtp(user.email, code, purpose, OTP_TTL_MS / 60_000);
+      await this.mail.sendStepUpOtp(user.email, code, purpose, OTP_TTL_MS / 60_000, user.language ?? undefined);
     } catch (err) {
       await this.repository.invalidateOtp(record.id);
       this.logger.error('Failed to send OTP email', err instanceof Error ? err.stack : String(err));
-      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', '验证码发送失败，请稍后重试');
+      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', 'auth.step_up.otp_send_failed');
     }
 
     return {
@@ -224,7 +226,7 @@ export class StepUpService {
     ip?: string,
   ): Promise<{ proof: string; expiresAt: string }> {
     if (!sessionId) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '当前会话不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.session_unavailable');
     }
 
     const user = await this.repository.findUser(userId);
@@ -235,7 +237,7 @@ export class StepUpService {
       !user.emailVerified ||
       user.email.endsWith('@no-email.oauth.local')
     ) {
-      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', '账户没有可用于身份复核的已验证邮箱');
+      throw new StepUpHttpException('STEP_UP_UNAVAILABLE', 'auth.step_up.no_verified_email');
     }
 
     // spec §3.2 D''' OTP 限流矩阵（verify）：userId 5/15min、session 10/15min、ip 50/15min、emailHash 10/15min。
@@ -259,10 +261,10 @@ export class StepUpService {
     // 幂等冲突（已消费）保留 409；其余失败（过期/锁定/错误）统一 400 STEP_UP_INVALID_OR_EXPIRED，
     // 不暴露剩余尝试次数或锁定状态（spec §3.2 D'：不透露剩余次数）。
     if (result.status === 'consumed') {
-      throw new StepUpHttpException('OTP_ALREADY_CONSUMED', '验证码已使用');
+      throw new StepUpHttpException('OTP_ALREADY_CONSUMED', 'auth.step_up.otp_used');
     }
     if (result.status !== 'ok') {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '验证码无效或已过期');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.otp_invalid_or_expired');
     }
 
     return this.signProof(userId, purpose, 'reauth-otp', sessionId);
@@ -283,13 +285,13 @@ export class StepUpService {
     try {
       payload = this.jwt.verify<StepUpProofPayload>(proofToken);
     } catch {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '身份复核凭证无效或已过期');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.invalid_or_expired');
     }
     if (payload.sub !== expectedUserId) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '身份复核凭证无效或已过期');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.invalid_or_expired');
     }
     if (payload.purpose !== expectedPurpose) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '身份复核凭证无效或已过期');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.invalid_or_expired');
     }
     // T15.3：session 绑定校验（spec §3.2 P0）
     // - 调用方传 expectedSessionId 时，proof 中的 sid 必须存在且相等；
@@ -297,7 +299,7 @@ export class StepUpService {
     // - 不传 expectedSessionId 保留兼容出口（例如仅做 payload 解码的场景），但生产 consumer 都应传。
     if (expectedSessionId !== undefined) {
       if (!payload.sid || payload.sid !== expectedSessionId) {
-        throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '身份复核凭证无效或已过期');
+        throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.invalid_or_expired');
       }
     }
     return payload;
@@ -315,7 +317,7 @@ export class StepUpService {
   ): Promise<void> {
     const payload = this.verifyProof(proofToken, userId, purpose, sessionId);
     if (!sessionId) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '当前会话不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.session_unavailable');
     }
     const ok = await this.repository.consumeProof({
       jti: payload.jti,
@@ -324,7 +326,7 @@ export class StepUpService {
       purpose: PURPOSE_TO_EMAIL_OTP_ENUM[purpose],
     });
     if (!ok) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '身份复核凭证无效或已使用');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.invalid_or_expired');
     }
   }
 
@@ -340,7 +342,7 @@ export class StepUpService {
       claims.sid = sessionId;
     }
     if (!sessionId) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '当前会话不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.session_unavailable');
     }
     const expiresAtDate = new Date(Date.now() + STEP_UP_PROOF_TTL_SECONDS * 1000);
     const created = await this.repository.createProof({
@@ -352,7 +354,7 @@ export class StepUpService {
       expiresAt: expiresAtDate,
     });
     if (!created) {
-      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', '当前会话或账户不可用于身份复核');
+      throw new StepUpHttpException('STEP_UP_INVALID_OR_EXPIRED', 'auth.step_up.session_or_account_unavailable');
     }
     const proof = this.jwt.sign(claims, { expiresIn: STEP_UP_PROOF_TTL_SECONDS });
     return { proof, expiresAt: expiresAtDate.toISOString() };

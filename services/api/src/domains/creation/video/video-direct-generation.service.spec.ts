@@ -1,6 +1,7 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { VideoUpstreamError } from '@autix/ai-adapters/video';
 import { VideoDirectGenerationService } from './video-direct-generation.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 // 同 video-generation-flow.service.spec.ts 的装配风格：只 mock submitVideoTask 本身，
 // resolveVideoPreset/assembleVideoRequest 仍跑真实实现——断言的是引擎真正收到的入参，
@@ -349,7 +350,7 @@ describe('VideoDirectGenerationService.generate', () => {
   it('缺少 prompt 时直接拒绝，不创建 hold', async () => {
     const { service, pointsService } = makeService();
 
-    await expect(service.generate(validInput({ prompt: '   ' }))).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.generate(validInput({ prompt: '   ' }))).rejects.toBeInstanceOf(I18nHttpException);
     expect(pointsService.createHold).not.toHaveBeenCalled();
   });
 });

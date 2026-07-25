@@ -91,7 +91,9 @@
     "campaignRewards": "活动奖励中心",
     "campaignRewardsDesc": "配置奖励活动、预算和发放记录",
     "auditLogsAction": "审计日志",
-    "auditLogsActionDesc": "查看管理员操作 / 积分调整流水"
+    "auditLogsActionDesc": "查看管理员操作 / 积分调整流水",
+    "adminOverview": "管理总览",
+    "localTime": "本地时间"
   },
   "profile": {
     "title": "个人中心",
@@ -260,6 +262,7 @@
       "IMAGE_TEMPLATE": "图片模板",
       "VIDEO_TEMPLATE": "视频模板",
       "GALLERY_POST": "广场作品"
-    }
+    },
+    "folderActions": "文件夹操作"
   }
 }

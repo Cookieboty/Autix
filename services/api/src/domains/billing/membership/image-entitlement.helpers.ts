@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import type { ErrorCode } from '@autix/domain';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
@@ -109,22 +109,18 @@ export function assertImageEntitlement(
   }
 }
 
-export class ImageConcurrencyLimitException extends HttpException {
+export class ImageConcurrencyLimitException extends I18nHttpException {
   constructor(levelName: string, concurrency: number, activeCount = 0, requestedCount = 1) {
     super(
+      HttpStatus.TOO_MANY_REQUESTS,
+      'image_entitlement.concurrency_limit',
+      { levelName, concurrency, active: activeCount, requested: requestedCount },
       {
-        code: 'IMAGE_CONCURRENCY_LIMIT_EXCEEDED',
-        message: `当前会员等级（${levelName}）最多同时生成 ${concurrency} 张图片，当前还有 ${activeCount} 张在生成中，本次请求 ${requestedCount} 张会超过上限，请等进行中的任务完成后再试`,
+        code: 'IMAGE_CONCURRENCY_LIMIT_EXCEEDED' as ErrorCode,
         // `data` 会被 AllExceptionsFilter 平铺进错误响应 envelope 的 data 字段，
         // 前端据此在弹窗里显示具体的 limit / active / requested。
-        data: {
-          levelName,
-          concurrency,
-          activeCount,
-          requestedCount,
-        },
+        data: { levelName, concurrency, activeCount, requestedCount },
       },
-      HttpStatus.TOO_MANY_REQUESTS,
     );
   }
 }

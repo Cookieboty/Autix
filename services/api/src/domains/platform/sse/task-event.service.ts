@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma } from '../prisma/generated';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import { TaskHistoryQueryDto } from './dto/task-history.query.dto';
 import { TaskEventResponseDto, TaskHistoryResponseDto } from './dto/task-event.response.dto';
 import { TaskEventRepository, TaskEventRow } from './task-event.repository';
@@ -48,7 +49,7 @@ export class TaskEventService {
     const event = await this.repository.findLatestByTaskId(userId, taskId);
 
     if (!event) {
-      throw new NotFoundException('任务不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'task.not_found');
     }
 
     return this.toResponse(event);
@@ -62,7 +63,7 @@ export class TaskEventService {
       readAt,
     );
     if (updated.count === 0) {
-      throw new NotFoundException('任务不存在或已读');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'task.already_read');
     }
     return { readAt: readAt.toISOString() };
   }

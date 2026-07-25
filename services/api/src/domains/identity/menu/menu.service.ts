@@ -88,8 +88,8 @@ export class MenuService {
   async remove(id: string): Promise<MessageResponse> {
     await this.findOne(id);
     const hasChildren = await this.menuRepository.findChildByParentId(id);
-    if (hasChildren) throw new Error('请先删除子菜单');
+    if (hasChildren) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'menu.has_children');
     await this.menuRepository.delete(id);
-    return { message: '删除成功' };
+    return { messageKey: 'common.deleted' };
   }
 }

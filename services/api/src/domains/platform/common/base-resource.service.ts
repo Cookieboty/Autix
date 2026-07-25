@@ -1,8 +1,6 @@
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import { AppLogger } from './app-logger';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import {
   ResourceType,
   TemplateStatus,
@@ -137,7 +135,7 @@ export abstract class BaseResourceService {
 
   async findById(id: string): Promise<unknown> {
     const row = await this.delegate.findUnique({ where: { id } });
-    if (!row) throw new NotFoundException('资源不存在');
+    if (!row) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'resource.not_found');
     return this.attachViewCount(row);
   }
 
@@ -166,13 +164,13 @@ export abstract class BaseResourceService {
   /** findPublicVisibleById 的“找不到就抛 404”便捷封装,供公开交互动作(like/favorite/recordView/generation)前置校验用。 */
   protected async requirePublicVisible(id: string): Promise<unknown> {
     const row = await this.findPublicVisibleById(id);
-    if (!row) throw new NotFoundException('资源不存在或不可公开访问');
+    if (!row) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'resource.not_found_or_private');
     return row;
   }
 
   async remove(id: string, userId: string) {
     const row = (await this.findById(id)) as { authorId: string };
-    if (row.authorId !== userId) throw new ForbiddenException('无权删除此资源');
+    if (row.authorId !== userId) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'resource.delete_forbidden');
     return this.delegate.delete({ where: { id } });
   }
 
@@ -244,7 +242,7 @@ export abstract class BaseResourceService {
       await op(this.resourceMetrics);
     } catch (err) {
       this.baseResourceLogger.warn(
-        `resource_metrics 同步失败 resourceType=${this.resourceType}: ${
+        `resource_metrics sync failed resourceType=${this.resourceType}: ${
           err instanceof Error ? err.message : String(err)
         }`,
       );
@@ -348,7 +346,7 @@ export abstract class BaseResourceService {
         runtimeRequirement: dto.runtimeRequirement,
         runtimeDetectedBy: DetectionSrc.ADMIN,
         runtimeReason:
-          dto.runtimeReason ?? `管理员手动覆盖为 ${dto.runtimeRequirement}`,
+          dto.runtimeReason ?? `Admin manual override to ${dto.runtimeRequirement}`,
       } as unknown,
     });
   }

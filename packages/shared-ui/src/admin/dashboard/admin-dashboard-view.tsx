@@ -181,7 +181,7 @@ export function AdminDashboardView({ onNavigate }: AdminDashboardViewProps) {
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
-            Admin overview
+            {t('adminOverview')}
           </p>
           <h1 className="text-foreground mt-2 text-3xl font-semibold tracking-[-0.04em]">
             {greeting}，{user?.realName || user?.username}
@@ -189,7 +189,7 @@ export function AdminDashboardView({ onNavigate }: AdminDashboardViewProps) {
         </div>
         <div className="self-start lg:self-auto lg:text-right">
           <div className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
-            Local time
+            {t('localTime')}
           </div>
           <div className="text-foreground mt-2 text-2xl font-semibold tracking-[-0.04em]">
             {currentTime.toLocaleTimeString('zh-CN')}

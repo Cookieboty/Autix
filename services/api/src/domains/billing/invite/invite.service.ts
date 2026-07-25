@@ -85,7 +85,7 @@ export class InviteService {
       const total = await this.inviteRepository.countByInviter(inviterUserId);
       if (total + 1 >= threshold) {
         this.logger.warn(
-          `[invite-velocity] inviter=${inviterUserId} 已累计邀请 ${total + 1} 人，请关注是否存在刷量`,
+          `[invite-velocity] inviter=${inviterUserId} has accumulated ${total + 1} invites; please watch for potential abuse`,
         );
       }
     } catch (err) {
@@ -106,7 +106,7 @@ export class InviteService {
 
     const campaign = await this.campaignRewardService.findCampaignByCode(INVITATION_REWARD_CODE);
     if (!campaign) {
-      this.logger.warn(`[invite-campaign-missing] code=${INVITATION_REWARD_CODE}，跳过 invitee=${inviteeUserId}`);
+      this.logger.warn(`[invite-campaign-missing] code=${INVITATION_REWARD_CODE}, skipping invitee=${inviteeUserId}`);
       return null;
     }
     if (!this.isCampaignActive(campaign)) return null;
@@ -116,7 +116,7 @@ export class InviteService {
     const rewardedCount = await this.inviteRepository.countRewardedByInviter(record.inviterUserId);
     if (maxRewarded != null && rewardedCount >= maxRewarded) {
       this.logger.warn(
-        `[invite-cap] inviter=${record.inviterUserId} 已达邀请奖励上限(${maxRewarded})，跳过 invitee=${inviteeUserId}`,
+        `[invite-cap] inviter=${record.inviterUserId} reached the invite reward cap (${maxRewarded}); skipping invitee=${inviteeUserId}`,
       );
       return null;
     }
@@ -158,7 +158,7 @@ export class InviteService {
   private async resolveInvitationRewardPointsSnapshot() {
     const campaign = await this.campaignRewardService.findCampaignByCode(INVITATION_REWARD_CODE);
     if (!campaign) {
-      this.logger.warn(`[invite-campaign-missing] code=${INVITATION_REWARD_CODE}，邀请记录积分快照写入 0`);
+      this.logger.warn(`[invite-campaign-missing] code=${INVITATION_REWARD_CODE}, writing 0 as the invite record points snapshot`);
       return 0;
     }
     return resolveRewardPoints(campaign.rewardPointsExpression);

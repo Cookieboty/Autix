@@ -44,13 +44,18 @@
     "refresh": "Làm mới",
     "hidden": "Ẩn",
     "showing": "Đang hiển thị",
-    "frontend": "Frontend",
-    "backend": "Backend",
+    "frontend": "Giao diện người dùng",
+    "backend": "Trang quản trị",
     "register": "Đăng ký",
     "actions": "Thao tác",
     "none": "Không có",
     "yes": "Có",
-    "no": "Không"
+    "no": "Không",
+    "like": "Thích",
+    "favorite": "Yêu thích",
+    "share": "Chia sẻ",
+    "jsonEmpty": "JSON trống",
+    "invalidJson": "JSON không hợp lệ"
   },
   "aiUi": {
     "selected": "Đã chọn",
@@ -72,7 +77,10 @@
     "noData": "Không có dữ liệu",
     "loading": "Đang tải",
     "actionMessage": "[Thao tác: {action}]",
-    "serverError": "Máy chủ trả về lỗi"
+    "serverError": "Máy chủ trả về lỗi",
+    "thinking": "Đang suy nghĩ…",
+    "thoughtForSeconds": "Đã suy nghĩ {seconds} giây",
+    "thoughtForAFewSeconds": "Đã suy nghĩ vài giây"
   },
   "sidebar": {
     "newSession": "Phiên mới",
@@ -122,9 +130,12 @@
     "myOrders": "Đơn hàng",
     "inviteFriends": "Mời bạn bè",
     "docs": "Tài liệu",
-    "myTemplates": "我的模板",
-    "upgrade": "升级会员",
-    "gallery": "Gallery"
+    "myTemplates": "Mẫu của tôi",
+    "upgrade": "Nâng cấp thành viên",
+    "gallery": "Thư viện",
+    "mobileTitle": "Thanh bên",
+    "mobileDescription": "Hiển thị thanh bên trên thiết bị di động.",
+    "toggle": "Bật/tắt thanh bên"
   },
   "notification": {
     "title": "Thông báo",
@@ -280,7 +291,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio - Nghĩ ra. Dựng lên. Ra mắt.",
       "description": "Tạo PRD, mã, thiết kế và nguyên mẫu bằng AI trong một nơi."
     },
     "video": {

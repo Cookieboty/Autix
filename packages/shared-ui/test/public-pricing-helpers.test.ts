@@ -137,4 +137,19 @@ describe('public pricing helpers', () => {
     // accent values are CSS vars, not hex
     expect(json).not.toMatch(/#[0-9a-fA-F]{6}/);
   });
+
+  test('carryover display mirrors runtime validity and truncation', () => {
+    const withCarry = (pc: unknown) =>
+      buildPricingPlans([level({ features: { pointsCarryover: pc } as MembershipLevel['features'] })], 'MONTHLY')
+        .find((p) => p.id === 'level-pro')?.comparison;
+
+    expect(withCarry({ enabled: true, maxCycles: 99, maxPoints: 500 })?.carryoverCycles).toBe(12);
+    expect(withCarry({ enabled: true, maxCycles: 2.9, maxPoints: 500 })?.carryoverCycles).toBe(2);
+    expect(withCarry({ enabled: true, maxCycles: 0, maxPoints: 500 })?.carryoverCycles).toBeNull();
+    expect(withCarry({ enabled: true, maxCycles: 3, maxPoints: 0 })?.carryoverMaxPoints).toBeNull();
+    expect(withCarry({ enabled: false, maxCycles: 3, maxPoints: 500 })?.carryoverCycles).toBeNull();
+    // 与运行时对齐：数字字符串运行时不认（不结转）；maxPoints 向下取整
+    expect(withCarry({ enabled: true, maxCycles: '3', maxPoints: '500' })?.carryoverCycles).toBeNull();
+    expect(withCarry({ enabled: true, maxCycles: 3, maxPoints: 500.7 })?.carryoverMaxPoints).toBe(500);
+  });
 });

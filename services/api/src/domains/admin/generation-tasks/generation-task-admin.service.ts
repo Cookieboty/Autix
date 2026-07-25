@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { GenerationBillingStatus } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import type { GenerationTaskListQueryDto } from './dto/generation-task-query.dto';
 import {
   GENERATION_TASK_SENSITIVE_KEYS,
@@ -30,7 +31,7 @@ export class GenerationTaskAdminService {
 
   async getDetail(id: string) {
     const detail = await this.repository.findDetail(id);
-    if (!detail) throw new NotFoundException('generation task not found');
+    if (!detail) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'admin.generation_task.not_found');
 
     const { task, hold, pointsRecords } = detail;
     // 脏数据/历史数据探测：billingStatus 已 CONFIRMED（即"计费已完成"）却查不到对应的

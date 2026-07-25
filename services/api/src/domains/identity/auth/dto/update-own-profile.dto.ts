@@ -13,7 +13,6 @@ function UrlKeyExclusive(urlField: string, keyField: string, validationOptions?:
       target: object.constructor,
       propertyName,
       options: {
-        message: `${urlField} 与 ${keyField} 不能同时提交`,
         ...validationOptions,
       },
       validator: {
@@ -44,95 +43,75 @@ function UrlKeyExclusive(urlField: string, keyField: string, validationOptions?:
 export class UpdateOwnProfileDto implements UpdateOwnProfileInput {
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'nickname 必须为字符串或 null' })
-  @MaxLength(OWN_PROFILE_LIMITS.nicknameMaxLength, {
-    message: `nickname 长度不能超过 ${OWN_PROFILE_LIMITS.nicknameMaxLength}`,
-  })
+  @IsString()
+  @MaxLength(OWN_PROFILE_LIMITS.nicknameMaxLength)
   nickname?: string | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'description 必须为字符串或 null' })
-  @MaxLength(OWN_PROFILE_LIMITS.descriptionMaxLength, {
-    message: `description 长度不能超过 ${OWN_PROFILE_LIMITS.descriptionMaxLength}`,
-  })
+  @IsString()
+  @MaxLength(OWN_PROFILE_LIMITS.descriptionMaxLength)
   description?: string | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'headline 必须为字符串或 null' })
-  @MaxLength(OWN_PROFILE_LIMITS.headlineMaxLength, {
-    message: `headline 长度不能超过 ${OWN_PROFILE_LIMITS.headlineMaxLength}`,
-  })
+  @IsString()
+  @MaxLength(OWN_PROFILE_LIMITS.headlineMaxLength)
   headline?: string | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'location 必须为字符串或 null' })
-  @MaxLength(OWN_PROFILE_LIMITS.locationMaxLength, {
-    message: `location 长度不能超过 ${OWN_PROFILE_LIMITS.locationMaxLength}`,
-  })
+  @IsString()
+  @MaxLength(OWN_PROFILE_LIMITS.locationMaxLength)
   location?: string | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'socialX 必须为字符串或 null' })
-  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength, {
-    message: `socialX 长度不能超过 ${OWN_PROFILE_LIMITS.socialMaxLength}`,
-  })
+  @IsString()
+  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength)
   socialX?: string | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'socialInstagram 必须为字符串或 null' })
-  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength, {
-    message: `socialInstagram 长度不能超过 ${OWN_PROFILE_LIMITS.socialMaxLength}`,
-  })
+  @IsString()
+  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength)
   socialInstagram?: string | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'socialYoutube 必须为字符串或 null' })
-  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength, {
-    message: `socialYoutube 长度不能超过 ${OWN_PROFILE_LIMITS.socialMaxLength}`,
-  })
+  @IsString()
+  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength)
   socialYoutube?: string | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'socialTiktok 必须为字符串或 null' })
-  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength, {
-    message: `socialTiktok 长度不能超过 ${OWN_PROFILE_LIMITS.socialMaxLength}`,
-  })
+  @IsString()
+  @MaxLength(OWN_PROFILE_LIMITS.socialMaxLength)
   socialTiktok?: string | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'avatar 必须为字符串或 null' })
-  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { message: 'avatar 必须是有效的 HTTP(S) URL' })
-  @MaxLength(OWN_PROFILE_LIMITS.avatarUrlMaxLength, {
-    message: `avatar URL 长度不能超过 ${OWN_PROFILE_LIMITS.avatarUrlMaxLength}`,
-  })
+  @IsString()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @MaxLength(OWN_PROFILE_LIMITS.avatarUrlMaxLength)
   @UrlKeyExclusive('avatar', 'avatarStorageKey')
   avatar?: string | null;
 
   @IsOptional()
-  @IsString({ message: 'avatarStorageKey 必须为字符串' })
-  @MaxLength(512, { message: 'avatarStorageKey 长度不能超过 512' })
+  @IsString()
+  @MaxLength(512)
   avatarStorageKey?: string;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
-  @IsString({ message: 'bannerImage 必须为字符串或 null' })
-  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { message: 'bannerImage 必须是有效的 HTTP(S) URL' })
-  @MaxLength(OWN_PROFILE_LIMITS.bannerUrlMaxLength, {
-    message: `bannerImage URL 长度不能超过 ${OWN_PROFILE_LIMITS.bannerUrlMaxLength}`,
-  })
+  @IsString()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @MaxLength(OWN_PROFILE_LIMITS.bannerUrlMaxLength)
   @UrlKeyExclusive('bannerImage', 'bannerStorageKey')
   bannerImage?: string | null;
 
   @IsOptional()
-  @IsString({ message: 'bannerStorageKey 必须为字符串' })
-  @MaxLength(512, { message: 'bannerStorageKey 长度不能超过 512' })
+  @IsString()
+  @MaxLength(512)
   bannerStorageKey?: string;
 }

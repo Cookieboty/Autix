@@ -185,7 +185,7 @@ export class UserService {
     }
 
     await this.userRepository.delete(id);
-    return { message: '删除成功' };
+    return { messageKey: 'common.deleted' };
   }
 
   async resetPassword(
@@ -201,7 +201,7 @@ export class UserService {
 
     await this.userRepository.updatePasswordAndRevokeSessions(id, hashedPassword);
 
-    return { message: '密码重置成功，用户需要重新登录' };
+    return { messageKey: 'user.password_reset_success' };
   }
 
   async updateStatus(
@@ -226,7 +226,7 @@ export class UserService {
       await this.userRepository.revokeSessions(id);
     }
 
-    return { message: '状态更新成功' };
+    return { messageKey: 'user.status_updated' };
   }
 
   async assignRoles(
@@ -255,7 +255,7 @@ export class UserService {
 
     await this.userRepository.assignRoles(userId, systemRoles);
 
-    return { message: '角色分配成功' };
+    return { messageKey: 'user.role_assigned' };
   }
 
   async updateLanguage(userId: string, language: string): Promise<{ language: string }> {

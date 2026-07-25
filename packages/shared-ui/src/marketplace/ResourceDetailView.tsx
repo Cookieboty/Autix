@@ -122,7 +122,7 @@ export function ResourceDetailView({
             className={cn('mb-3 text-xs', isImmersive && 'text-white/46')}
             style={isImmersive ? undefined : { color: 'var(--muted)' }}
           >
-            by {resource.authorId}
+            {t('detail.byAuthor', { author: resource.authorId })}
           </p>
 
           <div className="mb-4 flex items-center gap-2">
@@ -243,7 +243,7 @@ export function ResourceDetailView({
 
       {showTemplateDetails && hasTemplatePrompt(resource) && (
         <DetailSection
-          title="Prompt"
+          title={t('detail.promptTitle')}
           variant={variant}
           className="mt-6"
         >

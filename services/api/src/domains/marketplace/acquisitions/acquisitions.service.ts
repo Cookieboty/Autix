@@ -1,10 +1,6 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { PointsSource, ResourceType } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { PointsService } from '../../billing/points/points.service';
 import { MarketplaceAcquisitionRepository } from '../marketplace-acquisition.repository';
 import { MarketplaceResourceRepository } from '../marketplace-resource.repository';
@@ -30,7 +26,7 @@ export class AcquisitionsService {
     private readonly acquisitions: MarketplaceAcquisitionRepository,
     private readonly pointsService: PointsService,
     private readonly resources: MarketplaceResourceRepository,
-  ) {}
+  ) { }
 
   /**
    * 一次性获取(Skills/MCP/Agents):扣分 → 写 acquisitions → 增 useCount
@@ -39,8 +35,10 @@ export class AcquisitionsService {
    */
   async acquire(userId: string, type: ResourceType, resourceId: string) {
     if (!ACQUIRABLE_TYPES.has(type)) {
-      throw new BadRequestException(
-        `资源类型 ${type} 不支持一次性获取(仅 SKILL/MCP/AGENT)`,
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'acquisition.type_unsupported',
+        { type },
       );
     }
 
@@ -49,10 +47,20 @@ export class AcquisitionsService {
       type,
       resourceId,
     );
-    if (existing) throw new ConflictException('已获取过该资源');
+    if (existing) {
+      throw new I18nHttpException(
+        HttpStatus.CONFLICT,
+        'acquisition.already_owned',
+      );
+    }
 
     const resource = await this.resources.findOne(type, resourceId);
-    if (!resource) throw new NotFoundException('资源不存在');
+    if (!resource) {
+      throw new I18nHttpException(
+        HttpStatus.NOT_FOUND,
+        'acquisition.resource_not_found',
+      );
+    }
 
     const cost = resource.pointsCost ?? 0;
     // ACQUIRABLE_TYPES 已保证 type 命中映射；兜底仅为 Partial 的类型安全。
@@ -69,15 +77,15 @@ export class AcquisitionsService {
       },
       cost > 0
         ? (tx) =>
-            this.pointsService.deductWithinTx(
-              tx,
-              userId,
-              cost,
-              PointsSource.TASK,
-              resourceId,
-              `${taskType}: ${resource.title}`,
-              taskType,
-            ).then(() => undefined)
+          this.pointsService.deductWithinTx(
+            tx,
+            userId,
+            cost,
+            PointsSource.TASK,
+            resourceId,
+            `${taskType}: ${resource.title}`,
+            taskType,
+          ).then(() => undefined)
         : undefined,
     );
 

@@ -17,13 +17,13 @@ export async function proposeNextStep(
   systemPrompt: string,
 ): Promise<StepProposal> {
   if (remainingSteps.length === 0) {
-    return { proposedNextStep: null, reasoning: '所有阶段已完成。' };
+    return { proposedNextStep: null, reasoning: 'All stages are complete.' };
   }
 
   const result = await model.invoke([
     new SystemMessage(systemPrompt),
     new HumanMessage(
-      `刚完成阶段: ${completedStepKey}\n产出摘要: ${artifactSummary.slice(0, 500)}`
+      `Just completed stage: ${completedStepKey}\nOutput summary: ${artifactSummary.slice(0, 500)}`
     ),
   ]);
 
@@ -44,6 +44,6 @@ export async function proposeNextStep(
 
   return {
     proposedNextStep: remainingSteps[0].stepKey,
-    reasoning: '按默认顺序继续。',
+    reasoning: 'Continue in default order.',
   };
 }

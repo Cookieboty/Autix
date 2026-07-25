@@ -65,7 +65,7 @@ export function ChatPromptFooter({
             }}
           />
           <PromptInputButton
-            aria-label="Open actions"
+            aria-label={t('openActions')}
             aria-expanded={actionMenuOpen}
             onClick={onToggleActionMenu}
           >

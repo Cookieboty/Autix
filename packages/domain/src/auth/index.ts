@@ -230,8 +230,6 @@ export {
   PASSWORD_REGEX,
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
-  PASSWORD_VALIDATION_MESSAGE,
-  PASSWORD_LENGTH_MESSAGE,
 } from './password-policy';
 
 export type OtpChannel = 'email';

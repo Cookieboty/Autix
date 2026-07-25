@@ -1,7 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { TemplateStatus } from '../../platform/prisma/generated';
 import { ImageWorkbenchRepository } from './image-workbench.repository';
 import { GalleryService } from '../gallery/gallery.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 @Injectable()
 export class ImageWorkbenchService {
@@ -84,9 +85,8 @@ export class ImageWorkbenchService {
     const activePosts = await this.galleryService.findActivePostsByGenerationIds(userId, [id]);
     const galleryPost = activePosts.get(id);
     if (galleryPost) {
-      throw new ConflictException({
-        message: '该图片已投稿到广场，请先撤回或下架后再删除',
-        galleryPost: { id: galleryPost.id, status: galleryPost.status },
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.image_gen.already_posted', undefined, {
+        data: { galleryPost: { id: galleryPost.id, status: galleryPost.status } },
       });
     }
 

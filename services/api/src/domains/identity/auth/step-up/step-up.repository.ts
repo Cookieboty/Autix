@@ -37,6 +37,7 @@ export class StepUpRepository {
         email: true,
         emailVerified: true,
         status: true,
+        language: true,
       },
     });
   }

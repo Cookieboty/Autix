@@ -32,7 +32,9 @@ export class MarketplaceResourceCrudRepository {
           .video_templates as unknown as MarketplaceResourceCrudDelegate;
       default:
         // marketplace CRUD 只服务 marketplace 资源；GALLERY_POST 等不应到达此处。
-        throw new Error(`marketplace delegate 不支持资源类型: ${resourceType}`);
+        throw new Error(
+          `marketplace delegate does not support resource type: ${resourceType}`,
+        );
     }
   }
 

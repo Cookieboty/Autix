@@ -1019,7 +1019,7 @@ export class VideoGenerationRepository {
       data: {
         conversationId: input.conversationId,
         role: MessageRole.ASSISTANT,
-        content: `视频已生成: ${input.videoUrl}`,
+        content: `Video generated: ${input.videoUrl}`,
         metadata: {
           messageType: 'video_result',
           generationId: input.generationId,

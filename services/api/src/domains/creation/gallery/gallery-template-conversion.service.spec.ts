@@ -163,7 +163,7 @@ describe('GalleryTemplateConversionService.convertToTemplate', () => {
     const gallery = { ...publishedImageGallery, id: 'gallery-no-title', title: null };
     const { conv } = makeConversionService({ [gallery.id]: gallery });
     const t = await conv.convertToTemplate(adminId, gallery.id);
-    expect(t.title).toBe(`来自作品 ${gallery.id.slice(0, 8)}`);
+    expect(t.title).toBe(`From artwork ${gallery.id.slice(0, 8)}`);
   });
 
   it('coverImage 缺失时兜底 mediaUrls[0]', async () => {

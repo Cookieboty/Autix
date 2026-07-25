@@ -1,10 +1,10 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
-  ForbiddenException,
   ConflictException,
+  HttpStatus,
+  Injectable,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { PointsService } from '../../points/points.service';
 import { OrderRepository } from '../repositories/order.repository';
 import { PaymentEventRepository } from '../repositories/payment-event.repository';
@@ -58,7 +58,7 @@ export class OrderFulfillmentService {
 
   async handlePaymentWebhook(input: PaymentWebhookInput) {
     if (!input.provider || !input.eventId) {
-      throw new BadRequestException('支付事件缺少 provider 或 eventId');
+      throw new BadRequestException('Payment event is missing provider or eventId');
     }
 
     const initialEvent = await this.paymentEventRepo.claimPaymentEvent(input);
@@ -72,13 +72,13 @@ export class OrderFulfillmentService {
       };
     }
     if (initialEvent.alreadyProcessing) {
-      throw new ConflictException('支付事件正在处理中');
+      throw new ConflictException('Payment event is being processed');
     }
 
     try {
       return await this.orderRepo.runInTransaction(async (tx) => {
         const event = await this.paymentEventRepo.findByIdWithinTx(tx, initialEvent.event.id);
-        if (!event) throw new NotFoundException('支付事件不存在');
+        if (!event) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'payment.event_not_found');
         if (event.processedAt) {
           return { event, alreadyProcessed: true, order: null, fulfillment: null };
         }
@@ -141,10 +141,10 @@ export class OrderFulfillmentService {
   ) {
     order = await this.orderRepo.lockWithinTx(tx, order.id);
     if (order.status === OrderStatus.CANCELLED && !options.allowCancelledRecovery) {
-      throw new BadRequestException('已取消订单不能履约');
+      throw new BadRequestException('A cancelled order cannot be fulfilled');
     }
     if (order.status === OrderStatus.REFUNDED) {
-      throw new BadRequestException('已退款订单不能重复履约');
+      throw new BadRequestException('A refunded order cannot be fulfilled again');
     }
 
     assertPaymentAmountMatchesOrder(order, payment?.amount);
@@ -165,7 +165,7 @@ export class OrderFulfillmentService {
     order: orders,
   ) {
     const plan = await this.orderRepo.findMembershipPlanWithLevelWithinTx(tx, order.productId);
-    if (!plan) throw new NotFoundException('套餐不存在');
+    if (!plan) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.plan_not_found');
 
     const now = new Date();
     const previousMembership = await this.orderRepo.findUserMembershipWithLevelWithinTx(
@@ -188,9 +188,9 @@ export class OrderFulfillmentService {
 
     if (isDowngrade && activeMembership) {
       if (plan.level.level < activeMembership.level.level) {
-        throw new BadRequestException(
-          `当前已是 ${activeMembership.level.name}，不能购买等级更低的 ${plan.level.name} 套餐`,
-        );
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'order.already_on_plan', {
+          plan: activeMembership.level.name,
+        });
       }
     }
 
@@ -361,12 +361,12 @@ export class OrderFulfillmentService {
     }
 
     const pkg = await this.orderRepo.findPointsPackageWithinTx(tx, order.productId);
-    if (!pkg) throw new NotFoundException('积分包不存在');
-    if (!pkg.isActive) throw new BadRequestException('积分包已下架');
+    if (!pkg) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.points_pack_not_found');
+    if (!pkg.isActive) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'order.points_pack_not_found');
 
     const membership = await this.orderRepo.findUserMembershipWithLevelWithinTx(tx, order.userId);
     if (!isActivePaidMembership(membership, new Date())) {
-      throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'order.points_pack_requires_membership');
     }
 
     const now = new Date();
@@ -399,7 +399,7 @@ export class OrderFulfillmentService {
     tx: Prisma.TransactionClient,
     order: orders | null,
   ) {
-    if (!order) throw new NotFoundException('订单不存在');
+    if (!order) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'order.not_found');
     if (order.fulfilledAt) {
       return {
         type: order.orderType === OrderType.POINTS_PACKAGE ? 'points_package' : 'membership',
@@ -413,7 +413,7 @@ export class OrderFulfillmentService {
     if (order.orderType === OrderType.POINTS_PACKAGE) {
       return this.fulfillPointsPackageWithinTx(tx, order);
     }
-    throw new BadRequestException('暂不支持的订单类型');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.order_type_unsupported');
   }
 
   private async findOrderForPaymentEventWithinTx(
@@ -436,7 +436,7 @@ export class OrderFulfillmentService {
       );
       if (order) return order;
     }
-    throw new NotFoundException('支付事件未匹配到订单');
+    throw new I18nHttpException(HttpStatus.NOT_FOUND, 'stripe.checkout_missing_order');
   }
 }
 
@@ -454,7 +454,7 @@ function assertStripeCheckoutSessionMatchesOrder(order: orders, input: PaymentWe
   if (!checkoutSessionId?.startsWith('cs_')) return;
   if (!order.externalPaymentId) return;
   if (order.externalPaymentId !== checkoutSessionId) {
-    throw new BadRequestException('Stripe Checkout 会话与订单不匹配');
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'stripe.checkout_order_mismatch');
   }
 }
 

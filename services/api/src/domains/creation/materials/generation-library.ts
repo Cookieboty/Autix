@@ -51,7 +51,7 @@ export interface GenerationMaterialInput {
 export function buildGenerationMaterialRows(
   input: GenerationMaterialInput,
 ): Prisma.material_assetsCreateManyInput[] {
-  const fallbackTitle = input.kind === 'image' ? '生成图片' : '生成视频';
+  const fallbackTitle = input.kind === 'image' ? 'Generated image' : 'Generated video';
   return input.urls
     .map((url, index) => ({ url, index }))
     // 生成流水里可能混入空串/undefined（部分产图失败），这些不该进素材库。

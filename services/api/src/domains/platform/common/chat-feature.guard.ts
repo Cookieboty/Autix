@@ -1,5 +1,6 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, HttpStatus, Injectable } from '@nestjs/common';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 
 @Injectable()
 export class ChatFeatureGuard implements CanActivate {
@@ -7,7 +8,7 @@ export class ChatFeatureGuard implements CanActivate {
 
   async canActivate(_context: ExecutionContext): Promise<boolean> {
     if (!(await this.systemSettingsService.getBoolean('features.chatEnabled'))) {
-      throw new ForbiddenException('Chat 功能已关闭');
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'feature.chat_disabled');
     }
     return true;
   }

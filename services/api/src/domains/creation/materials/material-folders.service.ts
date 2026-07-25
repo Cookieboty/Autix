@@ -1,11 +1,7 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { FavoriteLibraryService } from './favorite-library.service';
 import { MaterialFoldersRepository } from './material-folders.repository';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 export interface MaterialFolderDto {
   id: string;
@@ -98,7 +94,7 @@ export class MaterialFoldersService {
       return await fn();
     } catch (error) {
       if ((error as { code?: string })?.code === 'P2002') {
-        throw new ConflictException('已存在同名文件夹');
+        throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.materials.folder_name_exists');
       }
       throw error;
     }
@@ -112,7 +108,7 @@ export class MaterialFoldersService {
 
   async ensureFolderOwned(userId: string, id: string) {
     const folder = await this.repository.findOwned(userId, id);
-    if (!folder) throw new NotFoundException('文件夹不存在');
+    if (!folder) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.materials.folder_not_found');
     return folder;
   }
 
@@ -125,7 +121,7 @@ export class MaterialFoldersService {
   private async assertNameAvailable(userId: string, name: string, excludeId?: string) {
     const existing = await this.repository.findActiveByName(userId, name);
     if (existing && existing.id !== excludeId) {
-      throw new ConflictException('已存在同名文件夹');
+      throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.materials.folder_name_exists');
     }
   }
 
@@ -147,14 +143,14 @@ export class MaterialFoldersService {
     // 放不下就整个拒收，而不是截一半：ZWJ 组合序列（👨‍👩‍👧‍👦 = 7 码位）从中间切开，
     // 得到的是「两个人 + 一个悬空连接符」这种乱码，比没有图标更糟。
     if (codePoints.length > ICON_MAX_CODE_POINTS) {
-      throw new BadRequestException('图标不合法');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.materials.invalid_icon');
     }
     return text;
   }
 
   private normalizeName(value: string): string {
     const name = String(value ?? '').trim();
-    if (!name) throw new BadRequestException('文件夹名称不能为空');
+    if (!name) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.materials.folder_name_required');
     return name.slice(0, 100);
   }
 }

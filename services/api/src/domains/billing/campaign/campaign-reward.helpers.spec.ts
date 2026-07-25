@@ -338,7 +338,7 @@ describe('campaign reward helpers', () => {
         pointGrantSourceId: 'campaign-1',
         foo: 'bar',
       },
-      remark: '活动奖励：连续使用奖励',
+      remark: 'Campaign reward: 连续使用奖励',
     });
     expect(
       buildCampaignPointGrantInput(

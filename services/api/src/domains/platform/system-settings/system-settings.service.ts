@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, type OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Injectable,
+  type OnModuleInit,
+} from '@nestjs/common';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import {
   SystemSettingsRepository,
   type SystemSettingRow,
@@ -65,7 +71,11 @@ export class SystemSettingsService implements OnModuleInit {
       .map(([key]) => key)
       .filter((key) => !EDITABLE_SYSTEM_SETTING_KEYS.has(key));
     if (invalidKeys.length > 0) {
-      throw new BadRequestException(`不可配置的系统配置项: ${invalidKeys.join(', ')}`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.non_configurable',
+        { keys: invalidKeys.join(', ') },
+      );
     }
 
     const writes: Array<{ key: string; value: string }> = [];
@@ -90,7 +100,11 @@ export class SystemSettingsService implements OnModuleInit {
   ): Promise<ResolvedSystemSetting> {
     const definition = findSystemSettingDefinition(key);
     if (!definition) {
-      throw new BadRequestException(`未知系统配置项: ${key}`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.unknown',
+        { key },
+      );
     }
     const rows = await this.readRows();
     return this.resolveSetting(definition, rows, options);
@@ -120,16 +134,28 @@ export class SystemSettingsService implements OnModuleInit {
         if (['1', 'true', 'yes', 'on', 'enabled'].includes(normalized)) return 'true';
         if (['0', 'false', 'no', 'off', 'disabled'].includes(normalized)) return 'false';
       }
-      throw new BadRequestException(`${definition.label} 必须是布尔值`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.must_be_boolean',
+        { label: definition.label },
+      );
     }
 
     if (typeof rawValue !== 'string') {
-      throw new BadRequestException(`${definition.label} 必须是字符串`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.must_be_string',
+        { label: definition.label },
+      );
     }
 
     const value = rawValue.trim();
     if (!value && !definition.allowEmpty) {
-      throw new BadRequestException(`${definition.label} 不能为空`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'platform.system_settings.cannot_be_empty',
+        { label: definition.label },
+      );
     }
     return value;
   }
@@ -146,7 +172,7 @@ export class SystemSettingsService implements OnModuleInit {
     try {
       await this.settingsRepository.upsertValue(key, value);
     } catch (error: any) {
-      throw new BadRequestException(error?.message ?? '系统配置保存失败');
+      throw new BadRequestException(error?.message ?? 'Failed to save system setting');
     }
   }
 }

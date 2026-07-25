@@ -137,7 +137,7 @@ export function ImageModelParamMenu({
                     <span className="truncate text-sm font-semibold text-foreground">{model.name}</span>
                     {premium ? (
                       <span className="shrink-0 rounded bg-growth-accent px-1.5 py-0.5 text-[10px] font-black uppercase italic text-background">
-                        Premium
+                        {t('premium')}
                       </span>
                     ) : null}
                   </span>

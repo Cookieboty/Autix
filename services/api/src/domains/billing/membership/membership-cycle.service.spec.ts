@@ -380,6 +380,7 @@ describe('MembershipCycleService', () => {
         sourceId: 'membership-carryover:membership-1:1',
         metadata: expect.objectContaining({
           carryover: true,
+          carriedCycles: 1,
           carriedFromGrantIds: ['grant-previous'],
         }),
       }),
@@ -404,6 +405,138 @@ describe('MembershipCycleService', () => {
         },
       },
     });
+  });
+
+  it('runDailyCycle grants the new cycle BEFORE expiring the previous one (no zero-balance gap)', async () => {
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    // 一个已进入第 2 个周期、应发放新月积分的会员
+    repository.findPendingMembershipChanges.mockResolvedValue([]);
+    repository.expireMemberships.mockResolvedValue({
+      cancelled: { count: 0 },
+      expired: { count: 0 },
+    });
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
+      {
+        id: 'membership-1',
+        userId: 'user-1',
+        planId: 'plan-yearly',
+        startedAt: new Date('2026-01-01T00:00:00.000Z'),
+        expiresAt: new Date('2027-01-01T00:00:00.000Z'),
+        level: { level: 2, name: 'Creator', pointsPerMonth: 6500 },
+      },
+    ]);
+    repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
+    repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn({ point_grants: { findFirst: vi.fn().mockResolvedValue(null) } }),
+    );
+
+    const result = await service.runDailyCycle();
+
+    // runDailyCycle 成功时不返回 failed 标记
+    expect(result).toBeUndefined();
+    expect(points.grantPointsWithinTx).toHaveBeenCalledTimes(1);
+    expect(points.expireGrants).toHaveBeenCalledTimes(1);
+
+    // 铁律：先发放（grantPointsWithinTx）再清空（expireGrants）。
+    // 若顺序反了，会出现一个 subscriptionBalance 归零的空窗期——这个断言就是守卫。
+    const grantOrder = points.grantPointsWithinTx.mock.invocationCallOrder[0];
+    const expireOrder = points.expireGrants.mock.invocationCallOrder[0];
+    expect(grantOrder).toBeLessThan(expireOrder);
+  });
+
+  it('carries a once-carried grant again and ages it to 2 (maxCycles=2)', async () => {
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
+      {
+        id: 'membership-1',
+        userId: 'user-1',
+        planId: 'plan-pro',
+        startedAt: new Date('2026-01-01T00:00:00.000Z'),
+        expiresAt: new Date('2026-06-01T00:00:00.000Z'),
+        level: {
+          level: 1,
+          name: 'Plus',
+          pointsPerMonth: 20000,
+          features: { pointsCarryover: { enabled: true, maxCycles: 2, maxPoints: 20000 } },
+        },
+      },
+    ]);
+    repository.findPlan.mockResolvedValue({ id: 'plan-pro', points: 20000 });
+    repository._tx.point_grants.findFirst.mockResolvedValue(null);
+    repository._tx.point_grants.findMany.mockResolvedValue([
+      {
+        id: 'grant-carry-1',
+        userId: 'user-1',
+        grantType: PointGrantType.SUBSCRIPTION,
+        sourceEvent: PointLedgerEventType.subscription_grant,
+        availableAmount: 8000,
+        expiresAt: new Date('2026-02-01T00:00:00.000Z'),
+        metadata: { membershipId: 'membership-1', carryover: true, carriedCycles: 1 },
+      },
+    ]);
+
+    const result = await service.grantDueSubscriptionPoints(
+      new Date('2026-02-15T00:00:00.000Z'),
+    );
+
+    expect(result.carryoverGrantsCreated).toBe(1);
+    expect(points.grantPointsWithinTx).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      'user-1',
+      expect.objectContaining({
+        amount: 8000,
+        sourceId: 'membership-carryover:membership-1:1',
+        metadata: expect.objectContaining({ carryover: true, carriedCycles: 2 }),
+      }),
+    );
+  });
+
+  it('does NOT carry a grant that reached maxCycles (age 2, maxCycles 2)', async () => {
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
+      {
+        id: 'membership-1',
+        userId: 'user-1',
+        planId: 'plan-pro',
+        startedAt: new Date('2026-01-01T00:00:00.000Z'),
+        expiresAt: new Date('2026-06-01T00:00:00.000Z'),
+        level: {
+          level: 1,
+          name: 'Plus',
+          pointsPerMonth: 20000,
+          features: { pointsCarryover: { enabled: true, maxCycles: 2, maxPoints: 20000 } },
+        },
+      },
+    ]);
+    repository.findPlan.mockResolvedValue({ id: 'plan-pro', points: 20000 });
+    repository._tx.point_grants.findFirst.mockResolvedValue(null);
+    repository._tx.point_grants.findMany.mockResolvedValue([
+      {
+        id: 'grant-carry-2',
+        userId: 'user-1',
+        grantType: PointGrantType.SUBSCRIPTION,
+        sourceEvent: PointLedgerEventType.subscription_grant,
+        availableAmount: 8000,
+        expiresAt: new Date('2026-02-01T00:00:00.000Z'),
+        metadata: { membershipId: 'membership-1', carryover: true, carriedCycles: 2 },
+      },
+    ]);
+
+    const result = await service.grantDueSubscriptionPoints(
+      new Date('2026-02-15T00:00:00.000Z'),
+    );
+
+    expect(result.carryoverGrantsCreated).toBe(0);
+    expect(points.grantPointsWithinTx).toHaveBeenCalledTimes(1);
+    expect(points.grantPointsWithinTx).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      expect.objectContaining({ sourceId: 'membership-cycle:membership-1:1' }),
+    );
   });
 
   it('P2-D2: 年付场景下同一 cycleIndex sourceId 多次调用幂等（同一个月只发一次）', async () => {

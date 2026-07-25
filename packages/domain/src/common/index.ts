@@ -33,7 +33,11 @@ export interface ListResult<T> {
 }
 
 export interface MessageResponse {
-  message: string;
+  /**
+   * i18n 词条键，由 ResponseInterceptor 按请求语言翻译成 `message` 写入响应体。
+   * 业务层只返回键，不硬编码文案。
+   */
+  messageKey: string;
 }
 
 export type ErrorCode =
@@ -59,6 +63,7 @@ export type ErrorCode =
   | 'PASSWORD_TOO_WEAK'
   | 'PROVIDER_REAUTH_UNSUPPORTED'
   | 'TOO_MANY_REQUESTS'
+  | 'INSUFFICIENT_POINTS'
   | 'USER_DELETED'
   | 'USER_NOT_AVAILABLE'
   | 'INVALID_STATUS_TRANSITION'

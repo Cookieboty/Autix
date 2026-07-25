@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { LibraryFeatureGuard } from './library-feature.guard';
 
 describe('LibraryFeatureGuard', () => {
@@ -15,6 +15,9 @@ describe('LibraryFeatureGuard', () => {
       getBoolean: vi.fn().mockResolvedValue(false),
     } as never);
 
-    await expect(guard.canActivate({} as never)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(guard.canActivate({} as never)).rejects.toMatchObject({
+      status: 403,
+      i18nKey: 'document.library_disabled',
+    });
   });
 });

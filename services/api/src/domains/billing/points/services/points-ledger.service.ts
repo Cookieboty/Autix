@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { PointsRepository } from '../repositories/points.repository';
 import {
   PointGrantType,
@@ -179,7 +180,9 @@ export class PointsLedgerService {
       consumedByType,
     });
     if (updatedPoints === 0) {
-      throw new BadRequestException('积分余额不足');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'points.balance_insufficient', undefined, {
+        code: 'INSUFFICIENT_POINTS',
+      });
     }
 
     const points = await this.pointsRepo.findBalanceWithinTx(tx, userId);

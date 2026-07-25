@@ -112,7 +112,7 @@ function FolderItem({ active, label, count, onClick, onRename, onDelete }: Folde
                 type="button"
                 className="ml-0.5 flex size-5 items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-accent"
                 onClick={(e) => e.stopPropagation()}
-                aria-label="Folder actions"
+                aria-label={t('folderActions')}
               >
                 <MoreHorizontal className="size-3.5" />
               </button>

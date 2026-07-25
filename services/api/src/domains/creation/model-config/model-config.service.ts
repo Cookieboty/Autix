@@ -1,9 +1,9 @@
 import {
-  BadRequestException,
+  HttpStatus,
   Injectable,
   ForbiddenException,
-  NotFoundException,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { AppLogger } from '../../platform/common/app-logger';
 import { ModelType, ModelVisibility, Prisma } from '../../platform/prisma/generated';
 import { invalidateModelCache } from '../llm/model.factory';
@@ -219,12 +219,11 @@ export class ModelConfigService {
   async getConfigForOrchestrator(id: string, userId?: string) {
     const config = await this.modelConfigRepository.findById(id);
     if (!config) {
-      throw new NotFoundException(`模型配置不存在: ${id}`);
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.model_config.not_found_id', { id });
     }
     if (config.visibility !== ModelVisibility.public) {
-      throw new ForbiddenException({
-        code: 'MODEL_NOT_AVAILABLE',
-        message: '该模型不可用',
+      throw new I18nHttpException(HttpStatus.FORBIDDEN, 'creation.model.not_available', undefined, {
+        code: 'FORBIDDEN',
       });
     }
     if (userId) {
@@ -282,7 +281,7 @@ export class ModelConfigService {
   async updateSystemModel(id: string, dto: UpdateModelConfigDto) {
     const existing = await this.modelConfigRepository.findManageableSystemModel(id);
     if (!existing) {
-      throw new NotFoundException('模型配置不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.model_config.not_found');
     }
 
     if (
@@ -318,7 +317,7 @@ export class ModelConfigService {
   async deleteSystemModel(id: string) {
     const existing = await this.modelConfigRepository.findManageableSystemModel(id);
     if (!existing) {
-      throw new NotFoundException('模型配置不存在');
+      throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.model_config.not_found');
     }
     invalidateModelCache(id);
     return this.modelConfigRepository.delete(id);
@@ -333,9 +332,8 @@ export class ModelConfigService {
     const userLevelId = await this.membershipService.resolveActiveMembershipLevelId(userId);
     if (userLevelId && allowedLevelIds.includes(userLevelId)) return;
 
-    throw new ForbiddenException({
-      code: 'MODEL_MEMBERSHIP_REQUIRED',
-      message: '当前会员等级不可使用该模型，请升级会员或选择其他模型',
+    throw new I18nHttpException(HttpStatus.FORBIDDEN, 'creation.model.membership_required', undefined, {
+      code: 'FORBIDDEN',
     });
   }
 
@@ -414,7 +412,12 @@ export class ModelConfigService {
       ...validateParamsSchema(paramsSchema, pricingSchema),
     ];
     if (violations.length > 0) {
-      throw new BadRequestException({ message: 'schema 校验失败', violations });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.model_config.schema_validation_failed',
+        undefined,
+        { data: { violations } },
+      );
     }
 
     this.assertParamsSchemaCompiles(paramsSchema);
@@ -447,15 +450,21 @@ export class ModelConfigService {
     // 流程、把用户的配置错误变成 500 —— 保存期绝不能用它。
     const entry = tryResolveAnyPreset(protocolKey);
     if (!entry) {
-      throw new BadRequestException({
-        message: '模型协议配置与参数 schema 不闭合',
-        violations: [
-          {
-            code: 'UNKNOWN_PROTOCOL_KEY',
-            message: `unknown protocolKey "${protocolKey}"`,
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.model_config.protocol_not_closed',
+        undefined,
+        {
+          data: {
+            violations: [
+              {
+                code: 'UNKNOWN_PROTOCOL_KEY',
+                message: `unknown protocolKey "${protocolKey}"`,
+              },
+            ],
           },
-        ],
-      });
+        },
+      );
     }
 
     if (entry.media === 'video') {
@@ -475,10 +484,12 @@ export class ModelConfigService {
         : validateModelProtocolConfig({ paramsSchema, metadata, preset: entry.preset });
 
     if (violations.length > 0) {
-      throw new BadRequestException({
-        message: '模型协议配置与参数 schema 不闭合',
-        violations,
-      });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.model_config.protocol_not_closed',
+        undefined,
+        { data: { violations } },
+      );
     }
   }
 
@@ -492,17 +503,24 @@ export class ModelConfigService {
   private assertParamsSchemaCompiles(paramsSchema: ParamsSchema) {
     const violations = compileParamsSchema(paramsSchema);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: 'paramsSchema 无法编译', violations });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.model_config.params_schema_compile_failed',
+        undefined,
+        { data: { violations } },
+      );
     }
   }
 
   private assertValidDescription(description: LocalizedText) {
     const badLocales = validateDescription(description);
     if (badLocales.length > 0) {
-      throw new BadRequestException({
-        message: `description 含不支持的 locale: ${badLocales.join(', ')}`,
-        violations: badLocales,
-      });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.model_config.unsupported_locales',
+        { locales: badLocales.join(', ') },
+        { data: { violations: badLocales } },
+      );
     }
   }
 
@@ -543,7 +561,7 @@ export class ModelConfigService {
         ? dto.pricingSchema
         : existing.pricingSchema === null
           ? null
-          : this.narrowPricingSchema(existing.pricingSchema, '已保存的 pricingSchema');
+          : this.narrowPricingSchema(existing.pricingSchema, 'saved pricingSchema');
 
     if (dto.paramsSchema !== undefined) {
       violations.push(
@@ -555,13 +573,18 @@ export class ModelConfigService {
       // referencing a nonexistent param would silently no-op forever.
       const existingParamsSchema = this.narrowParamsSchema(
         existing.paramsSchema,
-        '已保存的 paramsSchema',
+        'saved paramsSchema',
       );
       violations.push(...validateParamsSchema(existingParamsSchema, effectivePricingSchema ?? undefined));
     }
 
     if (violations.length > 0) {
-      throw new BadRequestException({ message: 'schema 校验失败', violations });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.model_config.schema_validation_failed',
+        undefined,
+        { data: { violations } },
+      );
     }
 
     // admin 改 schema 走的恰恰是 update —— 只在 create 路径接冒烟等于没接。
@@ -578,7 +601,7 @@ export class ModelConfigService {
         ? dto.paramsSchema
         : existing.paramsSchema === null
           ? null
-          : this.narrowParamsSchema(existing.paramsSchema, '已保存的 paramsSchema');
+          : this.narrowParamsSchema(existing.paramsSchema, 'saved paramsSchema');
     if (effectiveParamsSchema !== null) {
       this.assertProtocolConfigIsClosed(
         effectiveParamsSchema,
@@ -591,7 +614,12 @@ export class ModelConfigService {
     const candidate = value as unknown as PricingSchema;
     const violations = validatePricingSchema(candidate);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: `${subject} 结构无效`, violations });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.model_config.invalid_structure',
+        { subject },
+        { data: { violations } },
+      );
     }
     return candidate;
   }
@@ -600,7 +628,12 @@ export class ModelConfigService {
     const candidate = value as unknown as ParamsSchema;
     const violations = validateParamsSchema(candidate);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: `${subject} 结构无效`, violations });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.model_config.invalid_structure',
+        { subject },
+        { data: { violations } },
+      );
     }
     return candidate;
   }
@@ -620,7 +653,7 @@ export class ModelConfigService {
         throw new Error('unsupported protocol');
       }
     } catch {
-      throw new BadRequestException('Base URL 必须是有效的 HTTP(S) URL');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.model_config.invalid_base_url');
     }
 
     return trimmed;

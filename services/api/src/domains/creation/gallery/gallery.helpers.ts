@@ -1,9 +1,10 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import type { GalleryKind, GallerySource, GalleryStatus } from '@autix/domain';
 import {
   GalleryStatus as PGStatus,
   Prisma,
 } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 export type GalleryActor = 'author' | 'admin' | 'system';
 
@@ -40,11 +41,17 @@ export function assertTransition(
 ): void {
   const allowed = TRANSITIONS[`${from}->${to}`];
   if (!allowed) {
-    throw new BadRequestException(`非法状态转移: ${from} → ${to}`);
+    throw new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'creation.gallery.helpers.illegal_transition',
+      { from, to },
+    );
   }
   if (!allowed.includes(actor)) {
-    throw new BadRequestException(
-      `角色 ${actor} 无权执行 ${from} → ${to}（需 ${allowed.join('/')}）`,
+    throw new I18nHttpException(
+      HttpStatus.BAD_REQUEST,
+      'creation.gallery.helpers.transition_forbidden',
+      { actor, from, to, roles: allowed.join('/') },
     );
   }
 }
@@ -96,31 +103,45 @@ export function assertSource(
   switch (p.sourceType) {
     case 'USER_UPLOAD':
       if (hasTemplate || hasGeneration) {
-        throw new BadRequestException('USER_UPLOAD 不允许携带模板/生成引用');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.user_upload_no_refs',
+        );
       }
       if (!p.mediaUrls || p.mediaUrls.length === 0) {
-        throw new BadRequestException('USER_UPLOAD 必须提供 mediaUrls');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.user_upload_requires_media',
+        );
       }
       return;
 
     case 'FROM_GENERATION':
       if (hasTemplate) {
-        throw new BadRequestException('FROM_GENERATION 不允许携带模板引用');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.from_generation_no_template',
+        );
       }
       if (!matchesKind(p.imageGenerationId, p.videoGenerationId)) {
-        throw new BadRequestException(
-          'FROM_GENERATION 需提供与 kind 一致的单一 generationId',
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.from_generation_single_id',
         );
       }
       return;
 
     case 'FROM_TEMPLATE':
       if (hasGeneration) {
-        throw new BadRequestException('FROM_TEMPLATE 不允许携带生成引用');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.from_template_no_generation',
+        );
       }
       if (!matchesKind(p.imageTemplateId, p.videoTemplateId)) {
-        throw new BadRequestException(
-          'FROM_TEMPLATE 需提供与 kind 一致的单一 templateId',
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.from_template_single_id',
         );
       }
       return;
@@ -129,24 +150,40 @@ export function assertSource(
     // （由 mediaMigrated=false + 迁移 worker 兜底搬进站内）。
     case 'ADMIN_CURATED':
       if (hasTemplate || hasGeneration) {
-        throw new BadRequestException('ADMIN_CURATED 不允许携带模板/生成引用');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.admin_curated_no_refs',
+        );
       }
       if (!p.mediaUrls || p.mediaUrls.length === 0) {
-        throw new BadRequestException('ADMIN_CURATED 必须提供 mediaUrls');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.admin_curated_requires_media',
+        );
       }
       // Fix 1a：非 URL 的媒体条目若在此放行，会被迁移 worker 的 isUrl 判定原样跳过
       // （不 push error），进而 errors.length===0 → mediaMigrated=true → 自动发布一条
       // 从未被搬运校验过的"媒体"。必须在导入这一步就拒绝，让管理员在 errorLog 里看见。
       if (p.mediaUrls.some((url) => !isHttpUrl(url))) {
-        throw new BadRequestException('ADMIN_CURATED 的 mediaUrls 必须全部为合法的 http(s) URL');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.admin_curated_media_http',
+        );
       }
       if (p.coverImage != null && p.coverImage.trim() !== '' && !isHttpUrl(p.coverImage)) {
-        throw new BadRequestException('ADMIN_CURATED 的 coverImage 若提供必须是合法的 http(s) URL');
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'creation.gallery.helpers.admin_curated_cover_http',
+        );
       }
       return;
 
     default:
-      throw new BadRequestException(`未知来源类型: ${p.sourceType as string}`);
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'creation.gallery.helpers.unknown_source_type',
+        { sourceType: p.sourceType as string },
+      );
   }
 }
 
@@ -191,7 +228,7 @@ export function isInStationMediaUrl(
 export function assertInStationMediaUrls(
   urls: readonly string[],
   allowedBaseUrls: readonly (string | null | undefined)[],
-  message = '仅允许使用站内存储的媒体链接',
+  message = 'only media links stored on our platform are allowed',
 ): void {
   for (const url of urls) {
     if (!isInStationMediaUrl(url, allowedBaseUrls)) {

@@ -19,6 +19,14 @@ export class ResponseInterceptor implements NestInterceptor {
         // 从请求级 AsyncLocalStorage 读取 traceId，与所有 logger 输出保持同一 ID；
         // main.ts 的 traceContextBootstrap 兜底保证 store 一定存在，缺省仍返回空串。
         const traceId = TraceContext.getTraceId() ?? '';
+        // messageKey 约定：接口返回 { messageKey, messageArgs? } 而非硬编码文案，
+        // 由拦截器按请求语言翻译成 message，业务层无需自己拿 lang。args 支持插值。
+        if (data && typeof data === 'object' && typeof (data as Record<string, unknown>).messageKey === 'string') {
+          const d = data as Record<string, unknown>;
+          d.message = this.i18n.t(lang, d.messageKey as string, d.messageArgs as Record<string, unknown> | undefined);
+          delete d.messageKey;
+          delete d.messageArgs;
+        }
         if (data && typeof data === 'object' && 'success' in data) {
           // 部分接口自行返回 { success: true, ... } 的形状（不走标准包装）；
           // 这里补写 traceId，保证响应体与日志/响应头能通过 traceId 关联。

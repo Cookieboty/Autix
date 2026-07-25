@@ -50,7 +50,12 @@
     "actions": "Действия",
     "none": "Нет",
     "yes": "Да",
-    "no": "Нет"
+    "no": "Нет",
+    "like": "Нравится",
+    "favorite": "В избранное",
+    "share": "Поделиться",
+    "jsonEmpty": "JSON пуст",
+    "invalidJson": "Недопустимый JSON"
   },
   "aiUi": {
     "selected": "Выбрано",
@@ -72,7 +77,10 @@
     "noData": "Нет данных",
     "loading": "Загрузка",
     "actionMessage": "[Действие: {action}]",
-    "serverError": "Сервер вернул ошибку"
+    "serverError": "Сервер вернул ошибку",
+    "thinking": "Думаю…",
+    "thoughtForSeconds": "Размышлял {seconds} с",
+    "thoughtForAFewSeconds": "Размышлял несколько секунд"
   },
   "sidebar": {
     "newSession": "Новая сессия",
@@ -122,9 +130,12 @@
     "myOrders": "Мои заказы",
     "inviteFriends": "Пригласить друзей",
     "docs": "Документация",
-    "myTemplates": "我的模板",
-    "upgrade": "升级会员",
-    "gallery": "Галерея"
+    "myTemplates": "Мои шаблоны",
+    "upgrade": "Повысить уровень членства",
+    "gallery": "Галерея",
+    "mobileTitle": "Боковая панель",
+    "mobileDescription": "Отображает боковую панель на мобильных устройствах.",
+    "toggle": "Переключить боковую панель"
   },
   "notification": {
     "title": "Уведомления",
@@ -280,7 +291,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio — Придумай. Создай. Запусти.",
       "description": "Создавайте PRD, код, дизайн и прототипы с ИИ в одном месте."
     },
     "video": {

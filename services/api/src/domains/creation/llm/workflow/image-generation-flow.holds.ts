@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import type {
   ResolvedImageRequest,
   SourceImageRef,
@@ -11,9 +12,10 @@ export const PROMPT_OPTIMIZE_MAX_INPUT_TOKENS = 32_000;
 
 export function assertPromptOptimizeInputWithinLimit(inputTokens: number): void {
   if (inputTokens > PROMPT_OPTIMIZE_MAX_INPUT_TOKENS) {
-    throw new BadRequestException(
-      `Prompt 优化输入过长（约 ${inputTokens} tokens），上限 ${PROMPT_OPTIMIZE_MAX_INPUT_TOKENS}`,
-    );
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.prompt_optimize_too_long', {
+      tokens: inputTokens,
+      limit: PROMPT_OPTIMIZE_MAX_INPUT_TOKENS,
+    });
   }
 }
 import {
@@ -69,7 +71,7 @@ export function buildPromptOptimizeHoldRemark(
   provider: string | null | undefined,
   model: string,
 ): string {
-  return `图片工作台 Prompt AI 优化 · ${formatBillingModel(provider, model)}`;
+  return `Image workbench prompt AI optimization · ${formatBillingModel(provider, model)}`;
 }
 
 export function buildPromptOptimizeHoldCreateInput(input: {

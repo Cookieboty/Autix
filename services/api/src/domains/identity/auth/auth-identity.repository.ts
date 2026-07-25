@@ -131,7 +131,7 @@ export class AuthIdentityRepository {
   findPasswordResetUserByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
-      select: { id: true, password: true },
+      select: { id: true, password: true, language: true },
     });
   }
 

@@ -16,7 +16,7 @@ import {
   parseMentionRefs,
   requiresResourceAcquisition,
   resourceDetailKey,
-  templateConflictMessage,
+  templateConflictKey,
 } from './conversation-resources.helpers';
 
 describe('conversation resource helpers', () => {
@@ -35,11 +35,11 @@ describe('conversation resource helpers', () => {
     expect(isDetailResourceType(ResourceType.MCP)).toBe(true);
     expect(isDetailResourceType('UNKNOWN' as ResourceType)).toBe(false);
 
-    expect(templateConflictMessage(ResourceType.IMAGE_TEMPLATE)).toBe(
-      '会话已关联图片模板，请先移除后再关联',
+    expect(templateConflictKey(ResourceType.IMAGE_TEMPLATE)).toBe(
+      'creation.conversation.image_template_already_linked',
     );
-    expect(templateConflictMessage(ResourceType.VIDEO_TEMPLATE)).toBe(
-      '会话已关联视频模板，请先移除后再关联',
+    expect(templateConflictKey(ResourceType.VIDEO_TEMPLATE)).toBe(
+      'creation.conversation.video_template_already_linked',
     );
 
     expect(conversationKindForAttachedTemplate(ResourceType.IMAGE_TEMPLATE)).toBe(
@@ -144,7 +144,9 @@ describe('conversation resource helpers', () => {
     });
 
     expect(result.mcpRefs).toBe(mcpRefs);
-    expect(result.prompt).toContain('### 会话已激活资源(请遵循以下指令)');
+    expect(result.prompt).toContain(
+      '### Conversation active resources (follow the instructions below)',
+    );
     expect(result.prompt).toContain('## Skill: Skill One\nUse the skill.');
     expect(result.prompt).toContain('## Agent: Agent One\nAct as agent.');
     expect(result.prompt).toContain('## Image Template: Product Image');
@@ -185,7 +187,7 @@ describe('conversation resource helpers', () => {
 
     expect(buildMentionPrompt(sections)).toBe(
       [
-        '### 本条消息引用的资源(仅本次生效)',
+        '### Resources referenced by this message (effective only for this turn)',
         '',
         '## @Skill: Drafting',
         'Write tightly.',

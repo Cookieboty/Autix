@@ -92,7 +92,7 @@ export class TemplateGenerationRepository {
       );
     } catch (err) {
       this.logger.warn(
-        `resource_metrics use_template 引用同步失败 type=${type} templateId=${templateId}: ${
+        `resource_metrics use_template reference sync failed type=${type} templateId=${templateId}: ${
           err instanceof Error ? err.message : String(err)
         }`,
       );

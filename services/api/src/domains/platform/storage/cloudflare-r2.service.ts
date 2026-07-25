@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 import {
   S3Client,
   PutObjectCommand,
@@ -82,7 +83,7 @@ export class CloudflareR2Service {
 
     const contentType = normalizeContentType(opts.contentType);
     if (!SAFE_UPLOAD_CONTENT_TYPES.has(contentType)) {
-      throw new BadRequestException(`不支持的上传内容类型：${opts.contentType}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'storage.unsupported_content_type', { type: opts.contentType });
     }
 
     // 扩展名限定为安全字符集，避免用户输入拼进 key。
@@ -264,7 +265,7 @@ export class CloudflareR2Service {
       .map(([key]) => key);
 
     if (missing.length > 0) {
-      throw new BadRequestException(`Cloudflare R2 配置不完整: ${missing.join(', ')}`);
+      throw new BadRequestException(`Cloudflare R2 configuration is incomplete: ${missing.join(', ')}`);
     }
 
     return {

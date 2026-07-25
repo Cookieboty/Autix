@@ -2,7 +2,6 @@ import { IsString, MinLength, IsOptional, IsEmail, MaxLength, Matches } from 'cl
 import { Transform } from 'class-transformer';
 import {
   PASSWORD_REGEX,
-  PASSWORD_VALIDATION_MESSAGE,
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
 } from '@autix/domain';
@@ -43,7 +42,7 @@ export class RegisterDto {
   @IsString()
   @MinLength(PASSWORD_MIN_LENGTH)
   @MaxLength(PASSWORD_MAX_LENGTH)
-  @Matches(PASSWORD_REGEX, { message: PASSWORD_VALIDATION_MESSAGE })
+  @Matches(PASSWORD_REGEX)
   password: string;
 
   @IsString()
@@ -67,7 +66,7 @@ export class ResetPasswordByTokenDto {
   @IsString()
   @MinLength(PASSWORD_MIN_LENGTH)
   @MaxLength(PASSWORD_MAX_LENGTH)
-  @Matches(PASSWORD_REGEX, { message: PASSWORD_VALIDATION_MESSAGE })
+  @Matches(PASSWORD_REGEX)
   newPassword: string;
 }
 
@@ -110,7 +109,7 @@ export class SetOrChangePasswordDto {
   @IsString()
   @MinLength(PASSWORD_MIN_LENGTH)
   @MaxLength(PASSWORD_MAX_LENGTH)
-  @Matches(PASSWORD_REGEX, { message: PASSWORD_VALIDATION_MESSAGE })
+  @Matches(PASSWORD_REGEX)
   newPassword: string;
 }
 

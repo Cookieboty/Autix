@@ -9,14 +9,12 @@ import { AVATAR_UPLOAD_LIMITS, type AvatarPresignInput } from '@autix/domain';
  * - `fileName` 只取扩展名，长度限制防拼装攻击
  */
 export class AvatarPresignDto implements AvatarPresignInput {
-  @IsString({ message: 'fileName 必须为字符串' })
-  @MaxLength(256, { message: 'fileName 长度不能超过 256' })
+  @IsString()
+  @MaxLength(256)
   fileName!: string;
 
   @IsString()
-  @IsIn(AVATAR_UPLOAD_LIMITS.allowedContentTypes as unknown as string[], {
-    message: '仅允许 image/png|jpeg|jpg|webp|gif|avif',
-  })
+  @IsIn(AVATAR_UPLOAD_LIMITS.allowedContentTypes as unknown as string[])
   contentType!: string;
 
   @IsInt()

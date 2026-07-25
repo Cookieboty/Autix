@@ -130,7 +130,7 @@ describe('GalleryService.listFeed', () => {
     const res = await svc.listFeed('IMAGE', undefined, 24);
     expect(res.items[0]!.author).toEqual({
       userId: 'user-a',
-      nickname: '已注销用户',
+      nickname: 'Deactivated user',
       avatar: null,
     });
   });

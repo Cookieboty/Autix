@@ -183,6 +183,7 @@ describe('StepUpService', () => {
         expect.stringMatching(/^\d{6}$/),
         'delete-account',
         5,
+        undefined,
       );
     });
 

@@ -354,7 +354,7 @@ export function buildErrorStreamMessage(
 }
 
 export function buildDuplicateProcessingStreamError() {
-  return { type: 'error', message: '请求正在处理中' };
+  return { type: 'error', message: 'Request is being processed' };
 }
 
 export function collectStreamPersistence(

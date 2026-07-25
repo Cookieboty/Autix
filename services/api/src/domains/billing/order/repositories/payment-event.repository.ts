@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { Prisma, type payment_events } from '../../../platform/prisma/generated';
 
@@ -84,7 +85,7 @@ export class PaymentEventRepository {
             return { event: existing, alreadyProcessing: true };
           }
           const event = await tx.payment_events.findUnique({ where: { id: existing.id } });
-          if (!event) throw new NotFoundException('支付事件不存在');
+          if (!event) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'payment.event_not_found');
           return { event, alreadyProcessed: false };
         }
 

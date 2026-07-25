@@ -182,7 +182,7 @@ export class ArtifactRepository {
           create: {
             version: input.currentVersion,
             content: input.content,
-            changelog: `恢复到版本 ${input.targetVersion}`,
+            changelog: `Restore to version ${input.targetVersion}`,
             sourcetags: input.sourcetags,
           },
         },

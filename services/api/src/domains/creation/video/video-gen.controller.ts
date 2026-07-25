@@ -1,4 +1,5 @@
-import { BadRequestException, Body, ConflictException, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import type { AuthUser } from '@autix/domain';
@@ -37,7 +38,7 @@ export class VideoGenController {
     @Body() body: { prompt: string; params?: Record<string, unknown>; materials?: RawDirectVideoMaterialInput[] },
   ) {
     const userId = getCurrentUserId(user);
-    if (!body.prompt?.trim()) throw new BadRequestException('请输入提示词');
+    if (!body.prompt?.trim()) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.prompt_required');
     const materials = this.validateMaterials(body.materials ?? []);
     return this.directService.generate({ userId, prompt: body.prompt, materials, clientParams: body.params ?? {} });
   }
@@ -68,7 +69,7 @@ export class VideoGenController {
   async getOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const userId = getCurrentUserId(user);
     const gen = await this.repository.findOwnedDirectGeneration({ id, userId });
-    if (!gen) throw new BadRequestException('记录不存在');
+    if (!gen) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.record_not_found');
     return toDirectVideoGenerationDto(gen);
   }
 
@@ -77,14 +78,14 @@ export class VideoGenController {
   async deleteHistory(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const userId = getCurrentUserId(user);
     const r = await this.repository.deleteOwnedDirectGeneration({ id, userId });
-    if (r === 'not_found') throw new BadRequestException('记录不存在');
-    if (r === 'not_terminal') throw new ConflictException('任务进行中，无法删除');
+    if (r === 'not_found') throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.record_not_found');
+    if (r === 'not_terminal') throw new I18nHttpException(HttpStatus.CONFLICT, 'creation.video.task_in_progress_undeletable');
   }
 
   @Post('optimize-prompt')
   async optimizePrompt(@CurrentUser() user: AuthUser, @Body() body: { prompt: string; modelId?: string }) {
     const userId = getCurrentUserId(user);
-    if (!body.prompt?.trim()) throw new BadRequestException('请输入提示词');
+    if (!body.prompt?.trim()) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.prompt_required');
     return this.videoChatService.optimizePrompt({ userId, prompt: body.prompt.trim(), modelConfigId: body.modelId, billingPurpose: 'video_template_optimize' });
   }
 
@@ -96,9 +97,9 @@ export class VideoGenController {
   private validateMaterials(materials: RawDirectVideoMaterialInput[]): DirectVideoMaterialInput[] {
     return materials.map((m) => {
       if (!VALID_MATERIAL_ROLES.includes(m.role)) {
-        throw new BadRequestException(`无效的素材角色: ${m.role}`);
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.invalid_material_role', { role: m.role });
       }
-      if (!m.url?.trim()) throw new BadRequestException('素材缺少 url');
+      if (!m.url?.trim()) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.material_missing_url');
       return {
         role: m.role as VideoMaterialRole,
         url: m.url,

@@ -50,7 +50,12 @@
     "actions": "操作",
     "none": "無",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "like": "點讚",
+    "favorite": "收藏",
+    "share": "分享",
+    "jsonEmpty": "JSON 為空",
+    "invalidJson": "JSON 格式無效"
   },
   "aiUi": {
     "selected": "已選擇",
@@ -72,7 +77,10 @@
     "noData": "暫無資料",
     "loading": "載入中",
     "actionMessage": "[操作: {action}]",
-    "serverError": "伺服器返回錯誤"
+    "serverError": "伺服器返回錯誤",
+    "thinking": "思考中…",
+    "thoughtForSeconds": "思考了 {seconds} 秒",
+    "thoughtForAFewSeconds": "思考了幾秒"
   },
   "sidebar": {
     "newSession": "新建會話",
@@ -123,8 +131,11 @@
     "inviteFriends": "邀請好友",
     "docs": "使用文檔",
     "myTemplates": "我的模板",
-    "upgrade": "升级会员",
-    "gallery": "廣場"
+    "upgrade": "升級會員",
+    "gallery": "廣場",
+    "mobileTitle": "側邊欄",
+    "mobileDescription": "顯示行動版側邊欄。",
+    "toggle": "切換側邊欄"
   },
   "notification": {
     "title": "通知",
@@ -156,7 +167,7 @@
     "retry": "重試",
     "offlineBanner": "網路已中斷，操作可能失敗，恢復後會自動重新連線。",
     "back": "返回",
-    "viewUser": "聊天工作台",
+    "viewUser": "聊天工作臺",
     "viewSystem": "Chat 系統管理",
     "viewAdmin": "使用者中心管理",
     "navSystemUsers": "使用者管理",
@@ -280,7 +291,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio - 構思、打造、發佈。",
       "description": "PRD、程式碼、設計、原型，AI 一站生成。"
     },
     "video": {

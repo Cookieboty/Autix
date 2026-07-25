@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { AppLogger } from '../../platform/common/app-logger';
 import { getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { OrderService } from '../../billing/order/order.service';
 import { StripePaymentService } from '../../billing/order/stripe-payment.service';
 import { PointsService } from '../../billing/points/points.service';
@@ -59,7 +60,7 @@ export class AdminService {
     private readonly stripePaymentService: StripePaymentService,
     private readonly auditStore: AdminAuditStore,
     private readonly membershipService: MembershipService,
-  ) {}
+  ) { }
 
   getAuditLogs(input: {
     action?: string;
@@ -201,8 +202,7 @@ export class AdminService {
         await this.stripePaymentService.cancelSubscriptionImmediately(result.cancelSubscriptionId);
       } catch (error) {
         this.auditLogger.error(
-          `退款撤销会员后取消 Stripe 订阅失败 order=${id} subscription=${result.cancelSubscriptionId}: ${
-            error instanceof Error ? error.message : String(error)
+          `Failed to cancel Stripe subscription after refund revoked membership order=${id} subscription=${result.cancelSubscriptionId}: ${error instanceof Error ? error.message : String(error)
           }`,
         );
       }
@@ -244,7 +244,10 @@ export class AdminService {
   async approveUser(user: AuthUser, userId: string, body: ApproveUserDto) {
     const registration = await this.adminRepository.findPendingRegistrationByUser(userId);
     if (!registration) {
-      throw new BadRequestException('没有待审批的注册申请');
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'user.no_pending_registration',
+      );
     }
     this.audit(user, 'users.approve', { userId, note: body.note });
     return this.registrationService.approve(registration.id, user, { note: body.note });
@@ -254,7 +257,12 @@ export class AdminService {
     const { levelId, months = 1 } = body;
 
     const level = await this.adminRepository.findMembershipLevel(levelId);
-    if (!level) throw new BadRequestException('会员等级不存在');
+    if (!level) {
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'membership.level_not_found',
+      );
+    }
 
     const now = new Date();
     const expiresAt = OrderService.addMonths(now, Math.max(1, months));
@@ -266,20 +274,20 @@ export class AdminService {
       { userId, levelId, startedAt: now, expiresAt },
       pointsToGrant > 0
         ? async (tx) => {
-            await this.pointsService.grantPointsWithinTx(tx, userId, {
-              amount: pointsToGrant,
-              grantType: PointGrantType.SUBSCRIPTION,
-              sourceEvent: PointLedgerEventType.admin_adjustment,
-              source: PointsSource.ADMIN_GRANT,
-              expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-              remark: `管理员授予 ${level.name} 当前周期积分`,
-              metadata: { months, grantPolicy: 'current_cycle_only' },
-            });
-          }
+          await this.pointsService.grantPointsWithinTx(tx, userId, {
+            amount: pointsToGrant,
+            grantType: PointGrantType.SUBSCRIPTION,
+            sourceEvent: PointLedgerEventType.admin_adjustment,
+            source: PointsSource.ADMIN_GRANT,
+            expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+            remark: `Admin granted ${level.name} current-cycle points`,
+            metadata: { months, grantPolicy: 'current_cycle_only' },
+          });
+        }
         : undefined,
     );
 
-    return { message: '授予成功' };
+    return { message: 'granted' };
   }
 
   async grantPoints(user: AuthUser, userId: string, body: GrantPointsDto) {
@@ -306,7 +314,7 @@ export class AdminService {
       return { balance: result.balance };
     });
 
-    return { message: '授予成功', balance: current.balance };
+    return { message: 'granted', balance: current.balance };
   }
 
   private audit(user: AuthUser, action: string, payload: Record<string, unknown>) {

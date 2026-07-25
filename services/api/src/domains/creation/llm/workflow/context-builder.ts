@@ -76,7 +76,7 @@ export async function buildStepContext(
   }
 
   // 清理未替换的 artifact 占位符
-  rendered = rendered.replace(/\{\{artifact:\w+\}\}/g, '（该阶段产物不可用）');
+  rendered = rendered.replace(/\{\{artifact:\w+\}\}/g, '(This stage output is unavailable)');
 
   const links = await repository.findConversationResources(conversationId);
 
@@ -117,13 +117,13 @@ export async function buildStepContext(
 
   const resourceSections: string[] = [];
   for (const s of skills) {
-    resourceSections.push(`## 可用 Skill: ${s.title}\n${s.instructions}`);
+    resourceSections.push(`## Available Skill: ${s.title}\n${s.instructions}`);
   }
   for (const a of agents) {
-    resourceSections.push(`## 可用 Agent: ${a.title}\n${a.systemPrompt}`);
+    resourceSections.push(`## Available Agent: ${a.title}\n${a.systemPrompt}`);
   }
   if (resourceSections.length > 0) {
-    rendered += `\n\n### 会话已激活资源\n\n${resourceSections.join('\n\n')}`;
+    rendered += `\n\n### Conversation active resources\n\n${resourceSections.join('\n\n')}`;
   }
 
   return { renderedPrompt: rendered, tools, subagents };

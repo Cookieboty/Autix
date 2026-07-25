@@ -37,7 +37,7 @@ export function CTABanner() {
           <div className="relative flex min-h-[420px] flex-col justify-end p-6 md:p-12 lg:p-14">
             <p className="mb-4 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/64">
               <span className="h-px w-8 bg-white/45" />
-              Start Building
+              {t('ctaStartBuilding')}
             </p>
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
               <div>

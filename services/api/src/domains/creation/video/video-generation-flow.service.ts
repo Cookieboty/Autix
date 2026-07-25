@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, HttpStatus, NotFoundException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { AppLogger } from '../../platform/common/app-logger';
 import { runInJobContext } from '../../platform/common/job-context';
 import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
@@ -161,7 +161,7 @@ export class VideoGenerationFlowService {
     );
 
     for (const g of toExpire) {
-      await this.markExpired(g.id, 'cron: queued 超过 30 分钟未完成');
+      await this.markExpired(g.id, 'cron: queued for over 30 minutes without completing');
     }
 
     if (toPoll.length === 0) {
@@ -270,9 +270,9 @@ export class VideoGenerationFlowService {
 
   async generateClip(input: ClipGenerateInput) {
     const clip = await this.repository.findClipForGeneration(input.clipId);
-    if (!clip) throw new BadRequestException('Clip 不存在');
+    if (!clip) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.clip_not_found');
     if (clip.project.userId !== input.userId)
-      throw new BadRequestException('无权操作此项目');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.project_forbidden');
 
     const rawParams = (clip.params ?? {}) as ClipParams;
 
@@ -384,7 +384,7 @@ export class VideoGenerationFlowService {
     // 判空必须协议无关：flat-media（PoYo VEO）请求体没有 content 数组（prompt 在 input.prompt），
     // 查 requestBody.content 会永远判空。按「解析后 prompt 为空且无素材」判定，两种协议都对。
     if (resolvedPrompt.trim().length === 0 && materials.length === 0)
-      throw new BadRequestException('Clip 缺少素材或 prompt');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.clip_missing_material_or_prompt');
 
     const generationId: string = randomUUID();
     const estimateInput = buildSeedanceCostEstimateInput({
@@ -524,7 +524,7 @@ export class VideoGenerationFlowService {
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
             generationId,
-            'createTask 同步失败',
+            'createTask sync failed',
           ),
       );
       // CAS 输家：终态已由并发路径写定，重算只会读到赢家状态，本次没有新信息可加。
@@ -834,9 +834,9 @@ export class VideoGenerationFlowService {
     userId: string;
   }) {
     const generation = await this.repository.findOwnedGeneration(args);
-    if (!generation) throw new NotFoundException('Generation 不存在');
+    if (!generation) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.video.generation_not_found');
     if (!generation.providerTaskId)
-      throw new BadRequestException('任务尚未创建，无法刷新');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.task_not_created');
 
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) {
       return this.repository.findGenerationById(generation.id);
@@ -848,7 +848,7 @@ export class VideoGenerationFlowService {
         )
       : await this.resolveLegacyApiContext(generation);
     if (!apiContext) {
-      throw new BadRequestException('视频模型缺少 API Key 配置或已跨渠道漂移，无法刷新');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.model_missing_api_key_or_drift');
     }
     const preset = resolveVideoPreset(
       generation.protocolKey ?? LEGACY_VIDEO_PROTOCOL_KEY,
@@ -961,20 +961,20 @@ export class VideoGenerationFlowService {
     }
 
     this.logger.warn(
-      `Generation ${generationId} 排水标记 expired（不退款，交积分侧孤儿回收）: ${reason}`,
+      `Generation ${generationId} drain-marked expired (no refund, left to points-side orphan reclaim): ${reason}`,
     );
   }
 
   async generateAllClips(projectId: string, userId: string) {
     // 项目级 owner 校验前置（避免越权批量提交，单个 generateClip 内部校验仍兜底）
     const project = await this.repository.findProjectOwner(projectId);
-    if (!project) throw new NotFoundException('项目不存在');
+    if (!project) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'creation.video.project_not_found');
     if (project.userId !== userId)
-      throw new BadRequestException('无权操作此项目');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.project_forbidden');
 
     const clips = await this.repository.findProjectClipsOrdered(projectId);
     if (clips.length === 0)
-      throw new BadRequestException('项目无 Clip');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.project_no_clip');
 
     return this.generateStoryboardProjectVideo({ projectId, userId, clips });
   }
@@ -986,7 +986,7 @@ export class VideoGenerationFlowService {
   }) {
     const { projectId, userId, clips } = input;
     const anchorClip = clips[0];
-    if (!anchorClip) throw new BadRequestException('项目无 Clip');
+    if (!anchorClip) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.project_no_clip');
     const rawParams: Record<string, unknown> & ClipParams = {
       ...((anchorClip.params ?? {}) as ClipParams),
       generationMode: 'storyboard',
@@ -1050,7 +1050,7 @@ export class VideoGenerationFlowService {
       : [];
     // 判空协议无关（同 generateClip）：flat-media（PoYo）无 content 数组，按 prompt+素材判。
     if (resolvedPrompt.trim().length === 0 && storyboardMaterials.length === 0)
-      throw new BadRequestException('项目缺少分镜 prompt');
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.video.project_missing_prompt');
 
     const generationId = randomUUID();
     const estimateInput = buildSeedanceCostEstimateInput({

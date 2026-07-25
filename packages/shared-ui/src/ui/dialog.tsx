@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "./utils"
@@ -75,6 +76,7 @@ function DialogContent({
   overlayClassName?: string
 }) {
   const isFullscreen = variant === "fullscreen"
+  const t = useTranslations("common")
   return (
     <DialogPortal>
       <DialogOverlay
@@ -103,7 +105,7 @@ function DialogContent({
             >
               <XIcon
               />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{t("close")}</span>
             </Button>
           </DialogPrimitive.Close>
         )}
@@ -130,6 +132,7 @@ function DialogFooter({
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean
 }) {
+  const t = useTranslations("common")
   return (
     <div
       data-slot="dialog-footer"
@@ -142,7 +145,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
+          <Button variant="outline">{t("close")}</Button>
         </DialogPrimitive.Close>
       )}
     </div>

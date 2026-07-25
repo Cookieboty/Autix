@@ -16,7 +16,7 @@ export class AIUIClient {
     modelId?: string,
   ): AsyncGenerator<SSEEvent> {
     const token = await this.getToken();
-    if (!token) throw new Error('未登录');
+    if (!token) throw new Error('Not logged in');
 
     const url = `${this.baseUrl}/api/conversations/${conversationId}/chat`;
 

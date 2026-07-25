@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -12,6 +11,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { Public } from '../../identity/auth/decorators/public.decorator';
@@ -65,7 +65,7 @@ export class VideoProjectController {
     @Body() body: { prompt: string; modelId?: string },
   ) {
     const prompt = body.prompt?.trim();
-    if (!prompt) throw new BadRequestException('请输入提示词');
+    if (!prompt) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.prompt_required');
     const userId = getCurrentUserId(user);
     return this.videoChatService.optimizePrompt({
       userId,
@@ -258,7 +258,7 @@ export class VideoProjectController {
     },
   ) {
     const message = body.message?.trim();
-    if (!message) throw new BadRequestException('请输入消息内容');
+    if (!message) throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.message_required');
     const userId = getCurrentUserId(user);
     await this.projectService.getProject(projectId, userId);
     const conversationId = await this.projectService.ensureProjectConversation(projectId, userId);

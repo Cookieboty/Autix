@@ -1,6 +1,7 @@
 import type { Mock } from 'vitest';
 import type { SendMailOptions } from 'nodemailer';
 import type { SystemSettingsService } from '../system-settings/system-settings.service';
+import { I18nService } from '../i18n/i18n.service';
 import { MailService } from './mail.service';
 
 function createService() {
@@ -8,7 +9,10 @@ function createService() {
     getString: vi.fn().mockResolvedValue(''),
     getBoolean: vi.fn().mockResolvedValue(true),
   };
-  return new MailService(settings as unknown as SystemSettingsService);
+  // 用真实 I18nService（加载磁盘词条），断言默认语言 en 的邮件文案。
+  const i18n = new I18nService();
+  i18n.onModuleInit();
+  return new MailService(settings as unknown as SystemSettingsService, i18n);
 }
 
 function runtimeConfig(sendMail: Mock) {
@@ -36,11 +40,11 @@ describe('MailService.sendStepUpOtp', () => {
     expect(options).toMatchObject({
       from: 'security@example.com',
       to: 'user@example.com',
-      subject: '验证账号操作',
+      subject: 'Verify account action',
     });
-    expect(options.text).toContain('删除账号');
-    expect(options.text).toContain('验证码：042817');
-    expect(options.html).toContain('删除账号');
+    expect(options.text).toContain('delete account');
+    expect(options.text).toContain('Verification code: 042817');
+    expect(options.html).toContain('delete account');
     expect(options.html).toContain('>042817</p>');
     expect(options.html).not.toContain('?token=');
   });

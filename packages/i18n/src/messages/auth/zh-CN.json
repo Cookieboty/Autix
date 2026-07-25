@@ -7,7 +7,7 @@
     "password": "密码",
     "email": "邮箱",
     "user": "用户",
-    "subtitle": "Think it. Build it. Ship it.",
+    "subtitle": "构想它，构建它，交付它。",
     "featureAnalysis": "PRD · 代码 · 设计 · 原型",
     "featureHistory": "多会话历史管理",
     "featureRealtime": "AI 一站生成，快速交付",
@@ -250,7 +250,10 @@
     "backToLoginOptions": "返回其他登录方式",
     "loginEmailTitle": "登录 Amux Studio",
     "or": "或",
-    "modalTerms": "继续即表示我已阅读<privacy>隐私政策</privacy>并同意<terms>使用条款</terms>，同时确认本人已年满 18 周岁"
+    "modalTerms": "继续即表示我已阅读<privacy>隐私政策</privacy>并同意<terms>使用条款</terms>，同时确认本人已年满 18 周岁",
+    "modalA11yTitle": "登录 Amux Studio",
+    "modalA11yDescription": "登录或创建账户以继续。",
+    "creativeHighlights": "创意亮点"
   },
   "login": {
     "console": "管理控制台",

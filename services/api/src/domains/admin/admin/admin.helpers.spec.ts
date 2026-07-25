@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import {
   PointGrantType,
   Prisma,
@@ -165,7 +166,7 @@ describe('admin helpers', () => {
         { name: 'Starter', points: 1000 },
       )).toEqual({
         pointsToGrant: 1000,
-        remark: '管理员授予积分包: Starter',
+        remark: 'Admin granted points package: Starter',
         grantType: PointGrantType.PURCHASED,
       });
 
@@ -175,11 +176,18 @@ describe('admin helpers', () => {
         grantType: PointGrantType.COMPENSATION,
       });
 
-      expect(() => buildGrantPointsDecision({ packageId: 'missing' }, null)).toThrow(
-        BadRequestException,
-      );
+      expect(() => buildGrantPointsDecision({ packageId: 'missing' }, null))
+        .toThrow(
+          expect.objectContaining({
+            constructor: I18nHttpException,
+            i18nKey: 'grant.points_package_not_found',
+          }) as unknown as Error,
+        );
       expect(() => buildGrantPointsDecision({ points: 0 })).toThrow(
-        BadRequestException,
+        expect.objectContaining({
+          constructor: I18nHttpException,
+          i18nKey: 'grant.missing_points_or_package',
+        }) as unknown as Error,
       );
     });
   });

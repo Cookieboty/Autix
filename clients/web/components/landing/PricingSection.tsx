@@ -115,7 +115,7 @@ export function PricingSection() {
         >
           <p className="mb-4 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/56">
             <span className="h-px w-8 bg-white/42" />
-            Membership
+            {t('pricingMembershipLabel')}
           </p>
           <h2 className="text-4xl font-bold tracking-tight md:text-6xl">
             {t('pricingTitle')}

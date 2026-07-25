@@ -24,7 +24,7 @@ export function validateStepArtifact(
   if (schema.requiredSections) {
     for (const section of schema.requiredSections) {
       if (!content.includes(section)) {
-        reasons.push(`缺少必备章节: "${section}"`);
+        reasons.push(`Missing required section: "${section}"`);
       }
     }
   }
@@ -34,7 +34,7 @@ export function validateStepArtifact(
     try {
       JSON.parse(content);
     } catch {
-      reasons.push('产物内容不是合法 JSON');
+      reasons.push('Output content is not valid JSON');
     }
   }
 
@@ -43,7 +43,7 @@ export function validateStepArtifact(
     try {
       new Function(content);
     } catch (err) {
-      reasons.push(`代码语法错误: ${err instanceof Error ? err.message : String(err)}`);
+      reasons.push(`Code syntax error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

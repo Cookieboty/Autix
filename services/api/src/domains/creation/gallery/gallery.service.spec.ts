@@ -2,6 +2,7 @@ import type { Mock } from 'vitest';
 import { vi } from 'vitest';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { GalleryStatus, ResourceType } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { GalleryRepository } from './gallery.repository';
 import { GalleryService } from './gallery.service';
 
@@ -100,7 +101,7 @@ describe('GalleryService.createSubmission — fail-closed 归属校验', () => {
         sourceType: 'FROM_GENERATION',
         imageGenerationId: otherUsersGenId,
       } as never),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toMatchObject({ status: 403 });
   });
 
   it('FROM_GENERATION 投稿：generation 不存在 → 拒绝（fail-closed，不再放行）', async () => {
@@ -112,7 +113,7 @@ describe('GalleryService.createSubmission — fail-closed 归属校验', () => {
         sourceType: 'FROM_GENERATION',
         imageGenerationId: 'does-not-exist',
       } as never),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toMatchObject({ status: 403 });
   });
 
   it('查询异常直接向上抛出，不吞异常放行', async () => {
@@ -272,7 +273,7 @@ describe('GalleryService.createSubmission — Task 4.5：站内来源写入守�
         sourceType: 'FROM_GENERATION',
         imageGenerationId: myGenId,
       } as never),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400, i18nKey: 'gallery.generation.empty_result' });
   });
 
   it('USER_UPLOAD 拒绝非站内存储域名 URL', async () => {
@@ -383,7 +384,7 @@ describe('GalleryService.submitDraft — 草稿→提交时快照元数据', () 
       imageGenerations: { [myGenId]: { ...myGen, userId: 'someone-else' } },
       posts: { [draftId]: draftPost() },
     });
-    await expect(service.submitDraft(authorId, draftId)).rejects.toThrow(ForbiddenException);
+    await expect(service.submitDraft(authorId, draftId)).rejects.toMatchObject({ status: 403 });
   });
 
   it('USER_UPLOAD 草稿 submitDraft 不写入生成元数据', async () => {
@@ -500,7 +501,7 @@ describe('GalleryService.updatePost — 仅在来源/生成引用变动时才重
     });
     await expect(
       service.updatePost(authorId, postId, { imageGenerationId: genB } as never),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toMatchObject({ status: 403 });
   });
 });
 
@@ -668,7 +669,7 @@ describe('GalleryService.download — 仅 PUBLISHED + 非幂等计数', () => {
 
   it('作品不存在 → 404', async () => {
     const { service } = makeDownloadService({ posts: {} });
-    await expect(service.download('user-1', 'missing')).rejects.toThrow(NotFoundException);
+    await expect(service.download('user-1', 'missing')).rejects.toMatchObject({ status: 404 });
   });
 
   it.each(['DRAFT', 'PENDING', 'HIDDEN', 'REJECTED', 'UNPUBLISHED', 'REMOVED'])(
@@ -677,7 +678,7 @@ describe('GalleryService.download — 仅 PUBLISHED + 非幂等计数', () => {
       const { service, recordDownload } = makeDownloadService({
         posts: { p1: { ...publishedPost, id: 'p1', status } },
       });
-      await expect(service.download('user-1', 'p1')).rejects.toThrow(BadRequestException);
+      await expect(service.download('user-1', 'p1')).rejects.toMatchObject({ status: 400 });
       expect(recordDownload).not.toHaveBeenCalled();
     },
   );
@@ -708,7 +709,7 @@ describe('GalleryService.download — 仅 PUBLISHED + 非幂等计数', () => {
     const { service, recordDownload } = makeDownloadService({
       posts: { p3: { ...publishedPost, id: 'p3', mediaUrls: [], coverImage: null } },
     });
-    await expect(service.download('user-1', 'p3')).rejects.toThrow(NotFoundException);
+    await expect(service.download('user-1', 'p3')).rejects.toMatchObject({ status: 404 });
     expect(recordDownload).not.toHaveBeenCalled();
   });
 
@@ -767,14 +768,14 @@ describe('GalleryService.favorite/unfavorite — 单事务收藏耦合(Plan C Ta
       const { service, favoriteLibrary } = makeFavoriteService({
         posts: { p1: { ...publishedPost, id: 'p1', status } },
       });
-      await expect(service.favorite('user-1', 'p1')).rejects.toThrow(BadRequestException);
+      await expect(service.favorite('user-1', 'p1')).rejects.toMatchObject({ status: 400 });
       expect(favoriteLibrary.favorite).not.toHaveBeenCalled();
     },
   );
 
   it('favorite：作品不存在 → 404', async () => {
     const { service } = makeFavoriteService({ posts: {} });
-    await expect(service.favorite('user-1', 'missing')).rejects.toThrow(NotFoundException);
+    await expect(service.favorite('user-1', 'missing')).rejects.toMatchObject({ status: 404 });
   });
 
   it('unfavorite：不校验 PUBLISHED 状态（用户应始终能取消自己的收藏），直接委托', async () => {
@@ -861,7 +862,7 @@ describe('GalleryService.recreate — 仅 PUBLISHED，读快照 + referenceCount
 
   it('作品不存在 → 404', async () => {
     const { service } = makeRecreateService({ posts: {} });
-    await expect(service.recreate('user-1', 'missing')).rejects.toThrow(NotFoundException);
+    await expect(service.recreate('user-1', 'missing')).rejects.toMatchObject({ status: 404 });
   });
 
   it.each(['DRAFT', 'PENDING', 'HIDDEN', 'REJECTED', 'UNPUBLISHED', 'REMOVED'])(
@@ -870,7 +871,7 @@ describe('GalleryService.recreate — 仅 PUBLISHED，读快照 + referenceCount
       const { service, recordReference } = makeRecreateService({
         posts: { 'd-1': { ...draftPost, status } },
       });
-      await expect(service.recreate('user-1', 'd-1')).rejects.toThrow(BadRequestException);
+      await expect(service.recreate('user-1', 'd-1')).rejects.toMatchObject({ status: 400 });
       expect(recordReference).not.toHaveBeenCalled();
     },
   );
@@ -1096,7 +1097,7 @@ describe('GalleryService.batchModerate — 逐条尽力执行', () => {
     expect(result.succeeded.sort()).toEqual(['p-1', 'p-3']);
     expect(result.failed).toHaveLength(1);
     expect(result.failed[0]!.id).toBe('p-2');
-    expect(result.failed[0]!.reason).toContain('非法状态转移');
+    expect(result.failed[0]!.reason).toContain('illegal state transition');
     // 成功的条目审计日志照常写入，失败的不写
     expect(auditLogs.map((l) => l.targetId).sort()).toEqual(['p-1', 'p-3']);
   });
@@ -1111,7 +1112,9 @@ describe('GalleryService.batchModerate — 逐条尽力执行', () => {
 
     expect(result.succeeded).toEqual(['p-1']);
     expect(result.failed[0]!.id).toBe('ghost');
-    expect(result.failed[0]!.reason).toContain('作品不存在');
+    // not-found 抛 I18nHttpException；batchModerate 取其稳定 i18nKey 作为 reason，
+    // 而非 NestJS 从类名派生的不透明占位串。
+    expect(result.failed[0]!.reason).toBe('gallery.post.not_found');
   });
 
   it('reject 把共用 reason 透传给每一条', async () => {

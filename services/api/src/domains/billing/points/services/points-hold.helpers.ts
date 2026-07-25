@@ -52,7 +52,7 @@ export function assertConfirmAmount(actualAmount?: number) {
     actualAmount !== undefined &&
     (!Number.isInteger(actualAmount) || actualAmount < 0)
   ) {
-    throw new BadRequestException('确认扣费金额必须为非负整数');
+    throw new BadRequestException('Capture amount must be a non-negative integer');
   }
 }
 
@@ -132,7 +132,7 @@ export function buildHoldConfirmationPlan(input: {
 } {
   const confirmedAmount = input.actualAmount ?? input.estimatedAmount;
   if (confirmedAmount > input.estimatedAmount) {
-    throw new BadRequestException('确认扣费不能超过冻结金额');
+    throw new BadRequestException('Capture amount cannot exceed the held amount');
   }
 
   let remainingToConsume = confirmedAmount;
@@ -258,40 +258,40 @@ const REQUIRED_SNAPSHOT_KEYS = [
  */
 export function parsePricingSnapshot(raw: Prisma.JsonValue | null): PricingSnapshot {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new BadRequestException('冻结记录缺少计价快照');
+    throw new BadRequestException('Hold record is missing the pricing snapshot');
   }
   const snapshot = raw as Record<string, unknown>;
 
   for (const key of REQUIRED_SNAPSHOT_KEYS) {
     if (!(key in snapshot)) {
       throw new BadRequestException(
-        `计价快照缺少字段: ${key}（可能是旧计价引擎写入的快照，形状不兼容）`,
+        `Pricing snapshot is missing field: ${key} (possibly a snapshot written by the old pricing engine; incompatible shape)`,
       );
     }
   }
 
   if (typeof snapshot.schemaVersion !== 'number') {
-    throw new BadRequestException('计价快照的 schemaVersion 不是数字');
+    throw new BadRequestException('Pricing snapshot schemaVersion is not a number');
   }
   if (typeof snapshot.modelConfigId !== 'string') {
-    throw new BadRequestException('计价快照的 modelConfigId 不是字符串');
+    throw new BadRequestException('Pricing snapshot modelConfigId is not a string');
   }
   if (typeof snapshot.multiplier !== 'number') {
-    throw new BadRequestException('计价快照的 multiplier 不是数字');
+    throw new BadRequestException('Pricing snapshot multiplier is not a number');
   }
   if (typeof snapshot.discountFactor !== 'number') {
-    throw new BadRequestException('计价快照的 discountFactor 不是数字');
+    throw new BadRequestException('Pricing snapshot discountFactor is not a number');
   }
   if (
     snapshot.params === null ||
     typeof snapshot.params !== 'object' ||
     Array.isArray(snapshot.params)
   ) {
-    throw new BadRequestException('计价快照的 params 不是有效的对象');
+    throw new BadRequestException('Pricing snapshot params is not a valid object');
   }
   const discountCode = snapshot.discountCode;
   if (discountCode !== null && discountCode !== undefined && typeof discountCode !== 'string') {
-    throw new BadRequestException('计价快照的 discountCode 既不是字符串也不是 null');
+    throw new BadRequestException('Pricing snapshot discountCode is neither a string nor null');
   }
 
   const modelSchema = narrowSnapshotSchema(snapshot.modelSchema, 'modelSchema');
@@ -327,7 +327,7 @@ function narrowSnapshotSchema(value: unknown, field: 'modelSchema' | 'taskFixedS
   const violations = validatePricingSchema(candidate);
   if (violations.length > 0) {
     throw new BadRequestException({
-      message: `计价快照的 ${field} 结构无效`,
+      message: `Pricing snapshot ${field} structure is invalid`,
       violations,
     });
   }

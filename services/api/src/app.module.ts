@@ -4,9 +4,10 @@ import { AppService } from './app.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { I18nMiddleware } from './domains/platform/i18n/i18n.middleware';
 import { TraceContextMiddleware } from './domains/platform/common/trace-context.middleware';
+import { AppThrottlerGuard } from './domains/platform/common/app-throttler.guard';
 import { AdminDomainModule } from './domains/admin/admin-domain.module';
 import { BillingDomainModule } from './domains/billing/billing-domain.module';
 import { CreationDomainModule } from './domains/creation/creation-domain.module';
@@ -39,7 +40,9 @@ import { PlatformDomainModule } from './domains/platform/platform-domain.module'
   providers: [
     AppService,
     // 全局启用限流守卫，使各 controller 上的 @Throttle 装饰器真正生效。
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // AppThrottlerGuard 覆盖官方 throwThrottlingException，把 429 转成
+    // I18nHttpException 复用 i18n 通道，避免英文原文直出到前端。
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
   ],
 })
 export class AppModule implements NestModule {

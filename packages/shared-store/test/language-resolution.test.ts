@@ -13,11 +13,18 @@ import { resolveLanguage } from '../src/language-resolution';
  */
 describe('resolveLanguage', () => {
   describe('URL 前缀最高优先', () => {
-    it('URL 是非默认 locale → 胜出，并回写 cookie 与 localStorage', () => {
+    it('URL 是非默认 locale → 胜出，并回写 cookie；stored 有值但错位时同步纠正', () => {
       expect(resolveLanguage({ urlLocale: 'zh-CN', cookie: 'ja', stored: 'fr' })).toEqual({
         language: 'zh-CN',
         writeCookie: 'zh-CN',
         writeStored: 'zh-CN',
+      });
+    });
+
+    it('URL 是非默认 locale 且 stored 缺失 → 只回写 cookie，不主动写 stored', () => {
+      expect(resolveLanguage({ urlLocale: 'zh-CN' })).toEqual({
+        language: 'zh-CN',
+        writeCookie: 'zh-CN',
       });
     });
   });
@@ -60,6 +67,53 @@ describe('resolveLanguage', () => {
 
     it('三者全空 → 默认语言', () => {
       expect(resolveLanguage({})).toEqual({ language: 'en' });
+    });
+  });
+
+  describe('environment 兜底（用户从未手动设置过语言）', () => {
+    it('cookie 与 stored 都空、environment=zh-CN、裸路径 → 采信环境语言并切 URL、只回写 cookie', () => {
+      expect(resolveLanguage({ urlLocale: 'en', environment: 'zh-CN' })).toEqual({
+        language: 'zh-CN',
+        writeCookie: 'zh-CN',
+        switchUrlTo: 'zh-CN',
+      });
+    });
+
+    it('desktop 首装无偏好、environment=ja → 用环境语言，只回写 cookie，不落 stored', () => {
+      expect(resolveLanguage({ environment: 'ja' })).toEqual({
+        language: 'ja',
+        writeCookie: 'ja',
+      });
+    });
+
+    it('environment=en（等于默认语言）→ 不回写，避免给爬虫种 cookie', () => {
+      expect(resolveLanguage({ urlLocale: 'en', environment: 'en' })).toEqual({ language: 'en' });
+    });
+
+    it('stored 存在时 environment 被忽略（用户已手动设置过）', () => {
+      expect(resolveLanguage({ urlLocale: 'en', stored: 'fr', environment: 'zh-CN' })).toEqual({
+        language: 'fr',
+        writeCookie: 'fr',
+        switchUrlTo: 'fr',
+      });
+    });
+
+    it('cookie 存在但 stored 缺失时 environment 被忽略，仍以 cookie 为准；stored 不主动写', () => {
+      expect(resolveLanguage({ urlLocale: 'en', cookie: 'ja', environment: 'zh-CN' })).toEqual({
+        language: 'ja',
+      });
+    });
+
+    it('非法 environment 值被忽略，回落 DEFAULT_LANGUAGE', () => {
+      expect(resolveLanguage({ urlLocale: 'en', environment: 'xx-garbage' })).toEqual({
+        language: 'en',
+      });
+    });
+
+    it('稳态：cookie 已落地、stored 仍空、environment 相同 → 完全 no-op', () => {
+      expect(resolveLanguage({ urlLocale: 'en', cookie: 'zh-CN', environment: 'zh-CN' })).toEqual({
+        language: 'zh-CN',
+      });
     });
   });
 

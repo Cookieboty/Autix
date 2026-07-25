@@ -36,8 +36,8 @@ export function loadLocaleTree(dir: string): Map<string, Record<string, string>>
         const existingFile = sources.get(key);
         if (existingFile !== undefined) {
           throw new Error(
-            `[locale-loader] 语言 "${lang}" 的 key "${key}" 在多个文件中重复定义：` +
-              `${existingFile} 与 ${p}`,
+            `[locale-loader] language "${lang}" key "${key}" is defined in multiple files: ` +
+              `${existingFile} and ${p}`,
           );
         }
         sources.set(key, p);

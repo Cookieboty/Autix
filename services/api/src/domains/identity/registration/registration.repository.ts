@@ -98,7 +98,7 @@ export class RegistrationRepository {
   findApprovalEmailUser(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, username: true },
+      select: { email: true, username: true, language: true },
     });
   }
 

@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ImageTemplatesService } from './image-templates.service';
 
@@ -200,7 +201,10 @@ describe('ImageTemplatesService.create — Task 4.5：站内来源写入守卫',
         variables: [],
         coverImage: 'https://evil.com/cover.png',
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      constructor: I18nHttpException,
+      i18nKey: 'template.image.media_not_in_station',
+    });
   });
 
   it('拒绝非站内域名的 exampleImages（即便 coverImage 站内）', async () => {
@@ -214,7 +218,10 @@ describe('ImageTemplatesService.create — Task 4.5：站内来源写入守卫',
         coverImage: `${R2_PUBLIC_BASE}/cover.png`,
         exampleImages: [`${R2_PUBLIC_BASE}/ex-1.png`, 'https://evil.com/ex-2.png'],
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      constructor: I18nHttpException,
+      i18nKey: 'template.image.media_not_in_station',
+    });
   });
 
   it('站内 coverImage/exampleImages 全部放行', async () => {
@@ -241,7 +248,10 @@ describe('ImageTemplatesService.update — Task 4.6：站内来源守卫', () =>
     const { service } = createMocks();
     await expect(
       service.update('tpl-1', 'author-1', { coverImage: 'https://evil.com/cover.png' }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      constructor: I18nHttpException,
+      i18nKey: 'template.image.media_not_in_station',
+    });
   });
 
   it('拒绝非站内 exampleImages', async () => {
@@ -250,7 +260,10 @@ describe('ImageTemplatesService.update — Task 4.6：站内来源守卫', () =>
       service.update('tpl-1', 'author-1', {
         exampleImages: [`${R2_PUBLIC_BASE}/ex-1.png`, 'https://evil.com/ex-2.png'],
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      constructor: I18nHttpException,
+      i18nKey: 'template.image.media_not_in_station',
+    });
   });
 
   it('站内 coverImage/exampleImages 放行', async () => {
@@ -303,17 +316,17 @@ describe('ImageTemplatesService — 公开可见守卫 (status=APPROVED && sourc
 
   it('like: 目标非公开可见(PENDING) → NotFoundException', async () => {
     const { service } = createMocks();
-    await expect(service.like('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+    await expect(service.like('u1', 'tpl-pending')).rejects.toMatchObject({ status: 404 });
   });
 
   it('like: 目标为 SYSTEM 来源 → NotFoundException', async () => {
     const { service } = createMocks();
-    await expect(service.like('u1', 'tpl-system')).rejects.toThrow(NotFoundException);
+    await expect(service.like('u1', 'tpl-system')).rejects.toMatchObject({ status: 404 });
   });
 
   it('favorite: 目标非公开可见 → NotFoundException', async () => {
     const { service } = createMocks();
-    await expect(service.favorite('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+    await expect(service.favorite('u1', 'tpl-pending')).rejects.toMatchObject({ status: 404 });
   });
 
   it('favorite: 公开可见 → 委托给 FavoriteLibraryService.favorite', async () => {
@@ -337,7 +350,7 @@ describe('ImageTemplatesService — 公开可见守卫 (status=APPROVED && sourc
 
   it('recordView: 目标非公开可见 → NotFoundException', async () => {
     const { service } = createMocks();
-    await expect(service.recordView('u1', 'tpl-pending')).rejects.toThrow(NotFoundException);
+    await expect(service.recordView('u1', 'tpl-pending')).rejects.toMatchObject({ status: 404 });
   });
 
   it('createGeneration: 目标非公开可见(PENDING) → NotFoundException, 不冻结积分', async () => {
@@ -347,7 +360,7 @@ describe('ImageTemplatesService — 公开可见守卫 (status=APPROVED && sourc
         modelUsed: 'gpt-image-2',
         variables: { subject: 'shoe' },
       }),
-    ).rejects.toThrow(NotFoundException);
+    ).rejects.toMatchObject({ status: 404 });
     expect(points.createHold).not.toHaveBeenCalled();
   });
 
@@ -358,7 +371,7 @@ describe('ImageTemplatesService — 公开可见守卫 (status=APPROVED && sourc
         modelUsed: 'gpt-image-2',
         variables: { subject: 'shoe' },
       }),
-    ).rejects.toThrow(NotFoundException);
+    ).rejects.toMatchObject({ status: 404 });
   });
 });
 

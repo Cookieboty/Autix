@@ -46,8 +46,8 @@ export class ImageWorkbenchRepository {
   createWorkbenchTemplate(userId: string): Promise<WorkbenchTemplate> {
     return this.prisma.image_templates.create({
       data: {
-        title: '专业图片工作台',
-        description: '工作台直接提示词生成归档模板',
+        title: 'Professional Image Workbench',
+        description: 'Workbench direct prompt-generation archive template',
         category: 'workbench',
         prompt: '{{prompt}}',
         variables: [{ key: 'prompt', label: 'Prompt', type: 'textarea', default: '' }],
@@ -57,7 +57,7 @@ export class ImageWorkbenchRepository {
         createdById: userId,
         sourceType: ImageTemplateSource.SYSTEM,
         systemKey: IMAGE_WORKBENCH_SYSTEM_KEY,
-        runtimeReason: '专业图片工作台内部归档模板',
+        runtimeReason: 'Professional Image Workbench internal archive template',
       },
       select: WORKBENCH_TEMPLATE_SELECT,
     });

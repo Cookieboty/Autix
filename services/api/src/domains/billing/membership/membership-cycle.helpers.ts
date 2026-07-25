@@ -16,6 +16,7 @@ export type CarryoverSelection = {
   eligibleGrants: CarryoverSourceGrant[];
   availableAmount: number;
   carryoverAmount: number;
+  nextCarriedCycles: number;
 };
 
 // 结转最多可跨多少个周期的安全上限，防止管理员误配过大的 maxCycles 引起结转链路放大。
@@ -51,7 +52,6 @@ export function monthlyCycleIndexesDue(startedAt: Date, expiresAt: Date, now: Da
 
 export function getCarryoverPolicy(
   features: Prisma.JsonValue | null,
-  level: number,
 ): CarryoverPolicy | null {
   const object = asObject(features);
   const rawPolicy = asObject(object?.pointsCarryover);
@@ -60,7 +60,7 @@ export function getCarryoverPolicy(
 
   const maxCycles = positiveNumber(rawPolicy.maxCycles, 1);
   const maxPoints = positiveNumber(rawPolicy.maxPoints, 0);
-  if (level < 3 || maxCycles < 1 || maxPoints <= 0) return null;
+  if (maxCycles < 1 || maxPoints <= 0) return null;
   return {
     enabled: true,
     maxCycles: Math.min(maxCycles, POINTS_CARRYOVER_MAX_CYCLES),
@@ -68,25 +68,35 @@ export function getCarryoverPolicy(
   };
 }
 
+export function grantAge(metadata: Prisma.JsonValue | null): number {
+  const object = asObject(metadata);
+  if (object?.carryover !== true) return 0;
+  const carried = object.carriedCycles;
+  return typeof carried === 'number' && Number.isInteger(carried) && carried >= 1
+    ? carried
+    : 1;
+}
+
 export function selectCarryoverGrants(
   grants: CarryoverSourceGrant[],
   input: {
     membershipId: string;
     maxPoints: number;
-    currentCycleAmount: number;
+    maxCycles: number;
   },
 ): CarryoverSelection {
   const eligibleGrants = grants.filter((grant) => {
     const metadata = asObject(grant.metadata);
-    return metadata?.membershipId === input.membershipId && metadata?.carryover !== true;
+    if (metadata?.membershipId !== input.membershipId) return false;
+    return grantAge(grant.metadata) < input.maxCycles;
   });
   const availableAmount = eligibleGrants.reduce((sum, grant) => sum + grant.availableAmount, 0);
-  const carryoverAmount = Math.min(
-    availableAmount,
-    input.maxPoints,
-    input.currentCycleAmount,
-  );
-  return { eligibleGrants, availableAmount, carryoverAmount };
+  const carryoverAmount = Math.min(availableAmount, input.maxPoints);
+  const nextCarriedCycles =
+    eligibleGrants.length === 0
+      ? 0
+      : eligibleGrants.reduce((max, grant) => Math.max(max, grantAge(grant.metadata)), 0) + 1;
+  return { eligibleGrants, availableAmount, carryoverAmount, nextCarriedCycles };
 }
 
 export function subscriptionCycleSourceId(membershipId: string, cycleIndex: number) {

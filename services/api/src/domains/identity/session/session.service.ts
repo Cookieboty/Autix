@@ -15,12 +15,12 @@ export class SessionService {
     if (!session) throw new I18nHttpException(HttpStatus.NOT_FOUND, 'session.not_found');
     if (session.userId !== currentUserId) throw new I18nHttpException(HttpStatus.FORBIDDEN, 'session.forbidden');
     await this.sessionRepository.delete(sessionId);
-    return { message: '设备已退出登录' };
+    return { messageKey: 'session.device_logged_out' };
   }
 
   async revokeAllSessions(userId: string, currentSessionId: string) {
     // 保留当前 session
     await this.sessionRepository.deleteAllExcept(userId, currentSessionId);
-    return { message: '其他设备已全部退出登录' };
+    return { messageKey: 'session.other_devices_logged_out' };
   }
 }

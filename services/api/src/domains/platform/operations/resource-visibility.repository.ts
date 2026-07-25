@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
+import { I18nHttpException } from '../i18n/i18n-http.exception';
 
 /**
  * 运营位 / 加热的落地目标校验（gallery-design.md §十 / §十一）。
@@ -32,9 +33,16 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { status: true },
         });
-        if (!row) throw new NotFoundException('图片模板不存在');
+        if (!row)
+          throw new I18nHttpException(
+            HttpStatus.NOT_FOUND,
+            'platform.resource_visibility.image_template_not_found',
+          );
         if (row.status !== 'APPROVED') {
-          throw new BadRequestException('图片模板未通过审核，不可作为运营位/加热目标');
+          throw new I18nHttpException(
+            HttpStatus.BAD_REQUEST,
+            'platform.resource_visibility.image_template_not_approved',
+          );
         }
         return;
       }
@@ -43,9 +51,16 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { status: true },
         });
-        if (!row) throw new NotFoundException('视频模板不存在');
+        if (!row)
+          throw new I18nHttpException(
+            HttpStatus.NOT_FOUND,
+            'platform.resource_visibility.video_template_not_found',
+          );
         if (row.status !== 'APPROVED') {
-          throw new BadRequestException('视频模板未通过审核，不可作为运营位/加热目标');
+          throw new I18nHttpException(
+            HttpStatus.BAD_REQUEST,
+            'platform.resource_visibility.video_template_not_approved',
+          );
         }
         return;
       }
@@ -54,9 +69,16 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { status: true },
         });
-        if (!row) throw new NotFoundException('广场作品不存在');
+        if (!row)
+          throw new I18nHttpException(
+            HttpStatus.NOT_FOUND,
+            'platform.resource_visibility.gallery_post_not_found',
+          );
         if (row.status !== 'PUBLISHED') {
-          throw new BadRequestException('广场作品未发布，不可作为运营位/加热目标');
+          throw new I18nHttpException(
+            HttpStatus.BAD_REQUEST,
+            'platform.resource_visibility.gallery_post_not_published',
+          );
         }
         return;
       }
@@ -65,7 +87,11 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { id: true },
         });
-        if (!row) throw new NotFoundException('技能不存在');
+        if (!row)
+          throw new I18nHttpException(
+            HttpStatus.NOT_FOUND,
+            'platform.resource_visibility.skill_not_found',
+          );
         return;
       }
       case ResourceType.MCP: {
@@ -73,7 +99,11 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { id: true },
         });
-        if (!row) throw new NotFoundException('MCP 服务不存在');
+        if (!row)
+          throw new I18nHttpException(
+            HttpStatus.NOT_FOUND,
+            'platform.resource_visibility.mcp_not_found',
+          );
         return;
       }
       case ResourceType.AGENT: {
@@ -81,11 +111,19 @@ export class ResourceVisibilityRepository {
           where: { id: resourceId },
           select: { id: true },
         });
-        if (!row) throw new NotFoundException('智能体不存在');
+        if (!row)
+          throw new I18nHttpException(
+            HttpStatus.NOT_FOUND,
+            'platform.resource_visibility.agent_not_found',
+          );
         return;
       }
       default:
-        throw new BadRequestException(`不支持的资源类型: ${resourceType}`);
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'platform.resource_visibility.unsupported_resource_type',
+          { type: resourceType },
+        );
     }
   }
 }

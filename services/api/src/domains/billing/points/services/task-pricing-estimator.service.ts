@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import {
   computeTaskEstimate,
   validatePricingSchema,
@@ -90,10 +91,10 @@ export class TaskPricingEstimatorService {
   async estimateCost(input: TaskEstimateInput): Promise<TaskEstimateResult> {
     const task = await this.repo.findTaskDefinition(input.taskType);
     if (!task) {
-      throw new BadRequestException(`任务未配置: ${input.taskType}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.not_configured", { task: input.taskType });
     }
     if (!task.isActive) {
-      throw new BadRequestException(`任务已停用: ${input.taskType}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.disabled", { task: input.taskType });
     }
 
     const binding = await this.resolveBinding(input.taskType, input.modelConfigId);
@@ -101,30 +102,34 @@ export class TaskPricingEstimatorService {
 
     const model = await this.repo.findModelPricingConfig(modelConfigId);
     if (!model) {
-      throw new BadRequestException(`模型未找到: ${modelConfigId}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.model_not_found", { model: modelConfigId });
     }
     // NULL means "not configured". Falling back to {} / { terms: [] } here would make
     // evaluatePricing return total: 0 — silent free generation. Reject instead.
     if (model.pricingSchema === null) {
-      throw new BadRequestException(`模型未配置计价规则(pricingSchema): ${modelConfigId}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.model_no_pricing_rule", { model: modelConfigId });
     }
     if (model.paramsSchema === null) {
-      throw new BadRequestException(`模型未配置参数规则(paramsSchema): ${modelConfigId}`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, "task.model_no_params_rule", { model: modelConfigId });
     }
 
     const pricingSchema = this.narrowPricingSchema(
       model.pricingSchema,
-      `模型计价规则结构无效: ${modelConfigId}`,
+      'billing.task_pricing.pricing_schema_invalid',
+      { model: modelConfigId },
     );
     const paramsSchema = this.narrowParamsSchema(
       model.paramsSchema,
       pricingSchema,
-      `模型参数规则结构无效: ${modelConfigId}`,
+      'billing.task_pricing.params_schema_invalid',
+      { model: modelConfigId },
     );
     const taskFixedSchema =
       task.fixedCostSchema === null
         ? null
-        : this.narrowPricingSchema(task.fixedCostSchema, `任务固定成本规则结构无效: ${input.taskType}`);
+        : this.narrowPricingSchema(task.fixedCostSchema, 'billing.task_pricing.fixed_cost_schema_invalid', {
+            task: input.taskType,
+          });
 
     // Callers legitimately submit partial params — canvas has no
     // quality/resolution picker, a template's params are author-fixed — and
@@ -162,7 +167,7 @@ export class TaskPricingEstimatorService {
       usage: input.usage,
     });
     if (result.violations.length > 0) {
-      throw new BadRequestException({ message: '参数不合法', violations: result.violations });
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'task.invalid_params', undefined, { data: { violations: result.violations } });
     }
     // computeTaskEstimate 已跑 applyParamDefaults → deriveParams，返回派生后的参数，
     // 用它冻快照（结算按同一份参数复价）。
@@ -213,14 +218,10 @@ export class TaskPricingEstimatorService {
     if (modelConfigId) {
       const binding = await this.repo.findBinding(taskType, modelConfigId);
       if (!binding) {
-        throw new BadRequestException(
-          `模型未绑定任务: 任务 ${taskType} 与模型 ${modelConfigId} 之间没有配置绑定`,
-        );
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.task_pricing.model_not_bound', { taskType, modelConfigId });
       }
       if (!binding.isActive) {
-        throw new BadRequestException(
-          `绑定已停用: 任务 ${taskType} 与模型 ${modelConfigId} 之间的绑定已停用`,
-        );
+        throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.task_pricing.binding_disabled', { taskType, modelConfigId });
       }
       return binding;
     }
@@ -230,10 +231,10 @@ export class TaskPricingEstimatorService {
     // default exists but was deactivated" surface as different errors here.
     const defaultBinding = await this.repo.findDefaultBinding(taskType);
     if (!defaultBinding) {
-      throw new BadRequestException(`任务 ${taskType} 未配置默认模型绑定`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.task_pricing.no_default_binding', { taskType });
     }
     if (!defaultBinding.isActive) {
-      throw new BadRequestException(`任务 ${taskType} 的默认模型绑定已停用`);
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'billing.task_pricing.default_binding_disabled', { taskType });
     }
     return defaultBinding;
   }
@@ -246,11 +247,17 @@ export class TaskPricingEstimatorService {
    * just well-typed input) and throws before the candidate is used for anything.
    * Nothing downstream ever sees the pre-validation value.
    */
-  private narrowPricingSchema(value: Prisma.JsonValue, errorMessage: string): PricingSchema {
+  private narrowPricingSchema(
+    value: Prisma.JsonValue,
+    errorKey: string,
+    errorArgs?: Record<string, unknown>,
+  ): PricingSchema {
     const candidate = value as unknown as PricingSchema;
     const violations = validatePricingSchema(candidate);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: errorMessage, violations });
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, errorKey, errorArgs, {
+        data: { violations },
+      });
     }
     return candidate;
   }
@@ -260,12 +267,15 @@ export class TaskPricingEstimatorService {
   private narrowParamsSchema(
     value: Prisma.JsonValue,
     pricingSchema: PricingSchema,
-    errorMessage: string,
+    errorKey: string,
+    errorArgs?: Record<string, unknown>,
   ): ParamsSchema {
     const candidate = value as unknown as ParamsSchema;
     const violations = validateParamsSchema(candidate, pricingSchema);
     if (violations.length > 0) {
-      throw new BadRequestException({ message: errorMessage, violations });
+      throw new I18nHttpException(HttpStatus.BAD_REQUEST, errorKey, errorArgs, {
+        data: { violations },
+      });
     }
     return candidate;
   }

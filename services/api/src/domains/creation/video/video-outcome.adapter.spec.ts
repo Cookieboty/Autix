@@ -13,7 +13,7 @@ describe('toLegacyVideoOutcome', () => {
       externalStatus: 'expired',
       generationStatus: VideoGenStatus.expired,
       error: 'expired',
-      refundReason: '视频生成超时',
+      refundReason: 'Video generation timed out',
     });
   });
 
@@ -24,7 +24,7 @@ describe('toLegacyVideoOutcome', () => {
       externalStatus: 'failed',
       generationStatus: VideoGenStatus.failed,
       error: 'boom',
-      refundReason: '视频生成失败: boom',
+      refundReason: 'Video generation failed: boom',
     });
   });
 

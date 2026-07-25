@@ -33,7 +33,7 @@ export function firstNonBlank(...values: (string | null | undefined)[]): string 
  */
 export function presentAuthor(u: AuthorSource): PresentedAuthor {
   if (u.status === 'DELETED') {
-    return { userId: u.id, nickname: '已注销用户', avatar: null };
+    return { userId: u.id, nickname: 'Deactivated user', avatar: null };
   }
   return { userId: u.id, nickname: firstNonBlank(u.displayName, u.username) ?? u.username, avatar: u.avatar };
 }

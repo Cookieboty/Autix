@@ -311,8 +311,8 @@ export class LlmRepository {
     try {
       return await this.prisma.image_templates.create({
         data: {
-          title: '对话图片工具',
-          description: '对话中由主 LLM 调用图片工具时使用的内部直通模板',
+          title: 'Conversation image tool',
+          description: 'Internal passthrough template used when the main LLM calls the image tool in conversation',
           category: 'chat-image',
           prompt: '{{prompt}}',
           variables: [{ key: 'prompt', label: 'Prompt', type: 'textarea', default: '' }],
@@ -322,7 +322,7 @@ export class LlmRepository {
           createdById: userId,
           sourceType: ImageTemplateSource.SYSTEM,
           systemKey: CHAT_IMAGE_TOOL_SYSTEM_KEY,
-          runtimeReason: '对话图片工具内部直通模板',
+          runtimeReason: 'Conversation image tool internal passthrough template',
         },
         select,
       });

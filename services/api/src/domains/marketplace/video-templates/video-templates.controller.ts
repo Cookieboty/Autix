@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -13,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TemplateStatus, ResourceType } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import {
   CurrentUser,
@@ -32,7 +32,7 @@ import type { AuthUser } from '@autix/domain';
 
 @Controller('marketplace/video-templates')
 export class VideoTemplatesController {
-  constructor(private readonly service: VideoTemplatesService) {}
+  constructor(private readonly service: VideoTemplatesService) { }
 
   @Public()
   @Get()
@@ -62,7 +62,12 @@ export class VideoTemplatesController {
   ) {
     const userId = user?.id;
     const tpl = await this.service.findPublicVisibleById(id);
-    if (!tpl) throw new NotFoundException('模板不存在');
+    if (!tpl) {
+      throw new I18nHttpException(
+        HttpStatus.NOT_FOUND,
+        'template.video.not_found',
+      );
+    }
     await this.service.recordView(userId, id).catch(() => undefined);
     return tpl;
   }
@@ -96,7 +101,7 @@ export class VideoTemplatesAdminController {
   constructor(
     private readonly service: VideoTemplatesService,
     private readonly batchJobService: BatchJobService,
-  ) {}
+  ) { }
 
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() body: CreateVideoTemplateDto) {

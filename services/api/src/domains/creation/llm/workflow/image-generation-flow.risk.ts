@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
+import { I18nHttpException } from '../../../platform/i18n/i18n-http.exception';
 import { readImageMaxCount } from '@autix/domain/model';
 import {
   IMAGE_PIXELS_HARD_CEILING,
@@ -32,13 +33,13 @@ export function resolveImageCountCeiling(metadata: unknown): number {
 export function assertImageHardLimits(req: { size?: string | null; count: number }): void {
   const pixels = parseImageSizePixels(req.size);
   if (pixels > IMAGE_RISK_HARD_LIMITS.maxPixels) {
-    throw new BadRequestException(
-      `图片分辨率超过硬上限（${IMAGE_RISK_HARD_LIMITS.maxPixels} 像素）`,
-    );
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.resolution_hard_limit', {
+      pixels: IMAGE_RISK_HARD_LIMITS.maxPixels,
+    });
   }
   if (req.count > IMAGE_RISK_HARD_LIMITS.maxCount) {
-    throw new BadRequestException(
-      `单次图片数量不得超过 ${IMAGE_RISK_HARD_LIMITS.maxCount}`,
-    );
+    throw new I18nHttpException(HttpStatus.BAD_REQUEST, 'creation.image_gen.count_hard_limit', {
+      max: IMAGE_RISK_HARD_LIMITS.maxCount,
+    });
   }
 }

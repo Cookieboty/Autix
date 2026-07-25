@@ -289,8 +289,8 @@ export function resolveClipPrompt(
       : '';
 
   return [
-    storyboardPrompt ? `整片提示词：${storyboardPrompt}` : '',
-    clipPrompt ? `当前分镜提示词：${clipPrompt}` : '',
+    storyboardPrompt ? `Full video prompt: ${storyboardPrompt}` : '',
+    clipPrompt ? `Current shot prompt: ${clipPrompt}` : '',
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -323,16 +323,16 @@ export function resolveStoryboardVideoPrompt(input: {
       const title = clip.title?.trim();
       const prompt = clip.prompt?.trim();
       return [
-        `分镜 ${clip.order}${title ? `「${title}」` : ''}`,
-        prompt ? `：${prompt}` : '',
+        `Shot ${clip.order}${title ? ` "${title}"` : ''}`,
+        prompt ? `: ${prompt}` : '',
       ].join('');
     })
     .filter(Boolean);
 
   return [
-    storyboardPrompt ? `整片提示词：${storyboardPrompt}` : '',
+    storyboardPrompt ? `Full video prompt: ${storyboardPrompt}` : '',
     storyboardLines.length > 0
-      ? `完整分镜脚本：\n${storyboardLines.join('\n')}`
+      ? `Full storyboard script:\n${storyboardLines.join('\n')}`
       : '',
   ]
     .filter(Boolean)

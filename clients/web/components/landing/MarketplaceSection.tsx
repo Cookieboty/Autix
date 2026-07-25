@@ -177,7 +177,7 @@ export function MarketplaceSection() {
                       {c.previewType === 'video' && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-950">
                           <Play className="size-3" />
-                          Live
+                          {t('mktLivePreviewBadge')}
                         </span>
                       )}
                     </div>

@@ -198,6 +198,9 @@ describe('VideoProjectService workbench persistence', () => {
       ],
     });
 
-    await expect(service.createProjectShare('project-1', 'user-1')).rejects.toThrow('暂无可分享的视频');
+    await expect(service.createProjectShare('project-1', 'user-1')).rejects.toMatchObject({
+      status: 400,
+      i18nKey: 'creation.video_project.share_no_video',
+    });
   });
 });

@@ -274,7 +274,7 @@ describe('image generation flow helpers', () => {
       referenceImages: 2,
     });
     expect(buildPromptOptimizeHoldRemark(config.provider, config.model)).toBe(
-      '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
+      'Image workbench prompt AI optimization · openai-official/gpt-4o-mini',
     );
     expect(
       buildPromptOptimizeHoldCreateInput({
@@ -305,7 +305,7 @@ describe('image generation flow helpers', () => {
         estimatedOutputTokens: 80,
         referenceImages: 2,
       },
-      remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
+      remark: 'Image workbench prompt AI optimization · openai-official/gpt-4o-mini',
     });
   });
 

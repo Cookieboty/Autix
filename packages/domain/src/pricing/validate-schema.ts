@@ -62,7 +62,7 @@ function isMalformedSchema(schema: unknown): boolean {
  * 避免同一违规码的字面量在文件中重复出现。
  */
 function malformedSchemaViolation(subject: string): SchemaViolation {
-  return { code: 'MALFORMED_SCHEMA', message: `${subject} 不是有效的对象` };
+  return { code: 'MALFORMED_SCHEMA', message: `${subject} is not a valid object` };
 }
 
 /**
@@ -80,7 +80,7 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
   const violations: SchemaViolation[] = [];
 
   if (!schema.terms || schema.terms.length === 0) {
-    violations.push({ code: 'EMPTY_TERMS', message: 'pricingSchema 至少需要一个 term' });
+    violations.push({ code: 'EMPTY_TERMS', message: 'pricingSchema requires at least one term' });
     return violations;
   }
 
@@ -90,7 +90,7 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
 
     // Malformed term detection - single point of emission
     if (isMalformedTerm(term)) {
-      violations.push({ code: 'MALFORMED_TERM', message: `terms[${i}] 不是有效的对象` });
+      violations.push({ code: 'MALFORMED_TERM', message: `terms[${i}] is not a valid object` });
       continue;
     }
 
@@ -99,7 +99,7 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
       if (term.op !== 'add') {
         violations.push({
           code: 'FIRST_TERM_MUST_BE_ADD',
-          message: '首项必须是 add —— 累加器从 0 起步，mul 会把整单算成 0',
+          message: 'The first term must be add — the accumulator starts from 0, and mul would make the entire total 0',
           termId: term.id,
         });
       }
@@ -107,7 +107,7 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
       if (term.when) {
         violations.push({
           code: 'FIRST_TERM_MUST_BE_UNCONDITIONAL',
-          message: '首项不能带 when —— 断言不成立时累加器会停在 0',
+          message: 'The first term cannot have when — if the condition does not hold the accumulator stays at 0',
           termId: term.id,
         });
       }
@@ -115,7 +115,7 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
       if (!('const' in term)) {
         violations.push({
           code: 'FIRST_TERM_MUST_BE_CONST',
-          message: '首项取值源必须是 const —— table 查表未命中、perUnit 参数缺失时该项会被跳过',
+          message: 'The first term value source must be const — a table lookup miss or a missing perUnit parameter would cause the term to be skipped',
           termId: term.id,
         });
       }
@@ -123,20 +123,20 @@ export function validatePricingSchema(schema: PricingSchema): SchemaViolation[] 
 
     // Common checks for all terms
     if (seen.has(term.id)) {
-      violations.push({ code: 'DUPLICATE_TERM_ID', message: `term id 重复：${term.id}`, termId: term.id });
+      violations.push({ code: 'DUPLICATE_TERM_ID', message: `Duplicate term id: ${term.id}`, termId: term.id });
     }
     seen.add(term.id);
 
     if (sourceCount(term) !== 1) {
       violations.push({
         code: 'TERM_NEEDS_EXACTLY_ONE_SOURCE',
-        message: 'term 必须恰好有一个取值源：const / table / perUnit',
+        message: 'A term must have exactly one value source: const / table / perUnit',
         termId: term.id,
       });
     }
 
     if ('perUnit' in term && term.perUnit.divisor === 0) {
-      violations.push({ code: 'ZERO_DIVISOR', message: 'perUnit.divisor 不能为 0', termId: term.id });
+      violations.push({ code: 'ZERO_DIVISOR', message: 'perUnit.divisor cannot be 0', termId: term.id });
     }
   }
 
@@ -165,7 +165,7 @@ export function validateParamsSchema(
     if (isMalformedValue(property)) {
       violations.push({
         code: 'MALFORMED_PROPERTY',
-        message: `properties[${name}] 不是有效的对象`,
+        message: `properties[${name}] is not a valid object`,
         termId: name,
       });
       continue;
@@ -173,7 +173,7 @@ export function validateParamsSchema(
 
     const ui = property['x-ui'];
     if (!ui) {
-      violations.push({ code: 'MISSING_X_UI', message: `参数 ${name} 缺少 x-ui`, termId: name });
+      violations.push({ code: 'MISSING_X_UI', message: `Parameter ${name} is missing x-ui`, termId: name });
       continue;
     }
 
@@ -182,7 +182,7 @@ export function validateParamsSchema(
     if (ui.role !== undefined && !X_UI_ROLES.includes(ui.role)) {
       violations.push({
         code: 'UNKNOWN_X_UI_ROLE',
-        message: `参数 ${name} 的 x-ui.role 取值非法：${String(ui.role)}`,
+        message: `Parameter ${name} has an invalid x-ui.role value: ${String(ui.role)}`,
         termId: name,
       });
     }
@@ -192,27 +192,27 @@ export function validateParamsSchema(
       if (!derivedFrom) {
         violations.push({
           code: 'DERIVED_NEEDS_DERIVED_FROM',
-          message: `参数 ${name} 声明了 role: derived，但缺少 derivedFrom`,
+          message: `Parameter ${name} declares role: derived but is missing derivedFrom`,
           termId: name,
         });
       } else {
         if (!DERIVE_FNS.includes(derivedFrom.via)) {
           violations.push({
             code: 'UNKNOWN_DERIVE_FN',
-            message: `参数 ${name} 的派生函数不存在：${String(derivedFrom.via)}`,
+            message: `Parameter ${name} references a nonexistent derive function: ${String(derivedFrom.via)}`,
             termId: name,
           });
         }
         if (derivedFrom.param === name) {
           violations.push({
             code: 'DERIVED_FROM_SELF',
-            message: `参数 ${name} 的 derivedFrom 指向了自己`,
+            message: `Parameter ${name}'s derivedFrom points to itself`,
             termId: name,
           });
         } else if (!(derivedFrom.param in (paramsSchema.properties ?? {}))) {
           violations.push({
             code: 'DERIVED_FROM_UNKNOWN_PARAM',
-            message: `参数 ${name} 的 derivedFrom 指向了不存在的参数：${derivedFrom.param}`,
+            message: `Parameter ${name}'s derivedFrom points to a nonexistent parameter: ${derivedFrom.param}`,
             termId: name,
           });
         }
@@ -224,7 +224,7 @@ export function validateParamsSchema(
     if (CHOICE_CONTROLS.includes(ui.control) && !property.enum) {
       violations.push({
         code: 'CHOICE_CONTROL_NEEDS_ENUM',
-        message: `参数 ${name} 的 ${ui.control} 控件需要 enum`,
+        message: `Parameter ${name}'s ${ui.control} control requires enum`,
         termId: name,
       });
     }
@@ -234,14 +234,14 @@ export function validateParamsSchema(
     ) {
       violations.push({
         code: 'RANGE_CONTROL_NEEDS_BOUNDS',
-        message: `参数 ${name} 的 ${ui.control} 控件需要 minimum 与 maximum`,
+        message: `Parameter ${name}'s ${ui.control} control requires minimum and maximum`,
         termId: name,
       });
     }
     if (ui.control === 'switch' && property.type !== 'boolean') {
       violations.push({
         code: 'SWITCH_NEEDS_BOOLEAN',
-        message: `参数 ${name} 的 switch 控件要求 type 为 boolean`,
+        message: `Parameter ${name}'s switch control requires type to be boolean`,
         termId: name,
       });
     }
@@ -257,7 +257,7 @@ export function validateParamsSchema(
       if (!(name in (paramsSchema.properties ?? {}))) {
         violations.push({
           code: 'PRICING_REFERENCES_UNKNOWN_PARAM',
-          message: `pricingSchema 引用了 paramsSchema 中不存在的参数：${name}`,
+          message: `pricingSchema references a parameter that does not exist in paramsSchema: ${name}`,
           termId: name,
         });
       }

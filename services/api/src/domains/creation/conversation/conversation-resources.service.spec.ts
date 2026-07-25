@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
 import { AgentKind, ResourceType } from '../../platform/prisma/generated';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ConversationResourcesService } from './conversation-resources.service';
 
 function createRepositoryMock() {
@@ -76,7 +72,10 @@ describe('ConversationResourcesService', () => {
         ResourceType.IMAGE_TEMPLATE,
         'tpl-new',
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      status: 409,
+      i18nKey: 'creation.conversation.image_template_already_linked',
+    });
 
     expect(repository.createConversationResource).not.toHaveBeenCalled();
   });
@@ -88,7 +87,10 @@ describe('ConversationResourcesService', () => {
 
     await expect(
       service.attach('user-1', 'conv-1', ResourceType.SKILL, 'skill-1'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toMatchObject({
+      status: 403,
+      i18nKey: 'creation.conversation.resource_not_acquired',
+    });
   });
 
   it('enriches image template resource links', async () => {
@@ -163,6 +165,9 @@ describe('ConversationResourcesService', () => {
         'UNKNOWN' as ResourceType,
         'resource-1',
       ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toMatchObject({
+      status: 400,
+      i18nKey: 'creation.conversation.resource_type_not_activatable',
+    });
   });
 });

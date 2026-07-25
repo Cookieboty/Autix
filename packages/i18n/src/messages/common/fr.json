@@ -9,8 +9,8 @@
     "loading": "Chargement...",
     "processing": "Traitement...",
     "noData": "Aucune donnée",
-    "totalCount": "Total {total}",
-    "pageIndicator": "Page {page} / {totalPages}",
+    "totalCount": "{total} au total",
+    "pageIndicator": "Page {page} sur {totalPages}",
     "prevPage": "Page précédente",
     "nextPage": "Page suivante",
     "back": "Retour",
@@ -50,7 +50,12 @@
     "actions": "Actions",
     "none": "Aucun",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "like": "J’aime",
+    "favorite": "Favori",
+    "share": "Partager",
+    "jsonEmpty": "Le JSON est vide",
+    "invalidJson": "JSON invalide"
   },
   "aiUi": {
     "selected": "Sélectionné",
@@ -72,7 +77,10 @@
     "noData": "Aucune donnée",
     "loading": "Chargement",
     "actionMessage": "[Action : {action}]",
-    "serverError": "Le serveur a renvoyé une erreur"
+    "serverError": "Le serveur a renvoyé une erreur",
+    "thinking": "Réflexion…",
+    "thoughtForSeconds": "Réflexion pendant {seconds} secondes",
+    "thoughtForAFewSeconds": "Réflexion de quelques secondes"
   },
   "sidebar": {
     "newSession": "Nouvelle session",
@@ -123,8 +131,11 @@
     "myOrders": "Mes commandes",
     "inviteFriends": "Inviter des amis",
     "docs": "Documentation",
-    "upgrade": "升级会员",
-    "gallery": "Galerie"
+    "upgrade": "Améliorer l'abonnement",
+    "gallery": "Galerie",
+    "mobileTitle": "Barre latérale",
+    "mobileDescription": "Affiche la barre latérale mobile.",
+    "toggle": "Basculer la barre latérale"
   },
   "notification": {
     "title": "Notifications",
@@ -189,7 +200,7 @@
     "statusLocked": "Verrouillé",
     "statusDisabled": "Désactivé",
     "statusPending": "En attente",
-    "belongSection": "Affiliation",
+    "belongSection": "Rattachement",
     "belongDescription": "Attribuer le système et le rôle initiaux pour le nouvel utilisateur.",
     "belongSystem": "Système",
     "role": "Rôle",
@@ -237,7 +248,7 @@
     "createDescription": "Créer une nouvelle entrée de navigation système.",
     "editAside": "Les modifications affecteront immédiatement la navigation actuelle du système.",
     "createAside": "Continuer à configurer les permissions après la création.",
-    "belongSection": "Affiliation",
+    "belongSection": "Rattachement",
     "belongDescription": "Confirmer le système parent du menu et s'il est imbriqué sous un autre menu.",
     "parentSystem": "Système parent",
     "subMenu": "Sous-menu",
@@ -280,7 +291,7 @@
   },
   "metadata": {
     "root": {
-      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "title": "Amux Studio - Imaginez-le. Créez-le. Lancez-le.",
       "description": "Générez PRD, code, design et prototypes avec l’IA dans un seul espace."
     },
     "video": {

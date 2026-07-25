@@ -39,7 +39,7 @@ const SOURCE_TO_EVENT: Partial<Record<PointsSource, PointLedgerEventType>> = {
 
 export function assertPositiveAmount(amount: number) {
   if (!Number.isInteger(amount) || amount <= 0) {
-    throw new BadRequestException('积分数量必须为正整数');
+    throw new BadRequestException('Points amount must be a positive integer');
   }
 }
 

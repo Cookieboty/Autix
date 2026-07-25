@@ -475,7 +475,7 @@ describe('AuthService', () => {
     it('should return generic message even when user not found', async () => {
       const { service, mail } = buildService();
       const result = await service.forgotPassword({ email: 'nobody@example.com' });
-      expect(result.message).toContain('如果邮箱存在');
+      expect(result.messageKey).toBe('auth.password_reset.sent_if_exists');
       expect(mail.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
@@ -486,10 +486,11 @@ describe('AuthService', () => {
         password: '$2a$12$abcdefghijklmnopqrstuv',
       });
       const result = await service.forgotPassword({ email: 'test@example.com' });
-      expect(result.message).toContain('如果邮箱存在');
+      expect(result.messageKey).toBe('auth.password_reset.sent_if_exists');
       expect(mail.sendPasswordResetEmail).toHaveBeenCalledWith(
         'test@example.com',
         expect.any(String),
+        undefined,
       );
     });
   });
@@ -524,7 +525,7 @@ describe('AuthService', () => {
         newPassword: 'newpass123',
       });
 
-      expect(result.message).toContain('密码重置成功');
+      expect(result.messageKey).toBe('auth.password_reset.success');
       expect(prisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'user-1' },

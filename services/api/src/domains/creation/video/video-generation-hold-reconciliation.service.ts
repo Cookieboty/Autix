@@ -23,10 +23,10 @@ export class VideoGenerationHoldReconciliationService {
   ): Promise<{ userId: string }> {
     const hold = await this.findLatestHoldWithinTx(tx, generationId);
     if (!hold) {
-      throw new BadRequestException('视频生成缺少积分冻结记录，不能完成资产入库');
+      throw new BadRequestException('Video generation is missing a points hold record; cannot complete asset ingestion');
     }
     if (hold.status === PointHoldStatus.REFUNDED) {
-      throw new BadRequestException('视频生成冻结已退款，不能完成资产入库');
+      throw new BadRequestException('Video generation hold has been refunded; cannot complete asset ingestion');
     }
     if (
       hold.status === PointHoldStatus.CONFIRMED ||
@@ -40,7 +40,7 @@ export class VideoGenerationHoldReconciliationService {
       !result.confirmed &&
       result.hold.status === PointHoldStatus.REFUNDED
     ) {
-      throw new BadRequestException('视频生成冻结已退款，不能完成资产入库');
+      throw new BadRequestException('Video generation hold has been refunded; cannot complete asset ingestion');
     }
     this.logger.log(
       `point hold confirmed: generation=${generationId} hold=${hold.id}`,
@@ -67,7 +67,7 @@ export class VideoGenerationHoldReconciliationService {
       hold.status === PointHoldStatus.CONFIRMED ||
       hold.status === PointHoldStatus.PARTIALLY_REFUNDED
     ) {
-      throw new BadRequestException('视频生成积分已确认，不能按失败退款');
+      throw new BadRequestException('Video generation points already confirmed; cannot refund as failed');
     }
 
     const result = await this.pointsService.refundHoldWithinTx(
@@ -99,7 +99,7 @@ export class VideoGenerationHoldReconciliationService {
     ) {
       await this.refundPendingHold(
         generation.id,
-        `终态对账: ${generation.status}`,
+        `Terminal reconciliation: ${generation.status}`,
       );
     }
   }
@@ -153,7 +153,7 @@ export class VideoGenerationHoldReconciliationService {
       !result.confirmed &&
       result.hold.status === PointHoldStatus.REFUNDED
     ) {
-      throw new BadRequestException('视频生成冻结已退款，不能完成资产入库');
+      throw new BadRequestException('Video generation hold has been refunded; cannot complete asset ingestion');
     }
     this.logger.log(
       `point hold confirmed: generation=${generationId} hold=${hold.id}`,

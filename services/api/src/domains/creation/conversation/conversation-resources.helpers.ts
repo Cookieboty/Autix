@@ -116,10 +116,10 @@ export function isDetailResourceType(type: ResourceType): boolean {
   return DETAIL_RESOURCE_TYPES.has(type);
 }
 
-export function templateConflictMessage(type: ResourceType): string {
+export function templateConflictKey(type: ResourceType): string {
   return type === ResourceType.IMAGE_TEMPLATE
-    ? '会话已关联图片模板，请先移除后再关联'
-    : '会话已关联视频模板，请先移除后再关联';
+    ? 'creation.conversation.image_template_already_linked'
+    : 'creation.conversation.video_template_already_linked';
 }
 
 export function conversationKindForAttachedTemplate(
@@ -207,7 +207,7 @@ export function buildResourcePromptPayload(resources: PromptResources): {
 
   const prompt =
     sections.length > 0
-      ? `### 会话已激活资源(请遵循以下指令)\n\n${sections.join('\n\n')}`
+      ? `### Conversation active resources (follow the instructions below)\n\n${sections.join('\n\n')}`
       : '';
 
   return { prompt, mcpRefs: resources.mcps };
@@ -249,7 +249,7 @@ export function formatMentionResourceSection(
 
 export function buildMentionPrompt(sections: string[]): string {
   return sections.length > 0
-    ? `### 本条消息引用的资源(仅本次生效)\n\n${sections.join('\n\n')}`
+    ? `### Resources referenced by this message (effective only for this turn)\n\n${sections.join('\n\n')}`
     : '';
 }
 

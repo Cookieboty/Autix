@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import type { ErrorCode } from '@autix/domain';
 import {
   TemplateStatus,
   ResourceType,
@@ -7,6 +8,7 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { RuntimeDetectorService } from '../../platform/common/runtime-detector.service';
 import { parseSkillMarkdown } from '../../platform/common/skill-markdown.parser';
@@ -58,7 +60,10 @@ export class SkillsService extends BaseResourceService {
       : undefined;
     const instructions = parsed?.instructions ?? dto.instructions;
     if (!instructions?.trim()) {
-      throw new BadRequestException('Skill instructions 不能为空');
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'skill.instructions_required',
+      );
     }
     const frontmatter = parsed?.frontmatter ?? dto.frontmatter ?? {};
 
@@ -69,10 +74,12 @@ export class SkillsService extends BaseResourceService {
 
     // SUSPECTED_DESKTOP 必须由作者显式选择 → 强制要求 runtimeRequirement
     if (detection.level === 'SUSPECTED_DESKTOP' && !dto.runtimeRequirement) {
-      throw new BadRequestException({
-        code: 'SUSPECTED_DESKTOP',
-        message: detection.reason,
-      });
+      throw new I18nHttpException(
+        HttpStatus.BAD_REQUEST,
+        'skill.suspected_desktop_requires_runtime',
+        undefined,
+        { code: 'SUSPECTED_DESKTOP' as ErrorCode, data: { reason: detection.reason } },
+      );
     }
 
     const runtimeRequirement =
@@ -112,7 +119,12 @@ export class SkillsService extends BaseResourceService {
       rawMarkdown?: string | null;
       runtimeDetectedBy: DetectionSrc;
     };
-    if (skill.authorId !== userId) throw new ForbiddenException('无权修改此 Skill');
+    if (skill.authorId !== userId) {
+      throw new I18nHttpException(
+        HttpStatus.FORBIDDEN,
+        'skill.update_forbidden',
+      );
+    }
 
     const parsed = dto.rawMarkdown
       ? parseSkillMarkdown(dto.rawMarkdown)
@@ -150,10 +162,12 @@ export class SkillsService extends BaseResourceService {
         >,
       });
       if (detection.level === 'SUSPECTED_DESKTOP' && !dto.runtimeRequirement) {
-        throw new BadRequestException({
-          code: 'SUSPECTED_DESKTOP',
-          message: detection.reason,
-        });
+        throw new I18nHttpException(
+          HttpStatus.BAD_REQUEST,
+          'skill.suspected_desktop_requires_runtime',
+          undefined,
+          { code: 'SUSPECTED_DESKTOP' as ErrorCode, data: { reason: detection.reason } },
+        );
       }
       data.runtimeRequirement = (dto.runtimeRequirement ??
         detection.level) as RuntimeReq;

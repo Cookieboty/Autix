@@ -178,7 +178,7 @@ export function AdminTemplatesTable({
           <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerCategory')}</th>
           <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerStatus')}</th>
           {hotEnabled && (
-            <th className="px-4 py-3 text-center text-xs font-medium" style={{ color: 'var(--muted)' }}>Hot</th>
+            <th className="px-4 py-3 text-center text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerHot')}</th>
           )}
           <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerSubmittedAt')}</th>
           <th className="px-4 py-3 text-right text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerActions')}</th>
@@ -291,7 +291,7 @@ export function AdminTemplateDetailAside({
           <p className="text-sm" style={{ color: 'var(--foreground)' }}>{tCat(getTemplateCategoryI18nKey(selected.category))}</p>
         </div>
         <div>
-          <p className="mb-1 text-[11px] font-medium" style={{ color: 'var(--muted)' }}>Prompt</p>
+          <p className="mb-1 text-[11px] font-medium" style={{ color: 'var(--muted)' }}>{t('prompt')}</p>
           <div
             className="rounded-md p-3 font-mono text-xs leading-5"
             style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}

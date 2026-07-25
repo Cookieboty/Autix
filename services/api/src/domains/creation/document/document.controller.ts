@@ -10,7 +10,6 @@ import {
   UploadedFile,
   HttpCode,
   HttpStatus,
-  BadRequestException,
 } from '@nestjs/common';
 import { AppLogger } from '../../platform/common/app-logger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -23,6 +22,7 @@ import { DocumentService } from './document.service';
 import { ChunkService } from './chunk.service';
 import { ALLOWED_MIME_TYPES } from './document.constants';
 import { LibraryFeatureGuard } from './library-feature.guard';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import type { AuthUser } from '@autix/domain';
 
 type DocumentUploadRequest = Request<unknown, unknown, { filename?: string }>;
@@ -46,7 +46,7 @@ export class DocumentController {
         if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new BadRequestException(`不支持的文件类型：${file.mimetype}`), false);
+          cb(new I18nHttpException(HttpStatus.BAD_REQUEST, 'document.unsupported_type', { type: file.mimetype }), false);
         }
       },
     }),
@@ -73,7 +73,7 @@ export class DocumentController {
         err instanceof Error ? err.stack : String(err),
       );
     });
-    return { message: '处理已开始', documentId: id };
+    return { message: 'Processing started', documentId: id };
   }
 
   @Get()

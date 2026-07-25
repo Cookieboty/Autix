@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 import sharp = require('sharp');
 import {
   imageDataUrlToBuffer,
@@ -30,7 +30,7 @@ describe('image merge annotation helpers', () => {
   it('reads supported image data URLs and rejects unsupported image types', () => {
     expect(imageDataUrlToBuffer(transparentPng).byteLength).toBeGreaterThan(0);
     expect(() => imageDataUrlToBuffer('data:image/gif;base64,R0lGODlhAQABAAAAACw=')).toThrow(
-      BadRequestException,
+      I18nHttpException,
     );
   });
 

@@ -1,5 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
 import { VideoGenerationModelResolverService } from './video-generation-model-resolver.service';
+import { I18nHttpException } from '../../platform/i18n/i18n-http.exception';
 
 function makeResolver(options: {
   apiKey?: string | null;
@@ -44,7 +44,7 @@ describe('VideoGenerationModelResolverService', () => {
 
     await expect(
       resolver.resolveForGeneration({ id: 'clip-1', params: {} }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(I18nHttpException);
     // 关键：不再查询/回退任何「默认视频模型」
     expect(modelConfigService.getConfigForOrchestrator).not.toHaveBeenCalled();
   });

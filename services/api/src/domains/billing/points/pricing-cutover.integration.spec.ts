@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { quoteTaskFromSnapshot } from '@autix/domain/pricing';
 import { TaskPricingEstimatorService } from './services/task-pricing-estimator.service';
 
@@ -69,7 +68,7 @@ describe('pricing cutover — ajv rejects out-of-range params', () => {
         modelConfigId: 'model-1',
         params: { quality: 'ultra-high' },
       }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('rejects a request missing a required param', async () => {
@@ -77,7 +76,7 @@ describe('pricing cutover — ajv rejects out-of-range params', () => {
 
     await expect(
       service.estimateCost({ taskType: 'image_generation', modelConfigId: 'model-1', params: {} }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400 });
   });
 });
 
@@ -114,7 +113,7 @@ describe('pricing cutover — NULL pricingSchema is a hard 400, never a free gen
 
     await expect(
       service.estimateCost({ taskType: 'image_generation', modelConfigId: 'model-1', params: {} }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('never returns estimatedCost 0 due to a missing task-model binding', async () => {
@@ -124,6 +123,6 @@ describe('pricing cutover — NULL pricingSchema is a hard 400, never a free gen
 
     await expect(
       service.estimateCost({ taskType: 'image_generation', modelConfigId: 'unbound-model', params: {} }),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({ status: 400 });
   });
 });

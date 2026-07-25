@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { AuthModalMode } from '@autix/shared-store';
 import {
   Dialog,
@@ -49,6 +50,8 @@ export function AuthModalView({
   oauthLoadingProvider,
   oauthError,
 }: AuthModalViewProps) {
+  const t = useTranslations('auth');
+  const tCommon = useTranslations('common');
   const content =
     mode === 'register' ? (
       <RegisterFormPanel
@@ -86,15 +89,15 @@ export function AuthModalView({
         showCloseButton={false}
         className="max-h-[calc(100svh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-[28px] border-0 bg-transparent p-0 text-white ring-0 sm:w-[min(1160px,calc(100vw-2rem))] sm:max-w-[1160px]"
       >
-        <DialogTitle className="sr-only">Sign in to Amux Studio</DialogTitle>
+        <DialogTitle className="sr-only">{t('modalA11yTitle')}</DialogTitle>
         <DialogDescription className="sr-only">
-          Sign in or create an account to continue.
+          {t('modalA11yDescription')}
         </DialogDescription>
         <AuthExperienceShell
           modal
           showClose
           onClose={() => onOpenChange(false)}
-          closeLabel="Close"
+          closeLabel={tCommon('close')}
         >
           {content}
         </AuthExperienceShell>

@@ -54,7 +54,7 @@ export function HeroSection() {
             transition={{ duration: 0.6, ease: [0.22, 0.61, 0.36, 1] }}
           >
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
-              + {t('heroLabel')} / VIDEO STUDIO
+              + {t('heroLabel')} / {t('heroVideoLabel')}
             </p>
             <h1 className="max-w-4xl text-5xl font-bold leading-none tracking-tight text-white lg:text-7xl">
               {t('heroTitle1')}

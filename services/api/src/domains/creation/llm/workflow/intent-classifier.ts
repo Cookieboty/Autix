@@ -12,12 +12,12 @@ export async function classifyIntent(
 ): Promise<IntentClass> {
   if (!systemPrompt) throw new Error('intent classifier system prompt is required');
   const contextLine = hasActiveRun
-    ? `当前有进行中的工作流（暂停在 step: ${lastStepKey ?? '未知'}）。`
-    : '当前没有进行中的工作流。';
+    ? `There is a workflow in progress (paused at step: ${lastStepKey ?? 'unknown'}).`
+    : 'There is no workflow in progress.';
 
   const result = await model.invoke([
     new SystemMessage(systemPrompt),
-    new HumanMessage(`${contextLine}\n\n用户消息: ${userMessage}`),
+    new HumanMessage(`${contextLine}\n\nUser message: ${userMessage}`),
   ]);
 
   const text = typeof result.content === 'string'

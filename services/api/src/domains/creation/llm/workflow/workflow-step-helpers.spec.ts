@@ -21,11 +21,11 @@ describe('workflow step helpers', () => {
     const constrained = buildConstrainedStepPrompt('基础 prompt', 'outline');
 
     expect(constrained).toBe(
-      '基础 prompt\n\n【重要约束】你只需要产出 "outline" 阶段的内容。不要执行其他阶段的任务。产出完成后立即停止。',
+      '基础 prompt\n\n[Important constraint] You only need to produce the content for the "outline" stage. Do not perform tasks for other stages. Stop immediately once the output is complete.',
     );
     expect(appendRefineFeedback(constrained, '')).toBe(constrained);
     expect(appendRefineFeedback(constrained, '补充细节')).toBe(
-      `${constrained}\n\n【修改要求】根据以下反馈改进你的产出：\n补充细节`,
+      `${constrained}\n\n[Revision request] Improve your output based on the following feedback:\n补充细节`,
     );
   });
 
@@ -36,7 +36,7 @@ describe('workflow step helpers', () => {
     ];
 
     expect(buildNextStepCandidateList(remaining)).toBe(
-      '- draft (初稿)\n- polish (润色, 可选)',
+      '- draft (初稿)\n- polish (润色, optional)',
     );
     expect(buildNextStepOptions(remaining)).toEqual([
       'continue',

@@ -376,7 +376,7 @@ export function ResourceCard({
             </span>
             {toolCount > 0 && (
               <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-950">
-                {toolCount} tools
+                {t('card.toolCount', { count: toolCount })}
               </span>
             )}
           </div>
