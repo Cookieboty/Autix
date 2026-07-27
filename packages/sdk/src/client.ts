@@ -2501,11 +2501,14 @@ export interface GalleryRecreateResult {
 }
 
 export const galleryApi = {
-  /** GET /api/gallery/feed?kind=IMAGE|VIDEO —— 公开，只返回已发布(PUBLISHED)作品。 */
-  feed: (params?: { kind?: 'IMAGE' | 'VIDEO'; cursor?: string; limit?: number }) =>
+  /**
+   * GET /api/gallery/feed —— 公开，只返回已发布(PUBLISHED)作品，按 hotScore 热度倒序。
+   * `kind` 可选：`IMAGE` 单图片、`VIDEO` 单视频、`ALL`（或缺省）图片+视频灵感广场混排。
+   */
+  feed: (params?: { kind?: 'IMAGE' | 'VIDEO' | 'ALL'; cursor?: string; limit?: number }) =>
     chatApi.get<GalleryFeedResult>('/api/gallery/feed', { params }),
   /** GET /api/gallery/feed 的别名，命名对齐 Task 12 brief 的 galleryApi.getFeed。 */
-  getFeed: (params?: { kind?: 'IMAGE' | 'VIDEO'; cursor?: string; limit?: number }) =>
+  getFeed: (params?: { kind?: 'IMAGE' | 'VIDEO' | 'ALL'; cursor?: string; limit?: number }) =>
     chatApi.get<GalleryFeedResult>('/api/gallery/feed', { params }),
   /** GET /api/gallery/:id —— 公开详情聚合（匿名仅 PUBLISHED；作者/管理员可预览非公开态）。 */
   getDetail: (id: string) => chatApi.get<GalleryDetailResult>(`/api/gallery/${id}`),

@@ -30,7 +30,7 @@ export type {
  */
 export const galleryActions = {
   getFeed: async (params?: {
-    kind?: 'IMAGE' | 'VIDEO';
+    kind?: 'IMAGE' | 'VIDEO' | 'ALL';
     cursor?: string;
     limit?: number;
   }): Promise<GalleryFeedResult> => {

@@ -615,8 +615,10 @@ export class GalleryService {
   }
 
   /**
-   * GET /gallery/feed：公开热度 Feed（首页图片/视频画廊消费）。
-   * 只返回 PUBLISHED 作品，按 kind 分流（IMAGE/VIDEO），并附带互动指标（无指标行则补零）。
+   * GET /gallery/feed：公开热度 Feed（首页灵感广场消费）。
+   * 只返回 PUBLISHED 作品，按 kind 归一化：`ALL`（缺省=图片+视频混排的灵感广场），`IMAGE`/`VIDEO`
+   * 单类。排序按 `resource_metrics.hotScore` 倒序，视频权重加成 1.5x（见 repository）。
+   * 附带互动指标（无指标行则补零）。
    * Plan C Task 8：登录态附本页每项的 liked/favorited —— 拿到本页 items 后收集 ids，
    * 各跑一次批量成员查询（findLikedIds/findFavoritedIds，Task 7 已建），逐项 overlay，
    * 不逐条查（防 N+1，与 getDetail 复用同一批量方法）。匿名 viewer 省略、跳过批量查询。
@@ -627,8 +629,16 @@ export class GalleryService {
     take: number,
     viewer?: AuthUser,
   ) {
-    const normalizedKind =
-      String(kind).toUpperCase() === GalleryKind.VIDEO ? GalleryKind.VIDEO : GalleryKind.IMAGE;
+    const upper = String(kind ?? '').toUpperCase();
+    // 与旧行为兼容：kind 明确为 IMAGE/VIDEO 走单类；缺省或 ALL 走灵感广场混排。
+    // 非法值也归到 ALL（旧行为是归到 IMAGE，但这里我们让「未知 kind」回落到「广场混排」，
+    // 更符合"新首页只有一个灵感广场"的产品预期，同时不再让 UI 因为拼错 kind 就变成"只看图片"）。
+    const normalizedKind: GalleryKind | 'ALL' =
+      upper === GalleryKind.VIDEO
+        ? GalleryKind.VIDEO
+        : upper === GalleryKind.IMAGE
+          ? GalleryKind.IMAGE
+          : 'ALL';
     const n = Math.trunc(Number(take));
     const clampedTake = Number.isFinite(n) ? Math.min(Math.max(n, 1), 48) : 24;
 

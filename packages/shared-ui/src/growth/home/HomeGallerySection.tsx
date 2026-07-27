@@ -19,18 +19,19 @@ import { AuthorAvatar } from '../AuthorAvatar';
 import { GalleryMediaThumb, galleryHoverPlayHandlers } from '../GalleryMediaThumb';
 import { buildGeneratorWorkbenchHref } from '../generator-workbench-href';
 
-export type HomeGallerySource = 'image' | 'video';
+export type HomeGallerySource = 'image' | 'video' | 'all';
 
 /**
- * 通用 Gallery 模块：Image Gallery / Video Gallery 共用。
- * 数据来自广场（gallery_posts）已发布作品热度 Feed：GET /api/gallery/feed?kind=IMAGE|VIDEO。
- * 只展示几排，底部渐隐 + View all。广场无已发布作品时整块隐藏。
+ * 灵感广场 Section：图片/视频/混排三种来源共用一份实现。
+ * 数据来自广场（gallery_posts）已发布作品的热度 Feed：GET /api/gallery/feed?kind=IMAGE|VIDEO|ALL。
+ * ALL 走后端 `resource_metrics.hotScore` 混排（视频权重 1.5x），只展示几排，底部渐隐 + View all。
+ * 广场无已发布作品时整块隐藏。
  */
 export function HomeGallerySection({
   title,
   subtitle,
   viewAllHref,
-  source = 'image',
+  source = 'all',
 }: {
   title: string;
   subtitle?: string;
@@ -119,7 +120,8 @@ export function HomeGallerySection({
 
   useEffect(() => {
     let cancelled = false;
-    const kind = source === 'video' ? 'VIDEO' : 'IMAGE';
+    const kind: 'IMAGE' | 'VIDEO' | 'ALL' =
+      source === 'video' ? 'VIDEO' : source === 'image' ? 'IMAGE' : 'ALL';
     publicGalleryActions
       .listFeed({ kind, limit: 24 })
       .then((feed) => {
@@ -266,53 +268,53 @@ function HomeGalleryCard({
   const author = item.author?.nickname || unknownAuthor;
 
   return (
-          <article
-            // 悬浮播放绑在容器上：卡片被一层全尺寸点击热区盖着，绑 video 自身收不到事件
-            {...galleryHoverPlayHandlers()}
-            className="growth-generator-masonry group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-md bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
-            style={{ animationDelay: `${(index % 9) * 80}ms` }}
-          >
-            <GalleryMediaThumb item={item} index={index} />
+    <article
+      // 悬浮播放绑在容器上：卡片被一层全尺寸点击热区盖着，绑 video 自身收不到事件
+      {...galleryHoverPlayHandlers()}
+      className="growth-generator-masonry group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-md bg-secondary text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
+      style={{ animationDelay: `${(index % 9) * 80}ms` }}
+    >
+      <GalleryMediaThumb item={item} index={index} />
 
-            <ImpressionSentinel resourceType="GALLERY_POST" resourceId={post.id} />
+      <ImpressionSentinel resourceType="GALLERY_POST" resourceId={post.id} />
 
-            <button
-              type="button"
-              aria-label={post.title ?? ''}
-              className="absolute inset-0 z-10 cursor-pointer"
-              onClick={() => onSelect(item)}
-            />
+      <button
+        type="button"
+        aria-label={post.title ?? ''}
+        className="absolute inset-0 z-10 cursor-pointer"
+        onClick={() => onSelect(item)}
+      />
 
-            <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100" />
-            {/* 底部：作者（左） + 访问量/点赞（右）。与广场墙同一套胶囊：h-7 / bg-black/25 /
+      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-background/70 via-background/10 to-background/70 opacity-0 transition duration-200 group-hover:opacity-100" />
+      {/* 底部：作者（左） + 访问量/点赞（右）。与广场墙同一套胶囊：h-7 / bg-black/25 /
                 text-xs；点赞是嵌在里面的深色小药丸，只有它可点 */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-              <span className="growth-inset-ring inline-flex h-7 min-w-0 items-center gap-2 rounded-full bg-black/25 pl-1 pr-2.5 text-xs font-bold text-foreground backdrop-blur-md">
-                <AuthorAvatar name={author} avatarUrl={item.author?.avatar} />
-                <span className="truncate">{author}</span>
-              </span>
-              <span className="growth-inset-ring inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-black/25 pl-2.5 pr-1 text-xs font-bold text-foreground backdrop-blur-md">
-                <span className="inline-flex items-center gap-1">
-                  <Eye className="size-3.5" />
-                  {formatMetric(metrics.viewCount)}
-                </span>
-                <button
-                  type="button"
-                  aria-label={post.title ?? ''}
-                  aria-pressed={interaction.liked}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggleLike(post.id);
-                  }}
-                  className="pointer-events-auto inline-flex h-[22px] cursor-pointer items-center gap-1 rounded-full bg-black/45 px-2 transition hover:bg-black/60"
-                >
-                  <Heart
-                    className={`size-3.5 ${interaction.liked ? 'fill-red-500 text-red-500' : ''}`}
-                  />
-                  {formatMetric(interaction.likeCount)}
-                </button>
-              </span>
-            </div>
-          </article>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+        <span className="growth-inset-ring inline-flex h-7 min-w-0 items-center gap-2 rounded-full bg-black/25 pl-1 pr-2.5 text-xs font-bold text-foreground backdrop-blur-md">
+          <AuthorAvatar name={author} avatarUrl={item.author?.avatar} />
+          <span className="truncate">{author}</span>
+        </span>
+        <span className="growth-inset-ring inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full bg-black/25 pl-2.5 pr-1 text-xs font-bold text-foreground backdrop-blur-md">
+          <span className="inline-flex items-center gap-1">
+            <Eye className="size-3.5" />
+            {formatMetric(metrics.viewCount)}
+          </span>
+          <button
+            type="button"
+            aria-label={post.title ?? ''}
+            aria-pressed={interaction.liked}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleLike(post.id);
+            }}
+            className="pointer-events-auto inline-flex h-[22px] cursor-pointer items-center gap-1 rounded-full bg-black/45 px-2 transition hover:bg-black/60"
+          >
+            <Heart
+              className={`size-3.5 ${interaction.liked ? 'fill-red-500 text-red-500' : ''}`}
+            />
+            {formatMetric(interaction.likeCount)}
+          </button>
+        </span>
+      </div>
+    </article>
   );
 }

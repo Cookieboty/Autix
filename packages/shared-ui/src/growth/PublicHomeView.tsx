@@ -11,8 +11,9 @@ import { SetPublicTopPromo } from './PublicTopPromo';
 import type { PublicHomeData } from './types';
 
 /**
- * 首页视图：与 public-growth 域解耦，只吃 featured-slots（hero 运营位）+ Gallery（子组件自取 `/gallery/feed`）+
- * starter 区块（campaign hooks，见 HomeStarterSection）。静态标题/文案统一走 next-intl。
+ * 首页视图：与 public-growth 域解耦，只吃 featured-slots（hero 运营位）+ 灵感广场（图片+视频
+ * 模板按 hotScore 热度混排，视频权重 1.5x，见 HomeGallerySection）+ starter 区块（campaign
+ * hooks，见 HomeStarterSection）。静态标题/文案统一走 next-intl。
  */
 export function PublicHomeView({ home }: { home?: PublicHomeData | null }) {
   const t = useTranslations('publicGrowth');
@@ -31,20 +32,14 @@ export function PublicHomeView({ home }: { home?: PublicHomeData | null }) {
         )}
         <HomeStarterSection />
 
+        {/* 灵感广场：图片模板 + 视频模板按热度混排（后端 resource_metrics.hotScore 排序，
+            视频权重 1.5x）。View all 目前落到 /ai/image?mode=gallery（已有的作品广场入口，
+            视频广场是 /ai/video 的 tab；站点尚无统一 /gallery 索引，若后续新增可在此改指）。 */}
         <HomeGallerySection
-          title={t('home.imageGalleryTitle')}
-          subtitle={t('home.imageGallerySubtitle')}
+          title={t('home.inspirationGalleryTitle')}
+          subtitle={t('home.inspirationGallerySubtitle')}
           viewAllHref="/ai/image?mode=gallery"
-          source="image"
-        />
-
-        <HomeGallerySection
-          title={t('home.videoGalleryTitle')}
-          subtitle={t('home.videoGallerySubtitle')}
-          /* 与 image 对称：视频广场是 /ai/video 右栏的一个 tab。
-             原来指向 /gallery?kind=VIDEO —— 那个索引路由根本不存在（只有 /gallery/[id]），点了 404。 */
-          viewAllHref="/ai/video?mode=gallery"
-          source="video"
+          source="all"
         />
 
         <HomeFeatureTags title={t('home.featureTagsTitle')} />

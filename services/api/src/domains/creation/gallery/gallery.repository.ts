@@ -2,6 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, GalleryKind, GallerySource, GalleryStatus, ResourceType, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
+/**
+ * 灵感广场 feed 复合游标：`<effectiveScore>:<postId>`。effectiveScore 是热度乘以 kind 权重
+ * 后的浮点数，直接落 SQL 参数（占位符化，不拼串）；两段都缺失或格式非法一律回落到"从头查"，
+ * 不抛错——游标本就是"不透明续传标记"，客户端把它原封回传即可。
+ */
+function parseHotScoreCursor(
+  cursor: string | undefined,
+): { score: number; id: string } | null {
+  if (!cursor) return null;
+  const idx = cursor.lastIndexOf(':');
+  if (idx <= 0) return null;
+  const score = Number(cursor.slice(0, idx));
+  const id = cursor.slice(idx + 1);
+  if (!Number.isFinite(score) || !id) return null;
+  return { score, id };
+}
+
 /** 生成参数里的画幅比。直连在 params.options.ratio，分镜/项目在 params.ratio。 */
 function extractRatio(params: unknown): string | null {
   const bag = params as { ratio?: unknown; options?: { ratio?: unknown } } | null;
@@ -63,7 +80,7 @@ function extractFirstReferenceImage(params: unknown): string | null {
 /** gallery_posts / gallery_reports 的数据访问层。所有状态迁移由 service 层用 assertTransition 校验后再调用这里。 */
 @Injectable()
 export class GalleryRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   findById(id: string) {
     return this.prisma.gallery_posts.findUnique({ where: { id } });
@@ -217,17 +234,70 @@ export class GalleryRepository {
   }
 
   /**
-   * 公开热度 Feed：PUBLISHED + kind，publishedAt 倒序（最新发布优先），游标为上一页最后一条的 id。
-   * 命中 @@index([status, kind, publishedAt Desc, id Desc])。
+   * 公开热度 Feed：PUBLISHED + (可选) kind，按 `resource_metrics.hotScore` 倒序混排。
+   *
+   * 灵感广场核心排序公式：
+   *   effectiveScore = COALESCE(hotScore, 0) * (kind = VIDEO ? 1.5 : 1.0)
+   *
+   * 视频权重 1.5x 用于抵消视频生产/观看成本更高、但天然点赞/收藏总量偏低的抽样偏差，
+   * 保证图片/视频在同一榜单里能够公平混排。ORDER BY 后接 id DESC 打破并列 —— 保持稳定序，
+   * 才能安全使用 keyset 分页。
+   *
+   * 游标为 `<effectiveScore>:<postId>`（复合游标），命中 `resource_metrics` 主键
+   * `(resourceType, resourceId)`；hotScore 空缺时 COALESCE 到 0，冷启动作品仍能兜底展示。
    */
-  async findPublishedFeed(kind: GalleryKind, cursor: string | undefined, take: number) {
-    const rows = await this.prisma.gallery_posts.findMany({
-      where: { status: GalleryStatus.PUBLISHED, kind },
-      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
-      take: take + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      // 作者身份：与 findByIdWithAuthor 同一份 select（只取 presenter 需要的字段，
-      // 不外泄 email/phone 等 PII）。service 会经 presentAuthor 脱敏后再对外暴露。
+  async findPublishedFeed(
+    kind: GalleryKind | 'ALL',
+    cursor: string | undefined,
+    take: number,
+  ) {
+    const takeN = take + 1;
+    const cursorParts = parseHotScoreCursor(cursor);
+    const kindCondition =
+      kind === 'ALL'
+        ? Prisma.empty
+        : Prisma.sql`AND p."kind" = ${kind}::"GalleryKind"`;
+    // 视频权重系数：与 SQL 里两处保持同步（cursor 判定 & ORDER BY / SELECT 计算），
+    // 避免"游标算的分数"和"排序算的分数"用不同公式导致翻页跳变或死循环。
+    const videoBoost = 1.5;
+    const cursorCondition = cursorParts
+      ? Prisma.sql`AND (
+          COALESCE(m."hotScore", 0) * (CASE WHEN p."kind" = 'VIDEO' THEN ${videoBoost} ELSE 1.0 END) < ${cursorParts.score}
+          OR (
+            COALESCE(m."hotScore", 0) * (CASE WHEN p."kind" = 'VIDEO' THEN ${videoBoost} ELSE 1.0 END) = ${cursorParts.score}
+            AND p."id" < ${cursorParts.id}
+          )
+        )`
+      : Prisma.empty;
+
+    // 先用原生 SQL 拿到"按热度排好的 id + effectiveScore"，再回 Prisma include 拿 author。
+    // 直接在原生 SQL 里 include 关联表反而更麻烦（要手动 JSON 聚合），两段拆分兼顾类型和可读性。
+    const idRows = await this.prisma.$queryRaw<Array<{ id: string; score: number }>>`
+      SELECT p."id" AS "id",
+             (COALESCE(m."hotScore", 0) * (CASE WHEN p."kind" = 'VIDEO' THEN ${videoBoost} ELSE 1.0 END))::float8 AS "score"
+      FROM "gallery_posts" p
+      LEFT JOIN "resource_metrics" m
+        ON m."resourceType" = ${ResourceType.GALLERY_POST}::"ResourceType"
+       AND m."resourceId" = p."id"
+      WHERE p."status" = ${GalleryStatus.PUBLISHED}::"GalleryStatus"
+      ${kindCondition}
+      ${cursorCondition}
+      ORDER BY (COALESCE(m."hotScore", 0) * (CASE WHEN p."kind" = 'VIDEO' THEN ${videoBoost} ELSE 1.0 END)) DESC,
+               p."id" DESC
+      LIMIT ${takeN}
+    `;
+
+    const hasMore = idRows.length > take;
+    const pageRows = hasMore ? idRows.slice(0, take) : idRows;
+    if (pageRows.length === 0) {
+      return { items: [], nextCursor: null as string | null };
+    }
+
+    const ids = pageRows.map((r) => r.id);
+    // Prisma findMany 不保证输出顺序，用原生 SQL 的顺序自己重排，author select 与旧实现一致
+    // （只暴露 presenter 需要的字段，PII 由 presenter 层脱敏）。
+    const posts = await this.prisma.gallery_posts.findMany({
+      where: { id: { in: ids } },
       include: {
         author: {
           select: {
@@ -241,12 +311,14 @@ export class GalleryRepository {
         },
       },
     });
-    const hasMore = rows.length > take;
-    const items = hasMore ? rows.slice(0, take) : rows;
-    return {
-      items,
-      nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
-    };
+    const byId = new Map(posts.map((p) => [p.id, p] as const));
+    const items = pageRows
+      .map((r) => byId.get(r.id))
+      .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
+    const last = pageRows[pageRows.length - 1];
+    const nextCursor = hasMore && last ? `${last.score}:${last.id}` : null;
+    return { items, nextCursor };
   }
 
   /**

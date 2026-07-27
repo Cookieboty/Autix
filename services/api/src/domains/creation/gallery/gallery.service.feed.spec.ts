@@ -31,7 +31,7 @@ function makeService(overrides: {
   feedItems: ReturnType<typeof buildPost>[];
   nextCursor?: string | null;
   metricsMap?: Map<string, { likeCount: number; favoriteCount: number; viewCount: number; referenceCount: number }>;
-  captureKind?: (kind: GalleryKind) => void;
+  captureKind?: (kind: GalleryKind | 'ALL') => void;
   interactions?: {
     likedIds?: string[];
     favoritedIds?: string[];
@@ -40,7 +40,7 @@ function makeService(overrides: {
   };
 }) {
   const repo = {
-    findPublishedFeed: async (kind: GalleryKind) => {
+    findPublishedFeed: async (kind: GalleryKind | 'ALL') => {
       overrides.captureKind?.(kind);
       return { items: overrides.feedItems, nextCursor: overrides.nextCursor ?? null };
     },
@@ -53,32 +53,43 @@ function makeService(overrides: {
   };
   const interactions = overrides.interactions
     ? {
-        findLikedIds: async (...args: unknown[]) => {
-          overrides.interactions!.likedIdsCalls?.push(args);
-          return new Set(overrides.interactions!.likedIds ?? []);
-        },
-        findFavoritedIds: async (...args: unknown[]) => {
-          overrides.interactions!.favoritedIdsCalls?.push(args);
-          return new Set(overrides.interactions!.favoritedIds ?? []);
-        },
-      }
+      findLikedIds: async (...args: unknown[]) => {
+        overrides.interactions!.likedIdsCalls?.push(args);
+        return new Set(overrides.interactions!.likedIds ?? []);
+      },
+      findFavoritedIds: async (...args: unknown[]) => {
+        overrides.interactions!.favoritedIdsCalls?.push(args);
+        return new Set(overrides.interactions!.favoritedIds ?? []);
+      },
+    }
     : undefined;
   return new GalleryService(repo as never, metrics as never, {} as never, interactions as never);
 }
 
 describe('GalleryService.listFeed', () => {
   it('kind=video 归一化为 VIDEO 并透传到 repository', async () => {
-    let seen: GalleryKind | null = null;
+    let seen: GalleryKind | 'ALL' | null = null;
     const svc = makeService({ feedItems: [], captureKind: (k) => (seen = k) });
     await svc.listFeed('video', undefined, 24);
     expect(seen).toBe(GalleryKind.VIDEO);
   });
 
-  it('缺省/非法 kind 归一化为 IMAGE', async () => {
-    let seen: GalleryKind | null = null;
+  it('kind=image 归一化为 IMAGE 并透传到 repository', async () => {
+    let seen: GalleryKind | 'ALL' | null = null;
+    const svc = makeService({ feedItems: [], captureKind: (k) => (seen = k) });
+    await svc.listFeed('image', undefined, 24);
+    expect(seen).toBe(GalleryKind.IMAGE);
+  });
+
+  it('缺省/非法 kind 归一化为 ALL（灵感广场混排：图片+视频按热度混合排序）', async () => {
+    // 首页由「图片画廊 + 视频画廊」两栏改为单栏「灵感广场」后，默认应返回混排而非仅 IMAGE，
+    // 否则新首页在不传 kind 时会退化成"只看图片"。
+    let seen: GalleryKind | 'ALL' | null = null;
     const svc = makeService({ feedItems: [], captureKind: (k) => (seen = k) });
     await svc.listFeed(undefined, undefined, 24);
-    expect(seen).toBe(GalleryKind.IMAGE);
+    expect(seen).toBe('ALL');
+    await svc.listFeed('bogus', undefined, 24);
+    expect(seen).toBe('ALL');
   });
 
   it('把 PUBLISHED 作品映射为 GalleryFeedItem 并附上指标', async () => {
@@ -151,7 +162,7 @@ describe('GalleryService.listFeed', () => {
   it('take 被夹在 1..48 之间', async () => {
     let seenTake = 0;
     const repo = {
-      findPublishedFeed: async (_k: GalleryKind, _c: string | undefined, take: number) => {
+      findPublishedFeed: async (_k: GalleryKind | 'ALL', _c: string | undefined, take: number) => {
         seenTake = take;
         return { items: [], nextCursor: null };
       },

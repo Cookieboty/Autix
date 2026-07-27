@@ -8,10 +8,10 @@ export interface PublicGalleryFeedPage {
   nextCursor: string | null;
 }
 
-/** 公开广场（首页图片/视频画廊）消费入口：只读已发布作品的热度 Feed。 */
+/** 公开广场（首页灵感广场）消费入口：只读已发布作品的热度 Feed。 */
 export const publicGalleryActions = {
   listFeed: async (params?: {
-    kind?: 'IMAGE' | 'VIDEO';
+    kind?: 'IMAGE' | 'VIDEO' | 'ALL';
     cursor?: string;
     limit?: number;
   }): Promise<PublicGalleryFeedPage> => {
