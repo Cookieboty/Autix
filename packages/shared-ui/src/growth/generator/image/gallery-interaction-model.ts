@@ -3,7 +3,8 @@
  * 抽出来的四件事都是最容易写错的地方：
  * 1. 发布/删除的真实粒度是「一次生成」而非「一张图」——必须按 generationId 去重；
  * 2. 批量投稿要逐条独立、部分成功也要报准；
- * 3. 广场帖状态 → 可用动作（HIDDEN 绝不能给「重新提交」）；
+ * 3. 广场帖状态 → 可用动作（HIDDEN 绝不能给「重新提交」；REJECTED 不给「删帖」，因为广场已不可见，
+ *    双按钮只会让用户在等价选项之间选择）；
  * 4. like/favorite 是幂等的 POST/DELETE，不是 toggle —— 必须按当前状态定方向。
  */
 
@@ -64,6 +65,11 @@ export interface GalleryPostActions {
    * 删除广场帖本身（DELETE /gallery/:id → REMOVED）。
    * PUBLISHED 态刻意不给这个动作：后端其实允许作者直接 PUBLISHED→REMOVED，这里要求先下架
    * 再删是本组件的 UX 选择（让「从广场撤下」成为一个明确的、可反悔的独立动作），不是服务端强制。
+   * REJECTED 也刻意不给：审核未过时广场对所有人已经不可见，「删帖」按钮对用户毫无观感差异，
+   * 徒增决策负担；用户若想彻底放弃这条帖子，删生成记录时后端会级联清理。
+   * 仍保留 UNPUBLISHED / HIDDEN：
+   * - UNPUBLISHED 是作者已经把公开的帖子撤下、可能想彻底删掉这次投稿记录；
+   * - HIDDEN 是管理员处罚下架，republish 会 400，用户唯一的清理出口就是删帖。
    */
   canRemovePost: boolean;
   /**
@@ -100,6 +106,14 @@ export function galleryPostActions(status?: GalleryPostStatus): GalleryPostActio
     case 'PUBLISHED':
       return { ...NO_POST, canPublish: false, canUnpublish: true };
     case 'REJECTED':
+      // 审核被打回时广场对所有人已不可见，用户侧再暴露「删帖」并无 UX 意义
+      // （既不改变可见性，也不释放什么资源），只保留「重新提交审核」这一条出边。
+      // 想彻底不要这条帖子，直接删生成记录即可，后端会级联把帖子清掉。
+      return {
+        ...NO_POST,
+        canPublish: false,
+        canRepublish: true,
+      };
     case 'UNPUBLISHED':
       return {
         ...NO_POST,
