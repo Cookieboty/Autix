@@ -21,6 +21,7 @@ import {
   SelectItem,
   Checkbox,
 } from '../../ui';
+import { usePathname, useRouter, useSearchParams } from '../../navigation';
 import {
   useAdminUsersQuery,
   useAuthStore,
@@ -39,6 +40,7 @@ import {
   AdminDialogFooterRow,
 } from '../../shells';
 import { UsersTable } from './UsersTable';
+import { ProfileSyncBlockedState } from '../dashboard/ProfileSyncBlockedState';
 
 type User = AdminUserListItem;
 
@@ -75,25 +77,42 @@ function PageHeader({
 }
 
 export function AdminUsersView() {
+  const profileSyncStatus = useAuthStore((state) => state.profileSyncStatus);
+  const switchSystemMutation = useSwitchAdminSystemMutation();
+
+  if (profileSyncStatus !== 'ready') {
+    return <ProfileSyncBlockedState status={profileSyncStatus} />;
+  }
+
+  return <AdminUsersReadyView switchSystemMutation={switchSystemMutation} />;
+}
+
+function AdminUsersReadyView({
+  switchSystemMutation,
+}: {
+  switchSystemMutation: ReturnType<typeof useSwitchAdminSystemMutation>;
+}) {
   const t = useTranslations('users');
-  const { hasPermission, user, systems, switchSystem } = useAuthStore();
+  const { hasPermission, user, systems } = useAuthStore();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending'>(() =>
+    searchParams.get('tab') === 'pending' ? 'pending' : 'all',
+  );
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
   const [includeDeleted, setIncludeDeleted] = useState(false);
 
   const isSuperAdmin = user?.isSuperAdmin ?? false;
   const currentSystemId = user?.currentSystemId;
-  const switchSystemMutation = useSwitchAdminSystemMutation();
-
   const handleSwitchSystem = async (systemId: string) => {
     try {
       await switchSystemMutation.mutateAsync(systemId);
-      switchSystem(systemId);
     } catch {
       // ignore
     }
@@ -104,6 +123,20 @@ export function AdminUsersView() {
       handleSwitchSystem(systems[0].id);
     }
   }, [isSuperAdmin, currentSystemId, systems]);
+
+  const serializedSearchParams = searchParams.toString();
+  useEffect(() => {
+    const nextTab = searchParams.get('tab') === 'pending' ? 'pending' : 'all';
+    setActiveTab((current) => (current === nextTab ? current : nextTab));
+  }, [serializedSearchParams]);
+
+  const changeTab = (nextTab: 'all' | 'pending') => {
+    setActiveTab(nextTab);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', nextTab);
+    const query = nextParams.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  };
 
   const canCreate = hasPermission('user:create');
   const canUpdate = hasPermission('user:update');
@@ -206,7 +239,7 @@ export function AdminUsersView() {
                 <div className="border-border inline-flex items-center gap-6 border-b pb-1">
                   <button
                     type="button"
-                    onClick={() => setActiveTab('all')}
+                    onClick={() => changeTab('all')}
                     className={`pb-2 text-sm transition-colors ${
                       activeTab === 'all'
                         ? 'text-foreground shadow-[inset_0_-1px_0_0_currentColor]'
@@ -217,7 +250,7 @@ export function AdminUsersView() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveTab('pending')}
+                    onClick={() => changeTab('pending')}
                     className={`flex items-center gap-2 pb-2 text-sm transition-colors ${
                       activeTab === 'pending'
                         ? 'text-foreground shadow-[inset_0_-1px_0_0_currentColor]'

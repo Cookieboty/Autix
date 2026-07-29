@@ -1632,5 +1632,20 @@
       "save": "保存",
       "dryRunTotal": "合計: {total}"
     }
+  },
+  "chatDashboard": {
+    "eyebrow": "運用概要", "title": "Chat 管理ダッシュボード", "description": "生成、課金、コンテンツ、リスクのリアルタイム待機状況と運用健全性を確認します。",
+    "timezone": "タイムゾーン：{tz}", "timezonePending": "ブラウザのタイムゾーンを確認中…",
+    "profileSync": { "syncingTitle": "システムプロフィールを更新しています", "syncingDescription": "選択したシステムのアクセス権とメニューを同期しています。", "brokenTitle": "プロフィールの同期に失敗しました", "brokenDescription": "アクティブシステムは切り替わりましたが、新しいアクセスプロフィールを読み込めませんでした。プロフィール取得の再試行またはページの再読み込みを行ってください。", "retry": "同期を再試行", "reload": "ページを再読み込み" },
+    "unsupported": { "title": "このシステムにはダッシュボードがありません", "description": "現在のシステムコードは {code} です。対応システムに切り替えてください。", "unknownCode": "不明", "switchTo": "{name} に切り替え", "noKnownSystem": "このアカウントには対応するダッシュボードシステムへのアクセス権がありません。" },
+    "range": { "today": "今日", "yesterday": "昨日", "last7d": "過去 7 日", "custom": "カスタム", "from": "開始日", "to": "終了日", "invalidRange": "92 日以内の有効な日付範囲を選択してください。", "invalidTimezone": "ブラウザのタイムゾーンが無効なため、期間データを読み込めません。" },
+    "common": { "loadFailed": "このセクションを読み込めませんでした。", "retry": "再試行", "error": "エラー", "selectValidRange": "有効な期間を選択してください。", "estimate": "現在の期間は進行中のため、比較値は暫定です。", "empty": "この期間のデータはありません", "new": "新規", "unknownCurrency": "通貨が記録されていない過去の注文は UNKNOWN にまとめられます。" },
+    "header": { "pending": "保留中の作業", "successRate": "生成成功率", "gmv": "流通総額", "published": "ギャラリー公開数" },
+    "pending": { "title": "保留タスク", "description": "選択期間に依存しないリアルタイムの運用キューです。", "gallery": { "label": "ギャラリー審査" }, "reports": { "label": "ギャラリー通報", "unavailable": "通報一覧はまだ利用できません。" }, "templates": { "label": "テンプレート審査", "breakdown": "画像 {image} · 動画 {video}" }, "registrations": { "label": "登録承認" }, "risk": { "label": "リスク検知ユーザー" }, "batch": { "label": "実行中のバッチ", "unavailable": "バッチ一覧はまだ利用できません。" } },
+    "generation": { "title": "生成ヘルス", "totals": { "total": "合計", "active": "実行中", "succeeded": "成功", "failed": "失敗", "expired": "期限切れ" }, "successRate": "成功率", "failureRate": "失敗率", "avgDuration": "平均時間", "milliseconds": "{value} ミリ秒", "byKind": "生成タイプ別", "kinds": { "IMAGE": "画像", "VIDEO": "動画" }, "kindFailureRate": "失敗率 {value}", "failureReasons": "主な失敗理由", "topModels": "上位モデル", "comparison": "件数 {total}、成功率 {success}" },
+    "billing": { "title": "課金概要", "gmv": "流通総額", "refunded": "返金額", "paidOrders": "支払済み注文", "pendingOrders": "保留注文", "pointsConsumed": "消費ポイント", "activeHolds": "有効な保留", "topConsumers": "ポイント消費上位", "comparison": "前期間との比較", "paidDelta": "支払済み注文 {value}", "pointsDelta": "消費ポイント {value}" },
+    "content": { "title": "コンテンツ動向", "published": "ギャラリー公開", "publishedBreakdown": "画像 {image} · 動画 {video}", "featuredSlots": "有効 / 設定済み枠", "activeBoosts": "有効なブースト", "conversations": "新規会話", "comparison": "公開数の変化", "conversationDelta": "会話 {value}", "hotTop": "人気ギャラリー投稿" },
+    "risk": { "title": "リスクシグナル", "scope": "削除済みユーザーを除く全体分布で、保留タスクのリスク件数と同じ基準です。", "evaluatedHighRisk": "期間内に評価され現在 L2/L3", "evaluatedTooltip": "レベルが変わらなくても評価ごとに evaluatedAt が更新されます。新規昇格数ではありません。", "evaluatedDelta": "評価済み高リスクユーザーの変化 {value}", "events": "リスクイベント", "eventDelta": "イベント変化 {value}", "topTypes": "上位イベントタイプ", "typeUnavailable": "タイプと期間による絞り込みはまだ利用できません。", "severity": "重大度分布", "buckets": { "A": "A：0", "B": "B：1–39", "C": "C：40–69", "D": "D：70–99", "E": "E：100" }, "recent": "最近の高重大度イベント（≥70）", "userUnavailable": "ユーザーリスク詳細ページはまだ利用できません。", "noRecent": "この期間に高重大度（≥70）イベントはありません。手動 override/clawback イベントは重大度 0 のため除外されます。" },
+    "quickActions": { "title": "クイック操作", "templates": "テンプレート", "gallery": "ギャラリー", "generationTasks": "生成タスク", "campaigns": "キャンペーン", "featuredSlots": "注目枠", "boosts": "コンテンツブースト", "orders": "注文", "points": "ポイント履歴" }
   }
 }

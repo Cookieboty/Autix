@@ -8,8 +8,15 @@ const mockSetUser = vi.fn();
 const mockSetFeatures = vi.fn();
 const mockGetUser = vi.fn();
 const mockGetFeatures = vi.fn();
+const mockClearTokens = vi.fn();
+const mockGetSessionItem = vi.fn();
+const mockSetSessionItem = vi.fn();
+const mockRemoveSessionItem = vi.fn();
+const mockGetLanguage = vi.fn().mockResolvedValue('en');
+const mockSetLanguage = vi.fn();
 
-vi.mock('@autix/sdk', () => ({
+vi.mock('@autix/sdk', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@autix/sdk')>()),
   userApi: { post: mockPost, get: mockGet, delete: mockDelete },
 }));
 
@@ -20,8 +27,16 @@ vi.mock('@autix/platform', () => ({
     setFeatures: mockSetFeatures,
     getUser: mockGetUser,
     getFeatures: mockGetFeatures,
+    clearTokens: mockClearTokens,
+    getLanguage: mockGetLanguage,
+    setLanguage: mockSetLanguage,
     getMenus: vi.fn().mockResolvedValue([]),
     getSystems: vi.fn().mockResolvedValue([]),
+  }),
+  getSessionStorage: () => ({
+    getItem: mockGetSessionItem,
+    setItem: mockSetSessionItem,
+    removeItem: mockRemoveSessionItem,
   }),
   getNavigation: vi.fn(),
 }));
@@ -43,10 +58,16 @@ describe('authActions.login 仍复用 loadSessionFromTokens', () => {
     expect(r.user).toEqual(expect.objectContaining({ id: 'u1' }));
     expect(r.features).toEqual({ accountDeletion: true });
     expect(mockSetFeatures).toHaveBeenCalledWith({ accountDeletion: true });
+    expect(mockRemoveSessionItem).toHaveBeenCalled();
   });
 });
 
 describe('auth store hydration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetSessionItem.mockResolvedValue(null);
+  });
+
   it('restores persisted profile feature flags instead of resetting them', async () => {
     const { useAuthStore } = await import('./auth.store');
     mockGetUser.mockResolvedValueOnce({ id: 'u1', status: 'ACTIVE', isSuperAdmin: false, permissions: [], roles: [] });
@@ -58,6 +79,178 @@ describe('auth store hydration', () => {
       nicknameEditable: true,
       accountDeletion: true,
     });
+  });
+
+  it('derives the current system code and no longer exposes a local switchSystem setter', async () => {
+    const { selectCurrentSystemCode, useAuthStore } = await import('./auth.store');
+    const state = {
+      ...useAuthStore.getState(),
+      user: { id: 'u1', currentSystemId: 'sys-chat' },
+      systems: [{ id: 'sys-chat', code: 'chat', name: 'Chat' }],
+    } as never;
+    expect(selectCurrentSystemCode(state)).toBe('chat');
+    expect('switchSystem' in useAuthStore.getState()).toBe(false);
+  });
+
+  it('persists broken profile sync state and clears the marker when ready', async () => {
+    const { ADMIN_PROFILE_SYNC_SESSION_KEY, useAuthStore } = await import('./auth.store');
+    await useAuthStore.getState().setProfileSyncStatus('broken');
+    expect(mockSetSessionItem).toHaveBeenCalledWith(ADMIN_PROFILE_SYNC_SESSION_KEY, '1');
+    await useAuthStore.getState().setProfileSyncStatus('ready');
+    expect(mockRemoveSessionItem).toHaveBeenCalledWith(ADMIN_PROFILE_SYNC_SESSION_KEY);
+  });
+
+  it('recovers a marked bootstrap before publishing hydrated state', async () => {
+    const { ADMIN_PROFILE_SYNC_SESSION_KEY, useAuthStore } = await import('./auth.store');
+    const { hydrateStores } = await import('./index');
+    useAuthStore.setState({ hydrated: false, profileSyncStatus: 'ready' });
+    mockGetSessionItem.mockResolvedValueOnce('1');
+    mockGetUser.mockResolvedValueOnce({ id: 'old', status: 'ACTIVE', permissions: [], roles: [] });
+    mockGetFeatures.mockResolvedValueOnce({});
+    mockGet.mockResolvedValueOnce({ data: { id: 'fresh', status: 'ACTIVE', menus: [], systems: [], features: {} } });
+
+    await hydrateStores('en');
+
+    expect(mockGetSessionItem).toHaveBeenCalledWith(ADMIN_PROFILE_SYNC_SESSION_KEY);
+    expect(useAuthStore.getState()).toMatchObject({ hydrated: true, profileSyncStatus: 'ready', user: { id: 'fresh' } });
+    expect(mockRemoveSessionItem).toHaveBeenCalledWith(ADMIN_PROFILE_SYNC_SESSION_KEY);
+  });
+
+  it('hydrates without a profile request when no recovery marker exists', async () => {
+    const { useAuthStore } = await import('./auth.store');
+    const { hydrateStores } = await import('./index');
+    useAuthStore.setState({ hydrated: false, profileSyncStatus: 'broken' });
+    mockGetSessionItem.mockResolvedValueOnce(null);
+    mockGetUser.mockResolvedValueOnce({ id: 'local', status: 'ACTIVE', permissions: [], roles: [] });
+    mockGetFeatures.mockResolvedValueOnce({});
+
+    await hydrateStores('en');
+
+    expect(mockGet).not.toHaveBeenCalledWith('/auth/profile');
+    expect(useAuthStore.getState()).toMatchObject({
+      hydrated: true,
+      profileSyncStatus: 'ready',
+      user: { id: 'local' },
+    });
+  });
+
+  it('publishes a broken hydrated state and preserves the marker when recovery fails', async () => {
+    const { ADMIN_PROFILE_SYNC_SESSION_KEY, useAuthStore } = await import('./auth.store');
+    const { hydrateStores } = await import('./index');
+    useAuthStore.setState({ hydrated: false, profileSyncStatus: 'ready' });
+    mockGetSessionItem.mockResolvedValueOnce('1');
+    mockGetUser.mockResolvedValueOnce({ id: 'old', status: 'ACTIVE', permissions: [], roles: [] });
+    mockGetFeatures.mockResolvedValueOnce({});
+    mockGet.mockRejectedValueOnce(new Error('profile unavailable'));
+
+    await hydrateStores('en');
+
+    expect(useAuthStore.getState()).toMatchObject({
+      hydrated: true,
+      profileSyncStatus: 'broken',
+      user: { id: 'old' },
+    });
+    expect(mockSetSessionItem).toHaveBeenCalledWith(
+      ADMIN_PROFILE_SYNC_SESSION_KEY,
+      '1',
+    );
+  });
+
+  it('never exposes hydrated + ready with the stale local profile during recovery', async () => {
+    const { useAuthStore } = await import('./auth.store');
+    const { hydrateStores } = await import('./index');
+    let resolveProfile!: (value: { data: Record<string, unknown> }) => void;
+    const profilePromise = new Promise<{ data: Record<string, unknown> }>((resolve) => {
+      resolveProfile = resolve;
+    });
+    const states: Array<{
+      hydrated: boolean;
+      status: string;
+      userId: string | undefined;
+    }> = [];
+    const unsubscribe = useAuthStore.subscribe((state) => {
+      states.push({
+        hydrated: state.hydrated,
+        status: state.profileSyncStatus,
+        userId: state.user?.id,
+      });
+    });
+    useAuthStore.setState({ hydrated: false, profileSyncStatus: 'ready' });
+    mockGetSessionItem.mockResolvedValueOnce('1');
+    mockGetUser.mockResolvedValueOnce({ id: 'old', status: 'ACTIVE', permissions: [], roles: [] });
+    mockGetFeatures.mockResolvedValueOnce({});
+    mockGet.mockReturnValueOnce(profilePromise);
+
+    const hydration = hydrateStores('en');
+    await vi.waitFor(() => expect(mockGet).toHaveBeenCalledWith('/auth/profile'));
+    expect(useAuthStore.getState()).toMatchObject({
+      hydrated: false,
+      profileSyncStatus: 'syncing',
+      user: { id: 'old' },
+    });
+
+    resolveProfile({
+      data: { id: 'fresh', status: 'ACTIVE', menus: [], systems: [], features: {} },
+    });
+    await hydration;
+    unsubscribe();
+
+    expect(states).not.toContainEqual({
+      hydrated: true,
+      status: 'ready',
+      userId: 'old',
+    });
+    expect(useAuthStore.getState()).toMatchObject({
+      hydrated: true,
+      profileSyncStatus: 'ready',
+      user: { id: 'fresh' },
+    });
+  });
+});
+
+describe('profile synchronization recovery actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('retryProfileSync only refreshes the profile and clears the broken marker', async () => {
+    const { authActions, useAuthStore } = await import('./auth.store');
+    useAuthStore.setState({ profileSyncStatus: 'broken' });
+    mockGet.mockResolvedValueOnce({
+      data: { id: 'fresh', status: 'ACTIVE', menus: [], systems: [], features: {} },
+    });
+
+    await authActions.retryProfileSync();
+
+    expect(mockGet).toHaveBeenCalledOnce();
+    expect(mockGet).toHaveBeenCalledWith('/auth/profile');
+    expect(useAuthStore.getState().profileSyncStatus).toBe('ready');
+    expect(mockRemoveSessionItem).toHaveBeenCalled();
+  });
+
+  it('retryProfileSync keeps the global state broken and rethrows on failure', async () => {
+    const { ADMIN_PROFILE_SYNC_SESSION_KEY, authActions, useAuthStore } = await import('./auth.store');
+    const error = new Error('profile unavailable');
+    useAuthStore.setState({ profileSyncStatus: 'broken' });
+    mockGet.mockRejectedValueOnce(error);
+
+    await expect(authActions.retryProfileSync()).rejects.toBe(error);
+
+    expect(useAuthStore.getState().profileSyncStatus).toBe('broken');
+    expect(mockSetSessionItem).toHaveBeenCalledWith(
+      ADMIN_PROFILE_SYNC_SESSION_KEY,
+      '1',
+    );
+  });
+
+  it('logout returns to ready and clears the recovery marker', async () => {
+    const { useAuthStore } = await import('./auth.store');
+    useAuthStore.setState({ profileSyncStatus: 'broken' });
+
+    await useAuthStore.getState().logout();
+
+    expect(useAuthStore.getState().profileSyncStatus).toBe('ready');
+    expect(mockRemoveSessionItem).toHaveBeenCalled();
   });
 });
 

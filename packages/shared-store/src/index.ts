@@ -1,4 +1,5 @@
 export * from './auth.store';
+export * from './errors/admin-system-profile-sync-error';
 export * from './security.actions';
 export * from './oauth-linking.queries';
 export * from './language.store';
@@ -19,6 +20,8 @@ export * from './gallery-admin.actions';
 export * from './gallery-admin.queries';
 export * from './generation-task-admin.actions';
 export * from './generation-task-admin.queries';
+export * from './chat-admin-dashboard.actions';
+export * from './chat-admin-dashboard.queries';
 export * from './featured-slots-admin.actions';
 export * from './featured-slots-admin.queries';
 export * from './boost-admin.actions';
@@ -80,7 +83,12 @@ export * from './video-workbench.actions';
 export * from './video-share.actions';
 export * from './ui.store';
 
-import { useAuthStore } from './auth.store';
+import { getSessionStorage } from '@autix/platform';
+import {
+  ADMIN_PROFILE_SYNC_SESSION_KEY,
+  authActions,
+  useAuthStore,
+} from './auth.store';
 import { useLanguageStore } from './language.store';
 
 /**
@@ -89,8 +97,32 @@ import { useLanguageStore } from './language.store';
  * 调用前提：必须先调用 @autix/platform 的 registerPlatform()。
  */
 export async function hydrateStores(urlLocale?: string): Promise<void> {
+  const marker = await getSessionStorage().getItem(
+    ADMIN_PROFILE_SYNC_SESSION_KEY,
+  );
+  const authStore = useAuthStore.getState();
+
+  if (marker) {
+    await authStore.setProfileSyncStatus('syncing');
+    await Promise.all([
+      authStore.hydrate({ publishHydrated: false }),
+      useLanguageStore.getState().hydrate(urlLocale),
+    ]);
+    try {
+      await authActions.refreshProfile();
+      await authActions.setProfileSyncStatus('ready');
+    } catch {
+      await authActions.setProfileSyncStatus('broken');
+    } finally {
+      useAuthStore.getState().markHydrated();
+    }
+    return;
+  }
+
   await Promise.all([
-    useAuthStore.getState().hydrate(),
+    authStore.hydrate({ publishHydrated: false }),
     useLanguageStore.getState().hydrate(urlLocale),
   ]);
+  await useAuthStore.getState().setProfileSyncStatus('ready');
+  useAuthStore.getState().markHydrated();
 }

@@ -10,6 +10,14 @@ import type {
   BannerPresignResult,
   PublicProfile,
 } from '@autix/domain';
+import type {
+  ChatDashboardBillingSummary,
+  ChatDashboardContentPulse,
+  ChatDashboardGenerationHealth,
+  ChatDashboardPendingInbox,
+  ChatDashboardRangeQuery,
+  ChatDashboardRiskSignals,
+} from '@autix/domain/admin/chat-dashboard';
 import { createApiInstance, getApiBaseUrl, LLM_REQUEST_TIMEOUT_MS } from './client-core';
 
 export const userApi = createApiInstance(
@@ -2357,6 +2365,31 @@ export const generationTaskAdminApi = {
     chatApi.get<GenerationTaskAdminListResult>('/api/admin/generation-tasks', { params }),
   detail: (id: string) =>
     chatApi.get<GenerationTaskAdminDetail>(`/api/admin/generation-tasks/${id}`),
+};
+
+export const chatDashboardAdminApi = {
+  pendingInbox: () =>
+    chatApi.get<ChatDashboardPendingInbox>('/api/admin/chat-dashboard/pending-inbox'),
+  generationHealth: (params: ChatDashboardRangeQuery) =>
+    chatApi.get<ChatDashboardGenerationHealth>(
+      '/api/admin/chat-dashboard/generation-health',
+      { params },
+    ),
+  billingSummary: (params: ChatDashboardRangeQuery) =>
+    chatApi.get<ChatDashboardBillingSummary>(
+      '/api/admin/chat-dashboard/billing-summary',
+      { params },
+    ),
+  contentPulse: (params: ChatDashboardRangeQuery) =>
+    chatApi.get<ChatDashboardContentPulse>(
+      '/api/admin/chat-dashboard/content-pulse',
+      { params },
+    ),
+  riskSignals: (params: ChatDashboardRangeQuery) =>
+    chatApi.get<ChatDashboardRiskSignals>(
+      '/api/admin/chat-dashboard/risk-signals',
+      { params },
+    ),
 };
 
 // ── Gallery 公开热度 Feed (首页图片/视频画廊消费) ───────────────────────────

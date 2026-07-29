@@ -62,4 +62,23 @@ describe('loadLocaleTree', () => {
 
     expect(() => loadLocaleTree(dir)).toThrow(/auth\.denied/);
   });
+
+  it('七种 API locale 都包含 Chat Dashboard 的三个错误契约', () => {
+    const tree = loadLocaleTree(join(__dirname, 'locales'));
+    const locales = ['zh-CN', 'zh-TW', 'en', 'fr', 'ja', 'ru', 'vi'];
+    const keys = [
+      'admin.chat_dashboard.invalid_range',
+      'admin.chat_dashboard.invalid_timezone',
+      'auth.system.not_in_chat_system',
+    ];
+
+    for (const locale of locales) {
+      const messages = tree.get(locale);
+      expect(messages, `missing locale ${locale}`).toBeDefined();
+      for (const key of keys) {
+        expect(messages?.[key], `${locale}:${key}`).toEqual(expect.any(String));
+        expect(messages?.[key].trim(), `${locale}:${key}`).not.toBe('');
+      }
+    }
+  });
 });

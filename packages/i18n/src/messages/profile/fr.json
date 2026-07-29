@@ -50,6 +50,7 @@
     "greetingMorning": "Bonjour",
     "greetingAfternoon": "Bon après-midi",
     "greetingEvening": "Bonsoir",
+    "greetingWithName": "{greeting} {name}",
     "overviewEyebrow": "Aperçu",
     "keyMetrics": "Indicateurs clés",
     "actionsEyebrow": "Actions",

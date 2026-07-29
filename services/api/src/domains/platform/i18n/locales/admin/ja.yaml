@@ -39,3 +39,5 @@ admin.pricing.scope_membership_level_numbers: "scope.membershipLevelNumbers は 
 admin.pricing.scope_task_types: "scope.taskTypes は string[] である必要があります"
 admin.pricing.scope_model_config_ids: "scope.modelConfigIds は string[] である必要があります"
 admin.pricing.effective_order: "effectiveFrom は effectiveTo より前である必要があります"
+admin.chat_dashboard.invalid_range: "ダッシュボードの日付範囲が無効です"
+admin.chat_dashboard.invalid_timezone: "ダッシュボードのタイムゾーンが無効です"

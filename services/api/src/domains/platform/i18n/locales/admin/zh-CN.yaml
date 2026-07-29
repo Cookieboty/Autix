@@ -39,3 +39,5 @@ admin.pricing.scope_membership_level_numbers: "scope.membershipLevelNumbers 必�
 admin.pricing.scope_task_types: "scope.taskTypes 必须是 string[]"
 admin.pricing.scope_model_config_ids: "scope.modelConfigIds 必须是 string[]"
 admin.pricing.effective_order: "effectiveFrom 必须早于 effectiveTo"
+admin.chat_dashboard.invalid_range: "管理看板日期范围无效"
+admin.chat_dashboard.invalid_timezone: "管理看板时区无效"

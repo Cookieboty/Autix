@@ -343,13 +343,16 @@ async function main() {
   // generation-tasks 菜单权限需在角色关联阶段显式挂到 chatSystemAdmin（见下方
   // “生成任务管理权限” 小节），chatMenus 的 roleMenu 循环只处理菜单可见性，不处理权限。
   let generationTasksMenu: { id: string } | undefined;
+  let chatDashboardMenu: { id: string } | undefined;
   for (const def of CHAT_MENU_DEFS) {
     const m = await prisma.menu.upsert({
       where: { systemId_code: { systemId: chatSystem.id, code: def.code } },
       update: {
+        name: def.name,
         nameEn: def.nameEn, nameZhTW: def.nameZhTW, nameFr: def.nameFr,
         nameJa: def.nameJa, nameRu: def.nameRu, nameVi: def.nameVi,
-        sort: def.sort,
+        path: def.path, icon: def.icon, sort: def.sort,
+        visible: def.visible ?? true,
       },
       create: {
         systemId: chatSystem.id,
@@ -357,14 +360,18 @@ async function main() {
         nameFr: def.nameFr, nameJa: def.nameJa, nameRu: def.nameRu,
         nameVi: def.nameVi,
         code: def.code, path: def.path, icon: def.icon,
-        sort: def.sort, visible: true,
+        sort: def.sort, visible: def.visible ?? true,
       },
     });
     chatMenus.push(m);
     if (def.code === 'generation-tasks') generationTasksMenu = m;
+    if (def.code === 'chat-dashboard') chatDashboardMenu = m;
   }
   if (!generationTasksMenu) {
     throw new Error('Seed error: generation-tasks menu was not created');
+  }
+  if (!chatDashboardMenu) {
+    throw new Error('Seed error: chat-dashboard menu was not created');
   }
 
   // ==================== 3. 创建权限点 ====================
@@ -438,6 +445,10 @@ async function main() {
     { menu: generationTasksMenu, name: '查看生成内容（prompt/参数快照/上游原文）', code: 'generation:view-content', type: 'BACKEND', action: 'READ' },
   ];
 
+  const chatDashboardPermissions: SeedPermission[] = [
+    { menu: chatDashboardMenu, name: '查看 Chat 管理看板', code: 'chat-dashboard:read', type: 'BACKEND', action: 'READ' },
+  ];
+
   const allPermissions = [
     ...userPermissions,
     ...rolePermissions,
@@ -445,13 +456,20 @@ async function main() {
     ...articlePermissions,
     ...categoryPermissions,
     ...generationTaskPermissions,
+    ...chatDashboardPermissions,
   ];
 
   const createdPermissions: Array<{ id: string; code: string }> = [];
+  let chatDashboardPermission: { id: string } | undefined;
   for (const perm of allPermissions) {
     const permission = await prisma.permission.upsert({
       where: { code: perm.code },
-      update: {},
+      update: {
+        menuId: perm.menu.id,
+        name: perm.name,
+        type: perm.type,
+        action: perm.action,
+      },
       create: {
         menuId: perm.menu.id,
         name: perm.name,
@@ -461,6 +479,10 @@ async function main() {
       },
     });
     createdPermissions.push(permission);
+    if (perm.code === 'chat-dashboard:read') chatDashboardPermission = permission;
+  }
+  if (!chatDashboardPermission) {
+    throw new Error('Seed error: chat-dashboard:read permission was not created');
   }
 
   // ==================== 4. 创建角色 ====================
@@ -594,6 +616,20 @@ async function main() {
       create: { roleId: chatSystemAdmin.id, permissionId: permission.id },
     });
   }
+
+  await prisma.rolePermission.upsert({
+    where: {
+      roleId_permissionId: {
+        roleId: chatSystemAdmin.id,
+        permissionId: chatDashboardPermission.id,
+      },
+    },
+    update: {},
+    create: {
+      roleId: chatSystemAdmin.id,
+      permissionId: chatDashboardPermission.id,
+    },
+  });
 
   // 内容管理系统管理员 - 拥有所有CMS权限
   const cmsPermissions = createdPermissions.filter(p => p.code.startsWith('article:') || p.code.startsWith('category:'));

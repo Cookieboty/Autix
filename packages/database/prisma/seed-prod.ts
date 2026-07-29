@@ -8,7 +8,7 @@ import { CHAT_MENU_DEFS } from './seeds/chat-menus';
  * 灌的内容（保持最小集，只满足超级管理员可用 + chat 服务依赖）：
  *   - System: admin-system, chat
  *   - Menu:  admin-system 下的 3 个（用户管理 / 角色管理 / 权限配置中心）
- *            + chat 系统下的 15 个，定义于 ./seeds/chat-menus（与 seed.ts 共用同一
+ *            + chat 系统下的 16 个，定义于 ./seeds/chat-menus（与 seed.ts 共用同一
  *              份 CHAT_MENU_DEFS，不再各自维护一份拷贝）
  *   - Permission: admin-system 菜单关联的 BACKEND/FRONTEND 权限点
  *              + chat 系统 generation-tasks 菜单的 generation:view / generation:view-content
@@ -322,13 +322,16 @@ async function main() {
   // ── 4. chat 系统的菜单（单一来源见 ./seeds/chat-menus，勿再复制一份定义） ─
   const chatMenus: { id: string }[] = [];
   let generationTasksMenu: { id: string } | undefined;
+  let chatDashboardMenu: { id: string } | undefined;
   for (const def of CHAT_MENU_DEFS) {
     const m = await prisma.menu.upsert({
       where: { systemId_code: { systemId: chatSystem.id, code: def.code } },
       update: {
+        name: def.name,
         nameEn: def.nameEn, nameZhTW: def.nameZhTW, nameFr: def.nameFr,
         nameJa: def.nameJa, nameRu: def.nameRu, nameVi: def.nameVi,
-        sort: def.sort,
+        path: def.path, icon: def.icon, sort: def.sort,
+        visible: def.visible ?? true,
       },
       create: {
         systemId: chatSystem.id,
@@ -336,14 +339,18 @@ async function main() {
         nameFr: def.nameFr, nameJa: def.nameJa, nameRu: def.nameRu,
         nameVi: def.nameVi,
         code: def.code, path: def.path, icon: def.icon,
-        sort: def.sort, visible: true,
+        sort: def.sort, visible: def.visible ?? true,
       },
     });
     chatMenus.push(m);
     if (def.code === 'generation-tasks') generationTasksMenu = m;
+    if (def.code === 'chat-dashboard') chatDashboardMenu = m;
   }
   if (!generationTasksMenu) {
     throw new Error('Seed error: generation-tasks menu was not created');
+  }
+  if (!chatDashboardMenu) {
+    throw new Error('Seed error: chat-dashboard menu was not created');
   }
 
   // ── 3b. generation-tasks 菜单的权限点（chat 系统，非 admin-system） ──────
@@ -369,6 +376,23 @@ async function main() {
     });
     generationTaskPermissionRecords.push(permission);
   }
+
+  const chatDashboardPermission = await prisma.permission.upsert({
+    where: { code: 'chat-dashboard:read' },
+    update: {
+      menuId: chatDashboardMenu.id,
+      name: '查看 Chat 管理看板',
+      type: 'BACKEND',
+      action: 'READ',
+    },
+    create: {
+      menuId: chatDashboardMenu.id,
+      name: '查看 Chat 管理看板',
+      code: 'chat-dashboard:read',
+      type: 'BACKEND',
+      action: 'READ',
+    },
+  });
 
   // ── 5. chat 系统的角色（chat 注册审批依赖） ─────────────────────────────
   const chatAdminRole = await prisma.role.upsert({
@@ -415,6 +439,20 @@ async function main() {
       create: { roleId: chatAdminRole.id, permissionId: permission.id },
     });
   }
+
+  await prisma.rolePermission.upsert({
+    where: {
+      roleId_permissionId: {
+        roleId: chatAdminRole.id,
+        permissionId: chatDashboardPermission.id,
+      },
+    },
+    update: {},
+    create: {
+      roleId: chatAdminRole.id,
+      permissionId: chatDashboardPermission.id,
+    },
+  });
 
   await seedFixedCampaigns();
 

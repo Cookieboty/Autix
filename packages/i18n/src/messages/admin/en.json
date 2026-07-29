@@ -1632,5 +1632,74 @@
       "save": "Save",
       "dryRunTotal": "Total: {total}"
     }
+  },
+  "chatDashboard": {
+    "eyebrow": "Operations overview",
+    "title": "Chat Admin Dashboard",
+    "description": "Live queues and operational health across creation, billing, content, and risk.",
+    "timezone": "Time zone: {tz}",
+    "timezonePending": "Detecting browser time zone…",
+    "profileSync": {
+      "syncingTitle": "Refreshing your system profile",
+      "syncingDescription": "Access and menus are being synchronized for the selected system.",
+      "brokenTitle": "Profile synchronization failed",
+      "brokenDescription": "The active system changed, but the refreshed access profile could not be loaded. Retry the profile request or reload the page.",
+      "retry": "Retry profile sync",
+      "reload": "Reload page"
+    },
+    "unsupported": {
+      "title": "This system has no dashboard",
+      "description": "The current system code is {code}. Switch to a supported system to continue.",
+      "unknownCode": "unknown",
+      "switchTo": "Switch to {name}",
+      "noKnownSystem": "Your account does not have access to a supported dashboard system."
+    },
+    "range": {
+      "today": "Today", "yesterday": "Yesterday", "last7d": "Last 7 days", "custom": "Custom",
+      "from": "From", "to": "To", "invalidRange": "Choose a valid date range of up to 92 days.",
+      "invalidTimezone": "The browser time zone is invalid, so range-based data cannot be loaded."
+    },
+    "common": {
+      "loadFailed": "This section could not be loaded.", "retry": "Retry", "error": "Error", "selectValidRange": "Choose a valid time range.",
+      "estimate": "The current period is still in progress; comparisons are provisional.", "empty": "No data in this period", "new": "New", "unknownCurrency": "Legacy orders without a currency are grouped under UNKNOWN."
+    },
+    "header": { "pending": "Pending work", "successRate": "Generation success rate", "gmv": "GMV", "published": "Gallery published" },
+    "pending": {
+      "title": "Pending Inbox", "description": "Real-time operational queues; independent of the selected range.",
+      "gallery": { "label": "Gallery reviews" },
+      "reports": { "label": "Gallery reports", "unavailable": "The report list is not available yet." },
+      "templates": { "label": "Template reviews", "breakdown": "Image {image} · Video {video}" },
+      "registrations": { "label": "Registration approvals" },
+      "risk": { "label": "Flagged risk users" },
+      "batch": { "label": "Running batch jobs", "unavailable": "The batch job list is not available yet." }
+    },
+    "generation": {
+      "title": "Generation Health", "totals": { "total": "Total", "active": "Active", "succeeded": "Succeeded", "failed": "Failed", "expired": "Expired" },
+      "successRate": "Success rate", "failureRate": "Failure rate", "avgDuration": "Average duration", "milliseconds": "{value} ms",
+      "byKind": "By generation type", "kinds": { "IMAGE": "Images", "VIDEO": "Videos" }, "kindFailureRate": "Failure rate {value}",
+      "failureReasons": "Top failure reasons", "topModels": "Top models", "comparison": "Volume {total}; success rate {success}"
+    },
+    "billing": {
+      "title": "Billing Summary", "gmv": "GMV", "refunded": "Refunded", "paidOrders": "Paid orders", "pendingOrders": "Pending orders",
+      "pointsConsumed": "Points consumed", "activeHolds": "Active holds", "topConsumers": "Top points consumers", "comparison": "Compared with previous period",
+      "paidDelta": "Paid orders {value}", "pointsDelta": "Points consumed {value}"
+    },
+    "content": {
+      "title": "Content Pulse", "published": "Gallery published", "publishedBreakdown": "Image {image} · Video {video}",
+      "featuredSlots": "Active / enabled resource slots", "activeBoosts": "Active boosts", "conversations": "New conversations",
+      "comparison": "Published change", "conversationDelta": "Conversations {value}", "hotTop": "Hot gallery posts"
+    },
+    "risk": {
+      "title": "Risk Signals", "scope": "Platform-wide distribution excluding deleted users; aligned with the Pending Inbox risk count.",
+      "evaluatedHighRisk": "Evaluated in this window and currently L2/L3", "evaluatedTooltip": "Each risk evaluation refreshes evaluatedAt even when the level does not change. This is not a count of newly promoted users.", "evaluatedDelta": "Evaluated users change {value}",
+      "events": "Risk events", "eventDelta": "Event change {value}", "topTypes": "Top event types", "typeUnavailable": "Filtering by event type and time is not available yet.",
+      "severity": "Severity distribution", "buckets": { "A": "A: 0", "B": "B: 1–39", "C": "C: 40–69", "D": "D: 70–99", "E": "E: 100" },
+      "recent": "Recent high-severity events (≥70)", "userUnavailable": "The risk user detail page is not available yet.",
+      "noRecent": "No high-severity events (≥70) in this period. Manual override and clawback events use severity 0 and are excluded."
+    },
+    "quickActions": {
+      "title": "Quick Actions", "templates": "Templates", "gallery": "Gallery", "generationTasks": "Generation tasks", "campaigns": "Campaigns",
+      "featuredSlots": "Featured slots", "boosts": "Content boosts", "orders": "Orders", "points": "Points history"
+    }
   }
 }

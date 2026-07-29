@@ -15,6 +15,9 @@ import {
   type AdminUserListParams,
   type AdminUserSystemRolesInput,
 } from './admin-identity.actions';
+import { authActions } from './auth.store';
+import { chatAdminDashboardKeys } from './chat-admin-dashboard.queries';
+import { AdminSystemProfileSyncError } from './errors/admin-system-profile-sync-error';
 
 type MutationCallbacks = {
   onSuccess?: () => void | Promise<void>;
@@ -24,6 +27,7 @@ type MutationCallbacks = {
 type RegistrationStatus = AdminRegistration['status'];
 
 export const adminIdentityQueryKeys = {
+  all: ['adminIdentity'] as const,
   systems: () => ['adminIdentity', 'systems'] as const,
   roles: () => ['adminIdentity', 'roles'] as const,
   rolesBySystem: (systemId: string) =>
@@ -292,9 +296,32 @@ export function useUpdateAdminUserSystemRolesMutation(
 export function useSwitchAdminSystemMutation(callbacks?: MutationCallbacks) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: adminIdentityActions.switchSystem,
+    mutationFn: async (systemId: string) => {
+      await authActions.setProfileSyncStatus('syncing');
+      try {
+        await adminIdentityActions.switchSystem(systemId);
+      } catch (error) {
+        await authActions.setProfileSyncStatus('ready');
+        throw error;
+      }
+
+      try {
+        await authActions.refreshProfile();
+        await authActions.setProfileSyncStatus('ready');
+      } catch (error) {
+        await authActions.setProfileSyncStatus('broken');
+        throw new AdminSystemProfileSyncError({ cause: error });
+      }
+    },
     onSuccess: async () => {
-      await invalidateUsers(queryClient);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: adminIdentityQueryKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: chatAdminDashboardKeys.all,
+        }),
+      ]);
       await callOnSuccess(callbacks);
     },
     onError: (error) => callOnError(error, callbacks),

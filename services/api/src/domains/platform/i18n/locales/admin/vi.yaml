@@ -39,3 +39,5 @@ admin.pricing.scope_membership_level_numbers: "scope.membershipLevelNumbers ph�
 admin.pricing.scope_task_types: "scope.taskTypes phải là string[]"
 admin.pricing.scope_model_config_ids: "scope.modelConfigIds phải là string[]"
 admin.pricing.effective_order: "effectiveFrom phải sớm hơn effectiveTo"
+admin.chat_dashboard.invalid_range: "Khoảng ngày của bảng điều khiển không hợp lệ"
+admin.chat_dashboard.invalid_timezone: "Múi giờ của bảng điều khiển không hợp lệ"

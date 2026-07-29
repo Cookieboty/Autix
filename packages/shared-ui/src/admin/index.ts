@@ -2,7 +2,7 @@
 export * from './layout/header';
 export { Sidebar as AdminSidebar } from './layout/sidebar';
 export * from './layout/theme-toggle';
-export * from './dashboard/admin-dashboard-view';
+export * from './dashboard';
 
 // Permission Tree
 export * from './permission-tree/detail-panel';

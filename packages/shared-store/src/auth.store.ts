@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { checkAdmin } from '@autix/domain';
 import type { AuthProfile, AuthProfileFeatures, AuthUser, AvatarPresignResult, BannerPresignResult, Menu, SystemInfo, UpdateOwnProfileInput } from '@autix/domain';
-import { getAuth, getNavigation } from '@autix/platform';
+import { getAuth, getNavigation, getSessionStorage } from '@autix/platform';
 import { storageApi, uploadToPresignedUrl, userApi, updateMyAutoPublish } from '@autix/sdk';
 
 export interface AuthLoginInput {
@@ -56,7 +56,12 @@ export interface AuthLoginResult {
   tokens: AuthTokenPair;
 }
 
-interface AuthState {
+export type ProfileSyncStatus = 'ready' | 'syncing' | 'broken';
+
+export const ADMIN_PROFILE_SYNC_SESSION_KEY =
+  'autix:admin-profile-sync-required';
+
+export interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -64,13 +69,18 @@ interface AuthState {
   systems: SystemInfo[];
   features: AuthProfileFeatures;
   hydrated: boolean;
+  profileSyncStatus: ProfileSyncStatus;
 
-  hydrate: () => Promise<void>;
+  hydrate: (options?: { publishHydrated?: boolean }) => Promise<void>;
+  markHydrated: () => void;
   setUser: (user: AuthUser, menus?: Menu[], systems?: SystemInfo[], features?: AuthProfileFeatures) => void;
+  setProfileSyncStatus: (status: ProfileSyncStatus) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
-  switchSystem: (systemId: string) => void;
 }
+
+export const selectCurrentSystemCode = (state: AuthState) =>
+  state.systems.find((system) => system.id === state.user?.currentSystemId)?.code;
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -80,8 +90,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   systems: [],
   features: {},
   hydrated: false,
+  profileSyncStatus: 'ready',
 
-  hydrate: async () => {
+  hydrate: async ({ publishHydrated = true } = {}) => {
     const adapter = getAuth();
     const [user, menus, systems, features] = await Promise.all([
       adapter.getUser(),
@@ -97,9 +108,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       menus: menus as Menu[],
       systems: systems as SystemInfo[],
       features: features as AuthProfileFeatures,
-      hydrated: true,
+      hydrated: publishHydrated,
     });
   },
+
+  markHydrated: () => set({ hydrated: true }),
 
   setUser: (user, menus = [], systems = [], features = {}) => {
     const adapter = getAuth();
@@ -117,6 +130,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
+  setProfileSyncStatus: async (status) => {
+    set({ profileSyncStatus: status });
+    const session = getSessionStorage();
+    if (status === 'broken') {
+      await session.setItem(ADMIN_PROFILE_SYNC_SESSION_KEY, '1');
+    } else if (status === 'ready') {
+      await session.removeItem(ADMIN_PROFILE_SYNC_SESSION_KEY);
+    }
+  },
+
   logout: async () => {
     await getAuth().clearTokens();
     set({
@@ -126,7 +149,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       menus: [],
       systems: [],
       features: {},
+      profileSyncStatus: 'ready',
     });
+    await getSessionStorage().removeItem(ADMIN_PROFILE_SYNC_SESSION_KEY);
   },
 
   hasPermission: (permission) => {
@@ -139,14 +164,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       )
       : [];
     return permissions.includes(permission);
-  },
-
-  switchSystem: (systemId) => {
-    const { user } = get();
-    if (!user) return;
-    const updated = { ...user, currentSystemId: systemId };
-    void getAuth().setUser(updated);
-    set({ user: updated });
   },
 }));
 
@@ -174,6 +191,7 @@ const loadSessionFromTokens = async (
     ? tokens.systems ?? storedProfileSystems
     : storedProfileSystems;
   useAuthStore.getState().setUser(user, menus, systems, profile.features ?? {});
+  await useAuthStore.getState().setProfileSyncStatus('ready');
   return { user, menus, systems, features: profile.features ?? {}, tokens };
 };
 
@@ -301,7 +319,25 @@ export const authActions = {
 
   refreshProfile: async (): Promise<void> => {
     const { data: profile } = await userApi.get<AuthProfile>('/auth/profile');
-      useAuthStore.getState().setUser(pickAuthUser(profile), profile.menus ?? [], profile.systems ?? [], profile.features ?? {});
+    useAuthStore.getState().setUser(
+      pickAuthUser(profile),
+      profile.menus ?? [],
+      profile.systems ?? [],
+      profile.features ?? {},
+    );
+  },
+
+  setProfileSyncStatus: (status: ProfileSyncStatus) =>
+    useAuthStore.getState().setProfileSyncStatus(status),
+
+  retryProfileSync: async (): Promise<void> => {
+    try {
+      await authActions.refreshProfile();
+      await authActions.setProfileSyncStatus('ready');
+    } catch (error) {
+      await authActions.setProfileSyncStatus('broken');
+      throw error;
+    }
   },
 
   /**
@@ -365,7 +401,7 @@ export const authActions = {
    * 个人中心「Auto-publish」开关的唯一写入口。
    * - 服务端持久化经 SDK `updateMyAutoPublish`；
    * - 轻量回写：只更新 `user.autoPublish`，故意不走 `setUser`（会清空 menus/systems/features），
-   *   采用与 `switchSystem` 相同的 `setState({ user }) + getAuth().setUser` 范式。
+   *   采用 `setState({ user }) + getAuth().setUser` 的轻量持久化范式。
    */
   updateAutoPublish: async (autoPublish: boolean): Promise<void> => {
     await updateMyAutoPublish(autoPublish);

@@ -1632,5 +1632,31 @@
       "save": "保存",
       "dryRunTotal": "总计：{total}"
     }
+  },
+  "chatDashboard": {
+    "eyebrow": "运营总览", "title": "Chat 管理看板", "description": "集中查看生成、计费、内容与风控的实时待办和运行健康度。",
+    "timezone": "时区：{tz}", "timezonePending": "正在识别浏览器时区…",
+    "profileSync": { "syncingTitle": "正在刷新系统身份", "syncingDescription": "正在同步所选系统的权限与菜单。", "brokenTitle": "身份同步失败", "brokenDescription": "系统已切换，但新的权限身份未能加载。你可以只重试身份请求，或重新加载页面。", "retry": "重试身份同步", "reload": "重新加载" },
+    "unsupported": { "title": "当前系统没有管理看板", "description": "当前系统编码为 {code}，请切换到支持的系统。", "unknownCode": "未知", "switchTo": "切换到{name}", "noKnownSystem": "当前账号没有可用的管理看板系统。" },
+    "range": { "today": "今天", "yesterday": "昨天", "last7d": "最近 7 天", "custom": "自定义", "from": "开始日期", "to": "结束日期", "invalidRange": "请选择不超过 92 天的有效日期范围。", "invalidTimezone": "浏览器时区无效，暂时无法加载按时间范围统计的数据。" },
+    "common": { "loadFailed": "该模块加载失败。", "retry": "重试", "error": "错误", "selectValidRange": "请选择有效时间范围。", "estimate": "当前周期仍在进行中，对比数据为暂估。", "empty": "当前周期暂无数据", "new": "新增", "unknownCurrency": "历史订单未记录币种，已统一归入 UNKNOWN。" },
+    "header": { "pending": "待办总数", "successRate": "生成成功率", "gmv": "成交金额", "published": "广场发布量" },
+    "pending": {
+      "title": "待办中心", "description": "实时运营队列，不受所选时间范围影响。",
+      "gallery": { "label": "广场待审" }, "reports": { "label": "广场待处理举报", "unavailable": "举报列表尚待建设。" },
+      "templates": { "label": "模板待审", "breakdown": "图片 {image} · 视频 {video}" }, "registrations": { "label": "注册审批" },
+      "risk": { "label": "风控命中用户" }, "batch": { "label": "批处理运行中", "unavailable": "批处理列表尚待建设。" }
+    },
+    "generation": { "title": "生成健康", "totals": { "total": "总任务", "active": "进行中", "succeeded": "成功", "failed": "失败", "expired": "已过期" }, "successRate": "成功率", "failureRate": "失败率", "avgDuration": "平均耗时", "milliseconds": "{value} 毫秒", "byKind": "按生成类型", "kinds": { "IMAGE": "图片", "VIDEO": "视频" }, "kindFailureRate": "失败率 {value}", "failureReasons": "主要失败原因", "topModels": "主要模型", "comparison": "任务量 {total}；成功率 {success}" },
+    "billing": { "title": "计费概览", "gmv": "成交金额", "refunded": "退款金额", "paidOrders": "已支付订单", "pendingOrders": "待支付订单", "pointsConsumed": "消耗积分", "activeHolds": "活跃冻结", "topConsumers": "积分消耗用户", "comparison": "较上一周期", "paidDelta": "支付订单 {value}", "pointsDelta": "积分消耗 {value}" },
+    "content": { "title": "内容脉搏", "published": "广场发布", "publishedBreakdown": "图片 {image} · 视频 {video}", "featuredSlots": "生效 / 已启用资源位", "activeBoosts": "生效加热", "conversations": "新增对话", "comparison": "发布量变化", "conversationDelta": "对话量 {value}", "hotTop": "广场热度排行" },
+    "risk": {
+      "title": "风控信号", "scope": "全平台且排除已删除用户，与待办中心的风控用户口径一致。",
+      "evaluatedHighRisk": "窗口内被评估且当前为 L2/L3", "evaluatedTooltip": "每次风控评估都会刷新 evaluatedAt，即使等级未变化；因此该数字不等于新晋或等级跃迁。", "evaluatedDelta": "被评估高风险用户变化 {value}",
+      "events": "风控事件", "eventDelta": "事件变化 {value}", "topTypes": "主要事件类型", "typeUnavailable": "事件类型与时间筛选能力尚待扩展。",
+      "severity": "严重度分布", "buckets": { "A": "A：0", "B": "B：1–39", "C": "C：40–69", "D": "D：70–99", "E": "E：100" },
+      "recent": "最近高严重度事件（≥70）", "userUnavailable": "用户风控详情页尚待建设。", "noRecent": "该周期暂无高严重度（≥70）事件；人工 override/clawback 事件严重度为 0，不在此列表。"
+    },
+    "quickActions": { "title": "快捷入口", "templates": "模板审核", "gallery": "广场审核", "generationTasks": "生成任务", "campaigns": "活动奖励", "featuredSlots": "运营位", "boosts": "内容加热", "orders": "订单管理", "points": "积分流水" }
   }
 }

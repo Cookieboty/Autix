@@ -16,6 +16,7 @@
  *   9-11  运营       campaign-rewards, featured-slots, resource-boosts
  *   12    可观测     generation-tasks
  *   13-15 系统       system-models, system-settings, system-prompts
+ *   16    隐藏入口   chat-dashboard（仅供 /admin 根路由与权限绑定）
  *
  * `sort` must stay contiguous (1..N, no gaps, no repeats) — the admin
  * sidebar (packages/shared-ui/src/admin/layout/sidebar.tsx) orders purely by
@@ -35,6 +36,7 @@ export type ChatMenuDef = {
   path: string;
   icon: string;
   sort: number;
+  visible?: boolean;
 };
 
 /**
@@ -200,6 +202,14 @@ export const CHAT_MENU_DEFS: readonly ChatMenuDef[] = [
     nameJa: 'システムプロンプト', nameRu: 'Системные промпты',
     nameVi: 'Prompt hệ thống',
     path: '/prompts', icon: 'FileText', sort: 15,
+  },
+  {
+    code: 'chat-dashboard',
+    name: 'Chat 管理看板', nameEn: 'Chat Admin Dashboard',
+    nameZhTW: 'Chat 管理看板', nameFr: 'Tableau de bord Chat',
+    nameJa: 'Chat 管理ダッシュボード', nameRu: 'Панель управления Chat',
+    nameVi: 'Bảng điều khiển Chat',
+    path: '/admin', icon: 'LayoutDashboard', sort: 16, visible: false,
   },
 ];
 

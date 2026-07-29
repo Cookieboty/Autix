@@ -39,3 +39,5 @@ admin.pricing.scope_membership_level_numbers: "scope.membershipLevelNumbers doit
 admin.pricing.scope_task_types: "scope.taskTypes doit être un string[]"
 admin.pricing.scope_model_config_ids: "scope.modelConfigIds doit être un string[]"
 admin.pricing.effective_order: "effectiveFrom doit être antérieur à effectiveTo"
+admin.chat_dashboard.invalid_range: "La plage de dates du tableau de bord n’est pas valide"
+admin.chat_dashboard.invalid_timezone: "Le fuseau horaire du tableau de bord n’est pas valide"

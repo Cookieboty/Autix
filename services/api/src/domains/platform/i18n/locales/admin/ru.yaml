@@ -39,3 +39,5 @@ admin.pricing.scope_membership_level_numbers: "scope.membershipLevelNumbers до
 admin.pricing.scope_task_types: "scope.taskTypes должен быть string[]"
 admin.pricing.scope_model_config_ids: "scope.modelConfigIds должен быть string[]"
 admin.pricing.effective_order: "effectiveFrom должен быть раньше effectiveTo"
+admin.chat_dashboard.invalid_range: "Недопустимый диапазон дат панели управления"
+admin.chat_dashboard.invalid_timezone: "Недопустимый часовой пояс панели управления"

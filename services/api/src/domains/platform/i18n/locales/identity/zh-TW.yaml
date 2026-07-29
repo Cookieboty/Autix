@@ -89,6 +89,7 @@ auth.step_up.session_or_account_unavailable: "目前工作階段或帳戶不可�
 auth.step_up.otp_send_failed: "驗證碼傳送失敗，請稍後重試"
 auth.step_up.otp_used: "驗證碼已使用"
 auth.step_up.otp_invalid_or_expired: "驗證碼無效或已過期"
+auth.system.not_in_chat_system: "請先切換到 Chat 系統再開啟管理看板"
 auth.logout.success: "登出成功"
 auth.email.verification_sent: "驗證郵件已傳送，請查收"
 auth.email.verified: "電子郵件已驗證"

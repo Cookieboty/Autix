@@ -1632,5 +1632,20 @@
       "save": "儲存",
       "dryRunTotal": "總計：{total}"
     }
+  },
+  "chatDashboard": {
+    "eyebrow": "營運總覽", "title": "Chat 管理看板", "description": "集中查看生成、計費、內容與風控的即時待辦和運行健康度。",
+    "timezone": "時區：{tz}", "timezonePending": "正在識別瀏覽器時區…",
+    "profileSync": { "syncingTitle": "正在重新整理系統身份", "syncingDescription": "正在同步所選系統的權限與選單。", "brokenTitle": "身份同步失敗", "brokenDescription": "系統已切換，但新的權限身份未能載入。你可以只重試身份請求，或重新載入頁面。", "retry": "重試身份同步", "reload": "重新載入" },
+    "unsupported": { "title": "目前系統沒有管理看板", "description": "目前系統編碼為 {code}，請切換到支援的系統。", "unknownCode": "未知", "switchTo": "切換到{name}", "noKnownSystem": "目前帳號沒有可用的管理看板系統。" },
+    "range": { "today": "今天", "yesterday": "昨天", "last7d": "最近 7 天", "custom": "自訂", "from": "開始日期", "to": "結束日期", "invalidRange": "請選擇不超過 92 天的有效日期範圍。", "invalidTimezone": "瀏覽器時區無效，暫時無法載入按時間範圍統計的資料。" },
+    "common": { "loadFailed": "此模組載入失敗。", "retry": "重試", "error": "錯誤", "selectValidRange": "請選擇有效時間範圍。", "estimate": "目前週期仍在進行中，對比資料為暫估。", "empty": "目前週期暫無資料", "new": "新增", "unknownCurrency": "歷史訂單未記錄幣種，已統一歸入 UNKNOWN。" },
+    "header": { "pending": "待辦總數", "successRate": "生成成功率", "gmv": "成交金額", "published": "廣場發布量" },
+    "pending": { "title": "待辦中心", "description": "即時營運佇列，不受所選時間範圍影響。", "gallery": { "label": "廣場待審" }, "reports": { "label": "廣場待處理檢舉", "unavailable": "檢舉清單尚待建置。" }, "templates": { "label": "模板待審", "breakdown": "圖片 {image} · 影片 {video}" }, "registrations": { "label": "註冊審批" }, "risk": { "label": "風控命中使用者" }, "batch": { "label": "批次處理執行中", "unavailable": "批次處理清單尚待建置。" } },
+    "generation": { "title": "生成健康", "totals": { "total": "總任務", "active": "進行中", "succeeded": "成功", "failed": "失敗", "expired": "已過期" }, "successRate": "成功率", "failureRate": "失敗率", "avgDuration": "平均耗時", "milliseconds": "{value} 毫秒", "byKind": "按生成類型", "kinds": { "IMAGE": "圖片", "VIDEO": "影片" }, "kindFailureRate": "失敗率 {value}", "failureReasons": "主要失敗原因", "topModels": "主要模型", "comparison": "任務量 {total}；成功率 {success}" },
+    "billing": { "title": "計費概覽", "gmv": "成交金額", "refunded": "退款金額", "paidOrders": "已支付訂單", "pendingOrders": "待支付訂單", "pointsConsumed": "消耗積分", "activeHolds": "活躍凍結", "topConsumers": "積分消耗使用者", "comparison": "較上一週期", "paidDelta": "支付訂單 {value}", "pointsDelta": "積分消耗 {value}" },
+    "content": { "title": "內容脈搏", "published": "廣場發布", "publishedBreakdown": "圖片 {image} · 影片 {video}", "featuredSlots": "生效 / 已啟用資源位", "activeBoosts": "生效加熱", "conversations": "新增對話", "comparison": "發布量變化", "conversationDelta": "對話量 {value}", "hotTop": "廣場熱度排行" },
+    "risk": { "title": "風控信號", "scope": "全平台且排除已刪除使用者，與待辦中心的風控使用者口徑一致。", "evaluatedHighRisk": "視窗內被評估且目前為 L2/L3", "evaluatedTooltip": "每次風控評估都會更新 evaluatedAt，即使等級未變；因此此數字不等於新晉或等級躍遷。", "evaluatedDelta": "被評估高風險使用者變化 {value}", "events": "風控事件", "eventDelta": "事件變化 {value}", "topTypes": "主要事件類型", "typeUnavailable": "事件類型與時間篩選能力尚待擴充。", "severity": "嚴重度分布", "buckets": { "A": "A：0", "B": "B：1–39", "C": "C：40–69", "D": "D：70–99", "E": "E：100" }, "recent": "最近高嚴重度事件（≥70）", "userUnavailable": "使用者風控詳情頁尚待建置。", "noRecent": "此週期暫無高嚴重度（≥70）事件；人工 override/clawback 事件嚴重度為 0，不在此清單。" },
+    "quickActions": { "title": "快捷入口", "templates": "模板審核", "gallery": "廣場審核", "generationTasks": "生成任務", "campaigns": "活動獎勵", "featuredSlots": "營運位", "boosts": "內容加熱", "orders": "訂單管理", "points": "積分流水" }
   }
 }

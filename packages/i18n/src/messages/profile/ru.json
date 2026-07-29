@@ -50,6 +50,7 @@
     "greetingMorning": "Доброе утро",
     "greetingAfternoon": "Добрый день",
     "greetingEvening": "Добрый вечер",
+    "greetingWithName": "{greeting}, {name}!",
     "overviewEyebrow": "Обзор",
     "keyMetrics": "Ключевые показатели",
     "actionsEyebrow": "Действия",

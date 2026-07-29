@@ -39,3 +39,5 @@ admin.pricing.scope_membership_level_numbers: "scope.membershipLevelNumbers must
 admin.pricing.scope_task_types: "scope.taskTypes must be string[]"
 admin.pricing.scope_model_config_ids: "scope.modelConfigIds must be string[]"
 admin.pricing.effective_order: "effectiveFrom must be earlier than effectiveTo"
+admin.chat_dashboard.invalid_range: "The dashboard date range is invalid"
+admin.chat_dashboard.invalid_timezone: "The dashboard time zone is invalid"

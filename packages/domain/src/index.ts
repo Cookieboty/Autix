@@ -1,4 +1,5 @@
 export * from './ai-ui';
+export * from './admin/chat-dashboard';
 export * from './auth';
 export * from './billing';
 export * from './canvas';

@@ -50,6 +50,7 @@
     "greetingMorning": "早安",
     "greetingAfternoon": "午安",
     "greetingEvening": "晚安",
+    "greetingWithName": "{greeting}，{name}",
     "overviewEyebrow": "概覽",
     "keyMetrics": "關鍵指標",
     "actionsEyebrow": "操作",

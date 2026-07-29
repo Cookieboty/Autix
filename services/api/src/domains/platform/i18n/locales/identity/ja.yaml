@@ -89,6 +89,7 @@ auth.step_up.session_or_account_unavailable: "現在のセッションまたは�
 auth.step_up.otp_send_failed: "確認コードの送信に失敗しました。しばらくしてから再試行してください"
 auth.step_up.otp_used: "確認コードは既に使用されています"
 auth.step_up.otp_invalid_or_expired: "確認コードが無効か、有効期限が切れています"
+auth.system.not_in_chat_system: "このダッシュボードを開く前に Chat システムへ切り替えてください"
 auth.logout.success: "ログアウトしました"
 auth.email.verification_sent: "確認メールを送信しました。受信トレイをご確認ください"
 auth.email.verified: "メールを確認しました"

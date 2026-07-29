@@ -50,6 +50,7 @@
     "greetingMorning": "Chào buổi sáng",
     "greetingAfternoon": "Chào buổi chiều",
     "greetingEvening": "Chào buổi tối",
+    "greetingWithName": "{greeting} {name}",
     "overviewEyebrow": "Tổng quan",
     "keyMetrics": "Chỉ số chính",
     "actionsEyebrow": "Hành động",

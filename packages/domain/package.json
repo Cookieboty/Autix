@@ -17,6 +17,11 @@
       "import": "./src/auth/index.ts",
       "require": "./dist/auth/index.js"
     },
+    "./admin/chat-dashboard": {
+      "types": "./src/admin/chat-dashboard.ts",
+      "import": "./src/admin/chat-dashboard.ts",
+      "require": "./dist/admin/chat-dashboard.js"
+    },
     "./billing": {
       "types": "./src/billing/index.ts",
       "import": "./src/billing/index.ts",

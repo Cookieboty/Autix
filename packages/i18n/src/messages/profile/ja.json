@@ -50,6 +50,7 @@
     "greetingMorning": "おはようございます",
     "greetingAfternoon": "こんにちは",
     "greetingEvening": "こんばんは",
+    "greetingWithName": "{name}さん、{greeting}",
     "overviewEyebrow": "概要",
     "keyMetrics": "主要指標",
     "actionsEyebrow": "アクション",
