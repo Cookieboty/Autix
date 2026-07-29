@@ -47,7 +47,7 @@ export class ChatDashboardService {
     allowStale: false,
   });
 
-  constructor(private readonly repo: ChatDashboardRepository) {}
+  constructor(private readonly repo: ChatDashboardRepository) { }
 
   private async assertChatSystem(user: AuthUser): Promise<string> {
     if (!user.currentSystemId) {
@@ -179,10 +179,10 @@ export class ChatDashboardService {
       query.window === 'custom'
         ? await load()
         : await this.getOrSet(
-            this.rangeCache,
-            this.rangeKey('generation', systemId, resolved),
-            load,
-          );
+          this.rangeCache,
+          this.rangeKey('generation', systemId, resolved),
+          load,
+        );
     const current = this.summarizeGeneration(data.current);
     const previous = this.summarizeGeneration(data.previous);
 
@@ -242,10 +242,10 @@ export class ChatDashboardService {
       query.window === 'custom'
         ? await loadRange()
         : await this.getOrSet(
-            this.rangeCache,
-            this.rangeKey('billing', systemId, resolved),
-            loadRange,
-          );
+          this.rangeCache,
+          this.rangeKey('billing', systemId, resolved),
+          loadRange,
+        );
     const snapshot = await this.getOrSet(
       this.snapshotCache,
       `snapshot:billing:${systemId}`,
@@ -307,10 +307,10 @@ export class ChatDashboardService {
       query.window === 'custom'
         ? await loadRange()
         : await this.getOrSet(
-            this.rangeCache,
-            this.rangeKey('content', systemId, resolved),
-            loadRange,
-          );
+          this.rangeCache,
+          this.rangeKey('content', systemId, resolved),
+          loadRange,
+        );
     const snapshot = await this.getOrSet(
       this.snapshotCache,
       `snapshot:content:${systemId}`,
@@ -376,10 +376,10 @@ export class ChatDashboardService {
       query.window === 'custom'
         ? await loadRange()
         : await this.getOrSet(
-            this.rangeCache,
-            this.rangeKey('risk', systemId, resolved),
-            loadRange,
-          );
+          this.rangeCache,
+          this.rangeKey('risk', systemId, resolved),
+          loadRange,
+        );
     const levelDistribution = await this.getOrSet(
       this.snapshotCache,
       `snapshot:risk:${systemId}`,

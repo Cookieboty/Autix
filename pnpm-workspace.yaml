@@ -41,5 +41,13 @@ allowBuilds:
 # two near-identical versions collide and esbuild's postinstall self-check fails
 # ("Expected 0.21.3 but got 0.21.5"). Pinning to one 0.21.x makes JS and the
 # native binary match. Does not touch the repo's own esbuild 0.27/0.28 deps.
+#
+# lru-cache is force-unified onto v11.x. Multiple transitive consumers
+# (langchain, prisma, eslint …) previously pulled v5/v6/v7/v10 alongside the
+# API's own v11 direct dependency. Under the hoisted linker the "winner" at
+# /app/node_modules/lru-cache was version-dependent, and older releases only
+# export a default constructor — no `LRUCache` named export — which crashes
+# ChatDashboardService on boot ("LRUCache is not a constructor").
 overrides:
   esbuild@^0.21.0: '0.21.5'
+  lru-cache: ^11.5.2
